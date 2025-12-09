@@ -82,6 +82,7 @@ export function toAdjacent(
     premises: () => toPred("to"),
     refers: () => toSucc("resolved"),
     referreds: () => toPred("resolved"),
+    quoterm: () => toSucc("quoterm"),
     hasName,
   };
 }
