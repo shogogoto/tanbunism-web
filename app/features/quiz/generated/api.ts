@@ -7,17 +7,395 @@
 import type {
   AnswerParam,
   Answers,
+  BodyPostFilesResourcePost,
+  BodyPostTextResourceTextPost,
   CreateQuizParam,
   HTTPValidationError,
   ListQuizQuizGetParams,
+  NameSpace,
+  PostTextResourceTextPost200,
   QuizChain,
   QuizRecommendationResponse,
   ReadableQuiz,
   ReadableQuizResult,
+  ResourceDetail,
   ResourceLearningStatus,
+  ResourceMetas,
+  ResourceSearchBody,
+  ResourceSearchResult,
   StudyPlan,
   StudyPlanDraft,
 } from "./models";
+
+export type getNamaspaceNamespaceGetResponse200 = {
+  data: NameSpace;
+  status: 200;
+};
+
+export type getNamaspaceNamespaceGetResponseSuccess =
+  getNamaspaceNamespaceGetResponse200 & {
+    headers: Headers;
+  };
+
+export type getNamaspaceNamespaceGetResponse =
+  getNamaspaceNamespaceGetResponseSuccess;
+
+export const getGetNamaspaceNamespaceGetUrl = () => {
+  return "https://knowde.onrender.com/namespace";
+};
+
+/**
+ * ユーザーの名前空間.
+ * @summary Get Namaspace
+ */
+export const getNamaspaceNamespaceGet = async (
+  options?: RequestInit,
+): Promise<getNamaspaceNamespaceGetResponse> => {
+  const res = await fetch(getGetNamaspaceNamespaceGetUrl(), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getNamaspaceNamespaceGetResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as getNamaspaceNamespaceGetResponse;
+};
+
+export type syncNamespaceApiNamespacePostResponse200 = {
+  data: string[];
+  status: 200;
+};
+
+export type syncNamespaceApiNamespacePostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type syncNamespaceApiNamespacePostResponseSuccess =
+  syncNamespaceApiNamespacePostResponse200 & {
+    headers: Headers;
+  };
+export type syncNamespaceApiNamespacePostResponseError =
+  syncNamespaceApiNamespacePostResponse422 & {
+    headers: Headers;
+  };
+
+export type syncNamespaceApiNamespacePostResponse =
+  | syncNamespaceApiNamespacePostResponseSuccess
+  | syncNamespaceApiNamespacePostResponseError;
+
+export const getSyncNamespaceApiNamespacePostUrl = () => {
+  return "https://knowde.onrender.com/namespace";
+};
+
+/**
+ * ファイルシステムと同期.
+ * @summary Sync Namespace Api
+ */
+export const syncNamespaceApiNamespacePost = async (
+  resourceMetas: ResourceMetas,
+  options?: RequestInit,
+): Promise<syncNamespaceApiNamespacePostResponse> => {
+  const res = await fetch(getSyncNamespaceApiNamespacePostUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(resourceMetas),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: syncNamespaceApiNamespacePostResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as syncNamespaceApiNamespacePostResponse;
+};
+
+export type postTextResourceTextPostResponse200 = {
+  data: PostTextResourceTextPost200;
+  status: 200;
+};
+
+export type postTextResourceTextPostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type postTextResourceTextPostResponseSuccess =
+  postTextResourceTextPostResponse200 & {
+    headers: Headers;
+  };
+export type postTextResourceTextPostResponseError =
+  postTextResourceTextPostResponse422 & {
+    headers: Headers;
+  };
+
+export type postTextResourceTextPostResponse =
+  | postTextResourceTextPostResponseSuccess
+  | postTextResourceTextPostResponseError;
+
+export const getPostTextResourceTextPostUrl = () => {
+  return "https://knowde.onrender.com/resource-text";
+};
+
+/**
+ * テキストからsysnetを読み取って永続化.
+ * @summary Post Text
+ */
+export const postTextResourceTextPost = async (
+  bodyPostTextResourceTextPost: BodyPostTextResourceTextPost,
+  options?: RequestInit,
+): Promise<postTextResourceTextPostResponse> => {
+  const res = await fetch(getPostTextResourceTextPostUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(bodyPostTextResourceTextPost),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: postTextResourceTextPostResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as postTextResourceTextPostResponse;
+};
+
+export type postFilesResourcePostResponse200 = {
+  data: null;
+  status: 200;
+};
+
+export type postFilesResourcePostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type postFilesResourcePostResponseSuccess =
+  postFilesResourcePostResponse200 & {
+    headers: Headers;
+  };
+export type postFilesResourcePostResponseError =
+  postFilesResourcePostResponse422 & {
+    headers: Headers;
+  };
+
+export type postFilesResourcePostResponse =
+  | postFilesResourcePostResponseSuccess
+  | postFilesResourcePostResponseError;
+
+export const getPostFilesResourcePostUrl = () => {
+  return "https://knowde.onrender.com/resource";
+};
+
+/**
+ * ファイルからsysnetを読み取って永続化.
+ * @summary Post Files
+ */
+export const postFilesResourcePost = async (
+  bodyPostFilesResourcePost: BodyPostFilesResourcePost,
+  options?: RequestInit,
+): Promise<postFilesResourcePostResponse> => {
+  const formData = new FormData();
+  bodyPostFilesResourcePost.files.forEach((value) =>
+    formData.append("files", value),
+  );
+
+  const res = await fetch(getPostFilesResourcePostUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: postFilesResourcePostResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as postFilesResourcePostResponse;
+};
+
+export type getResourceDetailResourceResourceIdGetResponse200 = {
+  data: ResourceDetail;
+  status: 200;
+};
+
+export type getResourceDetailResourceResourceIdGetResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getResourceDetailResourceResourceIdGetResponseSuccess =
+  getResourceDetailResourceResourceIdGetResponse200 & {
+    headers: Headers;
+  };
+export type getResourceDetailResourceResourceIdGetResponseError =
+  getResourceDetailResourceResourceIdGetResponse422 & {
+    headers: Headers;
+  };
+
+export type getResourceDetailResourceResourceIdGetResponse =
+  | getResourceDetailResourceResourceIdGetResponseSuccess
+  | getResourceDetailResourceResourceIdGetResponseError;
+
+export const getGetResourceDetailResourceResourceIdGetUrl = (
+  resourceId: string,
+) => {
+  return `https://knowde.onrender.com/resource/${resourceId}`;
+};
+
+/**
+ * リソース詳細.
+ * @summary Get Resource Detail
+ */
+export const getResourceDetailResourceResourceIdGet = async (
+  resourceId: string,
+  options?: RequestInit,
+): Promise<getResourceDetailResourceResourceIdGetResponse> => {
+  const res = await fetch(
+    getGetResourceDetailResourceResourceIdGetUrl(resourceId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getResourceDetailResourceResourceIdGetResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as getResourceDetailResourceResourceIdGetResponse;
+};
+
+export type deleteEntryApiEntryEntryIdDeleteResponse200 = {
+  data: null;
+  status: 200;
+};
+
+export type deleteEntryApiEntryEntryIdDeleteResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type deleteEntryApiEntryEntryIdDeleteResponseSuccess =
+  deleteEntryApiEntryEntryIdDeleteResponse200 & {
+    headers: Headers;
+  };
+export type deleteEntryApiEntryEntryIdDeleteResponseError =
+  deleteEntryApiEntryEntryIdDeleteResponse422 & {
+    headers: Headers;
+  };
+
+export type deleteEntryApiEntryEntryIdDeleteResponse =
+  | deleteEntryApiEntryEntryIdDeleteResponseSuccess
+  | deleteEntryApiEntryEntryIdDeleteResponseError;
+
+export const getDeleteEntryApiEntryEntryIdDeleteUrl = (entryId: string) => {
+  return `https://knowde.onrender.com/entry/${entryId}`;
+};
+
+/**
+ * リソース削除.
+ * @summary Delete Entry Api
+ */
+export const deleteEntryApiEntryEntryIdDelete = async (
+  entryId: string,
+  options?: RequestInit,
+): Promise<deleteEntryApiEntryEntryIdDeleteResponse> => {
+  const res = await fetch(getDeleteEntryApiEntryEntryIdDeleteUrl(entryId), {
+    ...options,
+    method: "DELETE",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: deleteEntryApiEntryEntryIdDeleteResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as deleteEntryApiEntryEntryIdDeleteResponse;
+};
+
+export type searchResourcePostResourceSearchPostResponse200 = {
+  data: ResourceSearchResult;
+  status: 200;
+};
+
+export type searchResourcePostResourceSearchPostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type searchResourcePostResourceSearchPostResponseSuccess =
+  searchResourcePostResourceSearchPostResponse200 & {
+    headers: Headers;
+  };
+export type searchResourcePostResourceSearchPostResponseError =
+  searchResourcePostResourceSearchPostResponse422 & {
+    headers: Headers;
+  };
+
+export type searchResourcePostResourceSearchPostResponse =
+  | searchResourcePostResourceSearchPostResponseSuccess
+  | searchResourcePostResourceSearchPostResponseError;
+
+export const getSearchResourcePostResourceSearchPostUrl = () => {
+  return "https://knowde.onrender.com/resource/search";
+};
+
+/**
+ * リソース検索(POST).
+ * @summary Search Resource Post
+ */
+export const searchResourcePostResourceSearchPost = async (
+  resourceSearchBody: ResourceSearchBody,
+  options?: RequestInit,
+): Promise<searchResourcePostResourceSearchPostResponse> => {
+  const res = await fetch(getSearchResourcePostResourceSearchPostUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(resourceSearchBody),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: searchResourcePostResourceSearchPostResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as searchResourcePostResourceSearchPostResponse;
+};
 
 export type createQuizApiQuizPostResponse200 = {
   data: ReadableQuiz;

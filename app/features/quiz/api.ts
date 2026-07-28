@@ -1,5 +1,7 @@
 import {
   answerQuizApiQuizAnswerQuizIdPost,
+  createStudyPlanApiQuizStudyPlansPost,
+  getNamaspaceNamespaceGet,
   listStudyPlansApiQuizStudyPlansGet,
   recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPost,
 } from "./generated/api";
@@ -8,10 +10,15 @@ import type {
   QuizChain,
   QuizRecommendationResponse,
   StudyPlan,
+  StudyPlanDraft,
 } from "./generated/models";
 
-export type { StudyPlan };
+export type { StudyPlan, StudyPlanDraft };
 export type QuizRecommendation = QuizRecommendationResponse;
+export type StudyResource = {
+  uid: string;
+  name: string;
+};
 
 export class QuizApiError extends Error {
   constructor(
@@ -37,6 +44,38 @@ export async function listStudyPlans(): Promise<StudyPlan[]> {
     credentials: "include",
   });
   return unwrap(response, "学習計画を取得できませんでした。");
+}
+
+export async function listStudyResources(): Promise<StudyResource[]> {
+  const response = await getNamaspaceNamespaceGet({
+    credentials: "include",
+  });
+  const resourceIds = new Set(Object.keys(response.data.stats ?? {}));
+
+  return (response.data.g?.nodes ?? []).flatMap((node) => {
+    const entry = node.id as unknown;
+    if (
+      typeof entry !== "object" ||
+      entry === null ||
+      !("uid" in entry) ||
+      !("name" in entry) ||
+      typeof entry.uid !== "string" ||
+      typeof entry.name !== "string" ||
+      !resourceIds.has(entry.uid)
+    ) {
+      return [];
+    }
+    return [{ uid: entry.uid, name: entry.name }];
+  });
+}
+
+export async function createStudyPlan(
+  draft: StudyPlanDraft,
+): Promise<StudyPlan> {
+  const response = await createStudyPlanApiQuizStudyPlansPost(draft, {
+    credentials: "include",
+  });
+  return unwrap(response, "学習計画を作成できませんでした。");
 }
 
 export async function recommendQuizzes(

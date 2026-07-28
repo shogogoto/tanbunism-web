@@ -94,7 +94,51 @@ export const Default: Story = {};
 export const NoStudyPlan: Story = {
   parameters: {
     msw: {
-      handlers: [http.get("*/quiz/study-plans", () => HttpResponse.json([]))],
+      handlers: [
+        http.get("*/quiz/study-plans", () => HttpResponse.json([])),
+        http.get("*/namespace", () =>
+          HttpResponse.json({
+            g: {
+              directed: true,
+              edges: [],
+              graph: {},
+              multigraph: false,
+              nodes: [
+                {
+                  id: {
+                    uid: "resource-algebra",
+                    name: "代数学の読書メモ",
+                    authors: [],
+                  },
+                },
+                {
+                  id: {
+                    uid: "resource-logic",
+                    name: "論理学の読書メモ",
+                    authors: [],
+                  },
+                },
+              ],
+            },
+            roots_: {},
+            user_id: "user-preview",
+            stats: {
+              "resource-algebra": { n_sentence: 24 },
+              "resource-logic": { n_sentence: 18 },
+            },
+          }),
+        ),
+        http.post("*/quiz/study-plans", async ({ request }) => {
+          const draft = (await request.json()) as typeof plan;
+          return HttpResponse.json(
+            { ...draft, uid: "plan-new", created: plan.created },
+            { status: 201 },
+          );
+        }),
+        http.post("*/quiz/study-plans/plan-new/recommendations", () =>
+          HttpResponse.json(recommendations),
+        ),
+      ],
     },
   },
 };

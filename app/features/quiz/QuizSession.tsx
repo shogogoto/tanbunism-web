@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/shared/components/ui/card";
+import StudyPlanForm from "./StudyPlanForm";
 import {
   type QuizRecommendation,
   type StudyPlan,
@@ -37,6 +38,7 @@ export default function QuizSession() {
   const [isCorrect, setIsCorrect] = useState<boolean>();
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPlanForm, setShowPlanForm] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -138,6 +140,12 @@ export default function QuizSession() {
     setIsCorrect(undefined);
   }
 
+  function handlePlanCreated(plan: StudyPlan) {
+    setPlans((current) => [...current, plan]);
+    setPlanId(plan.uid);
+    setShowPlanForm(false);
+  }
+
   if (loadState.status === "loading") {
     return <p className="p-6">クイズを準備しています…</p>;
   }
@@ -153,17 +161,41 @@ export default function QuizSession() {
 
   if (plans.length === 0) {
     return (
-      <EmptyState
-        title="学習計画がありません"
-        description="クイズを提案するには、先にStudyPlanを作成してください。"
-      />
+      <div className="mx-auto max-w-2xl p-4 sm:p-6 space-y-4">
+        <header>
+          <h1 className="text-2xl font-semibold">学習計画を作る</h1>
+          <p className="text-sm text-muted-foreground">
+            学習するリソースとクイズ形式を選んでください。
+          </p>
+        </header>
+        <Card className="border">
+          <CardContent className="pt-4">
+            <StudyPlanForm onCreated={handlePlanCreated} />
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (!recommendation) {
     return (
       <div className="mx-auto max-w-2xl p-6 space-y-4">
-        <PlanSelector plans={plans} planId={planId} onChange={setPlanId} />
+        <PlanToolbar
+          plans={plans}
+          planId={planId}
+          onChange={setPlanId}
+          onCreate={() => setShowPlanForm(true)}
+        />
+        {showPlanForm && (
+          <Card className="border">
+            <CardContent className="pt-4">
+              <StudyPlanForm
+                onCreated={handlePlanCreated}
+                onCancel={() => setShowPlanForm(false)}
+              />
+            </CardContent>
+          </Card>
+        )}
         <EmptyState
           title="提案できるクイズがありません"
           description="このStudyPlanの対象リソースやクイズ設定を見直してください。"
@@ -184,7 +216,23 @@ export default function QuizSession() {
         </p>
       </header>
 
-      <PlanSelector plans={plans} planId={planId} onChange={setPlanId} />
+      <PlanToolbar
+        plans={plans}
+        planId={planId}
+        onChange={setPlanId}
+        onCreate={() => setShowPlanForm(true)}
+      />
+
+      {showPlanForm && (
+        <Card className="border">
+          <CardContent className="pt-4">
+            <StudyPlanForm
+              onCreated={handlePlanCreated}
+              onCancel={() => setShowPlanForm(false)}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border">
         <CardHeader>
@@ -278,6 +326,24 @@ function PlanSelector({
         ))}
       </select>
     </label>
+  );
+}
+
+function PlanToolbar({
+  onCreate,
+  ...selectorProps
+}: Parameters<typeof PlanSelector>[0] & {
+  onCreate: () => void;
+}) {
+  return (
+    <div className="flex items-end gap-2">
+      <div className="flex-1">
+        <PlanSelector {...selectorProps} />
+      </div>
+      <Button type="button" variant="outline" onClick={onCreate}>
+        新規作成
+      </Button>
+    </div>
   );
 }
 

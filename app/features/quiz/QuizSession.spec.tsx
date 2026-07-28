@@ -76,12 +76,55 @@ describe("QuizSession", () => {
     expect(await screen.findByText("正解です")).toBeInTheDocument();
   });
 
-  it("StudyPlanがなければ作成を促す", async () => {
-    server.use(http.get("*/quiz/study-plans", () => HttpResponse.json([])));
+  it("StudyPlanがなければ作成してクイズを開始できる", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get("*/quiz/study-plans", () => HttpResponse.json([])),
+      http.get("*/namespace", () =>
+        HttpResponse.json({
+          g: {
+            directed: true,
+            edges: [],
+            graph: {},
+            multigraph: false,
+            nodes: [
+              {
+                id: {
+                  uid: "resource-1",
+                  name: "数学ノート",
+                  authors: [],
+                },
+              },
+            ],
+          },
+          roots_: {},
+          user_id: "user-1",
+          stats: { "resource-1": { n_sentence: 10 } },
+        }),
+      ),
+      http.post("*/quiz/study-plans", async ({ request }) => {
+        const draft = (await request.json()) as typeof plan;
+        return HttpResponse.json(
+          { ...draft, uid: "plan-new", created: plan.created },
+          { status: 201 },
+        );
+      }),
+      http.post("*/quiz/study-plans/plan-new/recommendations", () =>
+        HttpResponse.json([recommendation]),
+      ),
+    );
 
     render(<QuizSession />);
 
-    expect(await screen.findByText("学習計画がありません")).toBeInTheDocument();
-    expect(screen.getByText(/StudyPlanを作成/)).toBeInTheDocument();
+    expect(await screen.findByText("学習計画を作る")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Plan名"), "数学の復習");
+    await user.click(screen.getByRole("checkbox", { name: "数学ノート" }));
+    await user.click(
+      screen.getByRole("button", { name: "作成してクイズを始める" }),
+    );
+
+    expect(
+      await screen.findByText("「可換」とはどのような性質ですか？"),
+    ).toBeInTheDocument();
   });
 });

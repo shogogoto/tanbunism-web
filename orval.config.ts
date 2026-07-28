@@ -48,7 +48,7 @@ export default defineConfig({
     input: {
       target: openApiUrl,
       filters: {
-        tags: ["quiz", "quiz-learning"],
+        tags: ["quiz", "quiz-learning", "entry"],
       },
     },
     output: {
