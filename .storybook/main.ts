@@ -6,7 +6,7 @@ const config: StorybookConfig = {
     "@storybook/addon-onboarding",
     "@chromatic-com/storybook",
     "@storybook/addon-vitest",
-    "storybook-addon-remix-react-router",
+    "msw-storybook-addon",
     "@storybook/addon-themes",
     "@storybook/addon-docs",
   ],

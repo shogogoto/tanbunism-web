@@ -5,17 +5,11 @@ import "../app/app.css";
 import "github-markdown-css/github-markdown.css";
 
 import { withThemeByClassName } from "@storybook/addon-themes";
-import { initialize, mswLoader } from "msw-storybook-addon";
-import {
-  reactRouterParameters,
-  withRouter,
-} from "storybook-addon-remix-react-router";
+import { mswLoader } from "msw-storybook-addon/csf3";
+import { setupWorker } from "msw/browser";
 import { MINIMAL_VIEWPORTS } from "storybook/viewport";
 import { ThemeProvider } from "../app/shared/components/theme/ThemeProvider";
-
-initialize({
-  onUnhandledRequest: "bypass", // 画像読み込みエラーを消す [MSW] Warning: intercepted a request without a matching request handler: • GET /app/stories/assets/accessibility.png?import If you still wish to intercept this unhandled request, please create a request handler for it.
-});
+import { withRouter } from "./RouterDecorator";
 
 const preview: Preview = {
   decorators: [
@@ -24,7 +18,7 @@ const preview: Preview = {
         <Story />
       </ThemeProvider>
     ),
-    withRouter, // useNavigationとか解決
+    withRouter,
     withThemeByClassName<ReactRenderer>({
       themes: {
         light: "",
@@ -42,12 +36,18 @@ const preview: Preview = {
         date: /Date$/i,
       },
     },
-    reactRouter: reactRouterParameters({}),
+    reactRouter: {},
     viewport: {
       options: MINIMAL_VIEWPORTS,
     },
   },
-  loaders: [mswLoader],
+  loaders: [
+    mswLoader(async () => {
+      const worker = setupWorker();
+      await worker.start({ onUnhandledRequest: "bypass" });
+      return worker;
+    }),
+  ],
 };
 
 export default preview;

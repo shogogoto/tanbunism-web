@@ -31,13 +31,21 @@ function mkStub() {
 }
 describe("Home", () => {
   describe("認証済み", () => {
+    let useAuthSpy: ReturnType<typeof vi.spyOn>;
+
     beforeEach(() => {
-      // @ts-ignore
-      vi.spyOn(AuthMock, "useAuth").mockReturnValue({ isAuthenticated: true });
+      useAuthSpy = vi.spyOn(AuthMock, "useAuth").mockReturnValue({
+        user: undefined,
+        isLoading: false,
+        isValidating: false,
+        signOut: vi.fn(),
+        isAuthenticated: true,
+        mutate: vi.fn(),
+      });
     });
 
     afterEach(() => {
-      vi.restoreAllMocks();
+      useAuthSpy.mockRestore();
     });
 
     it("速攻子要素表示", async () => {

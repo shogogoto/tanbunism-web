@@ -12,6 +12,10 @@ on:
       - '**/*.json'
       - 'package.json'
       - 'package-lock.json'
+      - '.node-version'
+      - 'vite.config.ts'
+      - 'vite.storybook.config.ts'
+      - '.storybook/**'
       - '.github/workflows/ci.yml'
   pull_request:
     branches: [main]
@@ -23,6 +27,10 @@ on:
       - '**/*.json'
       - 'package.json'
       - 'package-lock.json'
+      - '.node-version'
+      - 'vite.config.ts'
+      - 'vite.storybook.config.ts'
+      - '.storybook/**'
       - '.github/workflows/ci.yml'
 
 jobs:
@@ -35,7 +43,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 'lts/*'
+          node-version-file: '.node-version'
           cache: 'npm'
       - name: Install dependencies
         run: |
@@ -48,6 +56,8 @@ jobs:
         run: npm run typecheck
       - name: Run Biome check
         run: npm run lint
+      - name: Build
+        run: npm run build
 
       - name: Publish to Chromatic
         uses: chromaui/action@latest
