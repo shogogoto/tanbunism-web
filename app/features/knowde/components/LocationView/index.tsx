@@ -1,6 +1,6 @@
 import { Link } from "react-router";
-import { HashLink } from "react-router-hash-link";
 import UserAvatar from "~/features/user/UserAvatar";
+import { HashLink } from "~/shared/components/HashLink";
 import type { KnowdeLocation } from "~/shared/generated/fastAPI.schemas";
 
 type Props = {

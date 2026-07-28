@@ -1,6 +1,6 @@
 import { Calendar, MapPin, User } from "lucide-react";
 import { Link } from "react-router";
-import { HashLink } from "react-router-hash-link";
+import { HashLink } from "~/shared/components/HashLink";
 import type { Additional } from "~/shared/generated/fastAPI.schemas";
 import { toFormulas } from "~/shared/lib/formula";
 import { useResourceDetail } from "../Context";

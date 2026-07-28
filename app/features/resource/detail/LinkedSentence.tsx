@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from "react";
 import { Link } from "react-router";
-import { HashLink } from "react-router-hash-link";
+import { HashLink } from "~/shared/components/HashLink";
 import { useSelectPreventLink } from "~/shared/hooks/useSelectPrevent";
 import { useResourceDetail } from "./Context";
 import type { toAdjacent } from "./util";
