@@ -11,9 +11,13 @@ export default defineConfig({
       client: "swr",
       httpClient: "fetch",
       mock: {
-        type: "msw",
-        delay: 200,
-        useExamples: true,
+        generators: [
+          {
+            type: "msw",
+            delay: 200,
+            useExamples: true,
+          },
+        ],
       },
     },
     input: {
@@ -32,7 +36,7 @@ export default defineConfig({
       client: "zod",
       target: "./app/shared/generated",
       fileExtension: ".zod.ts",
-      biome: true,
+      formatter: "biome",
     },
   },
 });
