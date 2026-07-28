@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { http, HttpResponse } from "msw";
+import { expect, userEvent, within } from "storybook/test";
 import QuizSession from "./QuizSession";
 
 const plan = {
@@ -118,6 +119,24 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+export const AnsweredWithQuizChain: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "演算の順序を交換しても結果が変わらない",
+      }),
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "回答する" }));
+
+    await expect(canvas.findByText("正解です")).resolves.toBeInTheDocument();
+    await expect(
+      canvas.findByRole("heading", { name: "関連する単文" }),
+    ).resolves.toBeInTheDocument();
+  },
+};
 
 export const NoStudyPlan: Story = {
   parameters: {
