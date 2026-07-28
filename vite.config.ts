@@ -17,7 +17,9 @@ const dirname =
 
 export default defineConfig({
   plugins: [
-    process.env.NODE_ENV === "development" && mkcert(),
+    process.env.NODE_ENV === "development" &&
+      process.env.VITE_HTTPS !== "false" &&
+      mkcert(),
     tailwindcss(),
     process.env.VITEST ? reactVitest() : reactRouter(), // storybookのテスト解消
     tsconfigPaths(),
