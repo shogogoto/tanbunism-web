@@ -13,7 +13,7 @@ import type {
   StudyPlanDraft,
 } from "./generated/models";
 
-export type { StudyPlan, StudyPlanDraft };
+export type { QuizChain, StudyPlan, StudyPlanDraft };
 export type QuizRecommendation = QuizRecommendationResponse;
 export type StudyResource = {
   uid: string;

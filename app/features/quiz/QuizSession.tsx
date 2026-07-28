@@ -13,8 +13,10 @@ import {
   CardHeader,
   CardTitle,
 } from "~/shared/components/ui/card";
+import QuizChainReview from "./QuizChainReview";
 import StudyPlanForm from "./StudyPlanForm";
 import {
+  type QuizChain,
   type QuizRecommendation,
   type StudyPlan,
   answerQuiz,
@@ -39,6 +41,7 @@ export default function QuizSession() {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPlanForm, setShowPlanForm] = useState(false);
+  const [chain, setChain] = useState<QuizChain>();
 
   useEffect(() => {
     let active = true;
@@ -78,6 +81,7 @@ export default function QuizSession() {
     setLoadState({ status: "loading" });
     setSelected([]);
     setIsCorrect(undefined);
+    setChain(undefined);
 
     async function loadRecommendations() {
       try {
@@ -121,6 +125,7 @@ export default function QuizSession() {
     try {
       const chain = await answerQuiz(recommendation.quiz.quiz_id, selected);
       setIsCorrect(chain.answers?.[0]?.is_correct ?? false);
+      setChain(chain);
     } catch (error) {
       setLoadState({
         status: "error",
@@ -138,6 +143,7 @@ export default function QuizSession() {
     setRecommendationIndex((current) => current + 1);
     setSelected([]);
     setIsCorrect(undefined);
+    setChain(undefined);
   }
 
   function handlePlanCreated(plan: StudyPlan) {
@@ -297,6 +303,7 @@ export default function QuizSession() {
           )}
         </CardFooter>
       </Card>
+      {chain && <QuizChainReview chain={chain} />}
     </div>
   );
 }

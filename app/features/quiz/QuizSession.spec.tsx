@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { MemoryRouter } from "react-router";
 import QuizSession from "./QuizSession";
 
 const plan = {
@@ -37,9 +38,22 @@ const server = setupServer(
   http.post("*/quiz/answer/quiz-1", async ({ request }) => {
     const body = (await request.json()) as { selected: string[] };
     return HttpResponse.json({
-      sentences: [],
+      sentences: [
+        {
+          sentence_id: "sentence-1",
+          sentence:
+            "可換とは、演算の順序を交換しても結果が変わらない性質である。",
+          resource_id: "resource-1",
+        },
+      ],
       quizzes: [],
-      links: [],
+      links: [
+        {
+          quiz_id: "quiz-1",
+          sentence_id: "sentence-1",
+          role: "correct",
+        },
+      ],
       answers: [
         {
           answer_uid: "answer-1",
@@ -58,10 +72,18 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
+function renderQuizSession() {
+  return render(
+    <MemoryRouter>
+      <QuizSession />
+    </MemoryRouter>,
+  );
+}
+
 describe("QuizSession", () => {
   it("StudyPlanの推薦クイズに回答して正誤を表示する", async () => {
     const user = userEvent.setup();
-    render(<QuizSession />);
+    renderQuizSession();
 
     expect(
       await screen.findByText("「可換」とはどのような性質ですか？"),
@@ -74,6 +96,12 @@ describe("QuizSession", () => {
     await user.click(screen.getByRole("button", { name: "回答する" }));
 
     expect(await screen.findByText("正解です")).toBeInTheDocument();
+    expect(screen.getByText("関連する単文")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: /可換とは、演算の順序を交換しても結果が変わらない/,
+      }),
+    ).toHaveAttribute("href", "/knowde/sentence-1");
   });
 
   it("StudyPlanがなければ作成してクイズを開始できる", async () => {
@@ -114,7 +142,7 @@ describe("QuizSession", () => {
       ),
     );
 
-    render(<QuizSession />);
+    renderQuizSession();
 
     expect(await screen.findByText("学習計画を作る")).toBeInTheDocument();
     await user.type(screen.getByLabelText("Plan名"), "数学の復習");

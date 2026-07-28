@@ -45,6 +45,58 @@ const recommendations = [
   },
 ];
 
+const answerHandler = http.post(
+  "*/quiz/answer/:quizId",
+  async ({ params, request }) => {
+    const body = (await request.json()) as { selected: string[] };
+    const quiz = recommendations.find(
+      ({ quiz }) => quiz.quiz_id === params.quizId,
+    );
+    const isCorrect =
+      quiz?.quiz.correct.length === body.selected.length &&
+      quiz.quiz.correct.every((id) => body.selected.includes(id));
+
+    return HttpResponse.json({
+      sentences: [
+        {
+          sentence_id: "sentence-commutative",
+          sentence:
+            "可換とは、演算の順序を交換しても結果が変わらない性質である。",
+          resource_id: "resource-algebra",
+        },
+        {
+          sentence_id: "sentence-identity",
+          sentence: "単位元とは、演算しても相手を変化させない元である。",
+          resource_id: "resource-algebra",
+        },
+      ],
+      quizzes: [],
+      links: [
+        {
+          quiz_id: params.quizId,
+          sentence_id: "sentence-commutative",
+          role: "correct",
+        },
+        {
+          quiz_id: params.quizId,
+          sentence_id: "sentence-identity",
+          role: "option",
+        },
+      ],
+      answers: [
+        {
+          answer_uid: "answer-preview",
+          quiz_uid: params.quizId,
+          selected: body.selected,
+          who: "user-preview",
+          is_correct: isCorrect,
+          created: "2026-07-28T00:00:00Z",
+        },
+      ],
+    });
+  },
+);
+
 const meta = {
   title: "Features/Quiz/QuizSession",
   component: QuizSession,
@@ -55,31 +107,7 @@ const meta = {
         http.post("*/quiz/study-plans/:planId/recommendations", () =>
           HttpResponse.json(recommendations),
         ),
-        http.post("*/quiz/answer/:quizId", async ({ params, request }) => {
-          const body = (await request.json()) as { selected: string[] };
-          const quiz = recommendations.find(
-            ({ quiz }) => quiz.quiz_id === params.quizId,
-          );
-          const isCorrect =
-            quiz?.quiz.correct.length === body.selected.length &&
-            quiz.quiz.correct.every((id) => body.selected.includes(id));
-
-          return HttpResponse.json({
-            sentences: [],
-            quizzes: [],
-            links: [],
-            answers: [
-              {
-                answer_uid: "answer-preview",
-                quiz_uid: params.quizId,
-                selected: body.selected,
-                who: "user-preview",
-                is_correct: isCorrect,
-                created: "2026-07-28T00:00:00Z",
-              },
-            ],
-          });
-        }),
+        answerHandler,
       ],
     },
   },
@@ -138,6 +166,7 @@ export const NoStudyPlan: Story = {
         http.post("*/quiz/study-plans/plan-new/recommendations", () =>
           HttpResponse.json(recommendations),
         ),
+        answerHandler,
       ],
     },
   },
