@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { createSentenceQuiz } from "~/features/quiz/api";
+import {
+  type ReadableQuiz,
+  createSentenceQuiz,
+  listCreatedQuizzes,
+} from "~/features/quiz/api";
+import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import {
   DropdownMenu,
@@ -20,8 +25,36 @@ export default function SentenceQuizActions({
   const { rootId, sentenceQuizStatuses, refreshSentenceQuizStatuses } =
     useResourceDetail();
   const [isCreating, setIsCreating] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [quizzes, setQuizzes] = useState<ReadableQuiz[]>();
   const [error, setError] = useState<string>();
   const status = sentenceQuizStatuses?.get(sentenceId);
+
+  async function loadQuizzes() {
+    setIsLoading(true);
+    setError(undefined);
+    try {
+      setQuizzes(await listCreatedQuizzes(rootId, sentenceId));
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "クイズを取得できませんでした。",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function toggleQuizzes() {
+    if (isExpanded) {
+      setIsExpanded(false);
+      return;
+    }
+    setIsExpanded(true);
+    await loadQuizzes();
+  }
 
   async function create(quizType: QuizType) {
     setIsCreating(true);
@@ -29,6 +62,7 @@ export default function SentenceQuizActions({
     try {
       await createSentenceQuiz(sentenceId, quizType);
       await refreshSentenceQuizStatuses?.();
+      if (isExpanded) await loadQuizzes();
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -41,40 +75,83 @@ export default function SentenceQuizActions({
   }
 
   return (
-    <span className="ml-2 inline-flex items-center gap-1 align-middle">
-      {status && (
-        <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
-          <Link to={`/quiz/list?resource=${rootId}&sentence=${sentenceId}`}>
-            クイズ {status.total_quizzes}
-          </Link>
-        </Button>
-      )}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+    <>
+      <span className="ml-2 inline-flex items-center gap-1 align-middle">
+        {status && (
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
             className="h-7 px-2 text-xs"
-            disabled={isCreating}
+            aria-expanded={isExpanded}
+            onClick={() => void toggleQuizzes()}
           >
-            {isCreating ? "作成中…" : "＋ クイズ"}
+            クイズ {status.total_quizzes}
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem onSelect={() => void create("term2sent")}>
-            用語から単文を当てる
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => void create("sent2term")}>
-            単文から用語を当てる
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {error && (
-        <span role="alert" className="text-xs text-destructive">
-          {error}
-        </span>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={isCreating}
+            >
+              {isCreating ? "作成中…" : "＋ クイズ"}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onSelect={() => void create("term2sent")}>
+              用語から単文を当てる
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void create("sent2term")}>
+              単文から用語を当てる
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {error && (
+          <span role="alert" className="text-xs text-destructive">
+            {error}
+          </span>
+        )}
+      </span>
+      {isExpanded && (
+        <div className="my-2 ml-6 space-y-2 border-l-2 pl-3">
+          {isLoading && (
+            <p className="text-xs text-muted-foreground">クイズを読込中…</p>
+          )}
+          {!isLoading &&
+            quizzes?.map((quiz) => (
+              <div key={quiz.quiz_id} className="space-y-2 border p-3">
+                <p className="text-sm font-medium">{quiz.statement}</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(quiz.options).map(([optionId, option]) => (
+                    <span
+                      key={optionId}
+                      className="inline-flex items-center gap-1 text-xs"
+                    >
+                      {quiz.correct.includes(optionId) && (
+                        <Badge variant="secondary">正解</Badge>
+                      )}
+                      {option}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          {!isLoading && quizzes?.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              作成したクイズはありません。
+            </p>
+          )}
+          <Button asChild variant="link" size="sm" className="h-auto p-0">
+            <Link to={`/quiz/list?resource=${rootId}&sentence=${sentenceId}`}>
+              一覧で管理
+            </Link>
+          </Button>
+        </div>
       )}
-    </span>
+    </>
   );
 }

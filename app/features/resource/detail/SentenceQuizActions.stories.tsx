@@ -38,6 +38,24 @@ const meta = {
   parameters: {
     msw: {
       handlers: [
+        http.get("*/quiz/created", () =>
+          HttpResponse.json({
+            data: [
+              {
+                quiz_id: "quiz-1",
+                statement: "「可換」に合う文を当ててください",
+                options: {
+                  "sentence-1": "演算順序を交換しても結果が変わらない。",
+                  "sentence-2": "演算しても値を変化させない。",
+                },
+                correct: ["sentence-1"],
+                created: "2026-07-27T00:00:00Z",
+                no_correct_option: false,
+              },
+            ],
+            total: 1,
+          }),
+        ),
         http.post("*/quiz", () =>
           HttpResponse.json({
             quiz_id: "quiz-new",
