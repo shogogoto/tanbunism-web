@@ -60,18 +60,42 @@ const answerHandler = http.post(
     return HttpResponse.json({
       sentences: [
         {
-          sentence_id: "sentence-commutative",
+          uid: "sentence-commutative",
           sentence:
             "可換とは、演算の順序を交換しても結果が変わらない性質である。",
-          resource_id: "resource-algebra",
+          term: { names: ["可換"] },
+          stats: {
+            n_detail: 0,
+            n_premise: 0,
+            n_conclusion: 0,
+            n_refer: 0,
+            n_referred: 0,
+          },
+          resource_uid: "resource-algebra",
         },
         {
-          sentence_id: "sentence-identity",
+          uid: "sentence-identity",
           sentence: "単位元とは、演算しても相手を変化させない元である。",
-          resource_id: "resource-algebra",
+          term: { names: ["単位元"] },
+          stats: {
+            n_detail: 0,
+            n_premise: 0,
+            n_conclusion: 0,
+            n_refer: 0,
+            n_referred: 0,
+          },
+          resource_uid: "resource-algebra",
         },
       ],
-      quizzes: [],
+      quizzes: quiz
+        ? [
+            {
+              quiz_id: quiz.quiz.quiz_id,
+              quiz_type: "term2sent",
+              readable: quiz.quiz,
+            },
+          ]
+        : [],
       links: [
         {
           quiz_id: params.quizId,
@@ -133,7 +157,7 @@ export const AnsweredWithQuizChain: Story = {
 
     await expect(canvas.findByText("正解です")).resolves.toBeInTheDocument();
     await expect(
-      canvas.findByRole("heading", { name: "関連する単文" }),
+      canvas.findByRole("heading", { name: "このクイズの知識" }),
     ).resolves.toBeInTheDocument();
   },
 };

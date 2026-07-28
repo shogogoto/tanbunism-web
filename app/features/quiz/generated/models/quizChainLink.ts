@@ -5,12 +5,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { QuizChainRole } from "./quizChainRole";
+import type { QuizRel } from "./quizRel";
 
 /**
- * QuizとSentenceを結ぶ役割付きlink.
+ * QuizとKnowdeを結ぶ役割と、targetからの知識関係.
  */
 export interface QuizChainLink {
   quiz_id: string;
   sentence_id: string;
   role: QuizChainRole;
+  relations?: QuizRel[];
 }

@@ -40,13 +40,27 @@ const server = setupServer(
     return HttpResponse.json({
       sentences: [
         {
-          sentence_id: "sentence-1",
+          uid: "sentence-1",
           sentence:
             "可換とは、演算の順序を交換しても結果が変わらない性質である。",
-          resource_id: "resource-1",
+          term: { names: ["可換"] },
+          stats: {
+            n_detail: 0,
+            n_premise: 0,
+            n_conclusion: 0,
+            n_refer: 0,
+            n_referred: 0,
+          },
+          resource_uid: "resource-1",
         },
       ],
-      quizzes: [],
+      quizzes: [
+        {
+          quiz_id: "quiz-1",
+          quiz_type: "term2sent",
+          readable: recommendation.quiz,
+        },
+      ],
       links: [
         {
           quiz_id: "quiz-1",
@@ -96,10 +110,10 @@ describe("QuizSession", () => {
     await user.click(screen.getByRole("button", { name: "回答する" }));
 
     expect(await screen.findByText("正解です")).toBeInTheDocument();
-    expect(screen.getByText("関連する単文")).toBeInTheDocument();
+    expect(screen.getByText("このクイズの知識")).toBeInTheDocument();
     expect(
       screen.getByRole("link", {
-        name: /可換とは、演算の順序を交換しても結果が変わらない/,
+        name: /可換: 可換とは、演算の順序を交換しても結果が変わらない/,
       }),
     ).toHaveAttribute("href", "/knowde/sentence-1");
   });
