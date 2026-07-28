@@ -1,4 +1,10 @@
-import { BookOpen, Crown, Home, PanelLeftIcon, Search } from "lucide-react";
+import {
+  BookOpen,
+  Home,
+  PanelLeftIcon,
+  Search,
+  SquareCheckBig,
+} from "lucide-react";
 import { Link } from "react-router";
 import { useSidebar } from "~/shared/components/ui/sidebar";
 
@@ -15,8 +21,8 @@ export default function BottomNavigation() {
       <Link to="/search">
         <Search size={size} />
       </Link>
-      <Link to="/ranking">
-        <Crown size={size} />
+      <Link to="/quiz">
+        <SquareCheckBig size={size} />
       </Link>
       <Link to="/docs/toc">
         <BookOpen size={size} />

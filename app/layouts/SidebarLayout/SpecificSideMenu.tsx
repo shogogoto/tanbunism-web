@@ -10,6 +10,7 @@ import {
   Search,
   SearchCode,
   Speech,
+  SquareCheckBig,
   TextSearch,
   UserSearch,
   Users,
@@ -58,6 +59,7 @@ export function FeaturesMenu() {
       icon={<LogIn />}
       subs={[
         { to: "/home", title: "ホーム", icon: <Home /> },
+        { to: "/quiz", title: "クイズ", icon: <SquareCheckBig /> },
         { to: "/", title: "通知", icon: <BellRing /> },
         { to: "/", title: "エントリー管理", icon: <Folder /> },
         { to: "/", title: "ブックマーク", icon: <Bookmark /> },

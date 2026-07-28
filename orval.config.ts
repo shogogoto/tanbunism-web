@@ -1,13 +1,16 @@
 import { defineConfig } from "orval";
+import { loadEnv } from "vite";
+
+const env = loadEnv(process.env.NODE_ENV ?? "development", process.cwd(), "");
+const openApiUrl = env.OPENAPI_URL ?? "http://127.0.0.1:8000/openapi.json";
+const apiBaseUrl = env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
 
 export default defineConfig({
-  petstore: {
+  api: {
     output: {
       mode: "tags-split",
       target: "./app/shared/generated",
-      baseUrl: "https://knowde.onrender.com",
-      // baseUrl: "http://0.0.0.0:8000",
-      // baseUrl: "https://toucan-renewing-jackal.ngrok-free.app",
+      baseUrl: apiBaseUrl,
       client: "swr",
       httpClient: "fetch",
       mock: {
@@ -21,22 +24,47 @@ export default defineConfig({
       },
     },
     input: {
-      target: "http://0.0.0.0:8000/openapi.json",
+      target: openApiUrl,
     },
     hooks: {
       afterAllFilesWrite: "npm run lint:fix",
     },
   },
-  petstoreZod: {
+  apiZod: {
     input: {
-      target: "http://0.0.0.0:8000/openapi.json",
+      target: openApiUrl,
     },
     output: {
       mode: "tags-split",
       client: "zod",
       target: "./app/shared/generated",
       fileExtension: ".zod.ts",
-      formatter: "biome",
+    },
+    hooks: {
+      afterAllFilesWrite: "npm run lint:fix",
+    },
+  },
+  quiz: {
+    input: {
+      target: openApiUrl,
+      filters: {
+        tags: ["quiz", "quiz-learning"],
+      },
+    },
+    output: {
+      mode: "single",
+      target: "./app/features/quiz/generated/api.ts",
+      schemas: "./app/features/quiz/generated/models",
+      baseUrl: apiBaseUrl,
+      client: "fetch",
+      httpClient: "fetch",
+    },
+    hooks: {
+      afterAllFilesWrite: {
+        command:
+          "./node_modules/.bin/biome check --write --unsafe app/features/quiz/generated",
+        injectGeneratedDirsAndFiles: false,
+      },
     },
   },
 });
