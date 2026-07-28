@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,12 +20,72 @@ import {
   CardHeader,
   CardTitle,
 } from "~/shared/components/ui/card";
-import { type ReadableQuiz, deleteQuiz, listCreatedQuizzes } from "./api";
+import {
+  type QuizResourceStatus,
+  type ReadableQuiz,
+  deleteQuiz,
+  listCreatedQuizResources,
+  listCreatedQuizzes,
+} from "./api";
 
 type LoadState =
   | { status: "loading" }
-  | { status: "loaded"; quizzes: ReadableQuiz[] }
+  | {
+      status: "loaded";
+      resources: QuizResourceStatus[];
+      quizzes?: ReadableQuiz[];
+    }
   | { status: "error"; message: string };
+
+const quizTypeLabels = {
+  term2sent: "用語→単文",
+  sent2term: "単文→用語",
+  rel2pair: "関係→ペア",
+  pair2rel: "ペア→関係",
+} as const;
+
+function ResourceCard({ status }: { status: QuizResourceStatus }) {
+  const counts = Object.entries(status.quiz_counts ?? {});
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-lg">{status.resource.name}</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {status.total_quizzes}問作成済み
+            </p>
+          </div>
+          <Button asChild size="sm">
+            <Link to={`?resource=${status.resource.uid}`}>クイズを見る</Link>
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {counts.map(([type, count]) => (
+            <Badge key={type} variant="secondary">
+              {quizTypeLabels[type as keyof typeof quizTypeLabels] ?? type}{" "}
+              {count}
+            </Badge>
+          ))}
+        </div>
+        <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground">
+          <span>
+            最終作成: {new Date(status.last_created_at).toLocaleString("ja-JP")}
+          </span>
+          <Link
+            className="underline underline-offset-4"
+            to={`/resource/${status.resource.uid}`}
+          >
+            単文を見る
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function QuizCard({
   quiz,
@@ -107,14 +167,19 @@ function QuizCard({
 }
 
 export default function QuizList() {
+  const [searchParams] = useSearchParams();
+  const resourceId = searchParams.get("resource") ?? undefined;
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
 
   useEffect(() => {
     let active = true;
 
-    listCreatedQuizzes()
-      .then((quizzes) => {
-        if (active) setLoadState({ status: "loaded", quizzes });
+    Promise.all([
+      listCreatedQuizResources(),
+      resourceId ? listCreatedQuizzes(resourceId) : Promise.resolve(undefined),
+    ])
+      .then(([resources, quizzes]) => {
+        if (active) setLoadState({ status: "loaded", resources, quizzes });
       })
       .catch((error: unknown) => {
         if (active) {
@@ -131,27 +196,38 @@ export default function QuizList() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [resourceId]);
 
   async function handleDelete(quizId: string) {
     await deleteQuiz(quizId);
     setLoadState((current) =>
       current.status === "loaded"
         ? {
-            status: "loaded",
-            quizzes: current.quizzes.filter((quiz) => quiz.quiz_id !== quizId),
+            ...current,
+            quizzes: current.quizzes?.filter((quiz) => quiz.quiz_id !== quizId),
           }
         : current,
     );
   }
 
+  const selectedResource =
+    loadState.status === "loaded"
+      ? loadState.resources.find(
+          (resource) => resource.resource.uid === resourceId,
+        )
+      : undefined;
+
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4 sm:p-6">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">作成したクイズ</h1>
+          <h1 className="text-2xl font-semibold">
+            {selectedResource?.resource.name ?? "作成したクイズ"}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            問題・選択肢・正解を確認し、不要なクイズを整理できます。
+            {resourceId
+              ? "このResourceから作成した問題・選択肢・正解を確認できます。"
+              : "Resourceを選んで、単文から作成されたクイズを確認します。"}
           </p>
         </div>
         <Button asChild variant="outline">
@@ -165,13 +241,34 @@ export default function QuizList() {
           {loadState.message}
         </p>
       )}
-      {loadState.status === "loaded" && loadState.quizzes.length === 0 && (
-        <p className="border p-4 text-sm text-muted-foreground">
-          作成したクイズはありません。
-        </p>
+      {loadState.status === "loaded" && !resourceId && (
+        <div className="space-y-3">
+          {loadState.resources.map((resource) => (
+            <ResourceCard key={resource.resource.uid} status={resource} />
+          ))}
+        </div>
       )}
       {loadState.status === "loaded" &&
-        loadState.quizzes.map((quiz) => (
+        !resourceId &&
+        loadState.resources.length === 0 && (
+          <p className="border p-4 text-sm text-muted-foreground">
+            作成したクイズはありません。
+          </p>
+        )}
+      {loadState.status === "loaded" &&
+        resourceId &&
+        loadState.quizzes?.length === 0 && (
+          <p className="border p-4 text-sm text-muted-foreground">
+            このResourceから作成したクイズはありません。
+          </p>
+        )}
+      {loadState.status === "loaded" && resourceId && (
+        <Button asChild variant="ghost" size="sm">
+          <Link to="/quiz/list">← Resource一覧へ</Link>
+        </Button>
+      )}
+      {loadState.status === "loaded" &&
+        loadState.quizzes?.map((quiz) => (
           <QuizCard key={quiz.quiz_id} quiz={quiz} onDelete={handleDelete} />
         ))}
     </div>

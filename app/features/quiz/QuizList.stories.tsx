@@ -29,12 +29,43 @@ const quizzes = [
   },
 ];
 
+const resources = [
+  {
+    resource: {
+      uid: "resource-algebra",
+      name: "代数学の読書メモ",
+    },
+    total_quizzes: 2,
+    quiz_counts: {
+      term2sent: 1,
+      pair2rel: 1,
+    },
+    last_created_at: "2026-07-28T00:00:00Z",
+  },
+  {
+    resource: {
+      uid: "resource-graph",
+      name: "グラフ理論",
+    },
+    total_quizzes: 8,
+    quiz_counts: {
+      term2sent: 3,
+      sent2term: 3,
+      rel2pair: 2,
+    },
+    last_created_at: "2026-07-27T12:00:00Z",
+  },
+];
+
 const meta = {
   title: "Features/Quiz/QuizList",
   component: QuizList,
   parameters: {
     msw: {
       handlers: [
+        http.get("*/quiz/created/resources", () =>
+          HttpResponse.json(resources),
+        ),
         http.get("*/quiz/created", () =>
           HttpResponse.json({ data: quizzes, total: quizzes.length }),
         ),
@@ -57,9 +88,7 @@ export const Empty: Story = {
   parameters: {
     msw: {
       handlers: [
-        http.get("*/quiz/created", () =>
-          HttpResponse.json({ data: [], total: 0 }),
-        ),
+        http.get("*/quiz/created/resources", () => HttpResponse.json([])),
       ],
     },
   },

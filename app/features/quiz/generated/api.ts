@@ -17,6 +17,7 @@ import type {
   PostTextResourceTextPost200,
   QuizChain,
   QuizRecommendationResponse,
+  QuizResourceStatus,
   ReadableQuiz,
   ReadableQuizResult,
   ResourceDetail,
@@ -578,6 +579,49 @@ export const listCreatedQuizzesQuizCreatedGet = async (
     status: res.status,
     headers: res.headers,
   } as listCreatedQuizzesQuizCreatedGetResponse;
+};
+
+export type listCreatedQuizResourcesQuizCreatedResourcesGetResponse200 = {
+  data: QuizResourceStatus[];
+  status: 200;
+};
+
+export type listCreatedQuizResourcesQuizCreatedResourcesGetResponseSuccess =
+  listCreatedQuizResourcesQuizCreatedResourcesGetResponse200 & {
+    headers: Headers;
+  };
+
+export type listCreatedQuizResourcesQuizCreatedResourcesGetResponse =
+  listCreatedQuizResourcesQuizCreatedResourcesGetResponseSuccess;
+
+export const getListCreatedQuizResourcesQuizCreatedResourcesGetUrl = () => {
+  return "https://knowde.onrender.com/quiz/created/resources";
+};
+
+/**
+ * 作成済みQuizの状況をResourceごとに取得.
+ * @summary List Created Quiz Resources
+ */
+export const listCreatedQuizResourcesQuizCreatedResourcesGet = async (
+  options?: RequestInit,
+): Promise<listCreatedQuizResourcesQuizCreatedResourcesGetResponse> => {
+  const res = await fetch(
+    getListCreatedQuizResourcesQuizCreatedResourcesGetUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listCreatedQuizResourcesQuizCreatedResourcesGetResponse["data"] =
+    body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as listCreatedQuizResourcesQuizCreatedResourcesGetResponse;
 };
 
 export type deleteQuizApiQuizQuizIdDeleteResponse204 = {

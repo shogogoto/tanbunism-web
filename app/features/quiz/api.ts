@@ -3,6 +3,7 @@ import {
   createStudyPlanApiQuizStudyPlansPost,
   deleteQuizApiQuizQuizIdDelete,
   getNamaspaceNamespaceGet,
+  listCreatedQuizResourcesQuizCreatedResourcesGet,
   listCreatedQuizzesQuizCreatedGet,
   listStudyPlansApiQuizStudyPlansGet,
   recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPost,
@@ -11,12 +12,19 @@ import type {
   HTTPValidationError,
   QuizChain,
   QuizRecommendationResponse,
+  QuizResourceStatus,
   ReadableQuiz,
   StudyPlan,
   StudyPlanDraft,
 } from "./generated/models";
 
-export type { QuizChain, ReadableQuiz, StudyPlan, StudyPlanDraft };
+export type {
+  QuizChain,
+  QuizResourceStatus,
+  ReadableQuiz,
+  StudyPlan,
+  StudyPlanDraft,
+};
 export type QuizRecommendation = QuizRecommendationResponse;
 export type StudyResource = {
   uid: string;
@@ -106,9 +114,20 @@ export async function answerQuiz(
   return unwrap(response, "回答を送信できませんでした。");
 }
 
-export async function listCreatedQuizzes(): Promise<ReadableQuiz[]> {
+export async function listCreatedQuizResources(): Promise<
+  QuizResourceStatus[]
+> {
+  const response = await listCreatedQuizResourcesQuizCreatedResourcesGet({
+    credentials: "include",
+  });
+  return unwrap(response, "Resourceごとのクイズ状況を取得できませんでした。");
+}
+
+export async function listCreatedQuizzes(
+  resourceId?: string,
+): Promise<ReadableQuiz[]> {
   const response = await listCreatedQuizzesQuizCreatedGet(
-    { page: 1, size: 100 },
+    { resource_id: resourceId, page: 1, size: 100 },
     { credentials: "include" },
   );
   return unwrap(response, "作成したクイズを取得できませんでした。").data;

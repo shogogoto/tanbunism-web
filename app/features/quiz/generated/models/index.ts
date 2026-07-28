@@ -42,6 +42,7 @@ export * from "./quizCoverage";
 export * from "./quizPerformance";
 export * from "./quizRecommendationResponse";
 export * from "./quizRel";
+export * from "./quizResourceStatus";
 export * from "./quizType";
 export * from "./quizTypeLearningStatus";
 export * from "./readableQuiz";

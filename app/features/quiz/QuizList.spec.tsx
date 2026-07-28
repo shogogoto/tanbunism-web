@@ -17,7 +17,20 @@ const quiz = {
   no_correct_option: false,
 };
 
+const resourceStatus = {
+  resource: {
+    uid: "resource-1",
+    name: "代数学ノート",
+  },
+  total_quizzes: 1,
+  quiz_counts: { term2sent: 1 },
+  last_created_at: "2026-07-28T00:00:00Z",
+};
+
 const server = setupServer(
+  http.get("*/quiz/created/resources", () =>
+    HttpResponse.json([resourceStatus]),
+  ),
   http.get("*/quiz/created", () =>
     HttpResponse.json({ data: [quiz], total: 1 }),
   ),
@@ -36,6 +49,10 @@ it("作成したQuizを確認して削除する", async () => {
     </MemoryRouter>,
   );
 
+  expect(await screen.findByText("代数学ノート")).toBeInTheDocument();
+  expect(screen.getByText("用語→単文 1")).toBeInTheDocument();
+  await user.click(screen.getByRole("link", { name: "クイズを見る" }));
+
   expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
   expect(screen.getByText("正解")).toBeInTheDocument();
 
@@ -46,7 +63,7 @@ it("作成したQuizを確認して削除する", async () => {
   await user.click(screen.getByRole("button", { name: "削除する" }));
 
   expect(
-    await screen.findByText("作成したクイズはありません。"),
+    await screen.findByText("このResourceから作成したクイズはありません。"),
   ).toBeInTheDocument();
   expect(screen.queryByText(quiz.statement)).not.toBeInTheDocument();
 });

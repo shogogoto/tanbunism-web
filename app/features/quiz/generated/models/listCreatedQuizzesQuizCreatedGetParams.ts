@@ -6,6 +6,7 @@
  */
 
 export type ListCreatedQuizzesQuizCreatedGetParams = {
+  resource_id?: string | null;
   /**
    * @exclusiveMinimum 0
    */
