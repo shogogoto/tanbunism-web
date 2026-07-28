@@ -1,5 +1,6 @@
 import type { DirectedGraph } from "graphology";
 import { type ReactNode, createContext, useContext } from "react";
+import type { SentenceQuizStatus } from "~/features/quiz/api";
 import type {
   ResourceDetailTerms,
   ResourceDetailUids,
@@ -12,6 +13,8 @@ export type ResourceDetailContextState = {
   terms: ResourceDetailTerms;
   rootId: string;
   resource_info: ResourceInfo;
+  sentenceQuizStatuses?: ReadonlyMap<string, SentenceQuizStatus>;
+  refreshSentenceQuizStatuses?: () => Promise<void>;
 };
 
 const ResourceDetailContext = createContext<

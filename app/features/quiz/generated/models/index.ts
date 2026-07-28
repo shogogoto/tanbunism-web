@@ -59,6 +59,7 @@ export * from "./resourceMetas";
 export * from "./resourceSearchBody";
 export * from "./resourceSearchResult";
 export * from "./resourceStats";
+export * from "./sentenceQuizStatus";
 export * from "./sentency";
 export * from "./studyPlan";
 export * from "./studyPlanDraft";

@@ -1,4 +1,8 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  type SentenceQuizStatus,
+  listCreatedQuizSentences,
+} from "~/features/quiz/api";
 import Loading from "~/shared/components/Loading";
 import { Separator } from "~/shared/components/ui/separator";
 import { useGetResourceDetailResourceResourceIdGet } from "~/shared/generated/entry/entry";
@@ -17,11 +21,27 @@ type Props = {
 
 export default function ResourceDetail({ id }: Props) {
   const { addHistory } = useHistory();
+  const [sentenceQuizStatuses, setSentenceQuizStatuses] = useState<
+    ReadonlyMap<string, SentenceQuizStatus>
+  >(new Map());
   const {
     data: apiResult,
     error,
     isLoading,
   } = useGetResourceDetailResourceResourceIdGet(id);
+
+  const refreshSentenceQuizStatuses = useCallback(async () => {
+    const statuses = await listCreatedQuizSentences(id);
+    setSentenceQuizStatuses(
+      new Map(statuses.map((status) => [status.sentence_id, status])),
+    );
+  }, [id]);
+
+  useEffect(() => {
+    void refreshSentenceQuizStatuses().catch(() => {
+      setSentenceQuizStatuses(new Map());
+    });
+  }, [refreshSentenceQuizStatuses]);
 
   useEffect(() => {
     if (apiResult?.status === 200) {
@@ -47,6 +67,8 @@ export default function ResourceDetail({ id }: Props) {
       uids={uids}
       rootId={resource.uid}
       resource_info={resource_info}
+      sentenceQuizStatuses={sentenceQuizStatuses}
+      refreshSentenceQuizStatuses={refreshSentenceQuizStatuses}
     >
       <TraceMemoryProvider>
         <div className="markdown-body p-4">

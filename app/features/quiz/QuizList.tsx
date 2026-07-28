@@ -169,6 +169,7 @@ function QuizCard({
 export default function QuizList() {
   const [searchParams] = useSearchParams();
   const resourceId = searchParams.get("resource") ?? undefined;
+  const sentenceId = searchParams.get("sentence") ?? undefined;
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
 
   useEffect(() => {
@@ -176,7 +177,9 @@ export default function QuizList() {
 
     Promise.all([
       listCreatedQuizResources(),
-      resourceId ? listCreatedQuizzes(resourceId) : Promise.resolve(undefined),
+      resourceId
+        ? listCreatedQuizzes(resourceId, sentenceId)
+        : Promise.resolve(undefined),
     ])
       .then(([resources, quizzes]) => {
         if (active) setLoadState({ status: "loaded", resources, quizzes });
@@ -196,7 +199,7 @@ export default function QuizList() {
     return () => {
       active = false;
     };
-  }, [resourceId]);
+  }, [resourceId, sentenceId]);
 
   async function handleDelete(quizId: string) {
     await deleteQuiz(quizId);
@@ -226,7 +229,9 @@ export default function QuizList() {
           </h1>
           <p className="text-sm text-muted-foreground">
             {resourceId
-              ? "このResourceから作成した問題・選択肢・正解を確認できます。"
+              ? sentenceId
+                ? "この単文から作成した問題・選択肢・正解を確認できます。"
+                : "このResourceから作成した問題・選択肢・正解を確認できます。"
               : "Resourceを選んで、単文から作成されたクイズを確認します。"}
           </p>
         </div>

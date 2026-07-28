@@ -25,6 +25,7 @@ import type {
   ResourceMetas,
   ResourceSearchBody,
   ResourceSearchResult,
+  SentenceQuizStatus,
   StudyPlan,
   StudyPlanDraft,
 } from "./models";
@@ -623,6 +624,66 @@ export const listCreatedQuizResourcesQuizCreatedResourcesGet = async (
     headers: res.headers,
   } as listCreatedQuizResourcesQuizCreatedResourcesGetResponse;
 };
+
+export type listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponse200 =
+  {
+    data: SentenceQuizStatus[];
+    status: 200;
+  };
+
+export type listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponse422 =
+  {
+    data: HTTPValidationError;
+    status: 422;
+  };
+
+export type listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponseSuccess =
+  listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponse200 & {
+    headers: Headers;
+  };
+export type listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponseError =
+  listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponse422 & {
+    headers: Headers;
+  };
+
+export type listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponse =
+  | listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponseSuccess
+  | listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponseError;
+
+export const getListCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetUrl =
+  (resourceId: string) => {
+    return `https://knowde.onrender.com/quiz/created/resources/${resourceId}/sentences`;
+  };
+
+/**
+ * Resource内の単文を対象にした作成済みQuiz状況を取得.
+ * @summary List Created Quiz Sentences
+ */
+export const listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGet =
+  async (
+    resourceId: string,
+    options?: RequestInit,
+  ): Promise<listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponse> => {
+    const res = await fetch(
+      getListCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetUrl(
+        resourceId,
+      ),
+      {
+        ...options,
+        method: "GET",
+      },
+    );
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponse["data"] =
+      body ? JSON.parse(body) : {};
+    return {
+      data,
+      status: res.status,
+      headers: res.headers,
+    } as listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponse;
+  };
 
 export type deleteQuizApiQuizQuizIdDeleteResponse204 = {
   data: undefined;

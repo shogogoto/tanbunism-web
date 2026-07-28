@@ -1,9 +1,11 @@
 import {
   answerQuizApiQuizAnswerQuizIdPost,
+  createQuizApiQuizPost,
   createStudyPlanApiQuizStudyPlansPost,
   deleteQuizApiQuizQuizIdDelete,
   getNamaspaceNamespaceGet,
   listCreatedQuizResourcesQuizCreatedResourcesGet,
+  listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGet,
   listCreatedQuizzesQuizCreatedGet,
   listStudyPlansApiQuizStudyPlansGet,
   recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPost,
@@ -14,6 +16,7 @@ import type {
   QuizRecommendationResponse,
   QuizResourceStatus,
   ReadableQuiz,
+  SentenceQuizStatus,
   StudyPlan,
   StudyPlanDraft,
 } from "./generated/models";
@@ -22,6 +25,7 @@ export type {
   QuizChain,
   QuizResourceStatus,
   ReadableQuiz,
+  SentenceQuizStatus,
   StudyPlan,
   StudyPlanDraft,
 };
@@ -123,14 +127,47 @@ export async function listCreatedQuizResources(): Promise<
   return unwrap(response, "Resourceごとのクイズ状況を取得できませんでした。");
 }
 
+export async function listCreatedQuizSentences(
+  resourceId: string,
+): Promise<SentenceQuizStatus[]> {
+  const response =
+    await listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGet(
+      resourceId,
+      { credentials: "include" },
+    );
+  return unwrap(response, "単文ごとのクイズ状況を取得できませんでした。");
+}
+
 export async function listCreatedQuizzes(
   resourceId?: string,
+  sentenceId?: string,
 ): Promise<ReadableQuiz[]> {
   const response = await listCreatedQuizzesQuizCreatedGet(
-    { resource_id: resourceId, page: 1, size: 100 },
+    {
+      resource_id: resourceId,
+      sentence_id: sentenceId,
+      page: 1,
+      size: 100,
+    },
     { credentials: "include" },
   );
   return unwrap(response, "作成したクイズを取得できませんでした。").data;
+}
+
+export async function createSentenceQuiz(
+  sentenceId: string,
+  quizType: "sent2term" | "term2sent",
+): Promise<ReadableQuiz> {
+  const response = await createQuizApiQuizPost(
+    {
+      target_sent_uid: sentenceId,
+      quiz_type: quizType,
+      cand_type: "all",
+      n_option: 4,
+    },
+    { credentials: "include" },
+  );
+  return unwrap(response, "この単文からクイズを作成できませんでした。");
 }
 
 export async function deleteQuiz(quizId: string): Promise<void> {
