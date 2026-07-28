@@ -141,6 +141,11 @@
     "workerDirectory": ["public"]
   },
   "overrides": {
-    "storybook": "$storybook"
+    "storybook": "$storybook",
+    "mdast-util-to-hast": "13.2.1",
+    "mermaid": {
+      "uuid": "14.0.1"
+    },
+    "morgan": "1.11.0"
   }
 }
