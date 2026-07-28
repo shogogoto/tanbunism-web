@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import {
   Alert,
   AlertDescription,
@@ -215,11 +216,16 @@ export default function QuizSession() {
 
   return (
     <div className="mx-auto max-w-2xl p-4 sm:p-6 space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">クイズ</h1>
-        <p className="text-sm text-muted-foreground">
-          StudyPlanから提案された問題を解きます。
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">クイズ</h1>
+          <p className="text-sm text-muted-foreground">
+            StudyPlanから提案された問題を解きます。
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link to="/quiz/list">一覧</Link>
+        </Button>
       </header>
 
       <PlanToolbar

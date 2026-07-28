@@ -24,6 +24,7 @@ export * from "./hTTPValidationError";
 export * from "./kNode";
 export * from "./knowde";
 export * from "./kStats";
+export * from "./listCreatedQuizzesQuizCreatedGetParams";
 export * from "./listQuizQuizGetParams";
 export * from "./mResource";
 export * from "./nameSpace";

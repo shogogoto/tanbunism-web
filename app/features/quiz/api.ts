@@ -1,7 +1,9 @@
 import {
   answerQuizApiQuizAnswerQuizIdPost,
   createStudyPlanApiQuizStudyPlansPost,
+  deleteQuizApiQuizQuizIdDelete,
   getNamaspaceNamespaceGet,
+  listCreatedQuizzesQuizCreatedGet,
   listStudyPlansApiQuizStudyPlansGet,
   recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPost,
 } from "./generated/api";
@@ -9,11 +11,12 @@ import type {
   HTTPValidationError,
   QuizChain,
   QuizRecommendationResponse,
+  ReadableQuiz,
   StudyPlan,
   StudyPlanDraft,
 } from "./generated/models";
 
-export type { QuizChain, StudyPlan, StudyPlanDraft };
+export type { QuizChain, ReadableQuiz, StudyPlan, StudyPlanDraft };
 export type QuizRecommendation = QuizRecommendationResponse;
 export type StudyResource = {
   uid: string;
@@ -101,4 +104,21 @@ export async function answerQuiz(
     },
   );
   return unwrap(response, "回答を送信できませんでした。");
+}
+
+export async function listCreatedQuizzes(): Promise<ReadableQuiz[]> {
+  const response = await listCreatedQuizzesQuizCreatedGet(
+    { page: 1, size: 100 },
+    { credentials: "include" },
+  );
+  return unwrap(response, "作成したクイズを取得できませんでした。").data;
+}
+
+export async function deleteQuiz(quizId: string): Promise<void> {
+  const response = await deleteQuizApiQuizQuizIdDelete(quizId, {
+    credentials: "include",
+  });
+  if (response.status >= 400) {
+    throw new QuizApiError("クイズを削除できませんでした。", response.status);
+  }
 }

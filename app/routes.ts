@@ -18,6 +18,7 @@ export default [
     route("register", "routes/user/register.tsx"),
     route("login", "routes/user/login.tsx"),
     route("quiz", "routes/quiz.tsx"),
+    route("quiz/list", "routes/quiz-list.tsx"),
 
     layout("layouts/SideViewLayout/index.tsx", [
       route("home", "routes/home.tsx"),

@@ -11,6 +11,7 @@ import type {
   BodyPostTextResourceTextPost,
   CreateQuizParam,
   HTTPValidationError,
+  ListCreatedQuizzesQuizCreatedGetParams,
   ListQuizQuizGetParams,
   NameSpace,
   PostTextResourceTextPost200,
@@ -511,6 +512,124 @@ export const listQuizQuizGet = async (
     status: res.status,
     headers: res.headers,
   } as listQuizQuizGetResponse;
+};
+
+export type listCreatedQuizzesQuizCreatedGetResponse200 = {
+  data: ReadableQuizResult;
+  status: 200;
+};
+
+export type listCreatedQuizzesQuizCreatedGetResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listCreatedQuizzesQuizCreatedGetResponseSuccess =
+  listCreatedQuizzesQuizCreatedGetResponse200 & {
+    headers: Headers;
+  };
+export type listCreatedQuizzesQuizCreatedGetResponseError =
+  listCreatedQuizzesQuizCreatedGetResponse422 & {
+    headers: Headers;
+  };
+
+export type listCreatedQuizzesQuizCreatedGetResponse =
+  | listCreatedQuizzesQuizCreatedGetResponseSuccess
+  | listCreatedQuizzesQuizCreatedGetResponseError;
+
+export const getListCreatedQuizzesQuizCreatedGetUrl = (
+  params?: ListCreatedQuizzesQuizCreatedGetParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `https://knowde.onrender.com/quiz/created?${stringifiedParams}`
+    : "https://knowde.onrender.com/quiz/created";
+};
+
+/**
+ * 認証ユーザー自身が作成したクイズを一覧取得.
+ * @summary List Created Quizzes
+ */
+export const listCreatedQuizzesQuizCreatedGet = async (
+  params?: ListCreatedQuizzesQuizCreatedGetParams,
+  options?: RequestInit,
+): Promise<listCreatedQuizzesQuizCreatedGetResponse> => {
+  const res = await fetch(getListCreatedQuizzesQuizCreatedGetUrl(params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listCreatedQuizzesQuizCreatedGetResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as listCreatedQuizzesQuizCreatedGetResponse;
+};
+
+export type deleteQuizApiQuizQuizIdDeleteResponse204 = {
+  data: undefined;
+  status: 204;
+};
+
+export type deleteQuizApiQuizQuizIdDeleteResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type deleteQuizApiQuizQuizIdDeleteResponseSuccess =
+  deleteQuizApiQuizQuizIdDeleteResponse204 & {
+    headers: Headers;
+  };
+export type deleteQuizApiQuizQuizIdDeleteResponseError =
+  deleteQuizApiQuizQuizIdDeleteResponse422 & {
+    headers: Headers;
+  };
+
+export type deleteQuizApiQuizQuizIdDeleteResponse =
+  | deleteQuizApiQuizQuizIdDeleteResponseSuccess
+  | deleteQuizApiQuizQuizIdDeleteResponseError;
+
+export const getDeleteQuizApiQuizQuizIdDeleteUrl = (quizId: string) => {
+  return `https://knowde.onrender.com/quiz/${quizId}`;
+};
+
+/**
+ * 認証ユーザー自身が作成したQuizを削除.
+ * @summary Delete Quiz Api
+ */
+export const deleteQuizApiQuizQuizIdDelete = async (
+  quizId: string,
+  options?: RequestInit,
+): Promise<deleteQuizApiQuizQuizIdDeleteResponse> => {
+  const res = await fetch(getDeleteQuizApiQuizQuizIdDeleteUrl(quizId), {
+    ...options,
+    method: "DELETE",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: deleteQuizApiQuizQuizIdDeleteResponse["data"] = body
+    ? JSON.parse(body)
+    : undefined;
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as deleteQuizApiQuizQuizIdDeleteResponse;
 };
 
 export type answerQuizApiQuizAnswerQuizIdPostResponse200 = {
