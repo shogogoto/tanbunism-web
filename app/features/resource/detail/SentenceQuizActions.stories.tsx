@@ -66,6 +66,32 @@ const meta = {
             no_correct_option: false,
           }),
         ),
+        http.post("*/quiz/answer/:quizId", async ({ request }) => {
+          const body = (await request.json()) as { selected: string[] };
+          return HttpResponse.json({
+            sentences: [
+              {
+                uid: "sentence-1",
+                sentence: "演算順序を交換しても結果が変わらない。",
+                term: { names: ["可換"] },
+                stats: {},
+                resource_uid: "resource-1",
+              },
+            ],
+            quizzes: [],
+            links: [],
+            answers: [
+              {
+                answer_uid: "answer-1",
+                quiz_uid: "quiz-1",
+                selected: body.selected,
+                who: "user-1",
+                is_correct: body.selected.includes("sentence-1"),
+                created: "2026-07-28T00:00:00Z",
+              },
+            ],
+          });
+        }),
       ],
     },
   },

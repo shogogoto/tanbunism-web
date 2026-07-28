@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import QuizAttempt from "~/features/quiz/QuizAttempt";
 import {
   type ReadableQuiz,
   createSentenceQuiz,
   listCreatedQuizzes,
 } from "~/features/quiz/api";
-import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import {
   DropdownMenu,
@@ -123,22 +123,7 @@ export default function SentenceQuizActions({
           )}
           {!isLoading &&
             quizzes?.map((quiz) => (
-              <div key={quiz.quiz_id} className="space-y-2 border p-3">
-                <p className="text-sm font-medium">{quiz.statement}</p>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(quiz.options).map(([optionId, option]) => (
-                    <span
-                      key={optionId}
-                      className="inline-flex items-center gap-1 text-xs"
-                    >
-                      {quiz.correct.includes(optionId) && (
-                        <Badge variant="secondary">正解</Badge>
-                      )}
-                      {option}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <QuizAttempt key={quiz.quiz_id} quiz={quiz} />
             ))}
           {!isLoading && quizzes?.length === 0 && (
             <p className="text-xs text-muted-foreground">
