@@ -16,6 +16,7 @@ const plan = {
 const recommendations = [
   {
     resource_id: "resource-algebra",
+    reason: "unattempted",
     quiz: {
       quiz_id: "quiz-commutative",
       statement: "「可換」とはどのような性質ですか？",
@@ -31,6 +32,7 @@ const recommendations = [
   },
   {
     resource_id: "resource-algebra",
+    reason: "low_accuracy",
     quiz: {
       quiz_id: "quiz-identity",
       statement: "単位元の説明として正しいものを選んでください。",
@@ -129,6 +131,39 @@ const meta = {
     msw: {
       handlers: [
         http.get("*/quiz/study-plans", () => HttpResponse.json([plan])),
+        http.get("*/namespace", () =>
+          HttpResponse.json({
+            g: {
+              directed: true,
+              edges: [],
+              graph: {},
+              multigraph: false,
+              nodes: [
+                {
+                  id: {
+                    uid: "resource-algebra",
+                    name: "代数学の読書メモ",
+                    authors: [],
+                  },
+                },
+              ],
+            },
+            roots_: {},
+            user_id: "user-preview",
+            stats: { "resource-algebra": { n_sentence: 24 } },
+          }),
+        ),
+        http.put("*/quiz/study-plans/:planId", async ({ request }) =>
+          HttpResponse.json({
+            ...((await request.json()) as typeof plan),
+            uid: plan.uid,
+            created: plan.created,
+          }),
+        ),
+        http.delete(
+          "*/quiz/study-plans/:planId",
+          () => new HttpResponse(null, { status: 204 }),
+        ),
         http.post("*/quiz/study-plans/:planId/recommendations", () =>
           HttpResponse.json(recommendations),
         ),
@@ -158,6 +193,35 @@ export const AnsweredWithQuizChain: Story = {
     await expect(canvas.findByText("正解です")).resolves.toBeInTheDocument();
     await expect(
       canvas.findByRole("heading", { name: "このクイズの知識" }),
+    ).resolves.toBeInTheDocument();
+  },
+};
+
+export const CompletedSession: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "演算の順序を交換しても結果が変わらない",
+      }),
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "回答する" }));
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "次の問題" }),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", {
+        name: "演算しても相手を変化させない元",
+      }),
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "回答する" }));
+
+    await expect(
+      canvas.findByRole("heading", { name: "今回の学習結果" }),
+    ).resolves.toBeInTheDocument();
+    await expect(
+      canvas.findByText("2問中 2問正解しました。"),
     ).resolves.toBeInTheDocument();
   },
 };

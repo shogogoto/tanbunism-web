@@ -5,6 +5,18 @@ import {
   AlertDescription,
   AlertTitle,
 } from "~/shared/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/shared/components/ui/alert-dialog";
+import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import {
   Card,
@@ -21,6 +33,7 @@ import {
   type QuizRecommendation,
   type StudyPlan,
   answerQuiz,
+  deleteStudyPlan,
   listStudyPlans,
   recommendQuizzes,
 } from "./api";
@@ -42,7 +55,10 @@ export default function QuizSession() {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPlanForm, setShowPlanForm] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<StudyPlan>();
   const [chain, setChain] = useState<QuizChain>();
+  const [results, setResults] = useState<boolean[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -72,6 +88,7 @@ export default function QuizSession() {
     };
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey explicitly reloads recommendations.
   useEffect(() => {
     if (!planId) {
       setRecommendations([]);
@@ -83,6 +100,7 @@ export default function QuizSession() {
     setSelected([]);
     setIsCorrect(undefined);
     setChain(undefined);
+    setResults([]);
 
     async function loadRecommendations() {
       try {
@@ -107,7 +125,7 @@ export default function QuizSession() {
     return () => {
       active = false;
     };
-  }, [planId]);
+  }, [planId, refreshKey]);
 
   const recommendation = recommendations[recommendationIndex];
 
@@ -125,7 +143,9 @@ export default function QuizSession() {
     setIsSubmitting(true);
     try {
       const chain = await answerQuiz(recommendation.quiz.quiz_id, selected);
-      setIsCorrect(chain.answers?.[0]?.is_correct ?? false);
+      const correct = chain.answers?.[0]?.is_correct ?? false;
+      setIsCorrect(correct);
+      setResults((current) => [...current, correct]);
       setChain(chain);
     } catch (error) {
       setLoadState({
@@ -151,6 +171,33 @@ export default function QuizSession() {
     setPlans((current) => [...current, plan]);
     setPlanId(plan.uid);
     setShowPlanForm(false);
+  }
+
+  function handlePlanUpdated(plan: StudyPlan) {
+    setPlans((current) =>
+      current.map((item) => (item.uid === plan.uid ? plan : item)),
+    );
+    setEditingPlan(undefined);
+    setRefreshKey((current) => current + 1);
+  }
+
+  async function handlePlanDeleted() {
+    await deleteStudyPlan(planId);
+    const remaining = plans.filter((plan) => plan.uid !== planId);
+    setPlans(remaining);
+    setPlanId(remaining[0]?.uid ?? "");
+    setEditingPlan(undefined);
+  }
+
+  function retryIncorrectQuizzes() {
+    setRecommendations((current) =>
+      current.filter((_, index) => results[index] === false),
+    );
+    setRecommendationIndex(0);
+    setSelected([]);
+    setIsCorrect(undefined);
+    setChain(undefined);
+    setResults([]);
   }
 
   if (loadState.status === "loading") {
@@ -191,14 +238,24 @@ export default function QuizSession() {
           plans={plans}
           planId={planId}
           onChange={setPlanId}
-          onCreate={() => setShowPlanForm(true)}
+          onCreate={() => {
+            setEditingPlan(undefined);
+            setShowPlanForm(true);
+          }}
+          onEdit={() => setEditingPlan(plans.find(({ uid }) => uid === planId))}
+          onDelete={handlePlanDeleted}
         />
-        {showPlanForm && (
+        {(showPlanForm || editingPlan) && (
           <Card className="border">
             <CardContent className="pt-4">
               <StudyPlanForm
+                plan={editingPlan}
                 onCreated={handlePlanCreated}
-                onCancel={() => setShowPlanForm(false)}
+                onUpdated={handlePlanUpdated}
+                onCancel={() => {
+                  setShowPlanForm(false);
+                  setEditingPlan(undefined);
+                }}
               />
             </CardContent>
           </Card>
@@ -232,15 +289,25 @@ export default function QuizSession() {
         plans={plans}
         planId={planId}
         onChange={setPlanId}
-        onCreate={() => setShowPlanForm(true)}
+        onCreate={() => {
+          setEditingPlan(undefined);
+          setShowPlanForm(true);
+        }}
+        onEdit={() => setEditingPlan(plans.find(({ uid }) => uid === planId))}
+        onDelete={handlePlanDeleted}
       />
 
-      {showPlanForm && (
+      {(showPlanForm || editingPlan) && (
         <Card className="border">
           <CardContent className="pt-4">
             <StudyPlanForm
+              plan={editingPlan}
               onCreated={handlePlanCreated}
-              onCancel={() => setShowPlanForm(false)}
+              onUpdated={handlePlanUpdated}
+              onCancel={() => {
+                setShowPlanForm(false);
+                setEditingPlan(undefined);
+              }}
             />
           </CardContent>
         </Card>
@@ -249,7 +316,12 @@ export default function QuizSession() {
       <Card className="border">
         <CardHeader>
           <CardDescription>
-            {recommendationIndex + 1} / {recommendations.length}
+            <span className="flex flex-wrap items-center gap-2">
+              <span>
+                {recommendationIndex + 1} / {recommendations.length}
+              </span>
+              <RecommendationReason reason={recommendation.reason} />
+            </span>
           </CardDescription>
           <CardTitle className="text-lg leading-relaxed">
             {quiz.statement}
@@ -310,7 +382,74 @@ export default function QuizSession() {
         </CardFooter>
       </Card>
       {chain && <QuizChainReview chain={chain} />}
+      {isCorrect !== undefined && !hasNext && (
+        <SessionSummary
+          recommendations={recommendations}
+          results={results}
+          onRetryIncorrect={retryIncorrectQuizzes}
+          onRequestNew={() => setRefreshKey((current) => current + 1)}
+        />
+      )}
     </div>
+  );
+}
+
+const recommendationReasonLabels = {
+  unattempted: "未回答のクイズ",
+  low_accuracy: "正答率が低いため復習",
+  coverage: "Coverageを広げる",
+} as const;
+
+function RecommendationReason({
+  reason,
+}: {
+  reason: keyof typeof recommendationReasonLabels;
+}) {
+  return (
+    <Badge variant="secondary">{recommendationReasonLabels[reason]}</Badge>
+  );
+}
+
+function SessionSummary({
+  recommendations,
+  results,
+  onRetryIncorrect,
+  onRequestNew,
+}: {
+  recommendations: QuizRecommendation[];
+  results: boolean[];
+  onRetryIncorrect: () => void;
+  onRequestNew: () => void;
+}) {
+  const correctCount = results.filter(Boolean).length;
+  const resourceIds = [
+    ...new Set(recommendations.map(({ resource_id }) => resource_id)),
+  ];
+
+  return (
+    <Card className="border">
+      <CardHeader>
+        <CardTitle>今回の学習結果</CardTitle>
+        <CardDescription>
+          {results.length}問中 {correctCount}問正解しました。
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        {correctCount < results.length && (
+          <Button type="button" onClick={onRetryIncorrect}>
+            間違えた問題をもう一度
+          </Button>
+        )}
+        <Button type="button" variant="outline" onClick={onRequestNew}>
+          新しい推薦を取得
+        </Button>
+        {resourceIds.map((resourceId) => (
+          <Button key={resourceId} asChild variant="ghost">
+            <Link to={`/resource/${resourceId}`}>Resourceへ戻る</Link>
+          </Button>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -344,9 +483,13 @@ function PlanSelector({
 
 function PlanToolbar({
   onCreate,
+  onEdit,
+  onDelete,
   ...selectorProps
 }: Parameters<typeof PlanSelector>[0] & {
   onCreate: () => void;
+  onEdit: () => void;
+  onDelete: () => Promise<void>;
 }) {
   return (
     <div className="flex items-end gap-2">
@@ -356,6 +499,30 @@ function PlanToolbar({
       <Button type="button" variant="outline" onClick={onCreate}>
         新規作成
       </Button>
+      <Button type="button" variant="outline" onClick={onEdit}>
+        編集
+      </Button>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button type="button" variant="ghost">
+            削除
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>StudyPlanを削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              クイズや回答履歴は削除されません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void onDelete()}>
+              削除する
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

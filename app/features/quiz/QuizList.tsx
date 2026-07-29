@@ -23,7 +23,9 @@ import {
 import {
   type QuizResourceStatus,
   type ReadableQuiz,
+  type ResourceLearningStatus,
   deleteQuiz,
+  getLearningProgress,
   listCreatedQuizResources,
   listCreatedQuizzes,
 } from "./api";
@@ -33,6 +35,7 @@ type LoadState =
   | {
       status: "loaded";
       resources: QuizResourceStatus[];
+      learningByResource: Map<string, ResourceLearningStatus>;
       quizzes?: ReadableQuiz[];
     }
   | { status: "error"; message: string };
@@ -44,7 +47,62 @@ const quizTypeLabels = {
   pair2rel: "ペア→関係",
 } as const;
 
-function ResourceCard({ status }: { status: QuizResourceStatus }) {
+function Percentage({ value }: { value: number }) {
+  return <>{Math.round(value * 100)}%</>;
+}
+
+function LearningProgress({ status }: { status: ResourceLearningStatus }) {
+  return (
+    <div className="space-y-3 border-t pt-3">
+      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+        <div>
+          <div className="font-semibold">
+            <Percentage value={status.overall_coverage} />
+          </div>
+          <div className="text-muted-foreground">Coverage</div>
+        </div>
+        <div>
+          <div className="font-semibold">
+            <Percentage value={status.overall_attempt_rate} />
+          </div>
+          <div className="text-muted-foreground">Attempt</div>
+        </div>
+        <div>
+          <div className="font-semibold">
+            <Percentage value={status.overall_accuracy} />
+          </div>
+          <div className="text-muted-foreground">Accuracy</div>
+        </div>
+      </div>
+      <div className="space-y-1 text-xs">
+        {Object.entries(status.by_quiz_type).map(([type, learning]) => (
+          <div key={type} className="grid grid-cols-[1fr_repeat(3,3rem)] gap-2">
+            <span>
+              {quizTypeLabels[type as keyof typeof quizTypeLabels] ?? type}
+            </span>
+            <span title="Coverage">
+              <Percentage value={learning.coverage.ratio} />
+            </span>
+            <span title="Attempt">
+              <Percentage value={learning.attempt_rate.ratio} />
+            </span>
+            <span title="Accuracy">
+              <Percentage value={learning.performance.accuracy} />
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ResourceCard({
+  status,
+  learning,
+}: {
+  status: QuizResourceStatus;
+  learning?: ResourceLearningStatus;
+}) {
   const counts = Object.entries(status.quiz_counts ?? {});
 
   return (
@@ -71,6 +129,7 @@ function ResourceCard({ status }: { status: QuizResourceStatus }) {
             </Badge>
           ))}
         </div>
+        {learning && <LearningProgress status={learning} />}
         <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground">
           <span>
             最終作成: {new Date(status.last_created_at).toLocaleString("ja-JP")}
@@ -181,8 +240,21 @@ export default function QuizList() {
         ? listCreatedQuizzes(resourceId, sentenceId)
         : Promise.resolve(undefined),
     ])
-      .then(([resources, quizzes]) => {
-        if (active) setLoadState({ status: "loaded", resources, quizzes });
+      .then(async ([resources, quizzes]) => {
+        const learning = await Promise.all(
+          resources.map(
+            async ({ resource }) =>
+              [resource.uid, await getLearningProgress(resource.uid)] as const,
+          ),
+        );
+        if (active) {
+          setLoadState({
+            status: "loaded",
+            resources,
+            learningByResource: new Map(learning),
+            quizzes,
+          });
+        }
       })
       .catch((error: unknown) => {
         if (active) {
@@ -249,7 +321,11 @@ export default function QuizList() {
       {loadState.status === "loaded" && !resourceId && (
         <div className="space-y-3">
           {loadState.resources.map((resource) => (
-            <ResourceCard key={resource.resource.uid} status={resource} />
+            <ResourceCard
+              key={resource.resource.uid}
+              status={resource}
+              learning={loadState.learningByResource.get(resource.resource.uid)}
+            />
           ))}
         </div>
       )}

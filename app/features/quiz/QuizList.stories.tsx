@@ -57,6 +57,37 @@ const resources = [
   },
 ];
 
+const learningStatus = {
+  resource_id: "resource-algebra",
+  user_id: "user-1",
+  by_quiz_type: {
+    term2sent: {
+      coverage: { eligible: 10, covered: 8, ratio: 0.8 },
+      attempt_rate: { available: 8, attempted: 6, ratio: 0.75 },
+      performance: {
+        attempts: 10,
+        corrects: 7,
+        accuracy: 0.7,
+        last_attempted_at: null,
+      },
+    },
+    pair2rel: {
+      coverage: { eligible: 8, covered: 2, ratio: 0.25 },
+      attempt_rate: { available: 2, attempted: 1, ratio: 0.5 },
+      performance: {
+        attempts: 2,
+        corrects: 1,
+        accuracy: 0.5,
+        last_attempted_at: null,
+      },
+    },
+  },
+  overall_coverage: 0.56,
+  overall_attempt_rate: 0.7,
+  overall_accuracy: 0.67,
+  last_attempted_at: null,
+};
+
 const meta = {
   title: "Features/Quiz/QuizList",
   component: QuizList,
@@ -65,6 +96,12 @@ const meta = {
       handlers: [
         http.get("*/quiz/created/resources", () =>
           HttpResponse.json(resources),
+        ),
+        http.get("*/quiz/learning-progress/:resourceId", ({ params }) =>
+          HttpResponse.json({
+            ...learningStatus,
+            resource_id: params.resourceId,
+          }),
         ),
         http.get("*/quiz/created", () =>
           HttpResponse.json({ data: quizzes, total: quizzes.length }),

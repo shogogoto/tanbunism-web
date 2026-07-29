@@ -9,6 +9,7 @@ import {
   type StudyResource,
   createStudyPlan,
   listStudyResources,
+  updateStudyPlan,
 } from "./api";
 
 const quizTypes = [
@@ -20,18 +21,25 @@ const quizTypes = [
 
 export default function StudyPlanForm({
   onCreated,
+  plan,
+  onUpdated,
   onCancel,
 }: {
   onCreated: (plan: StudyPlan) => void;
+  plan?: StudyPlan;
+  onUpdated?: (plan: StudyPlan) => void;
   onCancel?: () => void;
 }) {
   const [resources, setResources] = useState<StudyResource[]>([]);
-  const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([]);
-  const [name, setName] = useState("");
-  const [quizType, setQuizType] =
-    useState<StudyPlanDraft["quiz_type"]>("term2sent");
-  const [nQuiz, setNQuiz] = useState(5);
-  const [nOption, setNOption] = useState(4);
+  const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>(
+    plan?.resource_ids ?? [],
+  );
+  const [name, setName] = useState(plan?.name ?? "");
+  const [quizType, setQuizType] = useState<StudyPlanDraft["quiz_type"]>(
+    plan?.quiz_type ?? "term2sent",
+  );
+  const [nQuiz, setNQuiz] = useState(plan?.n_quiz ?? 5);
+  const [nOption, setNOption] = useState(plan?.n_option ?? 4);
   const [error, setError] = useState<string>();
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,14 +80,18 @@ export default function StudyPlanForm({
     setError(undefined);
     setIsSubmitting(true);
     try {
-      const plan = await createStudyPlan({
+      const draft = {
         name,
         resource_ids: selectedResourceIds,
         quiz_type: quizType,
         n_quiz: nQuiz,
         n_option: nOption,
-      });
-      onCreated(plan);
+      };
+      if (plan) {
+        onUpdated?.(await updateStudyPlan(plan.uid, draft));
+      } else {
+        onCreated(await createStudyPlan(draft));
+      }
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -191,7 +203,13 @@ export default function StudyPlanForm({
             selectedResourceIds.length === 0
           }
         >
-          {isSubmitting ? "作成中…" : "作成してクイズを始める"}
+          {isSubmitting
+            ? plan
+              ? "更新中…"
+              : "作成中…"
+            : plan
+              ? "変更を保存"
+              : "作成してクイズを始める"}
         </Button>
       </div>
     </form>

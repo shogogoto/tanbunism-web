@@ -3,12 +3,15 @@ import {
   createQuizApiQuizPost,
   createStudyPlanApiQuizStudyPlansPost,
   deleteQuizApiQuizQuizIdDelete,
+  deleteStudyPlanApiQuizStudyPlansPlanIdDelete,
+  getLearningProgressApiQuizLearningProgressResourceIdGet,
   getNamaspaceNamespaceGet,
   listCreatedQuizResourcesQuizCreatedResourcesGet,
   listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGet,
   listCreatedQuizzesQuizCreatedGet,
   listStudyPlansApiQuizStudyPlansGet,
   recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPost,
+  updateStudyPlanApiQuizStudyPlansPlanIdPut,
 } from "./generated/api";
 import type {
   HTTPValidationError,
@@ -16,6 +19,7 @@ import type {
   QuizRecommendationResponse,
   QuizResourceStatus,
   ReadableQuiz,
+  ResourceLearningStatus,
   SentenceQuizStatus,
   StudyPlan,
   StudyPlanDraft,
@@ -25,6 +29,7 @@ export type {
   QuizChain,
   QuizResourceStatus,
   ReadableQuiz,
+  ResourceLearningStatus,
   SentenceQuizStatus,
   StudyPlan,
   StudyPlanDraft,
@@ -93,6 +98,27 @@ export async function createStudyPlan(
   return unwrap(response, "学習計画を作成できませんでした。");
 }
 
+export async function updateStudyPlan(
+  planId: string,
+  draft: StudyPlanDraft,
+): Promise<StudyPlan> {
+  const response = await updateStudyPlanApiQuizStudyPlansPlanIdPut(
+    planId,
+    draft,
+    { credentials: "include" },
+  );
+  return unwrap(response, "学習計画を更新できませんでした。");
+}
+
+export async function deleteStudyPlan(planId: string): Promise<void> {
+  const response = await deleteStudyPlanApiQuizStudyPlansPlanIdDelete(planId, {
+    credentials: "include",
+  });
+  if (response.status >= 400) {
+    throw new QuizApiError("学習計画を削除できませんでした。", response.status);
+  }
+}
+
 export async function recommendQuizzes(
   planId: string,
 ): Promise<QuizRecommendation[]> {
@@ -125,6 +151,16 @@ export async function listCreatedQuizResources(): Promise<
     credentials: "include",
   });
   return unwrap(response, "Resourceごとのクイズ状況を取得できませんでした。");
+}
+
+export async function getLearningProgress(
+  resourceId: string,
+): Promise<ResourceLearningStatus> {
+  const response =
+    await getLearningProgressApiQuizLearningProgressResourceIdGet(resourceId, {
+      credentials: "include",
+    });
+  return unwrap(response, "Resourceの学習状況を取得できませんでした。");
 }
 
 export async function listCreatedQuizSentences(

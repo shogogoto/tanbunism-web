@@ -40,6 +40,7 @@ export * from "./quizChainQuiz";
 export * from "./quizChainRole";
 export * from "./quizCoverage";
 export * from "./quizPerformance";
+export * from "./quizRecommendationReason";
 export * from "./quizRecommendationResponse";
 export * from "./quizRel";
 export * from "./quizResourceStatus";
