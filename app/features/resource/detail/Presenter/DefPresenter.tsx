@@ -6,6 +6,7 @@ import { toFormulas } from "~/shared/lib/formula";
 import { useResourceDetail } from "../Context";
 import RefLinkSentence from "../LinkedSentence";
 import Relations from "../Relations";
+import SentenceQuizActions from "../SentenceQuizActions";
 import type { toAdjacent } from "../util";
 
 type Props = {
@@ -70,6 +71,7 @@ export default function DefPresenter({ adj, prefix }: Props) {
         </span>
       )}
       <Relations startId={adj.kn.uid} />
+      <SentenceQuizActions sentenceId={adj.kn.uid} />
     </div>
   );
 }

@@ -24,7 +24,11 @@ npm run build # Create a production build
 
 ## Generating Backend API Client
 ```bash
-npx orval
+npm run generate:api
+
+ローカルbackendからAPIクライアントを生成し、そのbackendへ接続する場合は
+`.env.example` を `.env` にコピーしてから、backendを
+`127.0.0.1:8000` で起動する。
 ```
 
 ## Deployment

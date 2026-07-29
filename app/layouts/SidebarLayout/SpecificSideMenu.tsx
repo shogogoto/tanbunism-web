@@ -10,6 +10,7 @@ import {
   Search,
   SearchCode,
   Speech,
+  SquareCheckBig,
   TextSearch,
   UserSearch,
   Users,
@@ -53,7 +54,7 @@ export function RankingSideMenu() {
 export function FeaturesMenu() {
   return (
     <SideMenu
-      title={"ログイン後機能(予定)"}
+      title={"その他（予定）"}
       to={"#"}
       icon={<LogIn />}
       subs={[
@@ -64,6 +65,28 @@ export function FeaturesMenu() {
         { to: "/", title: "検索パラメータ", icon: <SearchCode /> },
         { to: "/", title: "参加中ディスカッション", icon: <Speech /> },
         { to: "/", title: "加入グループ", icon: <Users /> },
+      ]}
+    />
+  );
+}
+
+export function LearningMenu() {
+  return (
+    <SideMenu
+      title="学習"
+      to="#"
+      icon={<SquareCheckBig />}
+      subs={[
+        {
+          to: "/quiz",
+          title: "クイズを解く",
+          icon: <SquareCheckBig />,
+        },
+        {
+          to: "/quiz/list",
+          title: "作成したクイズ",
+          icon: <Folder />,
+        },
       ]}
     />
   );
