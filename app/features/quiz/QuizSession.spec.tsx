@@ -307,7 +307,15 @@ describe("QuizSession", () => {
     expect(await screen.findByText("学習計画を作る")).toBeInTheDocument();
     await user.type(screen.getByLabelText("Plan名"), "数学の復習");
     await user.click(screen.getByRole("checkbox", { name: "数学ノート" }));
-    await user.click(screen.getByRole("checkbox", { name: "単文から用語" }));
+    for (const quizType of [
+      "単文から用語",
+      "関係から単文の組",
+      "単文の組から関係",
+    ]) {
+      await user.click(screen.getByRole("checkbox", { name: quizType }));
+    }
+    await user.clear(screen.getByLabelText("出題数（合計）"));
+    await user.type(screen.getByLabelText("出題数（合計）"), "1");
     await user.click(
       screen.getByRole("button", { name: "作成してクイズを始める" }),
     );
@@ -316,7 +324,13 @@ describe("QuizSession", () => {
       await screen.findByText("「可換」とはどのような性質ですか？"),
     ).toBeInTheDocument();
     expect(createdPlan?.resource_ids).toEqual([resourceId]);
-    expect(createdPlan?.quiz_types).toEqual(["term2sent", "sent2term"]);
+    expect(createdPlan?.quiz_types).toEqual([
+      "term2sent",
+      "sent2term",
+      "rel2pair",
+      "pair2rel",
+    ]);
+    expect(createdPlan?.n_quiz).toBe(4);
   });
 
   it("StudyPlanを編集・削除できる", async () => {

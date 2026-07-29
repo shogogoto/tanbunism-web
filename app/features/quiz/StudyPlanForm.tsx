@@ -38,7 +38,9 @@ export default function StudyPlanForm({
   const [selectedQuizTypes, setSelectedQuizTypes] = useState<
     StudyPlanDraft["quiz_types"]
   >(plan?.quiz_types ?? ["term2sent"]);
-  const [nQuiz, setNQuiz] = useState(plan?.n_quiz ?? 5);
+  const [nQuiz, setNQuiz] = useState<number | "">(
+    Math.max(plan?.n_quiz ?? 5, plan?.quiz_types.length ?? 1),
+  );
   const [nOption, setNOption] = useState(plan?.n_option ?? 4);
   const [error, setError] = useState<string>();
   const [isLoading, setIsLoading] = useState(true);
@@ -76,10 +78,12 @@ export default function StudyPlanForm({
   }
 
   function toggleQuizType(quizType: StudyPlanDraft["quiz_types"][number]) {
-    setSelectedQuizTypes((current) =>
-      current.includes(quizType)
-        ? current.filter((type) => type !== quizType)
-        : [...current, quizType],
+    const nextQuizTypes = selectedQuizTypes.includes(quizType)
+      ? selectedQuizTypes.filter((type) => type !== quizType)
+      : [...selectedQuizTypes, quizType];
+    setSelectedQuizTypes(nextQuizTypes);
+    setNQuiz((current) =>
+      Math.max(current === "" ? 0 : current, nextQuizTypes.length),
     );
   }
 
@@ -92,7 +96,7 @@ export default function StudyPlanForm({
         name,
         resource_ids: selectedResourceIds,
         quiz_types: selectedQuizTypes,
-        n_quiz: nQuiz,
+        n_quiz: Math.max(nQuiz === "" ? 0 : nQuiz, selectedQuizTypes.length, 1),
         n_option: nOption,
       };
       if (plan) {
@@ -164,17 +168,35 @@ export default function StudyPlanForm({
             </label>
           ))}
         </div>
+        <p className="text-xs text-muted-foreground">
+          出題数は全形式の合計です。選択した各形式を最低1問ずつ出題します。
+        </p>
       </fieldset>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="quiz-count">出題数</Label>
+          <Label htmlFor="quiz-count">出題数（合計）</Label>
           <Input
             id="quiz-count"
             type="number"
-            min={1}
+            min={Math.max(1, selectedQuizTypes.length)}
             value={nQuiz}
-            onChange={(event) => setNQuiz(event.target.valueAsNumber)}
+            onChange={(event) => {
+              setNQuiz(
+                event.target.value === ""
+                  ? ""
+                  : Math.max(
+                      event.target.valueAsNumber,
+                      selectedQuizTypes.length,
+                      1,
+                    ),
+              );
+            }}
+            onBlur={() => {
+              if (nQuiz === "") {
+                setNQuiz(Math.max(selectedQuizTypes.length, 1));
+              }
+            }}
             required
           />
         </div>
