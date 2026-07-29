@@ -421,4 +421,22 @@ describe("QuizSession", () => {
       await screen.findByText("誤答肢が不足しています"),
     ).toBeInTheDocument();
   });
+
+  it("推薦APIの非JSONエラーを画面内に表示する", async () => {
+    server.use(
+      http.post(
+        "*/quiz/study-plans/plan-1/recommendations",
+        () => new HttpResponse("Bad Gateway", { status: 502 }),
+      ),
+    );
+
+    renderQuizSession();
+
+    expect(
+      await screen.findByText(
+        "クイズAPIからJSONではない応答が返されました。しばらく待って再試行してください。",
+      ),
+    ).toBeVisible();
+    expect(screen.getByText("クイズを開始できませんでした")).toBeVisible();
+  });
 });

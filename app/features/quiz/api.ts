@@ -168,9 +168,16 @@ export async function recommendQuizzes(
       signal,
     },
   );
-  const data = (await response.json()) as
-    | QuizRecommendation[]
-    | HTTPValidationError;
+  const body = await response.text();
+  let data: QuizRecommendation[] | HTTPValidationError;
+  try {
+    data = JSON.parse(body) as QuizRecommendation[] | HTTPValidationError;
+  } catch {
+    throw new QuizApiError(
+      "クイズAPIからJSONではない応答が返されました。しばらく待って再試行してください。",
+      response.status,
+    );
+  }
   const recommendations = unwrap(
     { data, status: response.status },
     "おすすめのクイズを取得できませんでした。",
