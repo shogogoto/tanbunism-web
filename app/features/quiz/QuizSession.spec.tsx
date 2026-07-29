@@ -244,4 +244,26 @@ describe("QuizSession", () => {
 
     expect(await screen.findByText("学習計画を作る")).toBeInTheDocument();
   });
+
+  it("推薦できない理由をAPIから表示する", async () => {
+    server.use(
+      http.post("*/quiz/study-plans/plan-1/recommendations", () =>
+        HttpResponse.json(
+          {
+            detail: {
+              code: 400,
+              message: "誤答肢が不足しています",
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+
+    renderQuizSession();
+
+    expect(
+      await screen.findByText("誤答肢が不足しています"),
+    ).toBeInTheDocument();
+  });
 });

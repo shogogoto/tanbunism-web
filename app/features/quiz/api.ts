@@ -62,7 +62,19 @@ function unwrap<T>(
   fallbackMessage: string,
 ): T {
   if (response.status >= 400) {
-    throw new QuizApiError(fallbackMessage, response.status);
+    const data = response.data as unknown;
+    const detail =
+      typeof data === "object" && data !== null && "detail" in data
+        ? data.detail
+        : undefined;
+    const message =
+      typeof detail === "object" &&
+      detail !== null &&
+      "message" in detail &&
+      typeof detail.message === "string"
+        ? detail.message
+        : fallbackMessage;
+    throw new QuizApiError(message, response.status);
   }
   return response.data as T;
 }
