@@ -62,6 +62,9 @@ export default function QuizSession() {
   const [isPreparingRecommendations, setIsPreparingRecommendations] =
     useState(false);
   const [preparingQuizType, setPreparingQuizType] = useState<QuizType>();
+  const [preparationPhase, setPreparationPhase] = useState<
+    "existing" | "generating"
+  >("existing");
   const [preparationError, setPreparationError] = useState<string>();
   const [submitError, setSubmitError] = useState<string>();
   const [showPlanForm, setShowPlanForm] = useState(false);
@@ -123,31 +126,33 @@ export default function QuizSession() {
     async function loadRecommendations() {
       let accumulated: QuizRecommendation[] = [];
       const errors: string[] = [];
-      for (const quizType of planQuizTypes) {
-        if (!active) return;
-        setPreparingQuizType(quizType);
-        try {
-          const loaded = await recommendQuizzes(
-            planId,
-            quizType,
-            controller.signal,
-          );
+      for (const phase of ["existing", "generating"] as const) {
+        setPreparationPhase(phase);
+        for (const quizType of planQuizTypes) {
           if (!active) return;
-          const byId = new Map(
-            [...accumulated, ...loaded].map((item) => [
-              item.quiz.quiz_id,
-              item,
-            ]),
-          );
-          accumulated = [...byId.values()];
-          setRecommendations(accumulated);
-        } catch (error) {
-          if (!active || controller.signal.aborted) return;
-          errors.push(
-            error instanceof Error
-              ? error.message
-              : `${quizType}のクイズを取得できませんでした。`,
-          );
+          setPreparingQuizType(quizType);
+          try {
+            const loaded = await recommendQuizzes(planId, quizType, {
+              generateMissing: phase === "generating",
+              signal: controller.signal,
+            });
+            if (!active) return;
+            const byId = new Map(
+              [...accumulated, ...loaded].map((item) => [
+                item.quiz.quiz_id,
+                item,
+              ]),
+            );
+            accumulated = [...byId.values()];
+            setRecommendations(accumulated);
+          } catch (error) {
+            if (!active || controller.signal.aborted) return;
+            errors.push(
+              error instanceof Error
+                ? error.message
+                : `${quizType}のクイズを取得できませんでした。`,
+            );
+          }
         }
       }
       if (!active) return;
@@ -266,6 +271,10 @@ export default function QuizSession() {
   const isComplete =
     recommendations.length > 0 &&
     recommendations.every(({ quiz }) => results[quiz.quiz_id] !== undefined);
+  const selectedPlan = plans.find(({ uid }) => uid === planId);
+  const expectedQuizCount = selectedPlan
+    ? Math.max(selectedPlan.n_quiz, selectedPlan.quiz_types.length)
+    : recommendations.length;
 
   function handleSessionKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     if (
@@ -428,7 +437,9 @@ export default function QuizSession() {
           <CardContent className="py-4">
             <p className="font-medium">
               {preparingQuizType
-                ? `${quizTypeLabels[preparingQuizType]}を準備しています…`
+                ? preparationPhase === "existing"
+                  ? `既存の${quizTypeLabels[preparingQuizType]}を確認しています…`
+                  : `${quizTypeLabels[preparingQuizType]}を作成しています…`
                 : "クイズを準備しています…"}
             </p>
             {recommendations.length > 0 && (
@@ -453,7 +464,7 @@ export default function QuizSession() {
             <QuizQuestion
               key={quizId}
               index={index}
-              total={recommendations.length}
+              total={expectedQuizCount}
               recommendation={recommendation}
               selected={answers[quizId] ?? []}
               result={results[quizId]}

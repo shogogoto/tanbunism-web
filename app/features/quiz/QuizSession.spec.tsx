@@ -186,12 +186,15 @@ describe("QuizSession", () => {
     expect(
       await screen.findByText(recommendation.quiz.statement),
     ).toBeVisible();
-    expect(screen.getByText("単文から用語を準備しています…")).toBeVisible();
+    expect(
+      screen.getByText("既存の単文から用語を確認しています…"),
+    ).toBeVisible();
+    expect(screen.getByText("1 / 2")).toBeVisible();
 
     finishSecondType();
     await waitFor(() => {
       expect(
-        screen.queryByText("単文から用語を準備しています…"),
+        screen.queryByText("既存の単文から用語を確認しています…"),
       ).not.toBeInTheDocument();
     });
   });

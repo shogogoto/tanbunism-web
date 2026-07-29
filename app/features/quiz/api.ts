@@ -148,14 +148,20 @@ export async function deleteStudyPlan(planId: string): Promise<void> {
 export async function recommendQuizzes(
   planId: string,
   quizType: QuizType,
-  signal?: AbortSignal,
+  {
+    generateMissing = true,
+    signal,
+  }: {
+    generateMissing?: boolean;
+    signal?: AbortSignal;
+  } = {},
 ): Promise<QuizRecommendation[]> {
   const url =
     getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostUrl(
       planId,
     );
   const response = await fetch(
-    `${url}?quiz_type=${encodeURIComponent(quizType)}`,
+    `${url}?quiz_type=${encodeURIComponent(quizType)}&generate_missing=${generateMissing}`,
     {
       method: "POST",
       credentials: "include",
