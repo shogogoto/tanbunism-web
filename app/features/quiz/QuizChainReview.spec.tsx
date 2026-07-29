@@ -73,4 +73,5 @@ it("関係クイズを起点・関係・終点として表示する", () => {
       name: "整数の加法群: 整数の加法群についての単文",
     }),
   ).toHaveAttribute("href", "/resource/resource#destination");
+  expect(screen.queryByText("単文へ →")).not.toBeInTheDocument();
 });

@@ -229,6 +229,9 @@ describe("QuizSession", () => {
     ).toHaveAttribute("href", "/resource/resource-1");
     expect(screen.getByText("このクイズの知識")).toBeInTheDocument();
     expect(
+      screen.getByRole("complementary", { name: "このクイズの知識" }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("link", {
         name: /可換: 可換とは、演算の順序を交換しても結果が変わらない/,
       }),

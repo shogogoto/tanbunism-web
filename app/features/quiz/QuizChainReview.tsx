@@ -1,11 +1,5 @@
 import { HashLink } from "~/shared/components/HashLink";
 import { Badge } from "~/shared/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "~/shared/components/ui/card";
 import type { QuizChain } from "./api";
 import type { Knowde, QuizChainLink, QuizChainRole } from "./generated/models";
 
@@ -28,9 +22,6 @@ function KnowdeLink({ knowde }: { knowde: Knowde }) {
     >
       {terms && <strong>{terms}: </strong>}
       <span className="group-hover:underline">{knowde.sentence}</span>
-      <span className="ml-2 whitespace-nowrap text-xs text-muted-foreground group-hover:text-primary">
-        単文へ →
-      </span>
     </HashLink>
   );
 }
@@ -124,17 +115,13 @@ export default function QuizChainReview({ chain }: { chain: QuizChain }) {
   const isRelationQuiz = quizType === "rel2pair" || quizType === "pair2rel";
 
   return (
-    <Card className="border">
-      <CardHeader>
-        <CardTitle className="text-base">このクイズの知識</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {isRelationQuiz ? (
-          <RelationKnowledge knowdes={chain.sentences} links={chain.links} />
-        ) : (
-          <TermKnowledge knowdes={chain.sentences} links={chain.links} />
-        )}
-      </CardContent>
-    </Card>
+    <section className="space-y-3">
+      <h3 className="text-sm font-semibold">このクイズの知識</h3>
+      {isRelationQuiz ? (
+        <RelationKnowledge knowdes={chain.sentences} links={chain.links} />
+      ) : (
+        <TermKnowledge knowdes={chain.sentences} links={chain.links} />
+      )}
+    </section>
   );
 }
