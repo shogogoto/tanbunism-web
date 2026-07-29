@@ -167,6 +167,7 @@ describe("QuizSession", () => {
   it("StudyPlanがなければ作成してクイズを開始できる", async () => {
     const user = userEvent.setup();
     let createdPlan: typeof plan | undefined;
+    const resourceId = "11111111-1111-1111-1111-111111111111";
     server.use(
       http.get("*/quiz/study-plans", () => HttpResponse.json([])),
       http.get("*/namespace", () =>
@@ -179,7 +180,7 @@ describe("QuizSession", () => {
             nodes: [
               {
                 id: {
-                  uid: "resource-1",
+                  uid: resourceId,
                   name: "数学ノート",
                   authors: [],
                 },
@@ -188,7 +189,7 @@ describe("QuizSession", () => {
           },
           roots_: {},
           user_id: "user-1",
-          stats: { "resource-1": { n_sentence: 10 } },
+          stats: { "11111111111111111111111111111111": { n_sentence: 10 } },
         }),
       ),
       http.post("*/quiz/study-plans", async ({ request }) => {
@@ -217,6 +218,7 @@ describe("QuizSession", () => {
     expect(
       await screen.findByText("「可換」とはどのような性質ですか？"),
     ).toBeInTheDocument();
+    expect(createdPlan?.resource_ids).toEqual([resourceId]);
     expect(createdPlan?.quiz_types).toEqual(["term2sent", "sent2term"]);
   });
 

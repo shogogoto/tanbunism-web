@@ -78,7 +78,10 @@ export async function listStudyResources(): Promise<StudyResource[]> {
   const response = await getNamaspaceNamespaceGet({
     credentials: "include",
   });
-  const resourceIds = new Set(Object.keys(response.data.stats ?? {}));
+  const normalizeUuid = (value: string) => value.replaceAll("-", "");
+  const resourceIds = new Set(
+    Object.keys(response.data.stats ?? {}).map(normalizeUuid),
+  );
 
   return (response.data.g?.nodes ?? []).flatMap((node) => {
     const entry = node.id as unknown;
@@ -89,7 +92,7 @@ export async function listStudyResources(): Promise<StudyResource[]> {
       !("name" in entry) ||
       typeof entry.uid !== "string" ||
       typeof entry.name !== "string" ||
-      !resourceIds.has(entry.uid)
+      !resourceIds.has(normalizeUuid(entry.uid))
     ) {
       return [];
     }
