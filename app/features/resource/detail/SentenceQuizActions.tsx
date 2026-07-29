@@ -18,6 +18,7 @@ import { useResourceDetail } from "./Context";
 import { getHeadingLevel } from "./util";
 
 type QuizType = "sent2term" | "term2sent";
+type RelationQuizType = "rel2pair" | "pair2rel";
 
 const relationLabels: Record<string, string> = {
   to: "依存",
@@ -50,7 +51,7 @@ export default function SentenceQuizActions({
     uids,
   } = useResourceDetail();
   const [isCreating, setIsCreating] = useState(false);
-  const [isChoosingRelation, setIsChoosingRelation] = useState(false);
+  const [relationQuizType, setRelationQuizType] = useState<RelationQuizType>();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [quizzes, setQuizzes] = useState<ReadableQuiz[]>();
@@ -125,11 +126,12 @@ export default function SentenceQuizActions({
   }
 
   async function createRelation(relatedSentenceId: string) {
+    if (!relationQuizType) return;
     setIsCreating(true);
     setError(undefined);
     try {
-      await createRelationQuiz(sentenceId, relatedSentenceId);
-      setIsChoosingRelation(false);
+      await createRelationQuiz(sentenceId, relatedSentenceId, relationQuizType);
+      setRelationQuizType(undefined);
       await refreshSentenceQuizStatuses?.();
       if (isExpanded) await loadQuizzes();
     } catch (cause) {
@@ -177,8 +179,11 @@ export default function SentenceQuizActions({
             <DropdownMenuItem onSelect={() => void create("sent2term")}>
               単文から用語を当てる
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setIsChoosingRelation(true)}>
+            <DropdownMenuItem onSelect={() => setRelationQuizType("rel2pair")}>
               関係から単文を当てる…
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setRelationQuizType("pair2rel")}>
+              単文ペアから関係を当てる…
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -188,9 +193,13 @@ export default function SentenceQuizActions({
           </span>
         )}
       </span>
-      {isChoosingRelation && (
+      {relationQuizType && (
         <div className="my-2 ml-6 space-y-2 border-l-2 pl-3">
-          <p className="text-xs font-medium">正解にする関係先を選ぶ</p>
+          <p className="text-xs font-medium">
+            {relationQuizType === "rel2pair"
+              ? "関係から当てる単文を選ぶ"
+              : "関係を当てる相手の単文を選ぶ"}
+          </p>
           {relationCandidates.map((candidate) => (
             <button
               key={candidate.id}
@@ -214,7 +223,7 @@ export default function SentenceQuizActions({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => setIsChoosingRelation(false)}
+            onClick={() => setRelationQuizType(undefined)}
           >
             閉じる
           </Button>

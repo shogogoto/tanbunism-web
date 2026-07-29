@@ -148,4 +148,20 @@ it("単文のQuizを確認し、その場から新しく作成する", async () 
       quiz_type: "rel2pair",
     }),
   );
+
+  await user.click(screen.getByRole("button", { name: "＋ クイズ" }));
+  await user.click(
+    screen.getByRole("menuitem", { name: "単文ペアから関係を当てる…" }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: /具体例.*関連する単文/ }),
+  );
+
+  expect(createRequests).toContainEqual(
+    expect.objectContaining({
+      target_sent_uid: "sentence-1",
+      correct_sent_uids: ["sentence-2"],
+      quiz_type: "pair2rel",
+    }),
+  );
 });

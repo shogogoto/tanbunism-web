@@ -173,18 +173,19 @@ export async function createSentenceQuiz(
 export async function createRelationQuiz(
   sentenceId: string,
   relatedSentenceId: string,
+  quizType: "rel2pair" | "pair2rel",
 ): Promise<ReadableQuiz> {
   const response = await createQuizApiQuizPost(
     {
       target_sent_uid: sentenceId,
       correct_sent_uids: [relatedSentenceId],
-      quiz_type: "rel2pair",
+      quiz_type: quizType,
       cand_type: "all",
       n_option: 4,
     },
     { credentials: "include" },
   );
-  return unwrap(response, "関係から単文を当てるクイズを作成できませんでした。");
+  return unwrap(response, "関係クイズを作成できませんでした。");
 }
 
 export async function deleteQuiz(quizId: string): Promise<void> {
