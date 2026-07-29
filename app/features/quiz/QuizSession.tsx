@@ -535,6 +535,9 @@ function QuizQuestion({
               <span>
                 {index + 1} / {total}
               </span>
+              <Badge variant="outline">
+                {recommendation.quiz_type.toUpperCase()}
+              </Badge>
               <RecommendationReason reason={recommendation.reason} />
               {result && (
                 <Badge variant={result.isCorrect ? "default" : "destructive"}>

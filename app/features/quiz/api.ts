@@ -11,7 +11,6 @@ import {
   listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGet,
   listCreatedQuizzesQuizCreatedGet,
   listStudyPlansApiQuizStudyPlansGet,
-  recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPost,
   searchCreatedQuizzesApiQuizCreatedSearchGet,
   updateStudyPlanApiQuizStudyPlansPlanIdPut,
 } from "./generated/api";
@@ -41,14 +40,16 @@ export type {
   StudyPlan,
   StudyPlanDraft,
 };
-export type QuizRecommendation = QuizRecommendationResponse;
+export type QuizType = StudyPlanDraft["quiz_types"][number];
+export type QuizRecommendation = QuizRecommendationResponse & {
+  quiz_type: QuizType;
+};
 export type QuizSearchParams =
   SearchCreatedQuizzesApiQuizCreatedSearchGetParams;
 export type StudyResource = {
   uid: string;
   name: string;
 };
-export type QuizType = StudyPlanDraft["quiz_types"][number];
 
 export class QuizApiError extends Error {
   constructor(
@@ -146,36 +147,32 @@ export async function deleteStudyPlan(planId: string): Promise<void> {
 
 export async function recommendQuizzes(
   planId: string,
-  quizType?: QuizType,
+  quizType: QuizType,
   signal?: AbortSignal,
 ): Promise<QuizRecommendation[]> {
-  if (quizType) {
-    const url =
-      getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostUrl(
-        planId,
-      );
-    const response = await fetch(
-      `${url}?quiz_type=${encodeURIComponent(quizType)}`,
-      {
-        method: "POST",
-        credentials: "include",
-        signal,
-      },
-    );
-    const data = (await response.json()) as
-      | QuizRecommendation[]
-      | HTTPValidationError;
-    return unwrap(
-      { data, status: response.status },
-      "おすすめのクイズを取得できませんでした。",
-    );
-  }
-  const response =
-    await recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPost(
+  const url =
+    getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostUrl(
       planId,
-      { credentials: "include", signal },
     );
-  return unwrap(response, "おすすめのクイズを取得できませんでした。");
+  const response = await fetch(
+    `${url}?quiz_type=${encodeURIComponent(quizType)}`,
+    {
+      method: "POST",
+      credentials: "include",
+      signal,
+    },
+  );
+  const data = (await response.json()) as
+    | QuizRecommendation[]
+    | HTTPValidationError;
+  const recommendations = unwrap(
+    { data, status: response.status },
+    "おすすめのクイズを取得できませんでした。",
+  );
+  return recommendations.map((recommendation) => ({
+    ...recommendation,
+    quiz_type: recommendation.quiz_type ?? quizType,
+  }));
 }
 
 export async function answerQuiz(

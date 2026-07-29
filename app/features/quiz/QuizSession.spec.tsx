@@ -17,6 +17,7 @@ const plan = {
 
 const recommendation = {
   resource_id: "resource-1",
+  quiz_type: "term2sent",
   reason: "coverage",
   quiz: {
     quiz_id: "quiz-1",
@@ -32,6 +33,7 @@ const recommendation = {
 };
 const secondRecommendation = {
   resource_id: "resource-1",
+  quiz_type: "sent2term",
   reason: "low_accuracy",
   quiz: {
     quiz_id: "quiz-2",
@@ -71,8 +73,12 @@ const server = setupServer(
       stats: { "resource-1": { n_sentence: 10 } },
     }),
   ),
-  http.post("*/quiz/study-plans/plan-1/recommendations", () =>
-    HttpResponse.json([recommendation]),
+  http.post("*/quiz/study-plans/plan-1/recommendations", ({ request }) =>
+    HttpResponse.json(
+      new URL(request.url).searchParams.get("quiz_type") === "term2sent"
+        ? [recommendation]
+        : [],
+    ),
   ),
   http.put("*/quiz/study-plans/plan-1", async ({ request }) =>
     HttpResponse.json({
@@ -199,6 +205,7 @@ describe("QuizSession", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText("StudyPlan")).toHaveValue("plan-1");
     expect(screen.getByText("Coverageを広げる")).toBeInTheDocument();
+    expect(screen.getByText("TERM2SENT")).toBeInTheDocument();
 
     await user.keyboard("1");
     expect(
