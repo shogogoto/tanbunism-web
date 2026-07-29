@@ -30,6 +30,22 @@ const recommendation = {
     no_correct_option: false,
   },
 };
+const secondRecommendation = {
+  resource_id: "resource-1",
+  reason: "low_accuracy",
+  quiz: {
+    quiz_id: "quiz-2",
+    statement: "「単位元」に合う説明を選んでください",
+    options: {
+      option_c: "演算しても相手を変化させない元",
+      option_d: "演算の順序を交換できる性質",
+    },
+    correct: ["option_c"],
+    created: "2026-07-28T00:00:00Z",
+    no_correct_option: false,
+  },
+} as const;
+const answeredQuizIds: string[] = [];
 
 const server = setupServer(
   http.get("*/quiz/study-plans", () => HttpResponse.json([plan])),
@@ -69,8 +85,14 @@ const server = setupServer(
     "*/quiz/study-plans/plan-1",
     () => new HttpResponse(null, { status: 204 }),
   ),
-  http.post("*/quiz/answer/quiz-1", async ({ request }) => {
+  http.post("*/quiz/answer/:quizId", async ({ params, request }) => {
     const body = (await request.json()) as { selected: string[] };
+    const quizId = String(params.quizId);
+    const currentQuiz =
+      quizId === secondRecommendation.quiz.quiz_id
+        ? secondRecommendation.quiz
+        : recommendation.quiz;
+    answeredQuizIds.push(quizId);
     return HttpResponse.json({
       sentences: [
         {
@@ -90,14 +112,14 @@ const server = setupServer(
       ],
       quizzes: [
         {
-          quiz_id: "quiz-1",
+          quiz_id: quizId,
           quiz_type: "term2sent",
-          readable: recommendation.quiz,
+          readable: currentQuiz,
         },
       ],
       links: [
         {
-          quiz_id: "quiz-1",
+          quiz_id: quizId,
           sentence_id: "sentence-1",
           role: "correct",
         },
@@ -105,10 +127,12 @@ const server = setupServer(
       answers: [
         {
           answer_uid: "answer-1",
-          quiz_uid: "quiz-1",
+          quiz_uid: quizId,
           selected: body.selected,
           who: "user-1",
-          is_correct: body.selected.includes("option_a"),
+          is_correct: currentQuiz.correct.every((id) =>
+            body.selected.includes(id),
+          ),
           created: "2026-07-28T00:00:00Z",
         },
       ],
@@ -117,7 +141,10 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  answeredQuizIds.length = 0;
+  server.resetHandlers();
+});
 afterAll(() => server.close());
 
 function renderQuizSession() {
@@ -162,6 +189,76 @@ describe("QuizSession", () => {
         name: /可換: 可換とは、演算の順序を交換しても結果が変わらない/,
       }),
     ).toHaveAttribute("href", "/resource/resource-1#sentence-1");
+  });
+
+  it("推薦された全Quizを列挙して一括回答する", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/quiz/study-plans/plan-1/recommendations", () =>
+        HttpResponse.json([recommendation, secondRecommendation]),
+      ),
+    );
+    renderQuizSession();
+
+    expect(
+      await screen.findByText(recommendation.quiz.statement),
+    ).toBeVisible();
+    expect(screen.getByText(secondRecommendation.quiz.statement)).toBeVisible();
+    expect(screen.getByText("未回答 2問")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "1. 演算の順序を交換できる",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "1. 演算しても相手を変化させない元",
+      }),
+    );
+    expect(screen.getByText("2問すべて回答済み")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "まとめて回答" }));
+
+    expect(await screen.findByText("2問中 2問正解しました。")).toBeVisible();
+    expect(answeredQuizIds).toEqual(["quiz-1", "quiz-2"]);
+    expect(screen.getAllByText("このクイズの知識")).toHaveLength(2);
+  });
+
+  it("一括回答の再実行では送信に失敗したQuizだけを送る", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/quiz/study-plans/plan-1/recommendations", () =>
+        HttpResponse.json([recommendation, secondRecommendation]),
+      ),
+      http.post(
+        "*/quiz/answer/quiz-2",
+        () => HttpResponse.json({}, { status: 503 }),
+        { once: true },
+      ),
+    );
+    renderQuizSession();
+
+    await screen.findByText(secondRecommendation.quiz.statement);
+    await user.click(
+      screen.getByRole("button", {
+        name: "1. 演算の順序を交換できる",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "1. 演算しても相手を変化させない元",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "まとめて回答" }));
+
+    expect(
+      await screen.findByText(/1問の回答を送信できませんでした/),
+    ).toBeVisible();
+    expect(answeredQuizIds).toEqual(["quiz-1"]);
+    await user.click(screen.getByRole("button", { name: "まとめて回答" }));
+
+    expect(await screen.findByText("2問中 2問正解しました。")).toBeVisible();
+    expect(answeredQuizIds).toEqual(["quiz-1", "quiz-2"]);
   });
 
   it("StudyPlanがなければ作成してクイズを開始できる", async () => {

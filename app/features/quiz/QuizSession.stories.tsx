@@ -185,37 +185,15 @@ export const AnsweredWithQuizChain: Story = {
 
     await userEvent.click(
       await canvas.findByRole("button", {
-        name: "演算の順序を交換しても結果が変わらない",
+        name: "1. 演算の順序を交換しても結果が変わらない",
       }),
-    );
-    await userEvent.click(canvas.getByRole("button", { name: "回答する" }));
-
-    await expect(canvas.findByText("正解です")).resolves.toBeInTheDocument();
-    await expect(
-      canvas.findByRole("heading", { name: "このクイズの知識" }),
-    ).resolves.toBeInTheDocument();
-  },
-};
-
-export const CompletedSession: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
-    await userEvent.click(
-      await canvas.findByRole("button", {
-        name: "演算の順序を交換しても結果が変わらない",
-      }),
-    );
-    await userEvent.click(canvas.getByRole("button", { name: "回答する" }));
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "次の問題" }),
     );
     await userEvent.click(
       canvas.getByRole("button", {
-        name: "演算しても相手を変化させない元",
+        name: "1. 演算しても相手を変化させない元",
       }),
     );
-    await userEvent.click(canvas.getByRole("button", { name: "回答する" }));
+    await userEvent.click(canvas.getByRole("button", { name: "まとめて回答" }));
 
     await expect(
       canvas.findByRole("heading", { name: "今回の学習結果" }),
@@ -223,8 +201,13 @@ export const CompletedSession: Story = {
     await expect(
       canvas.findByText("2問中 2問正解しました。"),
     ).resolves.toBeInTheDocument();
+    await expect(
+      canvas.findAllByText("このクイズの知識"),
+    ).resolves.toHaveLength(2);
   },
 };
+
+export const CompletedSession: Story = { ...AnsweredWithQuizChain };
 
 export const NoStudyPlan: Story = {
   parameters: {

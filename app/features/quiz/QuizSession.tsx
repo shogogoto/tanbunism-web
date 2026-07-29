@@ -22,7 +22,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "~/shared/components/ui/card";
@@ -43,21 +42,25 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready" };
 
+type QuizResult = {
+  isCorrect: boolean;
+  chain: QuizChain;
+};
+
 export default function QuizSession() {
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [planId, setPlanId] = useState("");
   const [recommendations, setRecommendations] = useState<QuizRecommendation[]>(
     [],
   );
-  const [recommendationIndex, setRecommendationIndex] = useState(0);
-  const [selected, setSelected] = useState<string[]>([]);
-  const [isCorrect, setIsCorrect] = useState<boolean>();
+  const [answers, setAnswers] = useState<Record<string, string[]>>({});
+  const [results, setResults] = useState<Record<string, QuizResult>>({});
+  const [activeQuizIndex, setActiveQuizIndex] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string>();
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState<StudyPlan>();
-  const [chain, setChain] = useState<QuizChain>();
-  const [results, setResults] = useState<boolean[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const sessionRef = useRef<HTMLDivElement>(null);
 
@@ -98,17 +101,16 @@ export default function QuizSession() {
 
     let active = true;
     setLoadState({ status: "loading" });
-    setSelected([]);
-    setIsCorrect(undefined);
-    setChain(undefined);
-    setResults([]);
+    setAnswers({});
+    setResults({});
+    setActiveQuizIndex(0);
+    setSubmitError(undefined);
 
     async function loadRecommendations() {
       try {
         const loadedRecommendations = await recommendQuizzes(planId);
         if (!active) return;
         setRecommendations(loadedRecommendations);
-        setRecommendationIndex(0);
         setLoadState({ status: "ready" });
       } catch (error) {
         if (!active) return;
@@ -128,49 +130,56 @@ export default function QuizSession() {
     };
   }, [planId, refreshKey]);
 
-  const recommendation = recommendations[recommendationIndex];
-  const hasNext = recommendationIndex + 1 < recommendations.length;
-
   useEffect(() => {
-    if (recommendation) sessionRef.current?.focus();
-  }, [recommendation]);
+    if (recommendations.length > 0) sessionRef.current?.focus();
+  }, [recommendations]);
 
-  function toggleOption(optionId: string) {
-    if (isCorrect !== undefined) return;
-    setSelected((current) =>
-      current.includes(optionId)
-        ? current.filter((id) => id !== optionId)
-        : [...current, optionId],
+  function toggleOption(quizId: string, optionId: string) {
+    if (results[quizId]) return;
+    setAnswers((current) => {
+      const selected = current[quizId] ?? [];
+      return {
+        ...current,
+        [quizId]: selected.includes(optionId)
+          ? selected.filter((id) => id !== optionId)
+          : [...selected, optionId],
+      };
+    });
+  }
+
+  async function submitAnswers() {
+    const pending = recommendations.filter(
+      ({ quiz }) => results[quiz.quiz_id] === undefined,
     );
-  }
-
-  async function submitAnswer() {
-    if (!recommendation) return;
+    if (pending.length === 0) return;
     setIsSubmitting(true);
-    try {
-      const chain = await answerQuiz(recommendation.quiz.quiz_id, selected);
-      const correct = chain.answers?.[0]?.is_correct ?? false;
-      setIsCorrect(correct);
-      setResults((current) => [...current, correct]);
-      setChain(chain);
-    } catch (error) {
-      setLoadState({
-        status: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "回答を送信できませんでした。",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+    setSubmitError(undefined);
 
-  function showNextQuiz() {
-    setRecommendationIndex((current) => current + 1);
-    setSelected([]);
-    setIsCorrect(undefined);
-    setChain(undefined);
+    const settled = await Promise.allSettled(
+      pending.map(async ({ quiz }) => ({
+        quizId: quiz.quiz_id,
+        chain: await answerQuiz(quiz.quiz_id, answers[quiz.quiz_id] ?? []),
+      })),
+    );
+    const succeeded: Record<string, QuizResult> = {};
+    let failed = 0;
+    for (const result of settled) {
+      if (result.status === "rejected") {
+        failed += 1;
+        continue;
+      }
+      succeeded[result.value.quizId] = {
+        chain: result.value.chain,
+        isCorrect: result.value.chain.answers?.[0]?.is_correct ?? false,
+      };
+    }
+    setResults((current) => ({ ...current, ...succeeded }));
+    if (failed > 0) {
+      setSubmitError(
+        `${failed}問の回答を送信できませんでした。未送信の問題だけ再実行できます。`,
+      );
+    }
+    setIsSubmitting(false);
   }
 
   function handlePlanCreated(plan: StudyPlan) {
@@ -197,16 +206,33 @@ export default function QuizSession() {
 
   function retryIncorrectQuizzes() {
     setRecommendations((current) =>
-      current.filter((_, index) => results[index] === false),
+      current.filter(({ quiz }) => results[quiz.quiz_id]?.isCorrect === false),
     );
-    setRecommendationIndex(0);
-    setSelected([]);
-    setIsCorrect(undefined);
-    setChain(undefined);
-    setResults([]);
+    setAnswers({});
+    setResults({});
+    setActiveQuizIndex(0);
+    setSubmitError(undefined);
   }
 
+  const unansweredCount = recommendations.filter(({ quiz }) => {
+    if (results[quiz.quiz_id]) return false;
+    return (
+      !quiz.no_correct_option && (answers[quiz.quiz_id]?.length ?? 0) === 0
+    );
+  }).length;
+  const allAnswered = recommendations.length > 0 && unansweredCount === 0;
+  const isComplete =
+    recommendations.length > 0 &&
+    recommendations.every(({ quiz }) => results[quiz.quiz_id] !== undefined);
+
   function handleSessionKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (
+      event.key === "Enter" &&
+      (event.target instanceof HTMLButtonElement ||
+        event.target instanceof HTMLAnchorElement)
+    ) {
+      return;
+    }
     if (
       event.target instanceof HTMLInputElement ||
       event.target instanceof HTMLSelectElement ||
@@ -215,30 +241,26 @@ export default function QuizSession() {
       return;
     }
 
-    const optionIds = recommendation
-      ? Object.keys(recommendation.quiz.options)
+    const activeRecommendation = recommendations[activeQuizIndex];
+    const optionIds = activeRecommendation
+      ? Object.keys(activeRecommendation.quiz.options)
       : [];
     const optionIndex = Number(event.key) - 1;
     if (
-      isCorrect === undefined &&
+      activeRecommendation &&
+      results[activeRecommendation.quiz.quiz_id] === undefined &&
       Number.isInteger(optionIndex) &&
       optionIndex >= 0 &&
       optionIndex < optionIds.length
     ) {
       event.preventDefault();
-      toggleOption(optionIds[optionIndex]);
+      toggleOption(activeRecommendation.quiz.quiz_id, optionIds[optionIndex]);
       return;
     }
 
     if (event.key !== "Enter") return;
     event.preventDefault();
-    if (isCorrect === undefined) {
-      const canSubmit =
-        recommendation?.quiz.no_correct_option || selected.length > 0;
-      if (canSubmit && !isSubmitting) void submitAnswer();
-    } else if (hasNext) {
-      showNextQuiz();
-    }
+    if (allAnswered && !isSubmitting && !isComplete) void submitAnswers();
   }
 
   if (loadState.status === "loading") {
@@ -272,7 +294,7 @@ export default function QuizSession() {
     );
   }
 
-  if (!recommendation) {
+  if (recommendations.length === 0) {
     return (
       <div className="mx-auto max-w-2xl p-6 space-y-4">
         <PlanToolbar
@@ -309,7 +331,6 @@ export default function QuizSession() {
     );
   }
 
-  const quiz = recommendation.quiz;
   return (
     <div
       ref={sessionRef}
@@ -324,7 +345,7 @@ export default function QuizSession() {
             StudyPlanから提案された問題を解きます。
           </p>
           <p className="text-xs text-muted-foreground">
-            数字キーで選択 · Enterで回答／次の問題
+            問題を選び、数字キーで回答 · Enterでまとめて送信
           </p>
         </div>
         <Button asChild variant="outline">
@@ -360,14 +381,99 @@ export default function QuizSession() {
         </Card>
       )}
 
-      <Card className="border">
+      <div className="space-y-4">
+        {recommendations.map((recommendation, index) => {
+          const quizId = recommendation.quiz.quiz_id;
+          return (
+            <QuizQuestion
+              key={quizId}
+              index={index}
+              total={recommendations.length}
+              recommendation={recommendation}
+              selected={answers[quizId] ?? []}
+              result={results[quizId]}
+              isActive={index === activeQuizIndex}
+              onActivate={() => setActiveQuizIndex(index)}
+              onToggle={(optionId) => toggleOption(quizId, optionId)}
+            />
+          );
+        })}
+      </div>
+
+      {!isComplete && (
+        <Card className="sticky bottom-3 border shadow-lg">
+          <CardContent className="flex items-center justify-between gap-4 py-4">
+            <div>
+              <p className="font-medium">
+                {unansweredCount > 0
+                  ? `未回答 ${unansweredCount}問`
+                  : `${recommendations.length}問すべて回答済み`}
+              </p>
+              {submitError && (
+                <p className="text-sm text-destructive">{submitError}</p>
+              )}
+            </div>
+            <Button
+              type="button"
+              onClick={submitAnswers}
+              disabled={!allAnswered || isSubmitting}
+            >
+              {isSubmitting ? "送信中…" : "まとめて回答"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {isComplete && (
+        <SessionSummary
+          recommendations={recommendations}
+          results={recommendations.map(
+            ({ quiz }) => results[quiz.quiz_id].isCorrect,
+          )}
+          onRetryIncorrect={retryIncorrectQuizzes}
+          onRequestNew={() => setRefreshKey((current) => current + 1)}
+        />
+      )}
+    </div>
+  );
+}
+
+function QuizQuestion({
+  index,
+  total,
+  recommendation,
+  selected,
+  result,
+  isActive,
+  onActivate,
+  onToggle,
+}: {
+  index: number;
+  total: number;
+  recommendation: QuizRecommendation;
+  selected: string[];
+  result?: QuizResult;
+  isActive: boolean;
+  onActivate: () => void;
+  onToggle: (optionId: string) => void;
+}) {
+  const { quiz } = recommendation;
+
+  return (
+    <div onFocusCapture={onActivate}>
+      <Card className={`border ${isActive ? "ring-2 ring-primary/40" : ""}`}>
         <CardHeader>
           <CardDescription>
             <span className="flex flex-wrap items-center gap-2">
               <span>
-                {recommendationIndex + 1} / {recommendations.length}
+                {index + 1} / {total}
               </span>
               <RecommendationReason reason={recommendation.reason} />
+              {result && (
+                <Badge variant={result.isCorrect ? "default" : "destructive"}>
+                  {result.isCorrect ? "正解" : "不正解"}
+                </Badge>
+              )}
             </span>
           </CardDescription>
           <CardTitle className="text-lg leading-relaxed">
@@ -376,19 +482,23 @@ export default function QuizSession() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {Object.entries(quiz.options).map(([id, label]) => {
+            {Object.entries(quiz.options).map(([id, label], optionIndex) => {
               const isSelected = selected.includes(id);
               const isAnswerCorrect =
-                isCorrect !== undefined && quiz.correct.includes(id);
+                result !== undefined && quiz.correct.includes(id);
               const isSelectedWrong =
-                isCorrect !== undefined && isSelected && !isAnswerCorrect;
+                result !== undefined && isSelected && !isAnswerCorrect;
               return (
                 <button
                   key={id}
                   type="button"
                   aria-pressed={isSelected}
-                  onClick={() => toggleOption(id)}
-                  className={`w-full border p-3 text-left transition-colors ${
+                  disabled={result !== undefined}
+                  onClick={() => {
+                    onActivate();
+                    onToggle(id);
+                  }}
+                  className={`w-full border p-3 text-left transition-colors disabled:opacity-100 ${
                     isAnswerCorrect
                       ? "border-green-600 bg-green-500/10"
                       : isSelectedWrong
@@ -400,7 +510,7 @@ export default function QuizSession() {
                 >
                   <span className="flex items-center justify-between gap-2">
                     <span>
-                      {Object.keys(quiz.options).indexOf(id) + 1}. {label}
+                      {optionIndex + 1}. {label}
                     </span>
                     {isAnswerCorrect && <Badge>正解</Badge>}
                     {isSelectedWrong && (
@@ -411,48 +521,21 @@ export default function QuizSession() {
               );
             })}
           </div>
-
-          {isCorrect !== undefined && (
+          {result && (
             <Alert className="mt-4">
-              <AlertTitle>{isCorrect ? "正解です" : "不正解です"}</AlertTitle>
+              <AlertTitle>
+                {result.isCorrect ? "正解です" : "不正解です"}
+              </AlertTitle>
               <AlertDescription>
-                {isCorrect
+                {result.isCorrect
                   ? "回答結果を学習履歴に記録しました。"
-                  : "回答結果を記録しました。もう一度関連する単文を見直せます。"}
+                  : "回答結果を記録しました。関連する単文を見直せます。"}
               </AlertDescription>
             </Alert>
           )}
         </CardContent>
-        <CardFooter className="justify-end gap-2">
-          {isCorrect === undefined ? (
-            <Button
-              type="button"
-              onClick={submitAnswer}
-              disabled={
-                isSubmitting ||
-                (!quiz.no_correct_option && selected.length === 0)
-              }
-            >
-              {isSubmitting ? "送信中…" : "回答する"}
-            </Button>
-          ) : (
-            hasNext && (
-              <Button type="button" onClick={showNextQuiz}>
-                次の問題
-              </Button>
-            )
-          )}
-        </CardFooter>
       </Card>
-      {chain && <QuizChainReview chain={chain} />}
-      {isCorrect !== undefined && !hasNext && (
-        <SessionSummary
-          recommendations={recommendations}
-          results={results}
-          onRetryIncorrect={retryIncorrectQuizzes}
-          onRequestNew={() => setRefreshKey((current) => current + 1)}
-        />
-      )}
+      {result && <QuizChainReview chain={result.chain} />}
     </div>
   );
 }
