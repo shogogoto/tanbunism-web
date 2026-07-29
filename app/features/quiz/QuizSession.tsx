@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import {
   Alert,
@@ -59,6 +59,7 @@ export default function QuizSession() {
   const [chain, setChain] = useState<QuizChain>();
   const [results, setResults] = useState<boolean[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const sessionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -128,6 +129,11 @@ export default function QuizSession() {
   }, [planId, refreshKey]);
 
   const recommendation = recommendations[recommendationIndex];
+  const hasNext = recommendationIndex + 1 < recommendations.length;
+
+  useEffect(() => {
+    if (recommendation) sessionRef.current?.focus();
+  }, [recommendation]);
 
   function toggleOption(optionId: string) {
     if (isCorrect !== undefined) return;
@@ -200,6 +206,41 @@ export default function QuizSession() {
     setResults([]);
   }
 
+  function handleSessionKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (
+      event.target instanceof HTMLInputElement ||
+      event.target instanceof HTMLSelectElement ||
+      event.target instanceof HTMLTextAreaElement
+    ) {
+      return;
+    }
+
+    const optionIds = recommendation
+      ? Object.keys(recommendation.quiz.options)
+      : [];
+    const optionIndex = Number(event.key) - 1;
+    if (
+      isCorrect === undefined &&
+      Number.isInteger(optionIndex) &&
+      optionIndex >= 0 &&
+      optionIndex < optionIds.length
+    ) {
+      event.preventDefault();
+      toggleOption(optionIds[optionIndex]);
+      return;
+    }
+
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    if (isCorrect === undefined) {
+      const canSubmit =
+        recommendation?.quiz.no_correct_option || selected.length > 0;
+      if (canSubmit && !isSubmitting) void submitAnswer();
+    } else if (hasNext) {
+      showNextQuiz();
+    }
+  }
+
   if (loadState.status === "loading") {
     return <p className="p-6">クイズを準備しています…</p>;
   }
@@ -269,15 +310,21 @@ export default function QuizSession() {
   }
 
   const quiz = recommendation.quiz;
-  const hasNext = recommendationIndex + 1 < recommendations.length;
-
   return (
-    <div className="mx-auto max-w-2xl p-4 sm:p-6 space-y-4">
+    <div
+      ref={sessionRef}
+      tabIndex={-1}
+      onKeyDown={handleSessionKeyDown}
+      className="mx-auto max-w-2xl p-4 sm:p-6 space-y-4 outline-none"
+    >
       <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">クイズ</h1>
           <p className="text-sm text-muted-foreground">
             StudyPlanから提案された問題を解きます。
+          </p>
+          <p className="text-xs text-muted-foreground">
+            数字キーで選択 · Enterで回答／次の問題
           </p>
         </div>
         <Button asChild variant="outline">
@@ -331,6 +378,10 @@ export default function QuizSession() {
           <div className="space-y-2">
             {Object.entries(quiz.options).map(([id, label]) => {
               const isSelected = selected.includes(id);
+              const isAnswerCorrect =
+                isCorrect !== undefined && quiz.correct.includes(id);
+              const isSelectedWrong =
+                isCorrect !== undefined && isSelected && !isAnswerCorrect;
               return (
                 <button
                   key={id}
@@ -338,12 +389,24 @@ export default function QuizSession() {
                   aria-pressed={isSelected}
                   onClick={() => toggleOption(id)}
                   className={`w-full border p-3 text-left transition-colors ${
-                    isSelected
-                      ? "border-primary bg-primary/10"
-                      : "hover:bg-muted"
+                    isAnswerCorrect
+                      ? "border-green-600 bg-green-500/10"
+                      : isSelectedWrong
+                        ? "border-destructive bg-destructive/10"
+                        : isSelected
+                          ? "border-primary bg-primary/10"
+                          : "hover:bg-muted"
                   }`}
                 >
-                  {label}
+                  <span className="flex items-center justify-between gap-2">
+                    <span>
+                      {Object.keys(quiz.options).indexOf(id) + 1}. {label}
+                    </span>
+                    {isAnswerCorrect && <Badge>正解</Badge>}
+                    {isSelectedWrong && (
+                      <Badge variant="destructive">あなたの回答</Badge>
+                    )}
+                  </span>
                 </button>
               );
             })}

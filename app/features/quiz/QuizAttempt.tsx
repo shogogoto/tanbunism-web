@@ -45,6 +45,8 @@ export default function QuizAttempt({ quiz }: { quiz: ReadableQuiz }) {
       <div className="space-y-1">
         {Object.entries(quiz.options).map(([optionId, option]) => {
           const isSelected = selected.includes(optionId);
+          const isCorrect = Boolean(answer) && quiz.correct.includes(optionId);
+          const isSelectedWrong = Boolean(answer) && isSelected && !isCorrect;
           return (
             <button
               key={optionId}
@@ -53,11 +55,18 @@ export default function QuizAttempt({ quiz }: { quiz: ReadableQuiz }) {
               disabled={Boolean(answer)}
               onClick={() => toggle(optionId)}
               className={`flex w-full items-start gap-2 border p-2 text-left text-xs ${
-                isSelected ? "border-primary bg-primary/10" : "hover:bg-muted"
+                isCorrect
+                  ? "border-green-600 bg-green-500/10"
+                  : isSelectedWrong
+                    ? "border-destructive bg-destructive/10"
+                    : isSelected
+                      ? "border-primary bg-primary/10"
+                      : "hover:bg-muted"
               }`}
             >
-              {answer && quiz.correct.includes(optionId) && (
-                <Badge variant="secondary">正解</Badge>
+              {isCorrect && <Badge variant="secondary">正解</Badge>}
+              {isSelectedWrong && (
+                <Badge variant="destructive">あなたの回答</Badge>
               )}
               <span>{option}</span>
             </button>

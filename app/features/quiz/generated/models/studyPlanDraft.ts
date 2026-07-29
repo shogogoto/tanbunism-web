@@ -14,7 +14,8 @@ export interface StudyPlanDraft {
   name: string;
   /** @minItems 1 */
   resource_ids: string[];
-  quiz_type: QuizType;
+  /** @minItems 1 */
+  quiz_types: QuizType[];
   /** @minimum 0 */
   n_quiz: number;
   /** @minimum 1 */

@@ -9,7 +9,7 @@ const plan = {
   uid: "plan-1",
   name: "数学の復習",
   resource_ids: ["resource-1"],
-  quiz_type: "term2sent",
+  quiz_types: ["term2sent", "sent2term"],
   n_quiz: 1,
   n_option: 3,
   created: "2026-07-28T00:00:00Z",
@@ -139,12 +139,16 @@ describe("QuizSession", () => {
     expect(screen.getByLabelText("StudyPlan")).toHaveValue("plan-1");
     expect(screen.getByText("Coverageを広げる")).toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", { name: "演算の順序を交換できる" }),
-    );
-    await user.click(screen.getByRole("button", { name: "回答する" }));
+    await user.keyboard("1");
+    expect(
+      screen.getByRole("button", { name: /1.*演算の順序を交換できる/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await user.keyboard("{Enter}");
 
     expect(await screen.findByText("正解です")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("正解", { selector: "[data-slot=badge]" }).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText("1問中 1問正解しました。")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "新しい推薦を取得" }),
@@ -162,6 +166,7 @@ describe("QuizSession", () => {
 
   it("StudyPlanがなければ作成してクイズを開始できる", async () => {
     const user = userEvent.setup();
+    let createdPlan: typeof plan | undefined;
     server.use(
       http.get("*/quiz/study-plans", () => HttpResponse.json([])),
       http.get("*/namespace", () =>
@@ -188,6 +193,7 @@ describe("QuizSession", () => {
       ),
       http.post("*/quiz/study-plans", async ({ request }) => {
         const draft = (await request.json()) as typeof plan;
+        createdPlan = draft;
         return HttpResponse.json(
           { ...draft, uid: "plan-new", created: plan.created },
           { status: 201 },
@@ -203,6 +209,7 @@ describe("QuizSession", () => {
     expect(await screen.findByText("学習計画を作る")).toBeInTheDocument();
     await user.type(screen.getByLabelText("Plan名"), "数学の復習");
     await user.click(screen.getByRole("checkbox", { name: "数学ノート" }));
+    await user.click(screen.getByRole("checkbox", { name: "単文から用語" }));
     await user.click(
       screen.getByRole("button", { name: "作成してクイズを始める" }),
     );
@@ -210,6 +217,7 @@ describe("QuizSession", () => {
     expect(
       await screen.findByText("「可換」とはどのような性質ですか？"),
     ).toBeInTheDocument();
+    expect(createdPlan?.quiz_types).toEqual(["term2sent", "sent2term"]);
   });
 
   it("StudyPlanを編集・削除できる", async () => {

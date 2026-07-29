@@ -7,7 +7,7 @@ const plan = {
   uid: "plan-algebra",
   name: "代数学の復習",
   resource_ids: ["resource-algebra"],
-  quiz_type: "term2sent",
+  quiz_types: ["term2sent", "sent2term"],
   n_quiz: 2,
   n_option: 3,
   created: "2026-07-28T00:00:00Z",

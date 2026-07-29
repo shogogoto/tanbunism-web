@@ -94,6 +94,25 @@ const meta = {
   parameters: {
     msw: {
       handlers: [
+        http.get("*/namespace", () =>
+          HttpResponse.json({
+            g: {
+              directed: true,
+              edges: [],
+              graph: {},
+              multigraph: false,
+              nodes: resources.map(({ resource }) => ({ id: resource })),
+            },
+            roots_: {},
+            user_id: "user-preview",
+            stats: Object.fromEntries(
+              resources.map(({ resource }) => [
+                resource.uid,
+                { n_sentence: 12 },
+              ]),
+            ),
+          }),
+        ),
         http.get("*/quiz/created/resources", () =>
           HttpResponse.json(resources),
         ),
@@ -103,8 +122,17 @@ const meta = {
             resource_id: params.resourceId,
           }),
         ),
-        http.get("*/quiz/created", () =>
-          HttpResponse.json({ data: quizzes, total: quizzes.length }),
+        http.get("*/quiz/created/search", () =>
+          HttpResponse.json({
+            data: quizzes.map((quiz, index) => ({
+              quiz,
+              attempts: index + 1,
+              corrects: index,
+              accuracy: index / (index + 1),
+              last_attempted_at: "2026-07-28T01:00:00Z",
+            })),
+            total: quizzes.length,
+          }),
         ),
         http.delete(
           "*/quiz/:quizId",
@@ -125,6 +153,20 @@ export const Empty: Story = {
   parameters: {
     msw: {
       handlers: [
+        http.get("*/namespace", () =>
+          HttpResponse.json({
+            g: {
+              directed: true,
+              edges: [],
+              graph: {},
+              multigraph: false,
+              nodes: [],
+            },
+            roots_: {},
+            user_id: "user-preview",
+            stats: {},
+          }),
+        ),
         http.get("*/quiz/created/resources", () => HttpResponse.json([])),
       ],
     },

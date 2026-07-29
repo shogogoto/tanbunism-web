@@ -13,6 +13,7 @@ import type {
   HTTPValidationError,
   ListCreatedQuizzesQuizCreatedGetParams,
   ListQuizQuizGetParams,
+  ManagedQuizResult,
   NameSpace,
   PostTextResourceTextPost200,
   QuizChain,
@@ -25,6 +26,7 @@ import type {
   ResourceMetas,
   ResourceSearchBody,
   ResourceSearchResult,
+  SearchCreatedQuizzesApiQuizCreatedSearchGetParams,
   SentenceQuizStatus,
   StudyPlan,
   StudyPlanDraft,
@@ -623,6 +625,84 @@ export const listCreatedQuizResourcesQuizCreatedResourcesGet = async (
     status: res.status,
     headers: res.headers,
   } as listCreatedQuizResourcesQuizCreatedResourcesGetResponse;
+};
+
+export type searchCreatedQuizzesApiQuizCreatedSearchGetResponse200 = {
+  data: ManagedQuizResult;
+  status: 200;
+};
+
+export type searchCreatedQuizzesApiQuizCreatedSearchGetResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type searchCreatedQuizzesApiQuizCreatedSearchGetResponseSuccess =
+  searchCreatedQuizzesApiQuizCreatedSearchGetResponse200 & {
+    headers: Headers;
+  };
+export type searchCreatedQuizzesApiQuizCreatedSearchGetResponseError =
+  searchCreatedQuizzesApiQuizCreatedSearchGetResponse422 & {
+    headers: Headers;
+  };
+
+export type searchCreatedQuizzesApiQuizCreatedSearchGetResponse =
+  | searchCreatedQuizzesApiQuizCreatedSearchGetResponseSuccess
+  | searchCreatedQuizzesApiQuizCreatedSearchGetResponseError;
+
+export const getSearchCreatedQuizzesApiQuizCreatedSearchGetUrl = (
+  params?: SearchCreatedQuizzesApiQuizCreatedSearchGetParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["quiz_types"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? "null" : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `https://knowde.onrender.com/quiz/created/search?${stringifiedParams}`
+    : "https://knowde.onrender.com/quiz/created/search";
+};
+
+/**
+ * 作成Quizを形式・回答状態・日時・正答率で検索.
+ * @summary Search Created Quizzes Api
+ */
+export const searchCreatedQuizzesApiQuizCreatedSearchGet = async (
+  params?: SearchCreatedQuizzesApiQuizCreatedSearchGetParams,
+  options?: RequestInit,
+): Promise<searchCreatedQuizzesApiQuizCreatedSearchGetResponse> => {
+  const res = await fetch(
+    getSearchCreatedQuizzesApiQuizCreatedSearchGetUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: searchCreatedQuizzesApiQuizCreatedSearchGetResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as searchCreatedQuizzesApiQuizCreatedSearchGetResponse;
 };
 
 export type listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponse200 =

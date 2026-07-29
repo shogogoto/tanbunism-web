@@ -11,15 +11,19 @@ import {
   listCreatedQuizzesQuizCreatedGet,
   listStudyPlansApiQuizStudyPlansGet,
   recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPost,
+  searchCreatedQuizzesApiQuizCreatedSearchGet,
   updateStudyPlanApiQuizStudyPlansPlanIdPut,
 } from "./generated/api";
 import type {
   HTTPValidationError,
+  ManagedQuiz,
+  ManagedQuizResult,
   QuizChain,
   QuizRecommendationResponse,
   QuizResourceStatus,
   ReadableQuiz,
   ResourceLearningStatus,
+  SearchCreatedQuizzesApiQuizCreatedSearchGetParams,
   SentenceQuizStatus,
   StudyPlan,
   StudyPlanDraft,
@@ -30,11 +34,15 @@ export type {
   QuizResourceStatus,
   ReadableQuiz,
   ResourceLearningStatus,
+  ManagedQuizResult,
+  ManagedQuiz,
   SentenceQuizStatus,
   StudyPlan,
   StudyPlanDraft,
 };
 export type QuizRecommendation = QuizRecommendationResponse;
+export type QuizSearchParams =
+  SearchCreatedQuizzesApiQuizCreatedSearchGetParams;
 export type StudyResource = {
   uid: string;
   name: string;
@@ -188,6 +196,15 @@ export async function listCreatedQuizzes(
     { credentials: "include" },
   );
   return unwrap(response, "作成したクイズを取得できませんでした。").data;
+}
+
+export async function searchCreatedQuizzes(
+  params: QuizSearchParams,
+): Promise<ManagedQuizResult> {
+  const response = await searchCreatedQuizzesApiQuizCreatedSearchGet(params, {
+    credentials: "include",
+  });
+  return unwrap(response, "作成したクイズを検索できませんでした。");
 }
 
 export async function createSentenceQuiz(

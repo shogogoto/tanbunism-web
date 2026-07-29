@@ -35,9 +35,9 @@ export default function StudyPlanForm({
     plan?.resource_ids ?? [],
   );
   const [name, setName] = useState(plan?.name ?? "");
-  const [quizType, setQuizType] = useState<StudyPlanDraft["quiz_type"]>(
-    plan?.quiz_type ?? "term2sent",
-  );
+  const [selectedQuizTypes, setSelectedQuizTypes] = useState<
+    StudyPlanDraft["quiz_types"]
+  >(plan?.quiz_types ?? ["term2sent"]);
   const [nQuiz, setNQuiz] = useState(plan?.n_quiz ?? 5);
   const [nOption, setNOption] = useState(plan?.n_option ?? 4);
   const [error, setError] = useState<string>();
@@ -75,6 +75,14 @@ export default function StudyPlanForm({
     );
   }
 
+  function toggleQuizType(quizType: StudyPlanDraft["quiz_types"][number]) {
+    setSelectedQuizTypes((current) =>
+      current.includes(quizType)
+        ? current.filter((type) => type !== quizType)
+        : [...current, quizType],
+    );
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(undefined);
@@ -83,7 +91,7 @@ export default function StudyPlanForm({
       const draft = {
         name,
         resource_ids: selectedResourceIds,
-        quiz_type: quizType,
+        quiz_types: selectedQuizTypes,
         n_quiz: nQuiz,
         n_option: nOption,
       };
@@ -139,23 +147,24 @@ export default function StudyPlanForm({
         ))}
       </fieldset>
 
-      <div className="grid gap-2">
-        <Label htmlFor="quiz-type">クイズ形式</Label>
-        <select
-          id="quiz-type"
-          value={quizType}
-          onChange={(event) =>
-            setQuizType(event.target.value as StudyPlanDraft["quiz_type"])
-          }
-          className="h-10 border bg-background px-3"
-        >
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">クイズ形式</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
           {quizTypes.map(([value, label]) => (
-            <option key={value} value={value}>
+            <label
+              key={value}
+              className="flex items-center gap-3 border p-3 text-sm"
+            >
+              <input
+                type="checkbox"
+                checked={selectedQuizTypes.includes(value)}
+                onChange={() => toggleQuizType(value)}
+              />
               {label}
-            </option>
+            </label>
           ))}
-        </select>
-      </div>
+        </div>
+      </fieldset>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-2">
@@ -200,7 +209,8 @@ export default function StudyPlanForm({
             isSubmitting ||
             isLoading ||
             resources.length === 0 ||
-            selectedResourceIds.length === 0
+            selectedResourceIds.length === 0 ||
+            selectedQuizTypes.length === 0
           }
         >
           {isSubmitting
