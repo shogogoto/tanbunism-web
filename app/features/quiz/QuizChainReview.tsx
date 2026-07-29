@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { HashLink } from "~/shared/components/HashLink";
 import { Badge } from "~/shared/components/ui/badge";
 import {
   Card,
@@ -20,14 +20,18 @@ function KnowdeLink({ knowde }: { knowde: Knowde }) {
   const label = terms ? `${terms}: ${knowde.sentence}` : knowde.sentence;
 
   return (
-    <Link
-      to={`/knowde/${knowde.uid}`}
+    <HashLink
+      to={`/resource/${knowde.resource_uid}#${knowde.uid}`}
       aria-label={label}
-      className="hover:text-primary hover:underline"
+      title="この単文から学習を続ける"
+      className="group hover:text-primary"
     >
       {terms && <strong>{terms}: </strong>}
-      <span>{knowde.sentence}</span>
-    </Link>
+      <span className="group-hover:underline">{knowde.sentence}</span>
+      <span className="ml-2 whitespace-nowrap text-xs text-muted-foreground group-hover:text-primary">
+        単文へ →
+      </span>
+    </HashLink>
   );
 }
 

@@ -67,10 +67,10 @@ it("関係クイズを起点・関係・終点として表示する", () => {
   expect(screen.getByText("—[具体例]→")).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "群: 群についての単文" }),
-  ).toHaveAttribute("href", "/knowde/source");
+  ).toHaveAttribute("href", "/resource/resource#source");
   expect(
     screen.getByRole("link", {
       name: "整数の加法群: 整数の加法群についての単文",
     }),
-  ).toHaveAttribute("href", "/knowde/destination");
+  ).toHaveAttribute("href", "/resource/resource#destination");
 });

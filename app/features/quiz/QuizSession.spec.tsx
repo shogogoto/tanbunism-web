@@ -115,7 +115,7 @@ describe("QuizSession", () => {
       screen.getByRole("link", {
         name: /可換: 可換とは、演算の順序を交換しても結果が変わらない/,
       }),
-    ).toHaveAttribute("href", "/knowde/sentence-1");
+    ).toHaveAttribute("href", "/resource/resource-1#sentence-1");
   });
 
   it("StudyPlanがなければ作成してクイズを開始できる", async () => {
