@@ -30,6 +30,7 @@ import StudyPlanForm from "./StudyPlanForm";
 import {
   type QuizChain,
   type QuizRecommendation,
+  type QuizType,
   type StudyPlan,
   answerQuiz,
   deleteStudyPlan,
@@ -58,6 +59,10 @@ export default function QuizSession() {
   const [activeQuizIndex, setActiveQuizIndex] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPreparingRecommendations, setIsPreparingRecommendations] =
+    useState(false);
+  const [preparingQuizType, setPreparingQuizType] = useState<QuizType>();
+  const [preparationError, setPreparationError] = useState<string>();
   const [submitError, setSubmitError] = useState<string>();
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState<StudyPlan>();
@@ -96,39 +101,76 @@ export default function QuizSession() {
   useEffect(() => {
     if (!planId) {
       setRecommendations([]);
+      setIsPreparingRecommendations(false);
       return;
     }
 
+    const plan = plans.find(({ uid }) => uid === planId);
+    if (!plan) return;
+    const planQuizTypes = plan.quiz_types;
+
     let active = true;
-    setLoadState({ status: "loading" });
+    const controller = new AbortController();
+    setLoadState({ status: "ready" });
+    setIsPreparingRecommendations(true);
+    setPreparationError(undefined);
+    setRecommendations([]);
     setAnswers({});
     setResults({});
     setActiveQuizIndex(0);
     setSubmitError(undefined);
 
     async function loadRecommendations() {
-      try {
-        const loadedRecommendations = await recommendQuizzes(planId);
+      let accumulated: QuizRecommendation[] = [];
+      const errors: string[] = [];
+      for (const quizType of planQuizTypes) {
         if (!active) return;
-        setRecommendations(loadedRecommendations);
-        setLoadState({ status: "ready" });
-      } catch (error) {
-        if (!active) return;
-        setLoadState({
-          status: "error",
-          message:
+        setPreparingQuizType(quizType);
+        try {
+          const loaded = await recommendQuizzes(
+            planId,
+            quizType,
+            controller.signal,
+          );
+          if (!active) return;
+          const byId = new Map(
+            [...accumulated, ...loaded].map((item) => [
+              item.quiz.quiz_id,
+              item,
+            ]),
+          );
+          accumulated = [...byId.values()];
+          setRecommendations(accumulated);
+        } catch (error) {
+          if (!active || controller.signal.aborted) return;
+          errors.push(
             error instanceof Error
               ? error.message
-              : "おすすめのクイズを取得できませんでした。",
+              : `${quizType}のクイズを取得できませんでした。`,
+          );
+        }
+      }
+      if (!active) return;
+      setPreparingQuizType(undefined);
+      setIsPreparingRecommendations(false);
+      if (errors.length > 0 && accumulated.length === 0) {
+        setLoadState({
+          status: "error",
+          message: errors[0],
         });
+      } else if (errors.length > 0) {
+        setPreparationError(
+          `${errors.length}形式のクイズを準備できませんでした。取得済みの問題は回答できます。`,
+        );
       }
     }
 
     loadRecommendations();
     return () => {
       active = false;
+      controller.abort();
     };
-  }, [planId, refreshKey]);
+  }, [planId, plans, refreshKey]);
 
   useEffect(() => {
     if (recommendations.length > 0) sessionRef.current?.focus();
@@ -294,7 +336,7 @@ export default function QuizSession() {
     );
   }
 
-  if (recommendations.length === 0) {
+  if (recommendations.length === 0 && !isPreparingRecommendations) {
     return (
       <div className="mx-auto max-w-2xl p-6 space-y-4">
         <PlanToolbar
@@ -381,6 +423,29 @@ export default function QuizSession() {
         </Card>
       )}
 
+      {isPreparingRecommendations && (
+        <Card className="border">
+          <CardContent className="py-4">
+            <p className="font-medium">
+              {preparingQuizType
+                ? `${quizTypeLabels[preparingQuizType]}を準備しています…`
+                : "クイズを準備しています…"}
+            </p>
+            {recommendations.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                届いた問題から回答を選べます。
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {preparationError && (
+        <Alert variant="destructive">
+          <AlertDescription>{preparationError}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="space-y-4">
         {recommendations.map((recommendation, index) => {
           const quizId = recommendation.quiz.quiz_id;
@@ -400,7 +465,7 @@ export default function QuizSession() {
         })}
       </div>
 
-      {!isComplete && (
+      {recommendations.length > 0 && !isComplete && (
         <Card className="sticky bottom-3 border shadow-lg">
           <CardContent className="flex items-center justify-between gap-4 py-4">
             <div>
@@ -416,7 +481,9 @@ export default function QuizSession() {
             <Button
               type="button"
               onClick={submitAnswers}
-              disabled={!allAnswered || isSubmitting}
+              disabled={
+                !allAnswered || isSubmitting || isPreparingRecommendations
+              }
             >
               {isSubmitting ? "送信中…" : "まとめて回答"}
             </Button>
@@ -545,6 +612,13 @@ const recommendationReasonLabels = {
   low_accuracy: "正答率が低いため復習",
   coverage: "Coverageを広げる",
 } as const;
+
+const quizTypeLabels: Record<QuizType, string> = {
+  term2sent: "用語から単文",
+  sent2term: "単文から用語",
+  rel2pair: "関係から単文の組",
+  pair2rel: "単文の組から関係",
+};
 
 function RecommendationReason({
   reason,

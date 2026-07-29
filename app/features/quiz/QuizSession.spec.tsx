@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -156,6 +156,40 @@ function renderQuizSession() {
 }
 
 describe("QuizSession", () => {
+  it("QuizTypeごとに届いた問題から表示する", async () => {
+    let finishSecondType!: () => void;
+    const waitForSecondType = new Promise<void>((resolve) => {
+      finishSecondType = resolve;
+    });
+    server.use(
+      http.post(
+        "*/quiz/study-plans/plan-1/recommendations",
+        async ({ request }) => {
+          const quizType = new URL(request.url).searchParams.get("quiz_type");
+          if (quizType === "sent2term") {
+            await waitForSecondType;
+            return HttpResponse.json([]);
+          }
+          return HttpResponse.json([recommendation]);
+        },
+      ),
+    );
+
+    renderQuizSession();
+
+    expect(
+      await screen.findByText(recommendation.quiz.statement),
+    ).toBeVisible();
+    expect(screen.getByText("単文から用語を準備しています…")).toBeVisible();
+
+    finishSecondType();
+    await waitFor(() => {
+      expect(
+        screen.queryByText("単文から用語を準備しています…"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it("StudyPlanの推薦クイズに回答して正誤を表示する", async () => {
     const user = userEvent.setup();
     renderQuizSession();

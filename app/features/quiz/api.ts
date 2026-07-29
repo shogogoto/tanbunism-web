@@ -6,6 +6,7 @@ import {
   deleteStudyPlanApiQuizStudyPlansPlanIdDelete,
   getLearningProgressApiQuizLearningProgressResourceIdGet,
   getNamaspaceNamespaceGet,
+  getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostUrl,
   listCreatedQuizResourcesQuizCreatedResourcesGet,
   listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGet,
   listCreatedQuizzesQuizCreatedGet,
@@ -47,6 +48,7 @@ export type StudyResource = {
   uid: string;
   name: string;
 };
+export type QuizType = StudyPlanDraft["quiz_types"][number];
 
 export class QuizApiError extends Error {
   constructor(
@@ -144,11 +146,34 @@ export async function deleteStudyPlan(planId: string): Promise<void> {
 
 export async function recommendQuizzes(
   planId: string,
+  quizType?: QuizType,
+  signal?: AbortSignal,
 ): Promise<QuizRecommendation[]> {
+  if (quizType) {
+    const url =
+      getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostUrl(
+        planId,
+      );
+    const response = await fetch(
+      `${url}?quiz_type=${encodeURIComponent(quizType)}`,
+      {
+        method: "POST",
+        credentials: "include",
+        signal,
+      },
+    );
+    const data = (await response.json()) as
+      | QuizRecommendation[]
+      | HTTPValidationError;
+    return unwrap(
+      { data, status: response.status },
+      "おすすめのクイズを取得できませんでした。",
+    );
+  }
   const response =
     await recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPost(
       planId,
-      { credentials: "include" },
+      { credentials: "include", signal },
     );
   return unwrap(response, "おすすめのクイズを取得できませんでした。");
 }
