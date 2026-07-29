@@ -12,6 +12,7 @@ import {
 import {
   DocsSideMenu,
   FeaturesMenu,
+  LearningMenu,
   RankingSideMenu,
   SearchSideMenu,
 } from "./SpecificSideMenu";
@@ -42,6 +43,7 @@ export default function MySidebar() {
             <DocsSideMenu />
             <SearchSideMenu />
             <RankingSideMenu />
+            {isAuthenticated && <LearningMenu />}
             <FeaturesMenu />
           </SidebarMenu>
           <SideMenu
