@@ -15,6 +15,7 @@ export interface CreateQuizParam {
   quiz_type: QuizType;
   cand_type: CandidateType;
   n_option?: number;
+  correct_sent_uids?: string[];
   allow_multiple_anwser?: boolean;
   allow_no_correct_option?: boolean;
 }

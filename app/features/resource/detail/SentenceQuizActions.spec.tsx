@@ -1,10 +1,18 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import Graph from "graphology";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router";
 import { ResourceDetailProvider } from "./Context";
 import SentenceQuizActions from "./SentenceQuizActions";
+
+const graph = new Graph({ multi: true, type: "directed" });
+graph.addNode("sentence-1");
+graph.addNode("sentence-2");
+graph.addDirectedEdge("sentence-1", "sentence-2", { etype: "example" });
+
+const createRequests: unknown[] = [];
 
 const server = setupServer(
   http.get("*/quiz/created", () =>
@@ -22,16 +30,17 @@ const server = setupServer(
       total: 1,
     }),
   ),
-  http.post("*/quiz", () =>
-    HttpResponse.json({
+  http.post("*/quiz", async ({ request }) => {
+    createRequests.push(await request.json());
+    return HttpResponse.json({
       quiz_id: "quiz-2",
       statement: "「可換」に合う文を当ててください",
       options: {},
       correct: [],
       created: "2026-07-28T00:00:00Z",
       no_correct_option: false,
-    }),
-  ),
+    });
+  }),
   http.post("*/quiz/answer/quiz-1", async ({ request }) => {
     const body = (await request.json()) as { selected: string[] };
     return HttpResponse.json({
@@ -61,7 +70,10 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  createRequests.length = 0;
+});
 afterAll(() => server.close());
 
 it("単文のQuizを確認し、その場から新しく作成する", async () => {
@@ -71,9 +83,14 @@ it("単文のQuizを確認し、その場から新しく作成する", async () 
   render(
     <MemoryRouter>
       <ResourceDetailProvider
-        graph={null as never}
-        uids={{}}
-        terms={{}}
+        graph={graph}
+        uids={{
+          "sentence-1": "対象の単文",
+          "sentence-2": "関連する単文",
+        }}
+        terms={{
+          "sentence-2": { names: ["具体例"] },
+        }}
         rootId="resource-1"
         resource_info={null as never}
         sentenceQuizStatuses={
@@ -115,4 +132,20 @@ it("単文のQuizを確認し、その場から新しく作成する", async () 
   );
 
   expect(refresh).toHaveBeenCalledOnce();
+
+  await user.click(screen.getByRole("button", { name: "＋ クイズ" }));
+  await user.click(
+    screen.getByRole("menuitem", { name: "関係から単文を当てる…" }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: /具体例.*関連する単文/ }),
+  );
+
+  expect(createRequests).toContainEqual(
+    expect.objectContaining({
+      target_sent_uid: "sentence-1",
+      correct_sent_uids: ["sentence-2"],
+      quiz_type: "rel2pair",
+    }),
+  );
 });

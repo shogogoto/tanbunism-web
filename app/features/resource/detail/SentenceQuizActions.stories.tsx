@@ -1,8 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import Graph from "graphology";
 import { http, HttpResponse } from "msw";
 import { MemoryRouter } from "react-router";
 import { ResourceDetailProvider } from "./Context";
 import SentenceQuizActions from "./SentenceQuizActions";
+
+const graph = new Graph({ multi: true, type: "directed" });
+graph.addNode("sentence-1");
+graph.addNode("sentence-2");
+graph.addDirectedEdge("sentence-1", "sentence-2", { etype: "example" });
 
 const meta = {
   title: "Features/Resource/SentenceQuizActions",
@@ -11,9 +17,14 @@ const meta = {
     (Story) => (
       <MemoryRouter>
         <ResourceDetailProvider
-          graph={null as never}
-          uids={{}}
-          terms={{}}
+          graph={graph}
+          uids={{
+            "sentence-1": "対象の単文",
+            "sentence-2": "整数は群の具体例である。",
+          }}
+          terms={{
+            "sentence-2": { names: ["整数の加法群"] },
+          }}
           rootId="resource-1"
           resource_info={null as never}
           sentenceQuizStatuses={

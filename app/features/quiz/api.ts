@@ -170,6 +170,23 @@ export async function createSentenceQuiz(
   return unwrap(response, "この単文からクイズを作成できませんでした。");
 }
 
+export async function createRelationQuiz(
+  sentenceId: string,
+  relatedSentenceId: string,
+): Promise<ReadableQuiz> {
+  const response = await createQuizApiQuizPost(
+    {
+      target_sent_uid: sentenceId,
+      correct_sent_uids: [relatedSentenceId],
+      quiz_type: "rel2pair",
+      cand_type: "all",
+      n_option: 4,
+    },
+    { credentials: "include" },
+  );
+  return unwrap(response, "関係から単文を当てるクイズを作成できませんでした。");
+}
+
 export async function deleteQuiz(quizId: string): Promise<void> {
   const response = await deleteQuizApiQuizQuizIdDelete(quizId, {
     credentials: "include",

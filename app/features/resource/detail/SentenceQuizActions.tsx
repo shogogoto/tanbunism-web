@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
 import {
   type ReadableQuiz,
+  createRelationQuiz,
   createSentenceQuiz,
   listCreatedQuizzes,
 } from "~/features/quiz/api";
@@ -14,22 +15,71 @@ import {
   DropdownMenuTrigger,
 } from "~/shared/components/ui/dropdown-menu";
 import { useResourceDetail } from "./Context";
+import { getHeadingLevel } from "./util";
 
 type QuizType = "sent2term" | "term2sent";
+
+const relationLabels: Record<string, string> = {
+  to: "依存",
+  example: "具体例",
+  anti: "反対",
+  similar: "類似",
+  resolved: "用語参照",
+  def: "定義",
+  quoterm: "引用用語",
+  when: "時",
+  where: "場所",
+  by: "人物",
+  ref: "参照",
+  num: "数値",
+  below: "配下",
+  sibling: "並列",
+};
 
 export default function SentenceQuizActions({
   sentenceId,
 }: {
   sentenceId: string;
 }) {
-  const { rootId, sentenceQuizStatuses, refreshSentenceQuizStatuses } =
-    useResourceDetail();
+  const {
+    graph,
+    rootId,
+    sentenceQuizStatuses,
+    refreshSentenceQuizStatuses,
+    terms,
+    uids,
+  } = useResourceDetail();
   const [isCreating, setIsCreating] = useState(false);
+  const [isChoosingRelation, setIsChoosingRelation] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [quizzes, setQuizzes] = useState<ReadableQuiz[]>();
   const [error, setError] = useState<string>();
   const status = sentenceQuizStatuses?.get(sentenceId);
+  const relationCandidates = graph
+    .neighbors(sentenceId)
+    .flatMap((candidateId) => {
+      const node = uids[candidateId];
+      const sentence =
+        typeof node === "string"
+          ? node
+          : ((node as { n?: string } | undefined)?.n ?? "");
+      if (!sentence || getHeadingLevel(sentence) > 0) return [];
+
+      const names = terms[candidateId]?.names?.join(" / ");
+      const edgeTypes = graph
+        .edges(sentenceId, candidateId)
+        .map((edge) => String(graph.getEdgeAttribute(edge, "etype")));
+      return [
+        {
+          id: candidateId,
+          label: names ? `${names}: ${sentence}` : sentence,
+          relations: [...new Set(edgeTypes)].map(
+            (type) => relationLabels[type] ?? type,
+          ),
+        },
+      ];
+    });
 
   async function loadQuizzes() {
     setIsLoading(true);
@@ -74,6 +124,25 @@ export default function SentenceQuizActions({
     }
   }
 
+  async function createRelation(relatedSentenceId: string) {
+    setIsCreating(true);
+    setError(undefined);
+    try {
+      await createRelationQuiz(sentenceId, relatedSentenceId);
+      setIsChoosingRelation(false);
+      await refreshSentenceQuizStatuses?.();
+      if (isExpanded) await loadQuizzes();
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "関係クイズを作成できませんでした。",
+      );
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
   return (
     <>
       <span className="ml-2 inline-flex items-center gap-1 align-middle">
@@ -108,6 +177,9 @@ export default function SentenceQuizActions({
             <DropdownMenuItem onSelect={() => void create("sent2term")}>
               単文から用語を当てる
             </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setIsChoosingRelation(true)}>
+              関係から単文を当てる…
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         {error && (
@@ -116,6 +188,38 @@ export default function SentenceQuizActions({
           </span>
         )}
       </span>
+      {isChoosingRelation && (
+        <div className="my-2 ml-6 space-y-2 border-l-2 pl-3">
+          <p className="text-xs font-medium">正解にする関係先を選ぶ</p>
+          {relationCandidates.map((candidate) => (
+            <button
+              key={candidate.id}
+              type="button"
+              disabled={isCreating}
+              className="block w-full border p-2 text-left text-xs hover:bg-muted"
+              onClick={() => void createRelation(candidate.id)}
+            >
+              <span className="mr-2 text-muted-foreground">
+                {candidate.relations.join(" / ")}
+              </span>
+              {candidate.label}
+            </button>
+          ))}
+          {relationCandidates.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              直接関係する単文がありません。
+            </p>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsChoosingRelation(false)}
+          >
+            閉じる
+          </Button>
+        </div>
+      )}
       {isExpanded && (
         <div className="my-2 ml-6 space-y-2 border-l-2 pl-3">
           {isLoading && (
