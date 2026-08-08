@@ -112,13 +112,13 @@ describe("統合検索", () => {
     expect(screen.queryByText("詳細数")).not.toBeInTheDocument();
     expect(document.querySelector("[data-slot=badge]")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "知識" })).toHaveClass(
-      "bg-blue-600",
+      "!bg-blue-600",
     );
     expect(screen.getByRole("button", { name: "リソース" })).toHaveClass(
-      "bg-orange-600",
+      "!bg-orange-600",
     );
     expect(screen.getByRole("button", { name: "ユーザー" })).toHaveClass(
-      "bg-purple-600",
+      "!bg-purple-600",
     );
     expect(requestedTypes.sort()).toEqual(["knowledge", "resource", "user"]);
   });
@@ -135,6 +135,13 @@ describe("統合検索", () => {
     expect(screen.getByRole("button", { name: "リソース" })).toHaveAttribute(
       "aria-pressed",
       "false",
+    );
+    expect(screen.getByRole("button", { name: "リソース" })).toHaveClass(
+      "!bg-muted",
+      "!text-muted-foreground",
+    );
+    expect(screen.getByRole("button", { name: "リソース" })).not.toHaveClass(
+      "!bg-orange-600",
     );
     expect(screen.getByText("1件の検索結果")).toBeVisible();
   });

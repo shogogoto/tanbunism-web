@@ -377,19 +377,21 @@ const searchTypeButtonStyles: Record<
   { selected: string; unselected: string }
 > = {
   knowledge: {
-    selected: "border-blue-600 bg-blue-600 text-white hover:bg-blue-700",
+    selected: "!border-blue-600 !bg-blue-600 !text-white hover:!bg-blue-700",
     unselected:
-      "border-blue-500/60 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950",
+      "!border-border !bg-muted !text-muted-foreground hover:!bg-muted/80",
   },
   resource: {
-    selected: "border-orange-600 bg-orange-600 text-white hover:bg-orange-700",
+    selected:
+      "!border-orange-600 !bg-orange-600 !text-white hover:!bg-orange-700",
     unselected:
-      "border-orange-500/60 text-orange-700 hover:bg-orange-50 dark:text-orange-300 dark:hover:bg-orange-950",
+      "!border-border !bg-muted !text-muted-foreground hover:!bg-muted/80",
   },
   user: {
-    selected: "border-purple-600 bg-purple-600 text-white hover:bg-purple-700",
+    selected:
+      "!border-purple-600 !bg-purple-600 !text-white hover:!bg-purple-700",
     unselected:
-      "border-purple-500/60 text-purple-700 hover:bg-purple-50 dark:text-purple-300 dark:hover:bg-purple-950",
+      "!border-border !bg-muted !text-muted-foreground hover:!bg-muted/80",
   },
 };
 
