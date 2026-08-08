@@ -7,7 +7,7 @@
 import type { EdgeType } from "./edgeType";
 
 /**
- * for fastapi schema.
+ * FastAPI schema用の辺.
  */
 export interface _EdgeData {
   type: EdgeType;

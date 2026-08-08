@@ -18,10 +18,18 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { Checkbox } from "~/shared/components/ui/checkbox";
 import { Label } from "~/shared/components/ui/label";
-import { UserSearchBodyOrderByAnyOfItem } from "~/shared/generated/fastAPI.schemas";
+import type { UserSearchBody } from "~/shared/generated/fastAPI.schemas";
 import { useUserSearch } from "./SearchContext";
 
-const ORDER_BY_OPTIONS = Object.values(UserSearchBodyOrderByAnyOfItem);
+type UserSearchOrder = NonNullable<UserSearchBody["order_by"]>[number];
+
+const ORDER_BY_OPTIONS = [
+  "username",
+  "display_name",
+  "n_char",
+  "n_sentence",
+  "n_resource",
+] as const satisfies readonly UserSearchOrder[];
 
 function SortableItem({ id }: { id: string }) {
   const { attributes, listeners, setNodeRef, transform, transition } =

@@ -2,9 +2,9 @@ import type { DirectedGraph } from "graphology";
 import Graph from "graphology";
 import type { Attributes } from "graphology-types";
 import type {
-  EdgeData,
+  _EdgeData as EdgeData,
   EdgeType,
-  GraphData,
+  _GraphData as GraphData,
 } from "~/shared/generated/fastAPI.schemas";
 
 type EdgePredicate = (attr: Attributes) => boolean;

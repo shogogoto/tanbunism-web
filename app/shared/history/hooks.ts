@@ -3,8 +3,8 @@ import { useLocation } from "react-router";
 import useSWR, { useSWRConfig } from "swr";
 import { historyCache } from "~/shared/lib/indexed";
 import type {
-  Knowde,
   MResource,
+  Tanbun,
   UserReadPublic,
 } from "../generated/fastAPI.schemas";
 import type { HistoryItemType } from "./types";
@@ -27,7 +27,7 @@ export function useHistory() {
     [location, mutate],
   );
 
-  const getKnowdeTitle = useCallback((k: Knowde) => {
+  const getTanbunTitle = useCallback((k: Tanbun) => {
     if (k.term?.names) return k.term?.names.join(", ");
     return k.sentence;
   }, []);
@@ -43,7 +43,7 @@ export function useHistory() {
   return {
     histories: histories ?? [],
     addHistory,
-    getKnowdeTitle,
+    getTanbunTitle,
     getUserTitle,
     getResourcreTitle,
   };

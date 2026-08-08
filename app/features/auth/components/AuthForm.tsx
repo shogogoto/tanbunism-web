@@ -11,24 +11,22 @@ import {
 } from "~/shared/components/ui/card";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
-import { registerRegisterAuthRegisterPostBody } from "~/shared/generated/auth/auth.zod";
+import { RegisterRegisterAuthRegisterPostBody } from "~/shared/generated/auth/auth.zod";
 import useShowToggle from "~/shared/hooks/useShowToggle";
 import { GoogleAuthButton } from "../sso/google";
 
-export const authSchema = registerRegisterAuthRegisterPostBody
-  .pick({
-    email: true,
-    password: true,
-  })
-  .extend({
-    email: z
-      .string({ required_error: "メールアドレスは必須です" })
-      .email("有効なメールアドレスを入力してください"),
-    password: z
-      .string({ required_error: "パスワードは必須です" })
-      .min(3, "パスワードは3文字以上で入力してください")
-      .max(100, "パスワードは100文字以下で入力してください"),
-  });
+export const authSchema = RegisterRegisterAuthRegisterPostBody.pick({
+  email: true,
+  password: true,
+}).extend({
+  email: z
+    .string({ required_error: "メールアドレスは必須です" })
+    .email("有効なメールアドレスを入力してください"),
+  password: z
+    .string({ required_error: "パスワードは必須です" })
+    .min(3, "パスワードは3文字以上で入力してください")
+    .max(100, "パスワードは100文字以下で入力してください"),
+});
 
 type Props = {
   lastResult: SubmissionResult<string[]> | undefined;

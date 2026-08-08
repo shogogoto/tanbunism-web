@@ -1,8 +1,8 @@
 import Dexie, { type Table } from "dexie";
 import type {
-  KnowdeDetail,
-  KnowdeSearchResult,
   ResourceSearchResult,
+  TanbunChain,
+  TanbunSearchResult,
 } from "~/shared/generated/fastAPI.schemas";
 import type { HistoryItemType } from "../history/types";
 
@@ -15,10 +15,10 @@ export interface CacheItem<T> {
 const TTL = 1000 * 60 * 60 * 24; // 24 hours
 const HISTORY_MAX = 100;
 
-class KnowdeCacheDB extends Dexie {
+class TanbunCacheDB extends Dexie {
   public cache!: Table<CacheItem<unknown>>;
-  public knowdeDetails!: Table<KnowdeDetail>;
-  public knowdeSearchResults!: Table<CacheItem<KnowdeSearchResult>>;
+  public knowdeDetails!: Table<TanbunChain>;
+  public knowdeSearchResults!: Table<CacheItem<TanbunSearchResult>>;
   public resourceSearchResults!: Table<CacheItem<ResourceSearchResult>>;
   public history!: Table<HistoryItemType>;
 
@@ -34,7 +34,7 @@ class KnowdeCacheDB extends Dexie {
   }
 }
 
-export const db = new KnowdeCacheDB();
+export const db = new TanbunCacheDB();
 
 function createTTLStore<T>(table: Table<CacheItem<T>>) {
   async function cleanup() {
@@ -122,10 +122,10 @@ function createHistoryStore(table: Table<HistoryItemType>) {
 
 // --- 具体的なキャッシュストアのインスタンス化 ---
 export const genericCache = createTTLStore(db.cache);
-export const knowdeSearchCache = createTTLStore<KnowdeSearchResult>(
+export const tanbunSearchCache = createTTLStore<TanbunSearchResult>(
   db.knowdeSearchResults,
 );
-export const knowdeDetailCache = createEntityStore<KnowdeDetail>(
+export const tanbunDetailCache = createEntityStore<TanbunChain>(
   db.knowdeDetails,
 );
 

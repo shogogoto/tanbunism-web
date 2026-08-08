@@ -40,19 +40,19 @@ type Props2 = {
   kn: ReturnType<typeof toAdjacent>["kn"];
 } & PropsWithChildren;
 
-export function KnowdeDetailLink({ kn, children }: Props2) {
+export function TanbunChainLink({ kn, children }: Props2) {
   const { resource_info } = useResourceDetail();
   const { handleMouseDown, handleClick } = useSelectPreventLink(5); // 5px を閾値とする
   return (
     <Link
-      to={`/knowde/${kn.uid}`}
+      to={`/tanbun/${kn.uid}`}
       draggable="false"
       className="!text-inherit"
       onMouseDown={handleMouseDown}
       onClick={handleClick}
       id={kn.uid}
       state={{
-        knowde: kn,
+        tanbun: kn,
         resource: resource_info.resource,
         user: resource_info.user,
       }}

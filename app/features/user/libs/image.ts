@@ -1,4 +1,6 @@
-import type { UserAvatarUrl } from "~/shared/generated/fastAPI.schemas";
+import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
+
+type UserAvatarUrl = UserReadPublic["avatar_url"];
 
 export function getTransformedImageUrl(
   url: UserAvatarUrl | undefined,

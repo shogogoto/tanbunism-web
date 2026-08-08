@@ -1,13 +1,13 @@
 import type Graph from "graphology";
 import type {
   EdgeType,
-  Knowde,
   ResourceDetailTerms,
   ResourceDetailUids,
+  Tanbun,
 } from "~/shared/generated/fastAPI.schemas";
 import { eqEdgeType, pathsToEnd, pred, succ } from "~/shared/lib/network";
 
-type ResourceKnowde = Omit<Knowde, "stats" | "resource_uid">;
+type ResourceTanbun = Omit<Tanbun, "stats" | "resource_uid">;
 
 export function toAdjacent(
   id: string,
@@ -31,7 +31,7 @@ export function toAdjacent(
       : ((sentenceNode as { n: string })?.n ??
         JSON.stringify(sentenceNode) ??
         "<<<not defined>>>");
-  const kn: ResourceKnowde = {
+  const kn: ResourceTanbun = {
     sentence,
     term: terms[id],
     uid: id,

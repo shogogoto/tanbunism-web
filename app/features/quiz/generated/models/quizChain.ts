@@ -5,15 +5,15 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Answer } from "./answer";
-import type { Knowde } from "./knowde";
 import type { QuizChainLink } from "./quizChainLink";
 import type { QuizChainQuiz } from "./quizChainQuiz";
+import type { Tanbun } from "./tanbun";
 
 /**
  * frontendで既存chainへマージできる1ホップ分のgraph.
  */
 export interface QuizChain {
-  sentences: Knowde[];
+  sentences: Tanbun[];
   quizzes: QuizChainQuiz[];
   links: QuizChainLink[];
   answers?: Answer[];

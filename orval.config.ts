@@ -67,4 +67,27 @@ export default defineConfig({
       },
     },
   },
+  achievement: {
+    input: {
+      target: openApiUrl,
+      filters: {
+        tags: ["quiz_achievement"],
+      },
+    },
+    output: {
+      mode: "single",
+      target: "./app/features/achievement/generated/api.ts",
+      schemas: "./app/features/achievement/generated/models",
+      baseUrl: apiBaseUrl,
+      client: "fetch",
+      httpClient: "fetch",
+    },
+    hooks: {
+      afterAllFilesWrite: {
+        command:
+          "./node_modules/.bin/biome check --write --unsafe app/features/achievement/generated",
+        injectGeneratedDirsAndFiles: false,
+      },
+    },
+  },
 });

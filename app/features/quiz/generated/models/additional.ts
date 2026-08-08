@@ -6,7 +6,7 @@
  */
 
 /**
- * knowde付加情報.
+ * 単文の付加情報.
  */
 export interface Additional {
   when?: string | null;

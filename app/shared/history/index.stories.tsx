@@ -22,7 +22,7 @@ export const Default: Story = {
   args: {
     histories: [
       mockHistory({ title: "user history", url: "user" }),
-      mockHistory({ title: "knowde history", url: "knowde" }),
+      mockHistory({ title: "tanbun history", url: "tanbun" }),
       mockHistory({ title: "search history", url: "search" }),
       mockHistory({ title: "resource history", url: "resource" }),
       mockHistory({ title: "other history", url: "other" }),

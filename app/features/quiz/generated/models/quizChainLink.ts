@@ -8,7 +8,7 @@ import type { QuizChainRole } from "./quizChainRole";
 import type { QuizRel } from "./quizRel";
 
 /**
- * QuizとKnowdeを結ぶ役割と、targetからの知識関係.
+ * QuizとTanbunを結ぶ役割と、targetからの知識関係.
  */
 export interface QuizChainLink {
   quiz_id: string;

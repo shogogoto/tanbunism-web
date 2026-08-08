@@ -9,7 +9,7 @@ import type { ResourceStats } from "./resourceStats";
 import type { UserReadPublic } from "./userReadPublic";
 
 /**
- * リソースの所有者や詳細.
+ * リソースの所有者や統計を含む情報.
  */
 export interface ResourceInfo {
   user: UserReadPublic;

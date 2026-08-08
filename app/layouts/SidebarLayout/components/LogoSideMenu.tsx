@@ -19,7 +19,7 @@ export default function LogoSideMenu() {
         <SidebarMenuButton asChild tooltip="Landing Page">
           <Link to="/">
             <SiteLogo />
-            <span>Knowde</span>
+            <span>Tanbun</span>
           </Link>
         </SidebarMenuButton>
         <SidebarMenuAction asChild>
