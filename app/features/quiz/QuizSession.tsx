@@ -561,7 +561,7 @@ function QuizQuestion({
               )}
             </span>
           </CardDescription>
-          <CardTitle className="text-lg leading-relaxed">
+          <CardTitle className="whitespace-pre-line text-lg leading-relaxed">
             <ChainSentenceLink
               chain={result?.chain}
               sentenceId={result && findTargetSentenceId(result.chain)}

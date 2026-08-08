@@ -46,7 +46,7 @@ export default function QuizAttempt({ quiz }: { quiz: ReadableQuiz }) {
 
   return (
     <div className="space-y-3 border p-3">
-      <p className="text-sm font-medium">
+      <p className="whitespace-pre-line text-sm font-medium">
         <ChainSentenceLink
           chain={chain}
           sentenceId={chain && findTargetSentenceId(chain)}

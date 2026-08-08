@@ -342,7 +342,7 @@ function QuizCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base leading-relaxed">
+        <CardTitle className="whitespace-pre-line text-base leading-relaxed">
           {quiz.statement}
         </CardTitle>
       </CardHeader>
