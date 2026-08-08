@@ -1,9 +1,6 @@
 import { ArrowUpCircle, ChevronRight } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Loading from "~/shared/components/Loading";
-import QueryParamTabPage, {
-  type QueryParamTabItem,
-} from "~/shared/components/tabs/QueryParamTabPage";
 import {
   Collapsible,
   CollapsibleContent,
@@ -37,21 +34,18 @@ const colors = {
   detail: {
     in: "border-blue-800",
     out: "border-blue-400",
-    tab: "data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900",
     bgIn: "bg-blue-100 dark:bg-blue-950",
     bgOut: "bg-blue-50 dark:bg-blue-800",
   },
   logic: {
     in: "border-green-800",
     out: "border-green-400",
-    tab: "data-[state=active]:bg-green-100 dark:data-[state=active]:bg-green-900",
     bgIn: "bg-green-100 dark:bg-green-950",
     bgOut: "bg-green-50 dark:bg-green-900",
   },
   ref: {
     in: "border-orange-800",
     out: "border-yellow-400",
-    tab: "data-[state=active]:bg-yellow-100 dark:data-[state=active]:bg-yellow-900",
     bgIn: "bg-orange-100 dark:bg-orange-950",
     bgOut: "bg-yellow-50 dark:bg-orange-900",
   },
@@ -91,6 +85,27 @@ function CollapsibleSection({
       </CollapsibleTrigger>
       <CollapsibleContent>{validChildren}</CollapsibleContent>
     </Collapsible>
+  );
+}
+
+function RelationSection({
+  id,
+  title,
+  borderColor,
+  children,
+}: {
+  id: string;
+  title: string;
+  borderColor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={id} className="scroll-mt-16 space-y-2">
+      <h2 className={cn("border-l-4 px-3 text-lg font-bold", borderColor)}>
+        {title}
+      </h2>
+      <div className="grid items-start gap-3 md:grid-cols-2">{children}</div>
+    </section>
   );
 }
 type Props = {
@@ -165,144 +180,129 @@ export default function MainView({ detail, prefetched }: Props) {
 
   const isLoaded = !!(detail && g && rootId && logicOp && refOp);
 
-  const items: QueryParamTabItem[] = [
-    {
-      param: "detail",
-      className: colors.detail.tab,
-      tab: (
-        <>
-          詳細
-          {st.detail}
-        </>
-      ),
-      content: (
-        <>
+  const relations = isLoaded ? (
+    <div className="space-y-8 px-1 pb-8">
+      <RelationSection
+        id="detail-relations"
+        title="詳細"
+        borderColor={colors.detail.in}
+      >
+        <div>
           <CollapsibleSection
             title="親"
             stat={<ArrowUpCircle className="size-4" />}
             backgroundColor={colors.detail.bgIn}
           >
-            {isLoaded && (
-              <Parents
-                parents={graphForView(detail).location.parents}
-                borderColor={colors.detail.in}
-              />
-            )}
+            <Parents
+              parents={graphForView(detail).location.parents}
+              borderColor={colors.detail.in}
+            />
           </CollapsibleSection>
+        </div>
+        <div>
           <CollapsibleSection
             title="子"
             stat={st.detail}
             backgroundColor={colors.detail.bgOut}
           >
-            {isLoaded &&
-              belows?.map((bid) => (
-                <DetailNested
-                  startId={bid}
-                  kn={kn}
-                  g={g}
-                  key={bid}
-                  borderColor={colors.detail.out}
-                />
-              ))}
+            {belows?.map((bid) => (
+              <DetailNested
+                startId={bid}
+                kn={kn}
+                g={g}
+                key={bid}
+                borderColor={colors.detail.out}
+              />
+            ))}
           </CollapsibleSection>
-        </>
-      ),
-    },
-    {
-      param: "logic",
-      className: colors.logic.tab,
-      tab: (
-        <>
-          {st.premise}
-          論理
-          {st.conclusion}
-        </>
-      ),
-      content: (
-        <>
+        </div>
+      </RelationSection>
+
+      <RelationSection
+        id="logic-relations"
+        title="論理"
+        borderColor={colors.logic.in}
+      >
+        <div>
           <CollapsibleSection
             title="前提"
             stat={st.premise}
             backgroundColor={colors.logic.bgIn}
           >
-            {isLoaded &&
-              logicPred.map((id) => (
-                <TanbunGroup2
-                  startId={id}
-                  kn={kn}
-                  getGroup={logicOp.pred}
-                  key={id}
-                  borderColor={colors.logic.in}
-                />
-              ))}
+            {logicPred.map((id) => (
+              <TanbunGroup2
+                startId={id}
+                kn={kn}
+                getGroup={logicOp.pred}
+                key={id}
+                borderColor={colors.logic.in}
+              />
+            ))}
           </CollapsibleSection>
+        </div>
+        <div>
           <CollapsibleSection
             title="結論"
             stat={st.conclusion}
             backgroundColor={colors.logic.bgOut}
           >
-            {isLoaded &&
-              logicSucc.map((id) => (
-                <TanbunGroup2
-                  startId={id}
-                  kn={kn}
-                  getGroup={logicOp.succ}
-                  key={id}
-                  borderColor={colors.logic.out}
-                />
-              ))}
+            {logicSucc.map((id) => (
+              <TanbunGroup2
+                startId={id}
+                kn={kn}
+                getGroup={logicOp.succ}
+                key={id}
+                borderColor={colors.logic.out}
+              />
+            ))}
           </CollapsibleSection>
-        </>
-      ),
-    },
-    {
-      param: "ref",
-      className: colors.ref.tab,
-      tab: (
-        <>
-          {st.refer}
-          参照
-          {st.referred}
-        </>
-      ),
-      content: (
-        <>
+        </div>
+      </RelationSection>
+
+      <RelationSection
+        id="reference-relations"
+        title="参照"
+        borderColor={colors.ref.in}
+      >
+        <div>
           <CollapsibleSection
-            title="参照"
+            title="参照している"
             stat={st.refer}
             backgroundColor={colors.ref.bgIn}
           >
-            {isLoaded &&
-              refSucc.map((id) => (
-                <TanbunGroup2
-                  startId={id}
-                  kn={kn}
-                  getGroup={refOp.succ}
-                  key={id}
-                  borderColor={colors.ref.in}
-                />
-              ))}
+            {refSucc.map((id) => (
+              <TanbunGroup2
+                startId={id}
+                kn={kn}
+                getGroup={refOp.succ}
+                key={id}
+                borderColor={colors.ref.in}
+              />
+            ))}
           </CollapsibleSection>
+        </div>
+        <div>
           <CollapsibleSection
-            title="被参照"
+            title="参照されている"
             stat={st.referred}
             backgroundColor={colors.ref.bgOut}
           >
-            {isLoaded &&
-              refPred.map((id) => (
-                <TanbunGroup2
-                  startId={id}
-                  kn={kn}
-                  getGroup={refOp.pred}
-                  key={id}
-                  borderColor={colors.ref.out}
-                />
-              ))}
+            {refPred.map((id) => (
+              <TanbunGroup2
+                startId={id}
+                kn={kn}
+                getGroup={refOp.pred}
+                key={id}
+                borderColor={colors.ref.out}
+              />
+            ))}
           </CollapsibleSection>
-        </>
-      ),
-    },
-  ];
+        </div>
+      </RelationSection>
+    </div>
+  ) : (
+    <Loading type="center-x" />
+  );
 
   return (
     <DetailContextProvider
@@ -322,11 +322,32 @@ export default function MainView({ detail, prefetched }: Props) {
             <TanbunCardContent k={headerTanbun} />
           </div>
         )}
-        <QueryParamTabPage
-          items={items}
-          defaultTab="detail"
-          isLoading={!isLoaded}
-        />
+        {isLoaded && (
+          <nav
+            aria-label="関係の目次"
+            className="sticky top-0 z-10 flex gap-2 border-y bg-background/95 p-2 backdrop-blur"
+          >
+            <a
+              className="rounded px-3 py-1 text-sm hover:bg-muted"
+              href="#detail-relations"
+            >
+              詳細
+            </a>
+            <a
+              className="rounded px-3 py-1 text-sm hover:bg-muted"
+              href="#logic-relations"
+            >
+              論理
+            </a>
+            <a
+              className="rounded px-3 py-1 text-sm hover:bg-muted"
+              href="#reference-relations"
+            >
+              参照
+            </a>
+          </nav>
+        )}
+        {relations}
       </div>
     </DetailContextProvider>
   );
