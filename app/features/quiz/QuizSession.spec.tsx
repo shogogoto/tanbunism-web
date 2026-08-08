@@ -23,10 +23,10 @@ const recommendation = {
     quiz_id: "quiz-1",
     statement: "「可換」とはどのような性質ですか？",
     options: {
-      option_a: "演算の順序を交換できる",
+      "sentence-1": "演算の順序を交換できる",
       option_b: "必ず逆元が存在する",
     },
-    correct: ["option_a"],
+    correct: ["sentence-1"],
     created: "2026-07-28T00:00:00Z",
     no_correct_option: false,
   },
@@ -227,13 +227,9 @@ describe("QuizSession", () => {
     expect(
       screen.getByRole("link", { name: "Resourceへ戻る" }),
     ).toHaveAttribute("href", "/resource/resource-1");
-    expect(screen.getByText("このクイズの知識")).toBeInTheDocument();
-    expect(
-      screen.getByRole("complementary", { name: "このクイズの知識" }),
-    ).toBeInTheDocument();
     expect(
       screen.getByRole("link", {
-        name: /可換: 可換とは、演算の順序を交換しても結果が変わらない/,
+        name: /演算の順序を交換できる/,
       }),
     ).toHaveAttribute("href", "/resource/resource-1#sentence-1");
   });
@@ -268,7 +264,7 @@ describe("QuizSession", () => {
 
     expect(await screen.findByText("2問中 2問正解しました。")).toBeVisible();
     expect(answeredQuizIds).toEqual(["quiz-1", "quiz-2"]);
-    expect(screen.getAllByText("このクイズの知識")).toHaveLength(2);
+    expect(screen.queryByText("このクイズの知識")).not.toBeInTheDocument();
   });
 
   it("一括回答の再実行では送信に失敗したQuizだけを送る", async () => {

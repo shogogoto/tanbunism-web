@@ -53,8 +53,15 @@ const server = setupServer(
           resource_uid: "resource-1",
         },
       ],
-      quizzes: [],
-      links: [],
+      quizzes: [{ quiz_id: "quiz-1", quiz_type: "term2sent" }],
+      links: [
+        {
+          quiz_id: "quiz-1",
+          sentence_id: "sentence-1",
+          role: "correct",
+          relations: ["具体例"],
+        },
+      ],
       answers: [
         {
           answer_uid: "answer-1",
@@ -120,7 +127,12 @@ it("単文のQuizを確認し、その場から新しく作成する", async () 
   await user.click(screen.getByRole("button", { name: "回答する" }));
   expect(await screen.findByText("正解です")).toBeInTheDocument();
   expect(screen.getAllByText("正解")).not.toHaveLength(0);
-  expect(screen.getByText("このクイズの知識")).toBeInTheDocument();
+  expect(screen.queryByText("このクイズの知識")).not.toBeInTheDocument();
+  expect(screen.getByText("具体例")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "正しい単文" })).toHaveAttribute(
+    "href",
+    "/resource/resource-1#sentence-1",
+  );
   expect(screen.getByRole("link", { name: "一覧で管理" })).toHaveAttribute(
     "href",
     "/quiz/list?resource=resource-1&sentence=sentence-1",

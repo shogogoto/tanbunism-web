@@ -21,11 +21,11 @@ const recommendations = [
       quiz_id: "quiz-commutative",
       statement: "「可換」とはどのような性質ですか？",
       options: {
-        option_a: "演算の順序を交換しても結果が変わらない",
-        option_b: "すべての元に逆元が存在する",
+        "sentence-commutative": "演算の順序を交換しても結果が変わらない",
+        "sentence-identity": "すべての元に逆元が存在する",
         option_c: "演算を繰り返すと必ず単位元になる",
       },
-      correct: ["option_a"],
+      correct: ["sentence-commutative"],
       created: "2026-07-28T00:00:00Z",
       no_correct_option: false,
     },
@@ -37,11 +37,11 @@ const recommendations = [
       quiz_id: "quiz-identity",
       statement: "単位元の説明として正しいものを選んでください。",
       options: {
-        option_a: "演算しても相手を変化させない元",
-        option_b: "自分自身と演算すると消える元",
+        "sentence-identity": "演算しても相手を変化させない元",
+        "sentence-commutative": "自分自身と演算すると消える元",
         option_c: "集合に必ず二つ存在する元",
       },
-      correct: ["option_a"],
+      correct: ["sentence-identity"],
       created: "2026-07-28T00:00:00Z",
       no_correct_option: false,
     },
@@ -98,18 +98,32 @@ const answerHandler = http.post(
             },
           ]
         : [],
-      links: [
-        {
-          quiz_id: params.quizId,
-          sentence_id: "sentence-commutative",
-          role: "correct",
-        },
-        {
-          quiz_id: params.quizId,
-          sentence_id: "sentence-identity",
-          role: "option",
-        },
-      ],
+      links:
+        params.quizId === "quiz-commutative"
+          ? [
+              {
+                quiz_id: params.quizId,
+                sentence_id: "sentence-commutative",
+                role: "correct",
+              },
+              {
+                quiz_id: params.quizId,
+                sentence_id: "sentence-identity",
+                role: "option",
+              },
+            ]
+          : [
+              {
+                quiz_id: params.quizId,
+                sentence_id: "sentence-identity",
+                role: "correct",
+              },
+              {
+                quiz_id: params.quizId,
+                sentence_id: "sentence-commutative",
+                role: "option",
+              },
+            ],
       answers: [
         {
           answer_uid: "answer-preview",
@@ -202,8 +216,8 @@ export const AnsweredWithQuizChain: Story = {
       canvas.findByText("2問中 2問正解しました。"),
     ).resolves.toBeInTheDocument();
     await expect(
-      canvas.findAllByText("このクイズの知識"),
-    ).resolves.toHaveLength(2);
+      canvas.findAllByTitle(/可換とは|単位元とは/),
+    ).resolves.toHaveLength(4);
   },
 };
 

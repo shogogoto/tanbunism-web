@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { QuizRecommendationReason } from "./quizRecommendationReason";
+import type { QuizType } from "./quizType";
 import type { ReadableQuiz } from "./readableQuiz";
 
 /**
@@ -12,6 +13,7 @@ import type { ReadableQuiz } from "./readableQuiz";
  */
 export interface QuizRecommendationResponse {
   resource_id: string;
+  quiz_type: QuizType;
   quiz: ReadableQuiz;
   reason: QuizRecommendationReason;
 }

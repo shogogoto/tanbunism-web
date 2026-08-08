@@ -52,6 +52,7 @@ export * from "./readableQuiz";
 export * from "./readableQuizOptions";
 export * from "./readableQuizResult";
 export * from "./readableQuizzes";
+export * from "./recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostParams";
 export * from "./resourceDetail";
 export * from "./resourceDetailTerms";
 export * from "./resourceDetailUids";

@@ -21,6 +21,7 @@ import type {
   QuizResourceStatus,
   ReadableQuiz,
   ReadableQuizResult,
+  RecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostParams,
   ResourceDetail,
   ResourceLearningStatus,
   ResourceMetas,
@@ -1276,8 +1277,23 @@ export type recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostR
   | recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostResponseError;
 
 export const getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostUrl =
-  (planId: string) => {
-    return `https://knowde.onrender.com/quiz/study-plans/${planId}/recommendations`;
+  (
+    planId: string,
+    params?: RecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostParams,
+  ) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined) {
+        normalizedParams.append(key, value === null ? "null" : String(value));
+      }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+      ? `https://knowde.onrender.com/quiz/study-plans/${planId}/recommendations?${stringifiedParams}`
+      : `https://knowde.onrender.com/quiz/study-plans/${planId}/recommendations`;
   };
 
 /**
@@ -1287,11 +1303,13 @@ export const getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsP
 export const recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPost =
   async (
     planId: string,
+    params?: RecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostParams,
     options?: RequestInit,
   ): Promise<recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostResponse> => {
     const res = await fetch(
       getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostUrl(
         planId,
+        params,
       ),
       {
         ...options,

@@ -25,7 +25,11 @@ import {
   CardHeader,
   CardTitle,
 } from "~/shared/components/ui/card";
-import QuizChainReview from "./QuizChainReview";
+import {
+  ChainSentenceLink,
+  RelationAnnotation,
+  findTargetSentenceId,
+} from "./QuizKnowledge";
 import StudyPlanForm from "./StudyPlanForm";
 import {
   type QuizChain,
@@ -387,7 +391,7 @@ export default function QuizSession() {
       ref={sessionRef}
       tabIndex={-1}
       onKeyDown={handleSessionKeyDown}
-      className="mx-auto max-w-5xl p-4 sm:p-6 space-y-4 outline-none"
+      className="mx-auto max-w-3xl p-4 sm:p-6 space-y-4 outline-none"
     >
       <header className="flex items-start justify-between gap-4">
         <div>
@@ -540,103 +544,106 @@ function QuizQuestion({
   return (
     <div onFocusCapture={onActivate}>
       <Card className={`border ${isActive ? "ring-2 ring-primary/40" : ""}`}>
-        <div
-          className={
-            result
-              ? "grid lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)]"
-              : undefined
-          }
-        >
-          <div>
-            <CardHeader>
-              <CardDescription>
-                <span className="flex flex-wrap items-center gap-2">
-                  <span>
-                    {index + 1} / {total}
-                  </span>
-                  <Badge variant="outline">
-                    {recommendation.quiz_type.toUpperCase()}
-                  </Badge>
-                  <RecommendationReason reason={recommendation.reason} />
-                  {result && (
-                    <Badge
-                      variant={result.isCorrect ? "default" : "destructive"}
-                    >
-                      {result.isCorrect ? "正解" : "不正解"}
-                    </Badge>
-                  )}
-                </span>
-              </CardDescription>
-              <CardTitle className="text-lg leading-relaxed">
-                {quiz.statement}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {Object.entries(quiz.options).map(
-                  ([id, label], optionIndex) => {
-                    const isSelected = selected.includes(id);
-                    const isAnswerCorrect =
-                      result !== undefined && quiz.correct.includes(id);
-                    const isSelectedWrong =
-                      result !== undefined && isSelected && !isAnswerCorrect;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        aria-pressed={isSelected}
-                        disabled={result !== undefined}
-                        onClick={() => {
-                          onActivate();
-                          onToggle(id);
-                        }}
-                        className={`w-full border p-3 text-left transition-colors disabled:opacity-100 ${
-                          isAnswerCorrect
-                            ? "border-green-600 bg-green-500/10"
-                            : isSelectedWrong
-                              ? "border-destructive bg-destructive/10"
-                              : isSelected
-                                ? "border-primary bg-primary/10"
-                                : "hover:bg-muted"
-                        }`}
-                      >
-                        <span className="flex items-center justify-between gap-2">
-                          <span>
-                            {optionIndex + 1}. {label}
-                          </span>
-                          {isAnswerCorrect && <Badge>正解</Badge>}
-                          {isSelectedWrong && (
-                            <Badge variant="destructive">あなたの回答</Badge>
-                          )}
-                        </span>
-                      </button>
-                    );
-                  },
-                )}
-              </div>
+        <CardHeader>
+          <CardDescription>
+            <span className="flex flex-wrap items-center gap-2">
+              <span>
+                {index + 1} / {total}
+              </span>
+              <Badge variant="outline">
+                {recommendation.quiz_type.toUpperCase()}
+              </Badge>
+              <RecommendationReason reason={recommendation.reason} />
               {result && (
-                <Alert className="mt-4">
-                  <AlertTitle>
-                    {result.isCorrect ? "正解です" : "不正解です"}
-                  </AlertTitle>
-                  <AlertDescription>
-                    {result.isCorrect
-                      ? "回答結果を学習履歴に記録しました。"
-                      : "回答結果を記録しました。関連する単文を見直せます。"}
-                  </AlertDescription>
-                </Alert>
+                <Badge variant={result.isCorrect ? "default" : "destructive"}>
+                  {result.isCorrect ? "正解" : "不正解"}
+                </Badge>
               )}
-            </CardContent>
+            </span>
+          </CardDescription>
+          <CardTitle className="text-lg leading-relaxed">
+            <ChainSentenceLink
+              chain={result?.chain}
+              sentenceId={result && findTargetSentenceId(result.chain)}
+            >
+              {quiz.statement}
+            </ChainSentenceLink>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {Object.entries(quiz.options).map(([id, label], optionIndex) => {
+              const isSelected = selected.includes(id);
+              const isAnswerCorrect =
+                result !== undefined && quiz.correct.includes(id);
+              const isSelectedWrong =
+                result !== undefined && isSelected && !isAnswerCorrect;
+              const className = `w-full border p-3 text-left transition-colors ${
+                isAnswerCorrect
+                  ? "border-green-600 bg-green-500/10"
+                  : isSelectedWrong
+                    ? "border-destructive bg-destructive/10"
+                    : isSelected
+                      ? "border-primary bg-primary/10"
+                      : "hover:bg-muted"
+              }`;
+              const content = (
+                <span className="flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-baseline gap-2">
+                    <ChainSentenceLink chain={result?.chain} sentenceId={id}>
+                      {optionIndex + 1}. {label}
+                    </ChainSentenceLink>
+                    {result && recommendation.quiz_type !== "pair2rel" && (
+                      <RelationAnnotation
+                        chain={result.chain}
+                        sentenceId={id}
+                      />
+                    )}
+                  </span>
+                  <span className="flex shrink-0 gap-2">
+                    {isAnswerCorrect && <Badge>正解</Badge>}
+                    {isSelectedWrong && (
+                      <Badge variant="destructive">あなたの回答</Badge>
+                    )}
+                  </span>
+                </span>
+              );
+              if (result) {
+                return (
+                  <div key={id} className={className}>
+                    {content}
+                  </div>
+                );
+              }
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => {
+                    onActivate();
+                    onToggle(id);
+                  }}
+                  className={className}
+                >
+                  {content}
+                </button>
+              );
+            })}
           </div>
           {result && (
-            <aside
-              aria-label="このクイズの知識"
-              className="border-t bg-muted/20 p-4 lg:border-t-0 lg:border-l"
-            >
-              <QuizChainReview chain={result.chain} />
-            </aside>
+            <Alert className="mt-4">
+              <AlertTitle>
+                {result.isCorrect ? "正解です" : "不正解です"}
+              </AlertTitle>
+              <AlertDescription>
+                {result.isCorrect
+                  ? "回答結果を学習履歴に記録しました。"
+                  : "回答結果を記録しました。関連する単文を見直せます。"}
+              </AlertDescription>
+            </Alert>
           )}
-        </div>
+        </CardContent>
       </Card>
     </div>
   );
