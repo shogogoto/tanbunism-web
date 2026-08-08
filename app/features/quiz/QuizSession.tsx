@@ -114,7 +114,10 @@ export default function QuizSession() {
 
     const plan = plans.find(({ uid }) => uid === planId);
     if (!plan) return;
-    const planQuizTypes = plan.quiz_types;
+    const planQuizTypes = [
+      ...plan.quiz_types.filter((quizType) => quizType !== "pair2rel"),
+      ...plan.quiz_types.filter((quizType) => quizType === "pair2rel"),
+    ];
 
     let active = true;
     const controller = new AbortController();

@@ -11,6 +11,7 @@
     "build": "cross-env NODE_ENV=production react-router build",
     "dev": "react-router dev --host 0.0.0.0",
     "start": "react-router-serve ./build/server/index.js",
+    "check": "npm run typecheck && npm run lint && npm test",
     "typecheck": "react-router typegen && tsc --noEmit",
     "tc": "tsc-files --noEmit --pretty",
     "test": "vitest run",

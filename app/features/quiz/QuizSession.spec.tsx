@@ -162,6 +162,39 @@ function renderQuizSession() {
 }
 
 describe("QuizSession", () => {
+  it("PAIR2RELを各準備段階の最後に取得する", async () => {
+    const requests: string[] = [];
+    server.use(
+      http.get("*/quiz/study-plans", () =>
+        HttpResponse.json([
+          {
+            ...plan,
+            quiz_types: ["pair2rel", "term2sent", "sent2term"],
+          },
+        ]),
+      ),
+      http.post("*/quiz/study-plans/plan-1/recommendations", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        requests.push(
+          `${params.get("generate_missing")}:${params.get("quiz_type")}`,
+        );
+        return HttpResponse.json([]);
+      }),
+    );
+
+    renderQuizSession();
+
+    await screen.findByText("提案できるクイズがありません");
+    expect(requests).toEqual([
+      "false:term2sent",
+      "false:sent2term",
+      "false:pair2rel",
+      "true:term2sent",
+      "true:sent2term",
+      "true:pair2rel",
+    ]);
+  });
+
   it("QuizTypeごとに届いた問題から表示する", async () => {
     let finishSecondType!: () => void;
     const waitForSecondType = new Promise<void>((resolve) => {
