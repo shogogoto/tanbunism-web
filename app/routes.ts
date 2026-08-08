@@ -27,11 +27,9 @@ export default [
       route("user/edit", "routes/user/edit.tsx"),
       route("user/:userId", "routes/user/detail.tsx"),
       route("resource/:id", "routes/resource/detail.tsx"),
-      layout("layouts/SearchTabLayout/index.tsx", {}, [
-        route("search", "routes/tanbun/search/index.tsx"),
-        route("search/resource", "features/resource/search/index.tsx"),
-        route("search/user", "features/user/search/index.tsx"),
-      ]),
+      route("search", "routes/search.tsx"),
+      route("search/resource", "routes/search-resource-redirect.ts"),
+      route("search/user", "routes/search-user-redirect.ts"),
     ]),
   ]),
 
