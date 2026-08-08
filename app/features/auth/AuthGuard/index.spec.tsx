@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, delay } from "msw";
 import { setupServer } from "msw/node";
 import { Link, createRoutesStub } from "react-router";
+import { SWRConfig } from "swr";
 import { getAuthMock } from "~/shared/generated/auth/auth.msw";
 import { getUserMock } from "~/shared/generated/user/user.msw";
 import AuthGuard from ".";
@@ -11,6 +12,7 @@ import * as AuthMock from "../AuthProvider";
 
 const server = setupServer(...getUserMock(), ...getAuthMock());
 beforeAll(() => server.listen());
+beforeEach(() => localStorage.removeItem("auth-user"));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
@@ -19,11 +21,13 @@ function mkStub() {
     {
       path: "/any",
       Component: () => (
-        <AuthProvider>
-          <AuthGuard>
-            <div>home</div>
-          </AuthGuard>
-        </AuthProvider>
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <AuthProvider>
+            <AuthGuard>
+              <div>home</div>
+            </AuthGuard>
+          </AuthProvider>
+        </SWRConfig>
       ),
     },
     { path: "other", Component: () => <Link to="/any">other</Link> },
