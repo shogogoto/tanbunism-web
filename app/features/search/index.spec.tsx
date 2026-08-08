@@ -110,6 +110,16 @@ describe("統合検索", () => {
     expect(screen.getAllByText("読書家")).toHaveLength(2);
     expect(screen.getByText("重要度 12")).toBeVisible();
     expect(screen.queryByText("詳細数")).not.toBeInTheDocument();
+    expect(document.querySelector("[data-slot=badge]")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "知識" })).toHaveClass(
+      "bg-blue-600",
+    );
+    expect(screen.getByRole("button", { name: "リソース" })).toHaveClass(
+      "bg-orange-600",
+    );
+    expect(screen.getByRole("button", { name: "ユーザー" })).toHaveClass(
+      "bg-purple-600",
+    );
     expect(requestedTypes.sort()).toEqual(["knowledge", "resource", "user"]);
   });
 

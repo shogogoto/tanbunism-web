@@ -1,9 +1,8 @@
-import { BookOpen, LoaderCircle, Search, UserRound } from "lucide-react";
+import { LoaderCircle, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Highlight } from "~/features/tanbun/components/Highlight";
 import UserAvatar from "~/features/user/UserAvatar";
-import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent, CardFooter } from "~/shared/components/ui/card";
 import { Input } from "~/shared/components/ui/input";
@@ -172,7 +171,12 @@ export default function UnifiedSearch() {
               key={type}
               type="button"
               size="sm"
-              variant={enabledTypes.includes(type) ? "secondary" : "ghost"}
+              variant="outline"
+              className={
+                searchTypeButtonStyles[type][
+                  enabledTypes.includes(type) ? "selected" : "unselected"
+                ]
+              }
               aria-pressed={enabledTypes.includes(type)}
               onClick={() => toggleType(type)}
             >
@@ -368,6 +372,27 @@ const searchTypeLabels: Record<SearchType, string> = {
   user: "ユーザー",
 };
 
+const searchTypeButtonStyles: Record<
+  SearchType,
+  { selected: string; unselected: string }
+> = {
+  knowledge: {
+    selected: "border-blue-600 bg-blue-600 text-white hover:bg-blue-700",
+    unselected:
+      "border-blue-500/60 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950",
+  },
+  resource: {
+    selected: "border-orange-600 bg-orange-600 text-white hover:bg-orange-700",
+    unselected:
+      "border-orange-500/60 text-orange-700 hover:bg-orange-50 dark:text-orange-300 dark:hover:bg-orange-950",
+  },
+  user: {
+    selected: "border-purple-600 bg-purple-600 text-white hover:bg-purple-700",
+    unselected:
+      "border-purple-500/60 text-purple-700 hover:bg-purple-50 dark:text-purple-300 dark:hover:bg-purple-950",
+  },
+};
+
 function KnowledgeResult({
   value,
   info,
@@ -381,9 +406,7 @@ function KnowledgeResult({
     <Link to={`/tanbun/${value.uid}`} state={{ tanbun: value, ...info }}>
       <Card className="border-l-4 border-l-blue-500 hover:bg-muted/40">
         <CardContent className="space-y-2">
-          <Badge className="bg-blue-600 text-white">
-            <BookOpen /> 知識
-          </Badge>
+          <span className="sr-only">知識:</span>
           {value.term?.names?.length ? (
             <p className="font-semibold">
               {value.term.names.map((name) => (
@@ -421,7 +444,7 @@ function ResourceResult({
     <Link to={`/resource/${resource.uid}`}>
       <Card className="border-l-4 border-l-orange-500 hover:bg-muted/40">
         <CardContent className="space-y-2">
-          <Badge className="bg-orange-600 text-white">リソース</Badge>
+          <span className="sr-only">リソース:</span>
           <p className="font-semibold text-lg">
             <Highlight text={resource.name} query={query} />
           </p>
@@ -446,11 +469,9 @@ function UserResult({ value, query }: { value: UserSearchRow; query: string }) {
     <Link to={`/user/${user.username || user.uid}`}>
       <Card className="border-l-4 border-l-purple-500 hover:bg-muted/40">
         <CardContent className="flex gap-3">
+          <span className="sr-only">ユーザー:</span>
           <UserAvatar user={user} />
           <div className="min-w-0 space-y-1">
-            <Badge className="bg-purple-600 text-white">
-              <UserRound /> ユーザー
-            </Badge>
             <p className="font-semibold">
               <Highlight
                 text={user.display_name || user.username || "名前未設定"}
