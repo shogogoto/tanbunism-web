@@ -42,7 +42,7 @@ export default function QuizAchievementChart({
           margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
-          <XAxis dataKey="day" tickLine={false} />
+          <XAxis dataKey="day" interval={0} tickLine={false} />
           <YAxis allowDecimals={false} tickLine={false} />
           <Tooltip labelFormatter={(day) => `${achievement.month}月${day}日`} />
           <Legend />
