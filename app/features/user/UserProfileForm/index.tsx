@@ -15,11 +15,11 @@ import { Dialog, DialogTrigger } from "~/shared/components/ui/dialog";
 import { Skeleton } from "~/shared/components/ui/skeleton";
 import type { UserRead } from "~/shared/generated/fastAPI.schemas";
 import {
-  userProfileUserProfileUsernameGetResponse,
-  userProfileUserProfileUsernameGetResponseDisplayNameMaxOne,
-  userProfileUserProfileUsernameGetResponseUsernameMaxOne,
+  UserProfileUserProfileUsernameGetResponse,
+  userProfileUserProfileUsernameGetResponseDisplayNameOneMax,
+  userProfileUserProfileUsernameGetResponseUsernameOneMax,
 } from "~/shared/generated/public-user/public-user.zod";
-import { usersPatchCurrentUserUserMePatchResponseProfileMaxOne } from "~/shared/generated/user/user.zod";
+import { usersPatchCurrentUserUserMePatchResponseProfileOneMax } from "~/shared/generated/user/user.zod";
 import UploadWidget from "../ImageUploader/UploadWidget";
 import {
   useDeleteUploadedImage,
@@ -28,16 +28,17 @@ import {
 import ProfileImage from "../UserProfile/ProfileImage";
 import { InputFormControl, TextareaFormControl } from "./controls";
 
-const MAX_DN = userProfileUserProfileUsernameGetResponseDisplayNameMaxOne;
-const MAX_UN = userProfileUserProfileUsernameGetResponseUsernameMaxOne;
+const MAX_DN = userProfileUserProfileUsernameGetResponseDisplayNameOneMax;
+const MAX_UN = userProfileUserProfileUsernameGetResponseUsernameOneMax;
 
-export const UserProfileSchema = userProfileUserProfileUsernameGetResponse
-  .pick({
+export const UserProfileSchema = UserProfileUserProfileUsernameGetResponse.pick(
+  {
     display_name: true,
     profile: true,
     username: true,
     avatar_url: true,
-  })
+  },
+)
   // 日本語メッセージに上書き
   .extend({
     display_name: z
@@ -58,8 +59,8 @@ export const UserProfileSchema = userProfileUserProfileUsernameGetResponse
       .optional(),
     profile: z
       .string()
-      .max(usersPatchCurrentUserUserMePatchResponseProfileMaxOne, {
-        message: `プロフィールは${usersPatchCurrentUserUserMePatchResponseProfileMaxOne}文字以下で入力してください。`,
+      .max(usersPatchCurrentUserUserMePatchResponseProfileOneMax, {
+        message: `プロフィールは${usersPatchCurrentUserUserMePatchResponseProfileOneMax}文字以下で入力してください。`,
       })
       .optional(),
   });
@@ -191,7 +192,7 @@ export default function UserProfileForm() {
           field={fields.profile}
           placeholder="プロフィールを入力してください"
           rows={4}
-          maxLength={usersPatchCurrentUserUserMePatchResponseProfileMaxOne}
+          maxLength={usersPatchCurrentUserUserMePatchResponseProfileOneMax}
           disabled={isSubmitting}
         />
         <div className="flex flex-col w-full max-w-sm gap-2">

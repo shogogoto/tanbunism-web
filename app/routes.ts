@@ -19,15 +19,16 @@ export default [
     route("login", "routes/user/login.tsx"),
     route("quiz", "routes/quiz.tsx"),
     route("quiz/list", "routes/quiz-list.tsx"),
+    route("achievement", "routes/achievement.tsx"),
 
     layout("layouts/SideViewLayout/index.tsx", [
       route("home", "routes/home.tsx"),
-      route("knowde/:id", "routes/knowde/detail/index.tsx"),
+      route("tanbun/:id", "routes/tanbun/detail/index.tsx"),
       route("user/edit", "routes/user/edit.tsx"),
       route("user/:userId", "routes/user/detail.tsx"),
       route("resource/:id", "routes/resource/detail.tsx"),
       layout("layouts/SearchTabLayout/index.tsx", {}, [
-        route("search", "routes/knowde/search/index.tsx"),
+        route("search", "routes/tanbun/search/index.tsx"),
         route("search/resource", "features/resource/search/index.tsx"),
         route("search/user", "features/user/search/index.tsx"),
       ]),

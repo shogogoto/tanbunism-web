@@ -49,13 +49,13 @@ function mkrouter(initial: string) {
             },
           },
           {
-            path: "knowde/:knowdeId",
+            path: "tanbun/:tanbunId",
             Component: () => {
               const { addHistory } = useHistory();
               React.useEffect(() => {
                 addHistory({ title: knowdeTitle });
               }, [addHistory]);
-              return <div>Knowde Detail Page</div>;
+              return <div>Tanbun Detail Page</div>;
             },
           },
           {
@@ -110,8 +110,8 @@ describe("history", () => {
 
     it("knowde詳細画面履歴", async () => {
       const user = userEvent.setup();
-      const knowdeId = "d9353547-6298-404d-b013-d61713117c32";
-      const router = mkrouter(`/knowde/${knowdeId}`);
+      const tanbunId = "d9353547-6298-404d-b013-d61713117c32";
+      const router = mkrouter(`/tanbun/${tanbunId}`);
       render(<RouterProvider router={router} />);
       act(() => {
         router.navigate("/");
@@ -121,7 +121,7 @@ describe("history", () => {
       expect(parentDiv?.querySelector("svg")).toBeInTheDocument();
       await user.click(historyItem);
       await waitFor(() => {
-        expect(router.state.location.pathname).toBe(`/knowde/${knowdeId}`);
+        expect(router.state.location.pathname).toBe(`/tanbun/${tanbunId}`);
       });
     });
     it("userプロフィール画面", async () => {
@@ -180,7 +180,7 @@ describe("history", () => {
       const router = mkrouter("/");
       render(<RouterProvider router={router} />);
 
-      await act(() => router.navigate("/knowde/1"));
+      await act(() => router.navigate("/tanbun/1"));
       await act(() => router.navigate("/user/1"));
       await act(() => router.navigate("/resource/1"));
       await act(() => router.navigate("/"));
@@ -191,7 +191,7 @@ describe("history", () => {
         expect(historyItems[1]).toHaveTextContent(userTitle);
         expect(historyItems[2]).toHaveTextContent(knowdeTitle);
       });
-      await act(() => router.navigate("/knowde/1")); // 最初のページに再訪
+      await act(() => router.navigate("/tanbun/1")); // 最初のページに再訪
       await act(() => router.navigate("/"));
 
       // knowdeが一番上に移動している

@@ -15,7 +15,7 @@ const Fa2 = () => {
 };
 
 // type Props = {
-//   detail: KnowdeDetail;
+//   detail: TanbunChain;
 // };
 //
 // function DisplayGraphComponent({ detail }: Props) {

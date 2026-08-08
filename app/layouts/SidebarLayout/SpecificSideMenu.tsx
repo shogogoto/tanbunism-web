@@ -2,6 +2,7 @@ import {
   BellRing,
   BookOpen,
   Bookmark,
+  ChartColumn,
   Crown,
   Folder,
   FolderSearch,
@@ -86,6 +87,11 @@ export function LearningMenu() {
           to: "/quiz/list",
           title: "作成したクイズ",
           icon: <Folder />,
+        },
+        {
+          to: "/achievement",
+          title: "学習記録",
+          icon: <ChartColumn />,
         },
       ]}
     />

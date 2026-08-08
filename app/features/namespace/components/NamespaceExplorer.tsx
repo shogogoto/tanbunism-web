@@ -6,7 +6,7 @@ import { TreeView } from "~/shared/components/tree-view";
 import { Button } from "~/shared/components/ui/button";
 import type { useGetNamaspaceNamespaceGet } from "~/shared/generated/entry/entry";
 import type {
-  EdgeData,
+  _EdgeData as EdgeData,
   Entry,
   MResource,
   NameSpace,

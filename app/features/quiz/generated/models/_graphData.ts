@@ -9,7 +9,7 @@ import type { _GraphDataGraph } from "./_graphDataGraph";
 import type { _GraphDataNodesItem } from "./_graphDataNodesItem";
 
 /**
- * for fastapi schema.
+ * FastAPI schema用のグラフ.
  */
 export interface _GraphData {
   directed: boolean;

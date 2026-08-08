@@ -32,18 +32,15 @@ function _UserSearch() {
   }, [q, desc, order_by, current, pageSize]);
   const debouncedParams = useDebounce(params, 500);
 
-  const { trigger, data, isMutating } = useSearchUserUserSearchPost(
-    {},
-    {
-      swr: {
-        onSuccess: (data) => {
-          if (data.status === 200) {
-            handleSuccess(data.data.total || 0, pageSize);
-          }
-        },
+  const { trigger, data, isMutating } = useSearchUserUserSearchPost({
+    swr: {
+      onSuccess: (data) => {
+        if (data.status === 200) {
+          handleSuccess(data.data.total || 0, pageSize);
+        }
       },
     },
-  );
+  });
 
   useEffect(() => {
     trigger(debouncedParams);

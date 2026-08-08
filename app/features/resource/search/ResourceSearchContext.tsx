@@ -2,7 +2,9 @@ import {
   type SearchParamsConfig,
   createGenericSearchContext,
 } from "~/shared/contexts/createGenericSearchContext";
-import type { ResourceSearchBodyOrderBy } from "~/shared/generated/fastAPI.schemas";
+import type { ResourceSearchBody } from "~/shared/generated/fastAPI.schemas";
+
+type ResourceSearchBodyOrderBy = NonNullable<ResourceSearchBody["order_by"]>;
 
 const initialOrderBy: ResourceSearchBodyOrderBy = ["title"];
 type ResourceSearch = {

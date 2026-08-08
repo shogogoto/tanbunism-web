@@ -2,7 +2,9 @@ import {
   type SearchParamsConfig,
   createGenericSearchContext,
 } from "~/shared/contexts/createGenericSearchContext";
-import type { UserSearchBodyOrderBy } from "~/shared/generated/fastAPI.schemas";
+import type { UserSearchBody } from "~/shared/generated/fastAPI.schemas";
+
+type UserSearchBodyOrderBy = NonNullable<UserSearchBody["order_by"]>;
 
 const initialOrderBy: UserSearchBodyOrderBy = ["username"];
 

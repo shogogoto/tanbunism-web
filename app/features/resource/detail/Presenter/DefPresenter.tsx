@@ -38,7 +38,7 @@ export default function DefPresenter({ adj, prefix }: Props) {
     <div className="space-x-1">
       <span>{prefix}</span>
       {/* このinline-flexがないよリンクが改行される */}
-      <Link to={`/knowde/${adj.kn.uid}`} className="inline-flex flex-shrink-0">
+      <Link to={`/tanbun/${adj.kn.uid}`} className="inline-flex flex-shrink-0">
         🔗
       </Link>
       <div className="inline-flex gap-2">

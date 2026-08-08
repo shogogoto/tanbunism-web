@@ -52,7 +52,6 @@ function _ResourceSearch() {
   const addedRef = useRef<string | null>(null);
 
   const { trigger, data, isMutating } = useSearchResourcePostResourceSearchPost(
-    {},
     {
       swr: {
         onSuccess: (data) => {

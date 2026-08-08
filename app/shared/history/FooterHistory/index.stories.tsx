@@ -20,8 +20,8 @@ type Story = StoryObj<typeof meta>;
 
 const mockHistories: HistoryItemType[] = Array.from({ length: 20 }, (_, i) => ({
   id: i,
-  title: `Knowde Title ${i}`,
-  url: i % 2 === 0 ? "/knowde/1" : "/user/1",
+  title: `Tanbun Title ${i}`,
+  url: i % 2 === 0 ? "/tanbun/1" : "/user/1",
   timestamp: Date.now() - i * 1000 * 60 * 60 * 24,
 }));
 

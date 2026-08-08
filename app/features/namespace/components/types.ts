@@ -1,9 +1,11 @@
 import type { TreeDataItem } from "~/shared/components/tree-view";
 import type {
-  MResourceAuthors,
-  MResourcePublished,
+  MResource,
   ResourceStats,
 } from "~/shared/generated/fastAPI.schemas";
+
+type MResourceAuthors = MResource["authors"];
+type MResourcePublished = MResource["published"];
 
 export interface ExplorerTreeDataItem extends TreeDataItem {
   authors?: MResourceAuthors;

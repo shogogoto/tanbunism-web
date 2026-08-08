@@ -2,7 +2,7 @@ import { File, Lightbulb, Search, User } from "lucide-react";
 import type { ComponentType } from "react";
 import { cn } from "../lib/utils";
 
-const historyTypes = ["user", "knowde", "resource", "search"] as const;
+const historyTypes = ["user", "tanbun", "resource", "search"] as const;
 type HistoryType = (typeof historyTypes)[number];
 
 type Style = {
@@ -17,7 +17,7 @@ const historyTypeStyles: Record<HistoryType, Style> = {
     Icon: User,
     color: "text-purple-500",
   },
-  knowde: {
+  tanbun: {
     Icon: Lightbulb,
     color: "text-blue-500",
   },
