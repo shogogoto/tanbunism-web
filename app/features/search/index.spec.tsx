@@ -213,6 +213,16 @@ describe("統合検索", () => {
     await screen.findByText("3件の検索結果");
 
     await ui.click(screen.getByRole("button", { name: "詳細設定" }));
+    const details = document.getElementById(
+      screen
+        .getByRole("button", { name: "詳細設定" })
+        .getAttribute("aria-controls") ?? "",
+    );
+    expect(details).toHaveClass(
+      "overflow-y-auto",
+      "overscroll-contain",
+      "touch-pan-y",
+    );
     const knowledge = screen.getByRole("button", {
       name: "知識の検索条件",
     });

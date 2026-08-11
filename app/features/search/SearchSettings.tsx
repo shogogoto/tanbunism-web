@@ -31,7 +31,7 @@ export default function SearchSettingsPanel({
           </Button>
         </CollapsibleTrigger>
       </div>
-      <CollapsibleContent className="mt-3 space-y-3 rounded-md border bg-background p-4">
+      <CollapsibleContent className="mt-3 max-h-[calc(100dvh-12rem)] touch-pan-y space-y-3 overflow-y-auto overscroll-contain rounded-md border bg-background p-4">
         {enabledTypes.includes("knowledge") && (
           <KnowledgeSettings settings={settings} onChange={onChange} />
         )}
