@@ -1,4 +1,5 @@
-import { RotateCcw, Settings } from "lucide-react";
+import { ChevronRight, RotateCcw, Settings } from "lucide-react";
+import type { ReactNode } from "react";
 import { Button } from "~/shared/components/ui/button";
 import {
   Collapsible,
@@ -30,7 +31,7 @@ export default function SearchSettingsPanel({
           </Button>
         </CollapsibleTrigger>
       </div>
-      <CollapsibleContent className="mt-3 space-y-4 rounded-md border bg-background p-4">
+      <CollapsibleContent className="mt-3 space-y-3 rounded-md border bg-background p-4">
         {enabledTypes.includes("knowledge") && (
           <KnowledgeSettings settings={settings} onChange={onChange} />
         )}
@@ -61,8 +62,7 @@ function KnowledgeSettings({ settings, onChange }: SettingsSectionProps) {
     (value) => [String(value), String(value)] as const,
   );
   return (
-    <fieldset className="space-y-3 border-l-4 border-l-blue-500 pl-3">
-      <legend className="font-semibold">知識の検索条件</legend>
+    <SettingsSection title="知識の検索条件" borderClass="border-l-blue-500">
       <div className="grid gap-3 sm:grid-cols-2">
         <SelectField
           id="knowledge-match"
@@ -120,14 +120,16 @@ function KnowledgeSettings({ settings, onChange }: SettingsSectionProps) {
           ))}
         </div>
       </div>
-    </fieldset>
+    </SettingsSection>
   );
 }
 
 function ResourceSettings({ settings, onChange }: SettingsSectionProps) {
   return (
-    <fieldset className="space-y-3 border-l-4 border-l-orange-500 pl-3">
-      <legend className="font-semibold">リソースの検索条件</legend>
+    <SettingsSection
+      title="リソースの検索条件"
+      borderClass="border-l-orange-500"
+    >
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="resource-user">所有ユーザー</Label>
@@ -175,14 +177,16 @@ function ResourceSettings({ settings, onChange }: SettingsSectionProps) {
           })
         }
       />
-    </fieldset>
+    </SettingsSection>
   );
 }
 
 function UserSettings({ settings, onChange }: SettingsSectionProps) {
   return (
-    <fieldset className="space-y-3 border-l-4 border-l-purple-500 pl-3">
-      <legend className="font-semibold">ユーザーの検索条件</legend>
+    <SettingsSection
+      title="ユーザーの検索条件"
+      borderClass="border-l-purple-500"
+    >
       <SelectField
         id="user-order"
         label="ユーザーの並び順"
@@ -212,7 +216,38 @@ function UserSettings({ settings, onChange }: SettingsSectionProps) {
           onChange({ ...settings, user: { ...settings.user, desc } })
         }
       />
-    </fieldset>
+    </SettingsSection>
+  );
+}
+
+function SettingsSection({
+  title,
+  borderClass,
+  children,
+}: {
+  title: string;
+  borderClass: string;
+  children: ReactNode;
+}) {
+  return (
+    <Collapsible
+      defaultOpen
+      className={`rounded-md border-l-4 bg-muted/20 ${borderClass}`}
+    >
+      <CollapsibleTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          className="group h-auto w-full justify-between rounded-none px-3 py-2"
+        >
+          <span className="font-semibold">{title}</span>
+          <ChevronRight className="transition-transform group-data-[state=open]:rotate-90" />
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-3 px-3 pb-3">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

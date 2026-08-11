@@ -207,6 +207,27 @@ describe("統合検索", () => {
     });
   });
 
+  it("検索対象ごとに詳細条件を開閉する", async () => {
+    const ui = userEvent.setup();
+    renderSearch();
+    await screen.findByText("3件の検索結果");
+
+    await ui.click(screen.getByRole("button", { name: "詳細設定" }));
+    const knowledge = screen.getByRole("button", {
+      name: "知識の検索条件",
+    });
+    expect(knowledge).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText("一致方法")).toBeVisible();
+
+    await ui.click(knowledge);
+    expect(knowledge).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("一致方法")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("所有ユーザー")).toBeVisible();
+
+    await ui.click(knowledge);
+    expect(screen.getByLabelText("一致方法")).toBeVisible();
+  });
+
   it("保存した検索結果を先に表示し、再取得に失敗しても維持する", async () => {
     const firstRender = renderSearch("/search?q=数学&types=knowledge");
     expect(
