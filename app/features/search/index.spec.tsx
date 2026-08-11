@@ -123,7 +123,11 @@ describe("統合検索", () => {
     expect(screen.getByRole("link", { name: /数学の知識/ })).toBeVisible();
     expect(screen.getByText("数学ノート")).toBeVisible();
     expect(screen.getAllByText("読書家")).toHaveLength(2);
-    expect(screen.getByText("重要度 12")).toBeVisible();
+    expect(screen.getByLabelText("重要度: 12")).toHaveClass("rounded-full");
+    expect(screen.getByLabelText("文字数: 100")).toBeVisible();
+    expect(screen.getByLabelText("単文数: 1")).toBeVisible();
+    expect(screen.getByLabelText("用語数: 1")).toBeVisible();
+    expect(screen.getByLabelText("関係数: 0")).toBeVisible();
     expect(screen.queryByText("詳細数")).not.toBeInTheDocument();
     expect(document.querySelector("[data-slot=badge]")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "知識" })).toHaveClass(

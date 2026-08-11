@@ -1,4 +1,13 @@
-import { LoaderCircle, Search } from "lucide-react";
+import {
+  Award,
+  Baseline,
+  GitFork,
+  List,
+  LoaderCircle,
+  type LucideIcon,
+  Search,
+  TextInitial,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Highlight } from "~/features/tanbun/components/Highlight";
@@ -514,8 +523,13 @@ function KnowledgeResult({
             </p>
           )}
         </CardContent>
-        <CardFooter className="text-sm text-muted-foreground">
-          重要度 {Math.round(value.stats.score ?? 0)}
+        <CardFooter>
+          <SearchMetric
+            Icon={Award}
+            label="重要度"
+            value={Math.round(value.stats.score ?? 0)}
+            tone="blue"
+          />
         </CardFooter>
       </Card>
     </Link>
@@ -526,7 +540,7 @@ function ResourceResult({
   value,
   query,
 }: { value: ResourceInfo; query: string }) {
-  const { resource, user } = value;
+  const { resource, resource_stats: stats, user } = value;
   return (
     <Link to={`/resource/${resource.uid}`}>
       <Card className="border-l-4 border-l-orange-500 hover:bg-muted/40">
@@ -545,8 +559,57 @@ function ResourceResult({
             <span>{user.display_name || user.username}</span>
           </div>
         </CardContent>
+        <CardFooter className="flex flex-wrap gap-2">
+          <ResourceStat Icon={Baseline} label="文字数" value={stats.n_char} />
+          <ResourceStat Icon={List} label="単文数" value={stats.n_sentence} />
+          <ResourceStat
+            Icon={TextInitial}
+            label="用語数"
+            value={stats.n_term}
+          />
+          <ResourceStat Icon={GitFork} label="関係数" value={stats.n_edge} />
+        </CardFooter>
       </Card>
     </Link>
+  );
+}
+
+function ResourceStat({
+  Icon,
+  label,
+  value,
+}: {
+  Icon: LucideIcon;
+  label: string;
+  value: number;
+}) {
+  return <SearchMetric Icon={Icon} label={label} value={value} tone="orange" />;
+}
+
+function SearchMetric({
+  Icon,
+  label,
+  value,
+  tone,
+}: {
+  Icon: LucideIcon;
+  label: string;
+  value: number;
+  tone: "blue" | "orange";
+}) {
+  const color =
+    tone === "blue"
+      ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300"
+      : "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300";
+  return (
+    <span
+      className={`flex items-center gap-1 rounded-full border px-2 py-1 ${color}`}
+      aria-label={`${label}: ${value}`}
+      title={`${label}: ${value}`}
+    >
+      <Icon className="size-4" aria-hidden="true" />
+      <span className="font-mono text-sm">{value}</span>
+    </span>
   );
 }
 
