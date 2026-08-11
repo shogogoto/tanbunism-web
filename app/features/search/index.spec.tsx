@@ -7,6 +7,7 @@ import type {
   ResourceSearchBody,
   UserSearchBody,
 } from "~/shared/generated/fastAPI.schemas";
+import { genericCache } from "~/shared/lib/indexed";
 import UnifiedSearch from ".";
 
 const originalIntersectionObserver = globalThis.IntersectionObserver;
@@ -91,7 +92,7 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => {
+afterEach(async () => {
   requestedTypes = [];
   knowledgeRequests = [];
   resourceRequests = [];
@@ -102,6 +103,7 @@ afterEach(() => {
   } else {
     Reflect.deleteProperty(globalThis, "IntersectionObserver");
   }
+  await genericCache.clear();
 });
 afterAll(() => server.close());
 
@@ -198,6 +200,37 @@ describe("統合検索", () => {
           order_by: ["n_resource"],
         }),
       );
+    });
+  });
+
+  it("保存した検索結果を先に表示し、再取得に失敗しても維持する", async () => {
+    const firstRender = renderSearch("/search?q=数学&types=knowledge");
+    expect(
+      await screen.findByRole("link", { name: /数学の知識/ }),
+    ).toBeVisible();
+    await waitFor(async () => expect(await genericCache.count()).toBe(1));
+    firstRender.unmount();
+
+    let revalidationRequests = 0;
+    server.use(
+      http.get("*/tanbun/", () => {
+        revalidationRequests += 1;
+        return HttpResponse.json(
+          { detail: "temporary failure" },
+          { status: 500 },
+        );
+      }),
+    );
+    renderSearch("/search?q=数学&types=knowledge");
+
+    expect(
+      await screen.findByRole("link", { name: /数学の知識/ }),
+    ).toBeVisible();
+    await waitFor(() => {
+      expect(revalidationRequests).toBe(1);
+      expect(
+        screen.queryByText("知識を検索できませんでした。"),
+      ).not.toBeInTheDocument();
     });
   });
 

@@ -17,7 +17,9 @@ import type {
 } from "~/shared/generated/fastAPI.schemas";
 import { searchUserUserSearchPost } from "~/shared/generated/public-user/public-user";
 import { searchByTextTanbunGet } from "~/shared/generated/tanbun/tanbun";
+import { createCacheKey } from "~/shared/hooks/swr/useCache";
 import { useDebounce } from "~/shared/hooks/useDebounce";
+import { genericCache } from "~/shared/lib/indexed";
 import SearchSettingsPanel from "./SearchSettings";
 import {
   type SearchSettings,
@@ -75,6 +77,12 @@ export default function UnifiedSearch() {
     const reset = previousSearchRef.current !== searchKey;
     const requestedPage = reset ? 1 : page;
     const requestKey = `${searchKey}:${requestedPage}`;
+    const cacheKey = createCacheKey("unified-search", {
+      query: debouncedQuery,
+      types: enabledKey,
+      settings: settingsKey,
+      page: requestedPage,
+    });
     if (lastRequestRef.current === requestKey) return;
 
     previousSearchRef.current = searchKey;
@@ -88,30 +96,48 @@ export default function UnifiedSearch() {
     setIsLoading(true);
     setError(undefined);
 
-    searchAll(
-      debouncedQuery,
-      enabledTypes,
-      requestedPage,
-      settings,
-      controller.signal,
-    )
-      .then((next) => {
-        setState((current) => mergeSearchState(current, next, reset));
-      })
-      .catch((reason) => {
+    async function load() {
+      const cached = await getCachedSearch(cacheKey);
+      if (controller.signal.aborted) return;
+      if (cached) {
+        setState((current) => mergeSearchState(current, cached, reset));
+      }
+
+      try {
+        const next = await searchAll(
+          debouncedQuery,
+          enabledTypes,
+          requestedPage,
+          settings,
+          controller.signal,
+        );
         if (controller.signal.aborted) return;
+        setState((current) => mergeSearchState(current, next, reset));
+        void genericCache.set(cacheKey, next).catch(() => undefined);
+      } catch (reason) {
+        if (controller.signal.aborted || cached) return;
         setError(
           reason instanceof Error
             ? reason.message
             : "検索結果を取得できませんでした。",
         );
-      })
-      .finally(() => {
+      } finally {
         if (!controller.signal.aborted) setIsLoading(false);
-      });
+      }
+    }
+
+    void load();
 
     return () => controller.abort();
-  }, [debouncedQuery, enabledTypes, page, searchKey, settings]);
+  }, [
+    debouncedQuery,
+    enabledKey,
+    enabledTypes,
+    page,
+    searchKey,
+    settings,
+    settingsKey,
+  ]);
 
   const hasMore = enabledTypes.some((type) => {
     const count =
@@ -381,9 +407,17 @@ function mergeSearchState(
 ): SearchState {
   if (replace) return next;
   return {
-    knowledge: [...current.knowledge, ...next.knowledge],
-    resources: [...current.resources, ...next.resources],
-    users: [...current.users, ...next.users],
+    knowledge: mergeUnique(
+      current.knowledge,
+      next.knowledge,
+      (value) => value.uid,
+    ),
+    resources: mergeUnique(
+      current.resources,
+      next.resources,
+      (value) => value.resource.uid,
+    ),
+    users: mergeUnique(current.users, next.users, (value) => value.user.uid),
     resourceInfos: { ...current.resourceInfos, ...next.resourceInfos },
     totals: {
       knowledge: next.totals.knowledge || current.totals.knowledge,
@@ -391,6 +425,20 @@ function mergeSearchState(
       user: next.totals.user || current.totals.user,
     },
   };
+}
+
+function mergeUnique<T>(current: T[], next: T[], getId: (value: T) => string) {
+  const merged = new Map(current.map((value) => [getId(value), value]));
+  for (const value of next) merged.set(getId(value), value);
+  return [...merged.values()];
+}
+
+async function getCachedSearch(key: string): Promise<SearchState | undefined> {
+  try {
+    return (await genericCache.get(key)) as SearchState | undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function parseSearchTypes(value: string | null): SearchType[] {
