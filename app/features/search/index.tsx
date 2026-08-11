@@ -15,14 +15,20 @@ import type {
   UserSearchResult,
   UserSearchRow,
 } from "~/shared/generated/fastAPI.schemas";
-import { SearchByTextTanbunGetType } from "~/shared/generated/fastAPI.schemas";
 import { searchUserUserSearchPost } from "~/shared/generated/public-user/public-user";
 import { searchByTextTanbunGet } from "~/shared/generated/tanbun/tanbun";
 import { useDebounce } from "~/shared/hooks/useDebounce";
+import SearchSettingsPanel from "./SearchSettings";
+import {
+  type SearchSettings,
+  type SearchType,
+  defaultSearchSettings,
+  readSearchSettings,
+  searchTypes,
+  writeSearchSettings,
+} from "./settings";
 
 const PAGE_SIZE = 20;
-const searchTypes = ["knowledge", "resource", "user"] as const;
-type SearchType = (typeof searchTypes)[number];
 
 type SearchState = {
   knowledge: Tanbun[];
@@ -48,7 +54,12 @@ export default function UnifiedSearch() {
     () => parseSearchTypes(typesParam),
     [typesParam],
   );
+  const settings = useMemo(
+    () => readSearchSettings(searchParams),
+    [searchParams],
+  );
   const enabledKey = enabledTypes.join(",");
+  const settingsKey = JSON.stringify(settings);
   const debouncedQuery = useDebounce(query, 400);
   const [page, setPage] = useState(1);
   const [state, setState] = useState<SearchState>(emptyState);
@@ -58,7 +69,7 @@ export default function UnifiedSearch() {
   const previousSearchRef = useRef("");
   const lastRequestRef = useRef("");
 
-  const searchKey = `${debouncedQuery}:${enabledKey}`;
+  const searchKey = `${debouncedQuery}:${enabledKey}:${settingsKey}`;
 
   useEffect(() => {
     const reset = previousSearchRef.current !== searchKey;
@@ -77,7 +88,13 @@ export default function UnifiedSearch() {
     setIsLoading(true);
     setError(undefined);
 
-    searchAll(debouncedQuery, enabledTypes, requestedPage, controller.signal)
+    searchAll(
+      debouncedQuery,
+      enabledTypes,
+      requestedPage,
+      settings,
+      controller.signal,
+    )
       .then((next) => {
         setState((current) => mergeSearchState(current, next, reset));
       })
@@ -94,7 +111,7 @@ export default function UnifiedSearch() {
       });
 
     return () => controller.abort();
-  }, [debouncedQuery, enabledTypes, page, searchKey]);
+  }, [debouncedQuery, enabledTypes, page, searchKey, settings]);
 
   const hasMore = enabledTypes.some((type) => {
     const count =
@@ -147,6 +164,12 @@ export default function UnifiedSearch() {
     });
   }
 
+  function setSettings(nextSettings: SearchSettings) {
+    setSearchParams((current) => writeSearchSettings(current, nextSettings), {
+      replace: true,
+    });
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-16 sm:px-6">
       <header className="sticky top-0 z-10 space-y-3 border-b bg-background/95 py-4 backdrop-blur">
@@ -184,6 +207,12 @@ export default function UnifiedSearch() {
             </Button>
           ))}
         </div>
+        <SearchSettingsPanel
+          enabledTypes={enabledTypes}
+          settings={settings}
+          onChange={setSettings}
+          onReset={() => setSettings(defaultSearchSettings)}
+        />
       </header>
 
       <div className="py-4">
@@ -278,6 +307,7 @@ async function searchAll(
   query: string,
   enabled: SearchType[],
   page: number,
+  settings: SearchSettings,
   signal: AbortSignal,
 ): Promise<SearchState> {
   const next = emptyState();
@@ -287,9 +317,15 @@ async function searchAll(
         const response = await searchByTextTanbunGet(
           {
             q: query,
-            type: SearchByTextTanbunGetType.CONTAINS,
+            type: settings.knowledge.matchType,
             page,
             size: PAGE_SIZE,
+            n_detail: settings.knowledge.weights.detail,
+            n_premise: settings.knowledge.weights.premise,
+            n_conclusion: settings.knowledge.weights.conclusion,
+            n_refer: settings.knowledge.weights.refer,
+            n_referred: settings.knowledge.weights.referred,
+            desc: settings.knowledge.desc,
           },
           { signal },
         );
@@ -305,9 +341,10 @@ async function searchAll(
         const response = await searchResourcePostResourceSearchPost(
           {
             q: query,
+            q_user: settings.resource.user,
             paging: { page, size: PAGE_SIZE },
-            desc: true,
-            order_by: ["title"],
+            desc: settings.resource.desc,
+            order_by: [settings.resource.order],
           },
           { signal },
         );
@@ -322,8 +359,8 @@ async function searchAll(
         {
           q: query,
           paging: { page, size: PAGE_SIZE },
-          desc: true,
-          order_by: ["username"],
+          desc: settings.user.desc,
+          order_by: [settings.user.order],
         },
         { signal },
       );

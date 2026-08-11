@@ -3,6 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router";
+import type {
+  ResourceSearchBody,
+  UserSearchBody,
+} from "~/shared/generated/fastAPI.schemas";
 import UnifiedSearch from ".";
 
 const originalIntersectionObserver = globalThis.IntersectionObserver;
@@ -33,9 +37,13 @@ const resourceInfo = {
 };
 
 let requestedTypes: string[] = [];
+let knowledgeRequests: URL[] = [];
+let resourceRequests: ResourceSearchBody[] = [];
+let userRequests: UserSearchBody[] = [];
 const server = setupServer(
-  http.get("*/tanbun/", () => {
+  http.get("*/tanbun/", ({ request }) => {
     requestedTypes.push("knowledge");
+    knowledgeRequests.push(new URL(request.url));
     return HttpResponse.json({
       total: 1,
       data: [
@@ -57,12 +65,14 @@ const server = setupServer(
       resource_infos: { [resource.uid]: resourceInfo },
     });
   }),
-  http.post("*/resource/search", () => {
+  http.post("*/resource/search", async ({ request }) => {
     requestedTypes.push("resource");
+    resourceRequests.push((await request.json()) as ResourceSearchBody);
     return HttpResponse.json({ total: 1, data: [resourceInfo] });
   }),
-  http.post("*/user/search", () => {
+  http.post("*/user/search", async ({ request }) => {
     requestedTypes.push("user");
+    userRequests.push((await request.json()) as UserSearchBody);
     return HttpResponse.json({
       total: 1,
       data: [
@@ -83,6 +93,9 @@ const server = setupServer(
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   requestedTypes = [];
+  knowledgeRequests = [];
+  resourceRequests = [];
+  userRequests = [];
   server.resetHandlers();
   if (originalIntersectionObserver) {
     globalThis.IntersectionObserver = originalIntersectionObserver;
@@ -144,6 +157,48 @@ describe("統合検索", () => {
       "!bg-orange-600",
     );
     expect(screen.getByText("1件の検索結果")).toBeVisible();
+  });
+
+  it("対象ごとの詳細条件を検索APIへ反映する", async () => {
+    const ui = userEvent.setup();
+    renderSearch();
+    await screen.findByText("3件の検索結果");
+
+    await ui.click(screen.getByRole("button", { name: "詳細設定" }));
+    await ui.selectOptions(screen.getByLabelText("一致方法"), "EQUAL");
+    await ui.selectOptions(screen.getByLabelText("詳細"), "3");
+    await ui.type(screen.getByLabelText("所有ユーザー"), "reader");
+    await ui.selectOptions(
+      screen.getByLabelText("リソースの並び順"),
+      "updated",
+    );
+    await ui.selectOptions(
+      screen.getByLabelText("ユーザーの並び順"),
+      "n_resource",
+    );
+    await ui.click(screen.getByLabelText("ユーザーを降順に並べる"));
+
+    await waitFor(() => {
+      expect(
+        knowledgeRequests.some(
+          (request) =>
+            request.searchParams.get("type") === "EQUAL" &&
+            request.searchParams.get("n_detail") === "3",
+        ),
+      ).toBe(true);
+      expect(resourceRequests).toContainEqual(
+        expect.objectContaining({
+          q_user: "reader",
+          order_by: ["updated"],
+        }),
+      );
+      expect(userRequests).toContainEqual(
+        expect.objectContaining({
+          desc: false,
+          order_by: ["n_resource"],
+        }),
+      );
+    });
   });
 
   it("末尾が見えたら次の検索結果を自動で追加する", async () => {
