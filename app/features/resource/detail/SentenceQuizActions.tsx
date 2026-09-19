@@ -1,3 +1,4 @@
+import { Ellipsis } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
@@ -12,6 +13,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/shared/components/ui/dropdown-menu";
 import { cn } from "~/shared/lib/utils";
@@ -52,10 +54,14 @@ export default function SentenceQuizActions({
   sentenceId,
   resourceId,
   className,
+  compact = false,
+  detailHref,
 }: {
   sentenceId: string;
   resourceId?: string;
   className?: string;
+  compact?: boolean;
+  detailHref?: string;
 }) {
   const resourceDetail = useOptionalResourceDetail();
   const rootId = resourceId ?? resourceDetail?.rootId;
@@ -167,63 +173,103 @@ export default function SentenceQuizActions({
     }
   }
 
+  const creationMenuItems = (
+    <>
+      <DropdownMenuItem onSelect={() => void create("term2sent")}>
+        用語から単文を当てる
+      </DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => void create("sent2term")}>
+        単文から用語を当てる
+      </DropdownMenuItem>
+      {relationCandidates.length > 0 && (
+        <>
+          <DropdownMenuItem onSelect={() => setRelationQuizType("rel2pair")}>
+            関係から単文を当てる…
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setRelationQuizType("pair2rel")}>
+            単文ペアから関係を当てる…
+          </DropdownMenuItem>
+        </>
+      )}
+    </>
+  );
+
   return (
     <>
       <span
         className={cn(
-          "ml-2 inline-flex items-center gap-1 align-middle",
+          "inline-flex items-center gap-1 align-middle",
+          compact
+            ? "ml-1 opacity-60 focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+            : "ml-2",
           className,
         )}
       >
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs"
-          aria-expanded={isExpanded}
-          onClick={() => void toggleQuizzes()}
-        >
-          {isExpanded
-            ? "クイズを閉じる"
-            : status
-              ? `クイズ ${status.total_quizzes}`
-              : "クイズを見る"}
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        {compact ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="size-7"
+                aria-label="単文の操作"
+                disabled={isCreating}
+              >
+                <Ellipsis />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {detailHref && (
+                <DropdownMenuItem asChild>
+                  <Link to={detailHref}>単文詳細を開く</Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onSelect={() => void toggleQuizzes()}>
+                {isExpanded
+                  ? "クイズを閉じる"
+                  : status
+                    ? `クイズを見る (${status.total_quizzes})`
+                    : "クイズを見る"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {creationMenuItems}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
               className="h-7 px-2 text-xs"
-              disabled={isCreating}
+              aria-expanded={isExpanded}
+              onClick={() => void toggleQuizzes()}
             >
-              {isCreating ? "作成中…" : "＋ クイズ"}
+              {isExpanded
+                ? "クイズを閉じる"
+                : status
+                  ? `クイズ ${status.total_quizzes}`
+                  : "クイズを見る"}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onSelect={() => void create("term2sent")}>
-              用語から単文を当てる
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => void create("sent2term")}>
-              単文から用語を当てる
-            </DropdownMenuItem>
-            {relationCandidates.length > 0 && (
-              <>
-                <DropdownMenuItem
-                  onSelect={() => setRelationQuizType("rel2pair")}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  disabled={isCreating}
                 >
-                  関係から単文を当てる…
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => setRelationQuizType("pair2rel")}
-                >
-                  単文ペアから関係を当てる…
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                  {isCreating ? "作成中…" : "＋ クイズ"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {creationMenuItems}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        )}
         {error && (
           <span role="alert" className="text-xs text-destructive">
             {error}

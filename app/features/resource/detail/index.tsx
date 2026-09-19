@@ -71,12 +71,12 @@ export default function ResourceDetail({ id }: Props) {
       refreshSentenceQuizStatuses={refreshSentenceQuizStatuses}
     >
       <TraceMemoryProvider>
-        <div className="markdown-body p-4">
+        <div className="markdown-body mx-auto max-w-5xl p-4 sm:p-6">
+          <Presenter id={resource.uid} />
           <UserHeader user={user} />
           <ResourceMeta info={resource_info} />
           {/* <ResourceStats stats={resource_stats} /> */}
           <Separator className="my-4" />
-          <Presenter id={resource.uid} />
           <Backbone startId={resource.uid} key={id} />
         </div>
       </TraceMemoryProvider>

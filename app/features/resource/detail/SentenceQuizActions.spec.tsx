@@ -212,3 +212,56 @@ it("Resource画面の外からも単文のQuizを確認・作成する", async (
     }),
   );
 });
+
+it("Resource画面では単文操作を一つのメニューに畳む", async () => {
+  const user = userEvent.setup();
+
+  render(
+    <MemoryRouter>
+      <ResourceDetailProvider
+        graph={graph}
+        uids={{
+          "sentence-1": "対象の単文",
+          "sentence-2": "関連する単文",
+        }}
+        terms={{}}
+        rootId="resource-1"
+        resource_info={null as never}
+        sentenceQuizStatuses={
+          new Map([
+            [
+              "sentence-1",
+              {
+                sentence_id: "sentence-1",
+                total_quizzes: 2,
+                quiz_counts: { term2sent: 2 },
+              },
+            ],
+          ])
+        }
+        refreshSentenceQuizStatuses={async () => {}}
+      >
+        <SentenceQuizActions
+          sentenceId="sentence-1"
+          compact
+          detailHref="/tanbun/sentence-1"
+        />
+      </ResourceDetailProvider>
+    </MemoryRouter>,
+  );
+
+  expect(
+    screen.queryByRole("button", { name: "クイズ 2" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "＋ クイズ" }),
+  ).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "単文の操作" }));
+
+  expect(
+    screen.getByRole("menuitem", { name: "単文詳細を開く" }),
+  ).toHaveAttribute("href", "/tanbun/sentence-1");
+  await user.click(screen.getByRole("menuitem", { name: "クイズを見る (2)" }));
+  expect(await screen.findByText("既存のクイズ")).toBeVisible();
+});

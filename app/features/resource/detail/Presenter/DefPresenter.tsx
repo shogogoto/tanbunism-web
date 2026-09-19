@@ -1,5 +1,4 @@
 import { Calendar, MapPin, User } from "lucide-react";
-import { Link } from "react-router";
 import { HashLink } from "~/shared/components/HashLink";
 import type { Additional } from "~/shared/generated/fastAPI.schemas";
 import { toFormulas } from "~/shared/lib/formula";
@@ -35,12 +34,8 @@ export default function DefPresenter({ adj, prefix }: Props) {
   }
 
   return (
-    <div className="space-x-1">
+    <div className="group space-x-1">
       <span>{prefix}</span>
-      {/* このinline-flexがないよリンクが改行される */}
-      <Link to={`/tanbun/${adj.kn.uid}`} className="inline-flex flex-shrink-0">
-        🔗
-      </Link>
       <div className="inline-flex gap-2">
         {adj.kn.term?.names?.map((name) => (
           <span
@@ -71,7 +66,11 @@ export default function DefPresenter({ adj, prefix }: Props) {
         </span>
       )}
       <Relations startId={adj.kn.uid} />
-      <SentenceQuizActions sentenceId={adj.kn.uid} />
+      <SentenceQuizActions
+        sentenceId={adj.kn.uid}
+        compact
+        detailHref={`/tanbun/${adj.kn.uid}`}
+      />
     </div>
   );
 }
