@@ -3,11 +3,21 @@ import { HistoryItemIcon } from "./HistoryItemIcon";
 import { useHistory } from "./hooks";
 import type { HistoryItemType } from "./types";
 
-function HistoryItem({ history }: { history: HistoryItemType }) {
+function HistoryItem({
+  history,
+  onSelect,
+}: {
+  history: HistoryItemType;
+  onSelect?: () => void;
+}) {
   return (
-    <li className="flex items-center hover:bg-muted rounded-md">
+    <li className="flex items-center rounded-md hover:bg-muted">
       <HistoryItemIcon url={history.url} className="mr-2" />
-      <Link to={history.url} className="truncate flex-1">
+      <Link
+        to={history.url}
+        onClick={onSelect}
+        className="flex-1 truncate py-2"
+      >
         {history.title}
       </Link>
     </li>
@@ -16,9 +26,10 @@ function HistoryItem({ history }: { history: HistoryItemType }) {
 
 type Props = {
   histories: readonly HistoryItemType[];
+  onSelect?: () => void;
 };
 
-export function HistoryList({ histories }: Props) {
+export function HistoryList({ histories, onSelect }: Props) {
   if (histories && histories.length === 0) {
     return (
       <p className="text-center text-sm text-muted-foreground">履歴なし</p>
@@ -27,7 +38,7 @@ export function HistoryList({ histories }: Props) {
   return (
     <ul>
       {histories.map((history) => (
-        <HistoryItem key={history.id} history={history} />
+        <HistoryItem key={history.id} history={history} onSelect={onSelect} />
       ))}
     </ul>
   );

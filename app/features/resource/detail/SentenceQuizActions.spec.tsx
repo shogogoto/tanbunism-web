@@ -177,3 +177,38 @@ it("単文のQuizを確認し、その場から新しく作成する", async () 
     }),
   );
 });
+
+it("Resource画面の外からも単文のQuizを確認・作成する", async () => {
+  const user = userEvent.setup();
+  render(
+    <MemoryRouter>
+      <SentenceQuizActions sentenceId="sentence-1" resourceId="resource-1" />
+    </MemoryRouter>,
+  );
+
+  await user.click(screen.getByRole("button", { name: "クイズを見る" }));
+  expect(await screen.findByText("既存のクイズ")).toBeVisible();
+  expect(screen.getByRole("link", { name: "一覧で管理" })).toHaveAttribute(
+    "href",
+    "/quiz/list?resource=resource-1&sentence=sentence-1",
+  );
+
+  await user.click(screen.getByRole("button", { name: "＋ クイズ" }));
+  expect(
+    screen.queryByRole("menuitem", { name: "関係から単文を当てる…" }),
+  ).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole("menuitem", { name: "単文から用語を当てる" }),
+  );
+
+  expect(
+    await screen.findByText("「可換」に合う文を当ててください"),
+  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "クイズを閉じる" })).toBeVisible();
+  expect(createRequests).toContainEqual(
+    expect.objectContaining({
+      target_sent_uid: "sentence-1",
+      quiz_type: "sent2term",
+    }),
+  );
+});

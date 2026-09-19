@@ -22,13 +22,17 @@ const ResourceDetailContext = createContext<
 >(undefined);
 
 export function useResourceDetail() {
-  const context = useContext(ResourceDetailContext);
+  const context = useOptionalResourceDetail();
   if (!context) {
     throw new Error(
       "useResourceDetail must be used within a ResourceDetailProvider",
     );
   }
   return context;
+}
+
+export function useOptionalResourceDetail() {
+  return useContext(ResourceDetailContext);
 }
 
 export const ResourceDetailProvider = ({

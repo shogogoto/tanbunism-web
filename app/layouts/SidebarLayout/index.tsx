@@ -3,7 +3,6 @@ import { SidebarProvider } from "~/shared/components/ui/sidebar";
 import { Toaster } from "~/shared/components/ui/sonner";
 import { useIsMobile } from "~/shared/hooks/use-mobile";
 import "github-markdown-css/github-markdown.css";
-import { FooterHistory } from "~/shared/history/FooterHistory";
 import MySidebar from "./MySidebar";
 import BottomNavigation from "./components/BottomNavigation";
 
@@ -19,7 +18,6 @@ export default function SidebarLayout() {
           <Outlet />
         </main>
         <footer className="sm:hidden sticky bottom-0 left-0 w-full border-t bg-white dark:bg-gray-950">
-          <FooterHistory />
           <nav className="flex w-full p-4 py-2 justify-between">
             <BottomNavigation />
           </nav>

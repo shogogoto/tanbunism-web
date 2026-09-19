@@ -9,6 +9,7 @@ import {
   SidebarMenu,
   SidebarRail,
 } from "~/shared/components/ui/sidebar";
+import { HistoryPanel } from "~/shared/history/HistoryPanel";
 import {
   DocsSideMenu,
   FeaturesMenu,
@@ -44,6 +45,7 @@ export default function MySidebar() {
             <SearchSideMenu />
             <RankingSideMenu />
             {isAuthenticated && <LearningMenu />}
+            <HistoryPanel />
             <FeaturesMenu />
           </SidebarMenu>
           <SideMenu

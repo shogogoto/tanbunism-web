@@ -14,8 +14,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/shared/components/ui/dropdown-menu";
-import { useResourceDetail } from "./Context";
+import { cn } from "~/shared/lib/utils";
+import { useOptionalResourceDetail } from "./Context";
 import { getHeadingLevel } from "./util";
+
+function prependQuiz(
+  quizzes: ReadableQuiz[] | undefined,
+  quiz: ReadableQuiz,
+): ReadableQuiz[] {
+  return [
+    quiz,
+    ...(quizzes ?? []).filter(({ quiz_id }) => quiz_id !== quiz.quiz_id),
+  ];
+}
 
 type QuizType = "sent2term" | "term2sent";
 type RelationQuizType = "rel2pair" | "pair2rel";
@@ -39,17 +50,21 @@ const relationLabels: Record<string, string> = {
 
 export default function SentenceQuizActions({
   sentenceId,
+  resourceId,
+  className,
 }: {
   sentenceId: string;
+  resourceId?: string;
+  className?: string;
 }) {
-  const {
-    graph,
-    rootId,
-    sentenceQuizStatuses,
-    refreshSentenceQuizStatuses,
-    terms,
-    uids,
-  } = useResourceDetail();
+  const resourceDetail = useOptionalResourceDetail();
+  const rootId = resourceId ?? resourceDetail?.rootId;
+  const graph = resourceDetail?.graph;
+  const terms = resourceDetail?.terms;
+  const uids = resourceDetail?.uids;
+  const sentenceQuizStatuses = resourceDetail?.sentenceQuizStatuses;
+  const refreshSentenceQuizStatuses =
+    resourceDetail?.refreshSentenceQuizStatuses;
   const [isCreating, setIsCreating] = useState(false);
   const [relationQuizType, setRelationQuizType] = useState<RelationQuizType>();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -57,30 +72,31 @@ export default function SentenceQuizActions({
   const [quizzes, setQuizzes] = useState<ReadableQuiz[]>();
   const [error, setError] = useState<string>();
   const status = sentenceQuizStatuses?.get(sentenceId);
-  const relationCandidates = graph
-    .neighbors(sentenceId)
-    .flatMap((candidateId) => {
-      const node = uids[candidateId];
-      const sentence =
-        typeof node === "string"
-          ? node
-          : ((node as { n?: string } | undefined)?.n ?? "");
-      if (!sentence || getHeadingLevel(sentence) > 0) return [];
+  const relationCandidates =
+    !graph || !uids || !terms
+      ? []
+      : graph.neighbors(sentenceId).flatMap((candidateId) => {
+          const node = uids[candidateId];
+          const sentence =
+            typeof node === "string"
+              ? node
+              : ((node as { n?: string } | undefined)?.n ?? "");
+          if (!sentence || getHeadingLevel(sentence) > 0) return [];
 
-      const names = terms[candidateId]?.names?.join(" / ");
-      const edgeTypes = graph
-        .edges(sentenceId, candidateId)
-        .map((edge) => String(graph.getEdgeAttribute(edge, "etype")));
-      return [
-        {
-          id: candidateId,
-          label: names ? `${names}: ${sentence}` : sentence,
-          relations: [...new Set(edgeTypes)].map(
-            (type) => relationLabels[type] ?? type,
-          ),
-        },
-      ];
-    });
+          const names = terms[candidateId]?.names?.join(" / ");
+          const edgeTypes = graph
+            .edges(sentenceId, candidateId)
+            .map((edge) => String(graph.getEdgeAttribute(edge, "etype")));
+          return [
+            {
+              id: candidateId,
+              label: names ? `${names}: ${sentence}` : sentence,
+              relations: [...new Set(edgeTypes)].map(
+                (type) => relationLabels[type] ?? type,
+              ),
+            },
+          ];
+        });
 
   async function loadQuizzes() {
     setIsLoading(true);
@@ -111,9 +127,10 @@ export default function SentenceQuizActions({
     setIsCreating(true);
     setError(undefined);
     try {
-      await createSentenceQuiz(sentenceId, quizType);
+      const created = await createSentenceQuiz(sentenceId, quizType);
+      setQuizzes((current) => prependQuiz(current, created));
+      setIsExpanded(true);
       await refreshSentenceQuizStatuses?.();
-      if (isExpanded) await loadQuizzes();
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -130,10 +147,15 @@ export default function SentenceQuizActions({
     setIsCreating(true);
     setError(undefined);
     try {
-      await createRelationQuiz(sentenceId, relatedSentenceId, relationQuizType);
+      const created = await createRelationQuiz(
+        sentenceId,
+        relatedSentenceId,
+        relationQuizType,
+      );
+      setQuizzes((current) => prependQuiz(current, created));
+      setIsExpanded(true);
       setRelationQuizType(undefined);
       await refreshSentenceQuizStatuses?.();
-      if (isExpanded) await loadQuizzes();
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -147,19 +169,26 @@ export default function SentenceQuizActions({
 
   return (
     <>
-      <span className="ml-2 inline-flex items-center gap-1 align-middle">
-        {status && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            aria-expanded={isExpanded}
-            onClick={() => void toggleQuizzes()}
-          >
-            クイズ {status.total_quizzes}
-          </Button>
+      <span
+        className={cn(
+          "ml-2 inline-flex items-center gap-1 align-middle",
+          className,
         )}
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          aria-expanded={isExpanded}
+          onClick={() => void toggleQuizzes()}
+        >
+          {isExpanded
+            ? "クイズを閉じる"
+            : status
+              ? `クイズ ${status.total_quizzes}`
+              : "クイズを見る"}
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -179,12 +208,20 @@ export default function SentenceQuizActions({
             <DropdownMenuItem onSelect={() => void create("sent2term")}>
               単文から用語を当てる
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setRelationQuizType("rel2pair")}>
-              関係から単文を当てる…
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setRelationQuizType("pair2rel")}>
-              単文ペアから関係を当てる…
-            </DropdownMenuItem>
+            {relationCandidates.length > 0 && (
+              <>
+                <DropdownMenuItem
+                  onSelect={() => setRelationQuizType("rel2pair")}
+                >
+                  関係から単文を当てる…
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => setRelationQuizType("pair2rel")}
+                >
+                  単文ペアから関係を当てる…
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
         {error && (
@@ -243,11 +280,13 @@ export default function SentenceQuizActions({
               作成したクイズはありません。
             </p>
           )}
-          <Button asChild variant="link" size="sm" className="h-auto p-0">
-            <Link to={`/quiz/list?resource=${rootId}&sentence=${sentenceId}`}>
-              一覧で管理
-            </Link>
-          </Button>
+          {rootId && (
+            <Button asChild variant="link" size="sm" className="h-auto p-0">
+              <Link to={`/quiz/list?resource=${rootId}&sentence=${sentenceId}`}>
+                一覧で管理
+              </Link>
+            </Button>
+          )}
         </div>
       )}
     </>

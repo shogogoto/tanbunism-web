@@ -1,5 +1,6 @@
-import { ArrowUpCircle, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import SentenceQuizActions from "~/features/resource/detail/SentenceQuizActions";
 import Loading from "~/shared/components/Loading";
 import {
   Collapsible,
@@ -17,7 +18,7 @@ import { useHistory } from "~/shared/history/hooks";
 import { eqEdgeType, operatorGraph, succ } from "~/shared/lib/network";
 import { cn } from "~/shared/lib/utils";
 import LocationView from "../components/LocationView";
-import { TanbunCardContent, createStatView } from "../components/TanbunCard";
+import { TanbunCardContent } from "../components/TanbunCard";
 import { DetailContextProvider } from "./DetailContext";
 import DetailNested from "./TanbunGroup";
 import Parents from "./TanbunGroup/Parents";
@@ -53,12 +54,10 @@ const colors = {
 
 function CollapsibleSection({
   title,
-  stat,
   backgroundColor,
   children,
 }: {
   title: string;
-  stat?: React.ReactNode;
   backgroundColor?: string;
   children: React.ReactNode;
 }) {
@@ -78,10 +77,7 @@ function CollapsibleSection({
             isOpen && "rotate-90",
           )}
         />
-        <div className="flex items-center gap-2 font-bold">
-          {stat}
-          <h3>{title}</h3>
-        </div>
+        <h3 className="font-bold">{title}</h3>
       </CollapsibleTrigger>
       <CollapsibleContent>{validChildren}</CollapsibleContent>
     </Collapsible>
@@ -123,14 +119,12 @@ export default function MainView({ detail, prefetched }: Props) {
     belows,
     logicOp,
     refOp,
-    st,
   } = useMemo(() => {
     if (detail) {
       const { root, g, kn, location, rootId } = graphForView(detail);
       const belows = succ(g, rootId, eqEdgeType("below"));
       const logicOp = operatorGraph(g, "to");
       const refOp = operatorGraph(g, "resolved");
-      const st = createStatView(root.stats);
       return {
         headerTanbun: root,
         headerLocation: location,
@@ -140,7 +134,6 @@ export default function MainView({ detail, prefetched }: Props) {
         belows,
         logicOp,
         refOp,
-        st,
       };
     }
     return {
@@ -155,7 +148,6 @@ export default function MainView({ detail, prefetched }: Props) {
       belows: [],
       logicOp: null,
       refOp: null,
-      st: createStatView(prefetched?.tanbun.stats),
     };
   }, [detail, prefetched]);
 
@@ -188,11 +180,7 @@ export default function MainView({ detail, prefetched }: Props) {
         borderColor={colors.detail.in}
       >
         <div>
-          <CollapsibleSection
-            title="親"
-            stat={<ArrowUpCircle className="size-4" />}
-            backgroundColor={colors.detail.bgIn}
-          >
+          <CollapsibleSection title="親" backgroundColor={colors.detail.bgIn}>
             <Parents
               parents={graphForView(detail).location.parents}
               borderColor={colors.detail.in}
@@ -200,11 +188,7 @@ export default function MainView({ detail, prefetched }: Props) {
           </CollapsibleSection>
         </div>
         <div>
-          <CollapsibleSection
-            title="子"
-            stat={st.detail}
-            backgroundColor={colors.detail.bgOut}
-          >
+          <CollapsibleSection title="子" backgroundColor={colors.detail.bgOut}>
             {belows?.map((bid) => (
               <DetailNested
                 startId={bid}
@@ -224,11 +208,7 @@ export default function MainView({ detail, prefetched }: Props) {
         borderColor={colors.logic.in}
       >
         <div>
-          <CollapsibleSection
-            title="前提"
-            stat={st.premise}
-            backgroundColor={colors.logic.bgIn}
-          >
+          <CollapsibleSection title="前提" backgroundColor={colors.logic.bgIn}>
             {logicPred.map((id) => (
               <TanbunGroup2
                 startId={id}
@@ -241,11 +221,7 @@ export default function MainView({ detail, prefetched }: Props) {
           </CollapsibleSection>
         </div>
         <div>
-          <CollapsibleSection
-            title="結論"
-            stat={st.conclusion}
-            backgroundColor={colors.logic.bgOut}
-          >
+          <CollapsibleSection title="結論" backgroundColor={colors.logic.bgOut}>
             {logicSucc.map((id) => (
               <TanbunGroup2
                 startId={id}
@@ -267,7 +243,6 @@ export default function MainView({ detail, prefetched }: Props) {
         <div>
           <CollapsibleSection
             title="参照している"
-            stat={st.refer}
             backgroundColor={colors.ref.bgIn}
           >
             {refSucc.map((id) => (
@@ -284,7 +259,6 @@ export default function MainView({ detail, prefetched }: Props) {
         <div>
           <CollapsibleSection
             title="参照されている"
-            stat={st.referred}
             backgroundColor={colors.ref.bgOut}
           >
             {refPred.map((id) => (
@@ -314,12 +288,21 @@ export default function MainView({ detail, prefetched }: Props) {
     >
       <div className="flex flex-col min-h-screen max-w-3xl mx-auto">
         {headerLocation.user && headerLocation.resource && (
-          <div className="m-1">
+          <div className="border-b bg-card/40 p-3">
             <LocationView
               loc={headerLocation as TanbunLocation}
               tanbunId={headerTanbun.uid}
             />
-            <TanbunCardContent k={headerTanbun} />
+            <div className="mt-2 rounded-lg border bg-card py-3 shadow-sm">
+              <TanbunCardContent k={headerTanbun} />
+              <div className="mx-6 mt-3 border-t pt-3">
+                <SentenceQuizActions
+                  sentenceId={headerTanbun.uid}
+                  resourceId={headerLocation.resource.uid}
+                  className="ml-0"
+                />
+              </div>
+            </div>
           </div>
         )}
         {isLoaded && (
