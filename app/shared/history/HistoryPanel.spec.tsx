@@ -2,7 +2,6 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
-import { SidebarProvider } from "~/shared/components/ui/sidebar";
 import { HistoryPanel } from "./HistoryPanel";
 
 vi.mock("./hooks", () => ({
@@ -18,20 +17,12 @@ vi.mock("./hooks", () => ({
   }),
 }));
 
-vi.mock("~/shared/hooks/use-mobile", () => ({
-  useIsMobile: () => false,
-}));
-
 it("必要なときだけ履歴をパネルで表示する", async () => {
   const user = userEvent.setup();
 
   render(
     <MemoryRouter>
-      <SidebarProvider>
-        <ul>
-          <HistoryPanel />
-        </ul>
-      </SidebarProvider>
+      <HistoryPanel />
     </MemoryRouter>,
   );
 

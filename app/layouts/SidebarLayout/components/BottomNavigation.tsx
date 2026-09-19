@@ -7,16 +7,17 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router";
-import { useSidebar } from "~/shared/components/ui/sidebar";
 
-export default function BottomNavigation() {
-  const { toggleSidebar } = useSidebar();
-
+export default function BottomNavigation({
+  onMenuOpen,
+}: {
+  onMenuOpen: () => void;
+}) {
   return (
     <>
       <button
         type="button"
-        onClick={toggleSidebar}
+        onClick={onMenuOpen}
         aria-label="メニューを開く"
         className="flex flex-col items-center gap-1 text-xs"
       >

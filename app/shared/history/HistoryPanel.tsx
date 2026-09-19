@@ -1,5 +1,6 @@
 import { History as HistoryIcon } from "lucide-react";
 import { useState } from "react";
+import { Button } from "~/shared/components/ui/button";
 import { ScrollArea } from "~/shared/components/ui/scroll-area";
 import {
   Sheet,
@@ -8,41 +9,25 @@ import {
   SheetHeader,
   SheetTitle,
 } from "~/shared/components/ui/sheet";
-import {
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "~/shared/components/ui/sidebar";
 import { useHistory } from "./hooks";
 import { HistoryList } from "./index";
 
-export function HistoryPanel() {
+export function HistoryPanel({ showLabel = false }: { showLabel?: boolean }) {
   const [open, setOpen] = useState(false);
   const { histories } = useHistory();
-  const { isMobile, setOpenMobile } = useSidebar();
-
-  const openPanel = () => {
-    setOpen(true);
-  };
-
-  const selectHistory = () => {
-    setOpen(false);
-    if (isMobile) setOpenMobile(false);
-  };
 
   return (
     <>
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          type="button"
-          tooltip="履歴"
-          onClick={openPanel}
-          aria-label="履歴を開く"
-        >
-          <HistoryIcon />
-          <span>履歴</span>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
+      <Button
+        type="button"
+        variant="ghost"
+        size={showLabel ? "sm" : "icon"}
+        onClick={() => setOpen(true)}
+        aria-label="履歴を開く"
+      >
+        <HistoryIcon />
+        {showLabel && <span className="hidden sm:inline">履歴</span>}
+      </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="p-0">
@@ -53,7 +38,10 @@ export function HistoryPanel() {
             </SheetDescription>
           </SheetHeader>
           <ScrollArea className="min-h-0 flex-1 px-4 pb-4">
-            <HistoryList histories={histories} onSelect={selectHistory} />
+            <HistoryList
+              histories={histories}
+              onSelect={() => setOpen(false)}
+            />
           </ScrollArea>
         </SheetContent>
       </Sheet>

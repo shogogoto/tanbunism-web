@@ -1,16 +1,13 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
 import BottomNavigation from "./BottomNavigation";
 
-vi.mock("~/shared/components/ui/sidebar", () => ({
-  useSidebar: () => ({ toggleSidebar: vi.fn() }),
-}));
-
 it("主要画面へ名前付きの導線を表示する", () => {
+  const onMenuOpen = vi.fn();
   render(
     <MemoryRouter initialEntries={["/quiz"]}>
-      <BottomNavigation />
+      <BottomNavigation onMenuOpen={onMenuOpen} />
     </MemoryRouter>,
   );
 
@@ -31,4 +28,7 @@ it("主要画面へ名前付きの導線を表示する", () => {
     "href",
     "/docs/toc",
   );
+
+  fireEvent.click(screen.getByRole("button", { name: "メニューを開く" }));
+  expect(onMenuOpen).toHaveBeenCalledOnce();
 });

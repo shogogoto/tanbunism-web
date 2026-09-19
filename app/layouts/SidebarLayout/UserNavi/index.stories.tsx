@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AuthProvider } from "~/features/auth/AuthProvider";
-import { Sidebar, SidebarProvider } from "~/shared/components/ui/sidebar";
 import { getUsersCurrentUserUserMeGetResponseMock } from "~/shared/generated/user/user.msw";
 import Index from "./index";
 
@@ -24,11 +23,7 @@ export const Default: Story = {
     (Story) => {
       return (
         <AuthProvider>
-          <SidebarProvider>
-            <Sidebar>
-              <Story />
-            </Sidebar>
-          </SidebarProvider>
+          <Story />
         </AuthProvider>
       );
     },
