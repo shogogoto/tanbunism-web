@@ -206,7 +206,7 @@ export default function UnifiedSearch() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-16 sm:px-6">
+    <div className="mx-auto min-h-full w-full max-w-3xl bg-background px-4 sm:px-6">
       <header className="sticky top-0 z-10 space-y-3 border-b bg-background/95 py-4 backdrop-blur">
         <div className="relative">
           {isLoading ? (
