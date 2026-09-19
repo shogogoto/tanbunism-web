@@ -200,7 +200,7 @@ export default function SentenceQuizActions({
         className={cn(
           "inline-flex items-center gap-1 align-middle",
           compact
-            ? "ml-1 opacity-60 focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+            ? "opacity-60 focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
             : "ml-2",
           className,
         )}

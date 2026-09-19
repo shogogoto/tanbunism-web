@@ -45,7 +45,7 @@ export default function Presenter({ id, prefix }: Props) {
   return (
     <div
       className={cn(
-        "rounded-md p-1",
+        "rounded-md px-1",
         isActive &&
           "bg-yellow-100 text-neutral-800 dark:bg-yellow-800/30 dark:text-white",
       )}

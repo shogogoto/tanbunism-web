@@ -34,7 +34,7 @@ export default function DefPresenter({ adj, prefix }: Props) {
   }
 
   return (
-    <div className="group space-x-1">
+    <div className="group relative space-x-1 pl-8">
       <span>{prefix}</span>
       <div className="inline-flex gap-2">
         {adj.kn.term?.names?.map((name) => (
@@ -65,12 +65,13 @@ export default function DefPresenter({ adj, prefix }: Props) {
           <AdditionalComponent additional={adj.kn.additional} />
         </span>
       )}
-      <Relations startId={adj.kn.uid} />
       <SentenceQuizActions
         sentenceId={adj.kn.uid}
         compact
         detailHref={`/tanbun/${adj.kn.uid}`}
+        className="absolute top-0 left-0 !ml-0"
       />
+      <Relations startId={adj.kn.uid} />
     </div>
   );
 }
