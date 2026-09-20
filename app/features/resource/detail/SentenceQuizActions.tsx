@@ -55,13 +55,11 @@ export default function SentenceQuizActions({
   resourceId,
   className,
   compact = false,
-  detailHref,
 }: {
   sentenceId: string;
   resourceId?: string;
   className?: string;
   compact?: boolean;
-  detailHref?: string;
 }) {
   const resourceDetail = useOptionalResourceDetail();
   const rootId = resourceId ?? resourceDetail?.rootId;
@@ -220,11 +218,6 @@ export default function SentenceQuizActions({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {detailHref && (
-                <DropdownMenuItem asChild>
-                  <Link to={detailHref}>単文詳細を開く</Link>
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onSelect={() => void toggleQuizzes()}>
                 {isExpanded
                   ? "クイズを閉じる"

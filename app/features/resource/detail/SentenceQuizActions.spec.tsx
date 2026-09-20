@@ -241,11 +241,7 @@ it("Resource画面では単文操作を一つのメニューに畳む", async ()
         }
         refreshSentenceQuizStatuses={async () => {}}
       >
-        <SentenceQuizActions
-          sentenceId="sentence-1"
-          compact
-          detailHref="/tanbun/sentence-1"
-        />
+        <SentenceQuizActions sentenceId="sentence-1" compact />
       </ResourceDetailProvider>
     </MemoryRouter>,
   );
@@ -260,8 +256,8 @@ it("Resource画面では単文操作を一つのメニューに畳む", async ()
   await user.click(screen.getByRole("button", { name: "単文の操作" }));
 
   expect(
-    screen.getByRole("menuitem", { name: "単文詳細を開く" }),
-  ).toHaveAttribute("href", "/tanbun/sentence-1");
+    screen.queryByRole("menuitem", { name: "単文詳細を開く" }),
+  ).not.toBeInTheDocument();
   await user.click(screen.getByRole("menuitem", { name: "クイズを見る (2)" }));
   expect(await screen.findByText("既存のクイズ")).toBeVisible();
 });

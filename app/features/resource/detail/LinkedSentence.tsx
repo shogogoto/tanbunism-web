@@ -8,12 +8,13 @@ import type { toAdjacent } from "./util";
 const PATTERN = /(\{[^}]*\})/g;
 
 type Props = {
+  kn: ReturnType<typeof toAdjacent>["kn"];
   sentence: string;
   refers: ReturnType<ReturnType<typeof toAdjacent>["refers"]>;
 };
 
 // 用語リンクを埋め込んだ単文
-export default function RefLinkSentence({ sentence, refers }: Props) {
+export default function RefLinkSentence({ kn, sentence, refers }: Props) {
   const { rootId } = useResourceDetail();
   const parts = sentence.split(PATTERN).filter(Boolean);
   return (
@@ -25,12 +26,16 @@ export default function RefLinkSentence({ sentence, refers }: Props) {
 
         if (found) {
           return (
-            <HashLink to={`/resource/${rootId}#${found.kn.uid}`}>
+            <HashLink key={part} to={`/resource/${rootId}#${found.kn.uid}`}>
               {part}
             </HashLink>
           );
         }
-        return <span key={part}>{part}</span>; // part;
+        return (
+          <TanbunChainLink key={part} kn={kn}>
+            {part}
+          </TanbunChainLink>
+        );
       })}
     </>
   );
@@ -47,10 +52,9 @@ export function TanbunChainLink({ kn, children }: Props2) {
     <Link
       to={`/tanbun/${kn.uid}`}
       draggable="false"
-      className="!text-inherit"
+      className="!text-inherit hover:underline"
       onMouseDown={handleMouseDown}
       onClick={handleClick}
-      id={kn.uid}
       state={{
         tanbun: kn,
         resource: resource_info.resource,

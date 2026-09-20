@@ -1,6 +1,14 @@
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { toGraph } from "~/shared/lib/network";
+import { ResourceDetailProvider } from "./Context";
+import DefPresenter from "./Presenter/DefPresenter";
+import { TraceMemoryProvider } from "./TraceMemory/Context";
 import { resourceDetailFiture } from "./fixture";
 import { toAdjacent } from "./util";
+
+vi.mock("./Relations", () => ({ default: () => null }));
+vi.mock("./SentenceQuizActions", () => ({ default: () => null }));
 
 const { g, resource_info, uids, terms } = resourceDetailFiture;
 const G = toGraph(g);
@@ -21,5 +29,35 @@ describe("ResourceDetail", () => {
     const arrs = adj.downArrays();
     expect(arrs[0]).toHaveLength(1); // 兄弟なし
     expect(arrs[1]).toHaveLength(3); // 3兄弟
+  });
+
+  it("単文の用語名と本文から詳細を直接開ける", () => {
+    const id = "e4254a62-74cd-46d2-9d75-2e69a717c2ec";
+    const adj = toAdjacent(id, G, uids, terms);
+
+    render(
+      <MemoryRouter>
+        <ResourceDetailProvider
+          graph={G}
+          terms={terms}
+          uids={uids}
+          rootId={resource_info.resource.uid}
+          resource_info={resource_info}
+        >
+          <TraceMemoryProvider>
+            <DefPresenter adj={adj} />
+          </TraceMemoryProvider>
+        </ResourceDetailProvider>
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "デイヴィッド・チャーマーズ" }),
+    ).toHaveAttribute("href", `/tanbun/${id}`);
+    expect(
+      screen.getByRole("link", {
+        name: "28歳でクオリアが原理的に解明されない",
+      }),
+    ).toHaveAttribute("href", `/tanbun/${id}`);
   });
 });

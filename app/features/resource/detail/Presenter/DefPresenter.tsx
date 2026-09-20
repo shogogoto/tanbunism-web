@@ -3,7 +3,7 @@ import { HashLink } from "~/shared/components/HashLink";
 import type { Additional } from "~/shared/generated/fastAPI.schemas";
 import { toFormulas } from "~/shared/lib/formula";
 import { useResourceDetail } from "../Context";
-import RefLinkSentence from "../LinkedSentence";
+import RefLinkSentence, { TanbunChainLink } from "../LinkedSentence";
 import Relations from "../Relations";
 import SentenceQuizActions from "../SentenceQuizActions";
 import type { toAdjacent } from "../util";
@@ -36,22 +36,25 @@ export default function DefPresenter({ adj, prefix }: Props) {
   return (
     <div className="group relative space-x-1 pl-8">
       <span>{prefix}</span>
-      <div className="inline-flex gap-2">
-        {adj.kn.term?.names?.map((name) => (
-          <span
-            key={name}
-            className="rounded-full font-bold text-green-800  dark:text-green-500"
-          >
-            {name}
-          </span>
-        ))}
-      </div>
+      <TanbunChainLink kn={adj.kn}>
+        <span className="inline-flex gap-2">
+          {adj.kn.term?.names?.map((name) => (
+            <span
+              key={name}
+              className="rounded-full font-bold text-green-800 dark:text-green-500"
+            >
+              {name}
+            </span>
+          ))}
+        </span>
+      </TanbunChainLink>
       {adj.kn.term?.names?.length && ":  "}
       {toFormulas(adj.kn.sentence).map((formulaOrString) => {
         if (typeof formulaOrString === "string") {
           return (
             <RefLinkSentence
               key={formulaOrString}
+              kn={adj.kn}
               sentence={formulaOrString}
               refers={refs}
             />
@@ -68,7 +71,6 @@ export default function DefPresenter({ adj, prefix }: Props) {
       <SentenceQuizActions
         sentenceId={adj.kn.uid}
         compact
-        detailHref={`/tanbun/${adj.kn.uid}`}
         className="absolute top-0 left-0 !ml-0"
       />
       <Relations startId={adj.kn.uid} />
