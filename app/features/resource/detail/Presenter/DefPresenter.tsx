@@ -13,29 +13,11 @@ type Props = {
   prefix?: React.ReactNode;
 };
 
-export default function DefPresenter({ adj, prefix }: Props) {
-  const { rootId } = useResourceDetail();
+function DefinitionContent({ adj }: Pick<Props, "adj">) {
   const refs = adj.refers();
-  const quoterm = adj.quoterm()[0];
-
-  if (quoterm) {
-    return (
-      <div>
-        <span>{prefix}</span>
-        <HashLink
-          to={`/resource/${rootId}/#${quoterm.kn.uid}`}
-          className="inline-flex flex-shrink-0"
-        >
-          <span>{adj.kn.sentence.replaceAll("`", "")} |</span>
-          <DefPresenter adj={quoterm} />
-        </HashLink>
-      </div>
-    );
-  }
 
   return (
-    <div className="group relative space-x-1 pl-8">
-      <span>{prefix}</span>
+    <>
       <TanbunChainLink kn={adj.kn}>
         <span className="inline-flex gap-2">
           {adj.kn.term?.names?.map((name) => (
@@ -68,6 +50,32 @@ export default function DefPresenter({ adj, prefix }: Props) {
           <AdditionalComponent additional={adj.kn.additional} />
         </span>
       )}
+    </>
+  );
+}
+
+export default function DefPresenter({ adj, prefix }: Props) {
+  const { rootId } = useResourceDetail();
+  const quoterm = adj.quoterm()[0];
+
+  if (quoterm) {
+    return (
+      <div>
+        <span>{prefix}</span>
+        <span className="inline" data-testid="quoterm-inline">
+          <HashLink to={`/resource/${rootId}/#${quoterm.kn.uid}`}>
+            {adj.kn.sentence.replaceAll("`", "")} |{" "}
+          </HashLink>
+          <DefinitionContent adj={quoterm} />
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group relative space-x-1 pl-8">
+      <span>{prefix}</span>
+      <DefinitionContent adj={adj} />
       <SentenceQuizActions
         sentenceId={adj.kn.uid}
         compact

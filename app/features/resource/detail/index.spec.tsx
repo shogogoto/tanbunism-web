@@ -60,4 +60,54 @@ describe("ResourceDetail", () => {
       }),
     ).toHaveAttribute("href", `/tanbun/${id}`);
   });
+
+  it("aliasと展開先を一行のインライン要素として表示する", () => {
+    const graph = toGraph({
+      directed: true,
+      multigraph: true,
+      graph: {},
+      nodes: [{ id: "alias" }, { id: "definition" }],
+      edges: [
+        {
+          key: 0,
+          source: "alias",
+          target: "definition",
+          type: "quoterm",
+        },
+      ],
+    });
+    const adj = toAdjacent(
+      "alias",
+      graph,
+      {
+        alias: "BL",
+        definition: "黒点が太陽の表面にある",
+      },
+      {},
+    );
+
+    render(
+      <MemoryRouter>
+        <ResourceDetailProvider
+          graph={graph}
+          terms={{}}
+          uids={{
+            alias: "BL",
+            definition: "黒点が太陽の表面にある",
+          }}
+          rootId={resource_info.resource.uid}
+          resource_info={resource_info}
+        >
+          <TraceMemoryProvider>
+            <DefPresenter adj={adj} />
+          </TraceMemoryProvider>
+        </ResourceDetailProvider>
+      </MemoryRouter>,
+    );
+
+    const inline = screen.getByTestId("quoterm-inline");
+    expect(inline).toHaveClass("inline");
+    expect(inline).toHaveTextContent("BL | 黒点が太陽の表面にある");
+    expect(inline.querySelector("div")).not.toBeInTheDocument();
+  });
 });
