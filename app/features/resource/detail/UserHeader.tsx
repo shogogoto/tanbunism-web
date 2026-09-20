@@ -1,9 +1,4 @@
 import { Link } from "react-router";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "~/shared/components/ui/avatar";
 import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 
 type Props = {
@@ -11,20 +6,14 @@ type Props = {
 };
 
 export default function UserHeader({ user }: Props) {
+  const username = user.username || user.uid;
   return (
     <Link
-      to={`/user/${user.username}`}
-      className="flex items-center gap-2 text-sm text-muted-foreground !text-inherit"
+      to={`/user/${username}`}
+      className="inline-flex text-xs text-muted-foreground !text-muted-foreground hover:underline"
+      title={user.display_name || username}
     >
-      <Avatar>
-        <AvatarImage
-          src={user?.avatar_url || undefined}
-          alt={user?.display_name || undefined}
-        />
-        <AvatarFallback>{user.display_name?.charAt(0)}</AvatarFallback>
-      </Avatar>
-      <span>{user.display_name || user.username}</span>
-      <span>@{user.username}</span>
+      @{username}
     </Link>
   );
 }

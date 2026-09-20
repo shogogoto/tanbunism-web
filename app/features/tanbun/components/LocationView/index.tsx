@@ -1,5 +1,4 @@
 import { Link } from "react-router";
-import UserAvatar from "~/features/user/UserAvatar";
 import { HashLink } from "~/shared/components/HashLink";
 import type { TanbunLocation } from "~/shared/generated/fastAPI.schemas";
 
@@ -10,32 +9,26 @@ type Props = {
 
 export default function LocationView({ loc, tanbunId }: Props) {
   const { user } = loc;
+  const username = user.username || user.uid;
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <Link
-          to={`/user/${user.username}`}
-          className="text-sm text-muted-foreground"
-        >
-          <UserAvatar user={user} />
-        </Link>
-        <div className="flex flex-col">
-          <div>
-            <span className="font-bold">{user.display_name} </span>@
-            {user.username || user.uid}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            <HashLink
-              to={`/resource/${loc.resource.uid}#${tanbunId}`}
-              className="hover:underline space-x-2"
-            >
-              <span>{loc.resource.name}</span>
-              <span>{loc.resource.authors}</span>
-              <span>{loc.resource.published}</span>
-            </HashLink>
-          </div>
-        </div>
-      </div>
+    <div className="flex flex-col items-start gap-1 text-sm text-muted-foreground">
+      <HashLink
+        to={`/resource/${loc.resource.uid}#${tanbunId}`}
+        className="flex flex-wrap items-center gap-x-3 gap-y-1 hover:underline"
+      >
+        <span className="font-medium text-foreground">{loc.resource.name}</span>
+        {loc.resource.authors?.length ? (
+          <span>{loc.resource.authors.join(", ")}</span>
+        ) : null}
+        {loc.resource.published && <span>{loc.resource.published}</span>}
+      </HashLink>
+      <Link
+        to={`/user/${username}`}
+        className="text-xs text-muted-foreground hover:underline"
+        title={user.display_name || username}
+      >
+        @{username}
+      </Link>
     </div>
   );
 }
