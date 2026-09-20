@@ -27,13 +27,8 @@ describe("単文詳細", () => {
       </MemoryRouter>,
     );
 
-    expect(
-      screen.queryByRole("heading", { name: "詳細" }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /^子 \d+件$/ })).toBeVisible();
-    expect(
-      screen.queryByRole("heading", { name: "論理" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "詳細" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "論理" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "参照" })).toBeVisible();
     const definitionPath = screen.getByRole("navigation", {
       name: "定義元の経路",
@@ -42,15 +37,10 @@ describe("単文詳細", () => {
     expect(within(definitionPath).getAllByRole("link")[0]).toHaveTextContent(
       "アリストテレスの運動法則",
     );
-    expect(
-      screen.queryByRole("button", { name: "前提" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "結論" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "参照している" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "子" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "前提" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "結論" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "参照している" })).toBeVisible();
     expect(
       screen.getByRole("button", { name: "参照されている" }),
     ).toBeVisible();

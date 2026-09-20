@@ -26,6 +26,11 @@ type PrefetchedState = {
   resource: MResource;
 };
 
+async function getCachedTanbunChains(cacheId: string) {
+  const cached = await tanbunDetailCache.get(cacheId);
+  return cached ? [cached] : undefined;
+}
+
 export function _TanbunChainView({ id }: Props) {
   const location = useLocation();
   const prefetched = location.state as PrefetchedState | undefined;
@@ -35,14 +40,13 @@ export function _TanbunChainView({ id }: Props) {
   const fallbackData = useCachedSWR<
     TanbunChains,
     detailTanbunSentenceSentenceIdGetResponse200 & { headers: Headers }
-  >(id, async (cacheId) => {
-    const cached = await tanbunDetailCache.get(cacheId);
-    return cached ? [cached] : undefined;
-  });
+  >(id, getCachedTanbunChains);
 
   const { data, isLoading } = useDetailTanbunSentenceSentenceIdGet(id, {
     swr: {
       revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
       keepPreviousData: false,
       fallbackData,
       // suspense: true, // suspenseは使わずisLoadingで制御

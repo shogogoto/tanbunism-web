@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import useSWR from "swr";
 import {
   type SentenceQuizStatus,
   listCreatedQuizSentences,
@@ -21,27 +22,37 @@ type Props = {
 
 export default function ResourceDetail({ id }: Props) {
   const { addHistory } = useHistory();
-  const [sentenceQuizStatuses, setSentenceQuizStatuses] = useState<
-    ReadonlyMap<string, SentenceQuizStatus>
-  >(new Map());
   const {
     data: apiResult,
     error,
     isLoading,
-  } = useGetResourceDetailResourceResourceIdGet(id);
+  } = useGetResourceDetailResourceResourceIdGet(id, {
+    swr: {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    },
+  });
+
+  const { data: quizStatuses = [], mutate: mutateQuizStatuses } = useSWR<
+    SentenceQuizStatus[]
+  >(
+    ["resource-quiz-sentence-statuses", id],
+    () => listCreatedQuizSentences(id),
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    },
+  );
+  const sentenceQuizStatuses = useMemo<ReadonlyMap<string, SentenceQuizStatus>>(
+    () => new Map(quizStatuses.map((status) => [status.sentence_id, status])),
+    [quizStatuses],
+  );
 
   const refreshSentenceQuizStatuses = useCallback(async () => {
-    const statuses = await listCreatedQuizSentences(id);
-    setSentenceQuizStatuses(
-      new Map(statuses.map((status) => [status.sentence_id, status])),
-    );
-  }, [id]);
-
-  useEffect(() => {
-    void refreshSentenceQuizStatuses().catch(() => {
-      setSentenceQuizStatuses(new Map());
-    });
-  }, [refreshSentenceQuizStatuses]);
+    await mutateQuizStatuses();
+  }, [mutateQuizStatuses]);
 
   useEffect(() => {
     if (apiResult?.status === 200) {

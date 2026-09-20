@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import SentenceQuizActions from "~/features/resource/detail/SentenceQuizActions";
@@ -37,7 +37,9 @@ type PrefetchedState = {
 
 const colors = {
   detail: {
+    in: "border-blue-800",
     out: "border-blue-400",
+    bgOut: "bg-blue-50 dark:bg-blue-900",
   },
   logic: {
     in: "border-green-800",
@@ -80,7 +82,13 @@ function CollapsibleSection({
         />
         <h3 className="font-bold">{title}</h3>
       </CollapsibleTrigger>
-      <CollapsibleContent>{validChildren}</CollapsibleContent>
+      <CollapsibleContent>
+        {validChildren.length > 0 ? (
+          validChildren
+        ) : (
+          <p className="px-3 py-2 text-sm text-muted-foreground">なし</p>
+        )}
+      </CollapsibleContent>
     </Collapsible>
   );
 }
@@ -320,94 +328,64 @@ export default function MainView({ detail, prefetched }: Props) {
   const refSucc = detail && rootId && refOp ? refOp.succ(rootId) : [];
   const isLoaded = !!(detail && g && rootId && logicOp && refOp);
   const childIds = isLoaded ? oneHopDetailIds(g, belows) : [];
-  const hasLogic = logicPred.length > 0 || logicSucc.length > 0;
-  const hasReferences = refPred.length > 0 || refSucc.length > 0;
 
   const relations = isLoaded ? (
     <div className="space-y-8 px-1 pb-8">
-      {childIds.length > 0 && (
-        <section aria-labelledby="child-heading" className="px-3 pt-4">
-          <h2
-            id="child-heading"
-            className="mb-2 flex items-center gap-1 text-sm font-medium text-muted-foreground"
-          >
-            <ChevronDown className="size-4" />子 {childIds.length}件
-          </h2>
-          <div className="ml-2 space-y-2 border-l-2 border-blue-400 pl-3">
+      <RelationSection title="詳細" borderColor={colors.detail.in} columns={1}>
+        <div>
+          <CollapsibleSection title="子" backgroundColor={colors.detail.bgOut}>
+            {childIds.length > 0 && (
+              <div className="ml-2 space-y-2 border-l-2 border-blue-400 pl-3">
+                <RelatedCards
+                  ids={childIds}
+                  kn={kn}
+                  borderColor={colors.detail.out}
+                />
+              </div>
+            )}
+          </CollapsibleSection>
+        </div>
+      </RelationSection>
+
+      <RelationSection title="論理" borderColor={colors.logic.in}>
+        <div>
+          <CollapsibleSection title="前提" backgroundColor={colors.logic.bgIn}>
             <RelatedCards
-              ids={childIds}
+              ids={logicPred}
               kn={kn}
-              borderColor={colors.detail.out}
+              borderColor={colors.logic.in}
             />
-          </div>
-        </section>
-      )}
+          </CollapsibleSection>
+        </div>
+        <div>
+          <CollapsibleSection title="結論" backgroundColor={colors.logic.bgOut}>
+            <RelatedCards
+              ids={logicSucc}
+              kn={kn}
+              borderColor={colors.logic.out}
+            />
+          </CollapsibleSection>
+        </div>
+      </RelationSection>
 
-      {hasLogic && (
-        <RelationSection title="論理" borderColor={colors.logic.in}>
-          {logicPred.length > 0 && (
-            <div>
-              <CollapsibleSection
-                title="前提"
-                backgroundColor={colors.logic.bgIn}
-              >
-                <RelatedCards
-                  ids={logicPred}
-                  kn={kn}
-                  borderColor={colors.logic.in}
-                />
-              </CollapsibleSection>
-            </div>
-          )}
-          {logicSucc.length > 0 && (
-            <div>
-              <CollapsibleSection
-                title="結論"
-                backgroundColor={colors.logic.bgOut}
-              >
-                <RelatedCards
-                  ids={logicSucc}
-                  kn={kn}
-                  borderColor={colors.logic.out}
-                />
-              </CollapsibleSection>
-            </div>
-          )}
-        </RelationSection>
-      )}
-
-      {hasReferences && (
-        <RelationSection title="参照" borderColor={colors.ref.in}>
-          {refSucc.length > 0 && (
-            <div>
-              <CollapsibleSection
-                title="参照している"
-                backgroundColor={colors.ref.bgIn}
-              >
-                <RelatedCards
-                  ids={refSucc}
-                  kn={kn}
-                  borderColor={colors.ref.in}
-                />
-              </CollapsibleSection>
-            </div>
-          )}
-          {refPred.length > 0 && (
-            <div>
-              <CollapsibleSection
-                title="参照されている"
-                backgroundColor={colors.ref.bgOut}
-              >
-                <RelatedCards
-                  ids={refPred}
-                  kn={kn}
-                  borderColor={colors.ref.out}
-                />
-              </CollapsibleSection>
-            </div>
-          )}
-        </RelationSection>
-      )}
+      <RelationSection title="参照" borderColor={colors.ref.in}>
+        <div>
+          <CollapsibleSection
+            title="参照している"
+            backgroundColor={colors.ref.bgIn}
+          >
+            <RelatedCards ids={refSucc} kn={kn} borderColor={colors.ref.in} />
+          </CollapsibleSection>
+        </div>
+        <div>
+          <CollapsibleSection
+            title="参照されている"
+            backgroundColor={colors.ref.bgOut}
+          >
+            <RelatedCards ids={refPred} kn={kn} borderColor={colors.ref.out} />
+          </CollapsibleSection>
+        </div>
+      </RelationSection>
     </div>
   ) : (
     <Loading type="center-x" />

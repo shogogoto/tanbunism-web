@@ -28,8 +28,6 @@ export function useCachedSWR<TData, TResponse>(
         } as TResponse;
         setFallbackData(res);
       }
-
-      console.log("LOADED CACHE", cacheKey);
     }
     loadCache();
 
