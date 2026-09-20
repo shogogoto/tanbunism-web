@@ -28,7 +28,9 @@ describe("単文詳細", () => {
     );
 
     expect(screen.getByRole("heading", { name: "詳細" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "論理" })).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "論理" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "参照" })).toBeVisible();
     const definitionPath = screen.getByRole("navigation", {
       name: "定義元の経路",
@@ -37,13 +39,23 @@ describe("単文詳細", () => {
     expect(within(definitionPath).getAllByRole("link")[0]).toHaveTextContent(
       "アリストテレスの運動法則",
     );
+    expect(
+      within(definitionPath).queryByText("定義元"),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "子" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "前提" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "結論" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "参照している" })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "前提" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "結論" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "参照している" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "参照されている" }),
     ).toBeVisible();
+    expect(screen.queryByText("なし")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "クイズを見る" })).toBeVisible();
     expect(screen.getByRole("button", { name: "＋ クイズ" })).toBeVisible();
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
@@ -73,5 +85,29 @@ describe("単文詳細", () => {
     });
     expect(quotePath).toBeVisible();
     expect(within(quotePath).getByText("# 神は数学者か？")).toBeVisible();
+  });
+
+  it("関係がない区画を表示しない", () => {
+    const detail = structuredClone(fixtureDetail1);
+    detail.g.edges = detail.g.edges.filter(
+      ({ type }) => type !== "below" && type !== "resolved" && type !== "to",
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/tanbun/sentence-1"]}>
+        <MainView detail={detail} />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.queryByRole("heading", { name: "詳細" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "論理" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "参照" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("なし")).not.toBeInTheDocument();
   });
 });
