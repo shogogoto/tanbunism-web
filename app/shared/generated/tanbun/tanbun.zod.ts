@@ -361,6 +361,39 @@ export const detailTanbunSentenceSentenceIdGetResponseLocationParentsItemStatsSc
   -100;
 export const detailTanbunSentenceSentenceIdGetResponseLocationParentsItemStatsScoreOneMax = 1000;
 
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemUserDisplayNameOneMax = 32;
+
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemUserProfileOneMax = 160;
+
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemUserUsernameOneMax = 16;
+
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemUserUsernameOneRegExp =
+  /^[a-zA-Z0-9_-]+$/;
+
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNDetailMin =
+  -100;
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNDetailMax = 1000;
+
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNPremiseMin =
+  -100;
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNPremiseMax = 1000;
+
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNConclusionMin =
+  -100;
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNConclusionMax = 1000;
+
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNReferMin =
+  -100;
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNReferMax = 1000;
+
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNReferredMin =
+  -100;
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNReferredMax = 1000;
+
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsScoreOneMin =
+  -100;
+export const detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsScoreOneMax = 1000;
+
 export const DetailTanbunSentenceSentenceIdGetResponseItem = zod
   .object({
     uid: zod.string().uuid(),
@@ -678,8 +711,213 @@ export const DetailTanbunSentenceSentenceIdGetResponseItem = zod
             })
             .describe("知識の最小単位."),
         ),
+        quote_contexts: zod
+          .array(
+            zod
+              .object({
+                user: zod
+                  .object({
+                    display_name: zod
+                      .union([
+                        zod
+                          .string()
+                          .max(
+                            detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemUserDisplayNameOneMax,
+                          ),
+                        zod.null(),
+                      ])
+                      .optional(),
+                    profile: zod
+                      .union([
+                        zod
+                          .string()
+                          .max(
+                            detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemUserProfileOneMax,
+                          ),
+                        zod.null(),
+                      ])
+                      .optional(),
+                    avatar_url: zod
+                      .union([zod.string(), zod.null()])
+                      .optional(),
+                    username: zod
+                      .union([
+                        zod
+                          .string()
+                          .max(
+                            detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemUserUsernameOneMax,
+                          )
+                          .regex(
+                            detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemUserUsernameOneRegExp,
+                          ),
+                        zod.null(),
+                      ])
+                      .optional()
+                      .describe(
+                        "半角英数字とハイフン、アンダースコアのみが使用できます。",
+                      ),
+                    uid: zod.string().uuid(),
+                    created: zod.string().datetime({ offset: true }),
+                  })
+                  .describe("公開ユーザー情報."),
+                folders: zod.array(
+                  zod
+                    .object({
+                      val: zod.string(),
+                      uid: zod.string().uuid(),
+                    })
+                    .describe("UUID付き文章."),
+                ),
+                resource: zod
+                  .object({
+                    name: zod.string(),
+                    element_id_property: zod
+                      .union([zod.string(), zod.null()])
+                      .optional(),
+                    uid: zod.string().uuid(),
+                    authors: zod
+                      .union([zod.array(zod.string()), zod.null()])
+                      .optional(),
+                    published: zod
+                      .union([zod.string().date(), zod.null()])
+                      .optional(),
+                    urls: zod
+                      .union([zod.array(zod.string().url().min(1)), zod.null()])
+                      .optional(),
+                    path: zod
+                      .union([zod.array(zod.string()), zod.null()])
+                      .optional(),
+                    updated: zod
+                      .union([
+                        zod.string().datetime({ offset: true }),
+                        zod.null(),
+                      ])
+                      .optional(),
+                    txt_hash: zod
+                      .union([zod.number().int(), zod.null()])
+                      .optional(),
+                  })
+                  .describe("LResourceのOGM, リソースのメタ情報."),
+                headers: zod.array(
+                  zod
+                    .object({
+                      val: zod.string(),
+                      uid: zod.string().uuid(),
+                    })
+                    .describe("UUID付き文章."),
+                ),
+                parents: zod.array(
+                  zod
+                    .object({
+                      sentence: zod.string(),
+                      uid: zod.string().uuid(),
+                      term: zod
+                        .union([
+                          zod
+                            .object({
+                              names: zod.array(zod.string()).optional(),
+                              alias: zod
+                                .union([zod.string(), zod.null()])
+                                .optional()
+                                .describe(
+                                  "参照用の無意味な記号(参照を持たない)",
+                                ),
+                            })
+                            .describe("用語."),
+                          zod.null(),
+                        ])
+                        .optional(),
+                      additional: zod
+                        .union([
+                          zod
+                            .object({
+                              when: zod
+                                .union([zod.string(), zod.null()])
+                                .optional(),
+                              where: zod
+                                .union([zod.string(), zod.null()])
+                                .optional(),
+                              by: zod
+                                .union([zod.string(), zod.null()])
+                                .optional(),
+                            })
+                            .describe("単文の付加情報."),
+                          zod.null(),
+                        ])
+                        .optional(),
+                      stats: zod
+                        .object({
+                          n_detail: zod
+                            .number()
+                            .int()
+                            .min(
+                              detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNDetailMin,
+                            )
+                            .max(
+                              detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNDetailMax,
+                            ),
+                          n_premise: zod
+                            .number()
+                            .int()
+                            .min(
+                              detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNPremiseMin,
+                            )
+                            .max(
+                              detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNPremiseMax,
+                            ),
+                          n_conclusion: zod
+                            .number()
+                            .int()
+                            .min(
+                              detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNConclusionMin,
+                            )
+                            .max(
+                              detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNConclusionMax,
+                            ),
+                          n_refer: zod
+                            .number()
+                            .int()
+                            .min(
+                              detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNReferMin,
+                            )
+                            .max(
+                              detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNReferMax,
+                            ),
+                          n_referred: zod
+                            .number()
+                            .int()
+                            .min(
+                              detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNReferredMin,
+                            )
+                            .max(
+                              detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsNReferredMax,
+                            ),
+                          score: zod
+                            .union([
+                              zod
+                                .number()
+                                .int()
+                                .min(
+                                  detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsScoreOneMin,
+                                )
+                                .max(
+                                  detailTanbunSentenceSentenceIdGetResponseLocationQuoteContextsItemParentsItemStatsScoreOneMax,
+                                ),
+                              zod.null(),
+                            ])
+                            .optional(),
+                        })
+                        .describe("知識の関係統計."),
+                      resource_uid: zod.string().uuid(),
+                    })
+                    .describe("知識の最小単位."),
+                ),
+              })
+              .describe("ある場所から単文へ至る文脈."),
+          )
+          .optional(),
       })
-      .describe("単文の位置情報."),
+      .describe("定義元と引用先を含む単文の位置情報."),
   })
   .describe("詳細.");
 export const DetailTanbunSentenceSentenceIdGetResponse = zod.array(

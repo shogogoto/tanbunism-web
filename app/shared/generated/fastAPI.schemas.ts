@@ -754,7 +754,18 @@ export interface UidStr {
 }
 
 /**
- * 単文の位置情報.
+ * ある場所から単文へ至る文脈.
+ */
+export interface TanbunContext {
+  user: UserReadPublic;
+  folders: UidStr[];
+  resource: MResource;
+  headers: UidStr[];
+  parents: Tanbun[];
+}
+
+/**
+ * 定義元と引用先を含む単文の位置情報.
  */
 export interface TanbunLocation {
   user: UserReadPublic;
@@ -762,6 +773,7 @@ export interface TanbunLocation {
   resource: MResource;
   headers: UidStr[];
   parents: Tanbun[];
+  quote_contexts?: TanbunContext[];
 }
 
 /**

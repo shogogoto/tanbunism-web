@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import SentenceQuizActions from "~/features/resource/detail/SentenceQuizActions";
@@ -12,17 +12,21 @@ import type {
   MResource,
   Tanbun,
   TanbunChain,
+  TanbunContext,
   TanbunLocation,
   UserReadPublic,
 } from "~/shared/generated/fastAPI.schemas";
 import { useHistory } from "~/shared/history/hooks";
-import { eqEdgeType, operatorGraph, succ } from "~/shared/lib/network";
+import {
+  eqEdgeType,
+  operatorGraph,
+  pathsToEnd,
+  succ,
+} from "~/shared/lib/network";
 import { cn } from "~/shared/lib/utils";
 import LocationView from "../components/LocationView";
-import { TanbunCardContent } from "../components/TanbunCard";
+import TanbunCard, { TanbunCardContent } from "../components/TanbunCard";
 import { DetailContextProvider } from "./DetailContext";
-import DetailNested from "./TanbunGroup";
-import TanbunGroup2 from "./TanbunGroup/TanbunGroup2";
 import { graphForView } from "./util";
 
 type PrefetchedState = {
@@ -33,9 +37,7 @@ type PrefetchedState = {
 
 const colors = {
   detail: {
-    in: "border-blue-800",
     out: "border-blue-400",
-    bgOut: "bg-blue-50 dark:bg-blue-800",
   },
   logic: {
     in: "border-green-800",
@@ -118,21 +120,38 @@ function tanbunLabel(tanbun: Tanbun) {
   );
 }
 
-function ParentBreadcrumb({
+function Breadcrumb({
+  label,
   parents,
   current,
-  location,
+  context,
+  showResource = false,
 }: {
+  label: string;
   parents: Tanbun[];
   current: Tanbun;
-  location: TanbunLocation;
+  context: TanbunContext;
+  showResource?: boolean;
 }) {
-  if (parents.length === 0) return null;
-
   return (
-    <nav aria-label="親の経路" className="mt-3 overflow-x-auto pb-1">
+    <nav aria-label={`${label}の経路`} className="overflow-x-auto pb-1">
       <ol className="flex min-w-max items-center gap-1 text-sm text-muted-foreground">
-        {[...parents].reverse().map((parent) => {
+        <li className="mr-1 text-xs font-medium text-foreground">{label}</li>
+        {showResource && (
+          <>
+            <li>
+              <Link
+                to={`/resource/${context.resource.uid}`}
+                className="block max-w-48 truncate rounded px-1.5 py-1 hover:bg-muted hover:text-foreground"
+                title={context.resource.name}
+              >
+                {context.resource.name}
+              </Link>
+            </li>
+            <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
+          </>
+        )}
+        {parents.map((parent) => {
           const label = tanbunLabel(parent);
           return (
             <React.Fragment key={parent.uid}>
@@ -141,8 +160,8 @@ function ParentBreadcrumb({
                   to={`/tanbun/${parent.uid}`}
                   state={{
                     tanbun: parent,
-                    user: location.user,
-                    resource: location.resource,
+                    user: context.user,
+                    resource: context.resource,
                   }}
                   title={label}
                   className="block max-w-48 truncate rounded px-1.5 py-1 hover:bg-muted hover:text-foreground"
@@ -165,6 +184,75 @@ function ParentBreadcrumb({
     </nav>
   );
 }
+
+function ContextBreadcrumbs({
+  location,
+  current,
+}: {
+  location: TanbunLocation;
+  current: Tanbun;
+}) {
+  const quoteContexts = location.quote_contexts ?? [];
+
+  return (
+    <div className="mt-3 space-y-1" aria-label="単文の文脈">
+      <Breadcrumb
+        label="定義元"
+        parents={location.parents}
+        current={current}
+        context={location}
+      />
+      {quoteContexts.length > 0 && (
+        <details open className="group rounded-md bg-muted/40 px-2 py-1">
+          <summary className="flex cursor-pointer list-none items-center gap-1 text-sm text-muted-foreground">
+            <ChevronRight className="size-4 group-open:rotate-90" />
+            引用先 {quoteContexts.length}件
+          </summary>
+          <div className="mt-1 space-y-1 border-l pl-2">
+            {quoteContexts.map((context, index) => (
+              <Breadcrumb
+                key={`${context.resource.uid}-${index}`}
+                label={`引用先 ${index + 1}`}
+                parents={context.parents}
+                current={current}
+                context={context}
+                showResource
+              />
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function oneHopDetailIds(
+  g: NonNullable<ReturnType<typeof graphForView>["g"]>,
+  belowIds: string[],
+) {
+  return [
+    ...new Set(
+      belowIds.flatMap((id) => {
+        const paths = pathsToEnd(g, id, eqEdgeType("sibling"), succ);
+        return paths.length === 0 ? [id] : paths.flat();
+      }),
+    ),
+  ];
+}
+
+function RelatedCards({
+  ids,
+  kn,
+  borderColor,
+}: {
+  ids: string[];
+  kn: (id: string) => Tanbun;
+  borderColor: string;
+}) {
+  return ids.map((id) => (
+    <TanbunCard k={kn(id)} key={id} borderColor={borderColor} />
+  ));
+}
 type Props = {
   detail?: TanbunChain;
   prefetched?: PrefetchedState;
@@ -177,7 +265,6 @@ export default function MainView({ detail, prefetched }: Props) {
     g,
     kn,
     rootId,
-    parents,
     belows,
     logicOp,
     refOp,
@@ -193,7 +280,6 @@ export default function MainView({ detail, prefetched }: Props) {
         g,
         kn,
         rootId,
-        parents: location.parents,
         belows,
         logicOp,
         refOp,
@@ -208,7 +294,6 @@ export default function MainView({ detail, prefetched }: Props) {
       g: null,
       kn: null,
       rootId: null,
-      parents: [],
       belows: [],
       logicOp: null,
       refOp: null,
@@ -234,88 +319,95 @@ export default function MainView({ detail, prefetched }: Props) {
   const refPred = detail && rootId && refOp ? refOp.pred(rootId) : [];
   const refSucc = detail && rootId && refOp ? refOp.succ(rootId) : [];
   const isLoaded = !!(detail && g && rootId && logicOp && refOp);
+  const childIds = isLoaded ? oneHopDetailIds(g, belows) : [];
+  const hasLogic = logicPred.length > 0 || logicSucc.length > 0;
+  const hasReferences = refPred.length > 0 || refSucc.length > 0;
 
   const relations = isLoaded ? (
     <div className="space-y-8 px-1 pb-8">
-      <RelationSection title="詳細" borderColor={colors.detail.in} columns={1}>
-        <div>
-          <CollapsibleSection title="子" backgroundColor={colors.detail.bgOut}>
-            {belows?.map((bid) => (
-              <DetailNested
-                startId={bid}
-                kn={kn}
-                g={g}
-                key={bid}
-                borderColor={colors.detail.out}
-              />
-            ))}
-          </CollapsibleSection>
-        </div>
-      </RelationSection>
-
-      <RelationSection title="論理" borderColor={colors.logic.in}>
-        <div>
-          <CollapsibleSection title="前提" backgroundColor={colors.logic.bgIn}>
-            {logicPred.map((id) => (
-              <TanbunGroup2
-                startId={id}
-                kn={kn}
-                getGroup={logicOp.pred}
-                key={id}
-                borderColor={colors.logic.in}
-              />
-            ))}
-          </CollapsibleSection>
-        </div>
-        <div>
-          <CollapsibleSection title="結論" backgroundColor={colors.logic.bgOut}>
-            {logicSucc.map((id) => (
-              <TanbunGroup2
-                startId={id}
-                kn={kn}
-                getGroup={logicOp.succ}
-                key={id}
-                borderColor={colors.logic.out}
-              />
-            ))}
-          </CollapsibleSection>
-        </div>
-      </RelationSection>
-
-      <RelationSection title="参照" borderColor={colors.ref.in}>
-        <div>
-          <CollapsibleSection
-            title="参照している"
-            backgroundColor={colors.ref.bgIn}
+      {childIds.length > 0 && (
+        <section aria-labelledby="child-heading" className="px-3 pt-4">
+          <h2
+            id="child-heading"
+            className="mb-2 flex items-center gap-1 text-sm font-medium text-muted-foreground"
           >
-            {refSucc.map((id) => (
-              <TanbunGroup2
-                startId={id}
-                kn={kn}
-                getGroup={refOp.succ}
-                key={id}
-                borderColor={colors.ref.in}
-              />
-            ))}
-          </CollapsibleSection>
-        </div>
-        <div>
-          <CollapsibleSection
-            title="参照されている"
-            backgroundColor={colors.ref.bgOut}
-          >
-            {refPred.map((id) => (
-              <TanbunGroup2
-                startId={id}
-                kn={kn}
-                getGroup={refOp.pred}
-                key={id}
-                borderColor={colors.ref.out}
-              />
-            ))}
-          </CollapsibleSection>
-        </div>
-      </RelationSection>
+            <ChevronDown className="size-4" />子 {childIds.length}件
+          </h2>
+          <div className="ml-2 space-y-2 border-l-2 border-blue-400 pl-3">
+            <RelatedCards
+              ids={childIds}
+              kn={kn}
+              borderColor={colors.detail.out}
+            />
+          </div>
+        </section>
+      )}
+
+      {hasLogic && (
+        <RelationSection title="論理" borderColor={colors.logic.in}>
+          {logicPred.length > 0 && (
+            <div>
+              <CollapsibleSection
+                title="前提"
+                backgroundColor={colors.logic.bgIn}
+              >
+                <RelatedCards
+                  ids={logicPred}
+                  kn={kn}
+                  borderColor={colors.logic.in}
+                />
+              </CollapsibleSection>
+            </div>
+          )}
+          {logicSucc.length > 0 && (
+            <div>
+              <CollapsibleSection
+                title="結論"
+                backgroundColor={colors.logic.bgOut}
+              >
+                <RelatedCards
+                  ids={logicSucc}
+                  kn={kn}
+                  borderColor={colors.logic.out}
+                />
+              </CollapsibleSection>
+            </div>
+          )}
+        </RelationSection>
+      )}
+
+      {hasReferences && (
+        <RelationSection title="参照" borderColor={colors.ref.in}>
+          {refSucc.length > 0 && (
+            <div>
+              <CollapsibleSection
+                title="参照している"
+                backgroundColor={colors.ref.bgIn}
+              >
+                <RelatedCards
+                  ids={refSucc}
+                  kn={kn}
+                  borderColor={colors.ref.in}
+                />
+              </CollapsibleSection>
+            </div>
+          )}
+          {refPred.length > 0 && (
+            <div>
+              <CollapsibleSection
+                title="参照されている"
+                backgroundColor={colors.ref.bgOut}
+              >
+                <RelatedCards
+                  ids={refPred}
+                  kn={kn}
+                  borderColor={colors.ref.out}
+                />
+              </CollapsibleSection>
+            </div>
+          )}
+        </RelationSection>
+      )}
     </div>
   ) : (
     <Loading type="center-x" />
@@ -337,10 +429,9 @@ export default function MainView({ detail, prefetched }: Props) {
               tanbunId={headerTanbun.uid}
             />
             {detail && (
-              <ParentBreadcrumb
-                parents={parents}
-                current={headerTanbun}
+              <ContextBreadcrumbs
                 location={headerLocation as TanbunLocation}
+                current={headerTanbun}
               />
             )}
             <div className="mt-2 rounded-lg border bg-card py-3 shadow-sm">
