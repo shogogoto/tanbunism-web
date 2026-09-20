@@ -11,9 +11,6 @@ vi.mock("~/shared/history/hooks", () => ({
 }));
 vi.mock("../components/LocationView", () => ({ default: () => null }));
 vi.mock("./TanbunGroup", () => ({ default: () => <div>関係する単文</div> }));
-vi.mock("./TanbunGroup/Parents", () => ({
-  default: () => <div>親の単文</div>,
-}));
 vi.mock("./TanbunGroup/TanbunGroup2", () => ({
   default: () => <div>関係する単文</div>,
 }));
@@ -29,7 +26,13 @@ describe("単文詳細", () => {
     expect(screen.getByRole("heading", { name: "詳細" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "論理" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "参照" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "親" })).toBeVisible();
+    expect(
+      screen.queryByRole("navigation", { name: "関係の目次" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "親の経路" })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "親" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "子" })).toBeVisible();
     expect(screen.getByRole("button", { name: "前提" })).toBeVisible();
     expect(screen.getByRole("button", { name: "結論" })).toBeVisible();

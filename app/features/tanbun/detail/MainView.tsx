@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router";
 import SentenceQuizActions from "~/features/resource/detail/SentenceQuizActions";
 import Loading from "~/shared/components/Loading";
 import {
@@ -21,7 +22,6 @@ import LocationView from "../components/LocationView";
 import { TanbunCardContent } from "../components/TanbunCard";
 import { DetailContextProvider } from "./DetailContext";
 import DetailNested from "./TanbunGroup";
-import Parents from "./TanbunGroup/Parents";
 import TanbunGroup2 from "./TanbunGroup/TanbunGroup2";
 import { graphForView } from "./util";
 
@@ -35,7 +35,6 @@ const colors = {
   detail: {
     in: "border-blue-800",
     out: "border-blue-400",
-    bgIn: "bg-blue-100 dark:bg-blue-950",
     bgOut: "bg-blue-50 dark:bg-blue-800",
   },
   logic: {
@@ -85,23 +84,85 @@ function CollapsibleSection({
 }
 
 function RelationSection({
-  id,
   title,
   borderColor,
+  columns = 2,
   children,
 }: {
-  id: string;
   title: string;
   borderColor: string;
+  columns?: 1 | 2;
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-16 space-y-2">
+    <section className="space-y-2">
       <h2 className={cn("border-l-4 px-3 text-lg font-bold", borderColor)}>
         {title}
       </h2>
-      <div className="grid items-start gap-3 md:grid-cols-2">{children}</div>
+      <div
+        className={cn(
+          "grid items-start gap-3",
+          columns === 2 && "md:grid-cols-2",
+        )}
+      >
+        {children}
+      </div>
     </section>
+  );
+}
+
+function tanbunLabel(tanbun: Tanbun) {
+  return (
+    tanbun.term?.names?.[0] ??
+    (tanbun.sentence === "<<<not defined>>>" ? "名称未設定" : tanbun.sentence)
+  );
+}
+
+function ParentBreadcrumb({
+  parents,
+  current,
+  location,
+}: {
+  parents: Tanbun[];
+  current: Tanbun;
+  location: TanbunLocation;
+}) {
+  if (parents.length === 0) return null;
+
+  return (
+    <nav aria-label="親の経路" className="mt-3 overflow-x-auto pb-1">
+      <ol className="flex min-w-max items-center gap-1 text-sm text-muted-foreground">
+        {[...parents].reverse().map((parent) => {
+          const label = tanbunLabel(parent);
+          return (
+            <React.Fragment key={parent.uid}>
+              <li>
+                <Link
+                  to={`/tanbun/${parent.uid}`}
+                  state={{
+                    tanbun: parent,
+                    user: location.user,
+                    resource: location.resource,
+                  }}
+                  title={label}
+                  className="block max-w-48 truncate rounded px-1.5 py-1 hover:bg-muted hover:text-foreground"
+                >
+                  {label}
+                </Link>
+              </li>
+              <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
+            </React.Fragment>
+          );
+        })}
+        <li
+          aria-current="page"
+          title={tanbunLabel(current)}
+          className="max-w-48 truncate px-1.5 py-1 font-medium text-foreground"
+        >
+          {tanbunLabel(current)}
+        </li>
+      </ol>
+    </nav>
   );
 }
 type Props = {
@@ -116,6 +177,7 @@ export default function MainView({ detail, prefetched }: Props) {
     g,
     kn,
     rootId,
+    parents,
     belows,
     logicOp,
     refOp,
@@ -131,6 +193,7 @@ export default function MainView({ detail, prefetched }: Props) {
         g,
         kn,
         rootId,
+        parents: location.parents,
         belows,
         logicOp,
         refOp,
@@ -145,6 +208,7 @@ export default function MainView({ detail, prefetched }: Props) {
       g: null,
       kn: null,
       rootId: null,
+      parents: [],
       belows: [],
       logicOp: null,
       refOp: null,
@@ -169,24 +233,11 @@ export default function MainView({ detail, prefetched }: Props) {
   const logicSucc = detail && rootId && logicOp ? logicOp.succ(rootId) : [];
   const refPred = detail && rootId && refOp ? refOp.pred(rootId) : [];
   const refSucc = detail && rootId && refOp ? refOp.succ(rootId) : [];
-
   const isLoaded = !!(detail && g && rootId && logicOp && refOp);
 
   const relations = isLoaded ? (
     <div className="space-y-8 px-1 pb-8">
-      <RelationSection
-        id="detail-relations"
-        title="詳細"
-        borderColor={colors.detail.in}
-      >
-        <div>
-          <CollapsibleSection title="親" backgroundColor={colors.detail.bgIn}>
-            <Parents
-              parents={graphForView(detail).location.parents}
-              borderColor={colors.detail.in}
-            />
-          </CollapsibleSection>
-        </div>
+      <RelationSection title="詳細" borderColor={colors.detail.in} columns={1}>
         <div>
           <CollapsibleSection title="子" backgroundColor={colors.detail.bgOut}>
             {belows?.map((bid) => (
@@ -202,11 +253,7 @@ export default function MainView({ detail, prefetched }: Props) {
         </div>
       </RelationSection>
 
-      <RelationSection
-        id="logic-relations"
-        title="論理"
-        borderColor={colors.logic.in}
-      >
+      <RelationSection title="論理" borderColor={colors.logic.in}>
         <div>
           <CollapsibleSection title="前提" backgroundColor={colors.logic.bgIn}>
             {logicPred.map((id) => (
@@ -235,11 +282,7 @@ export default function MainView({ detail, prefetched }: Props) {
         </div>
       </RelationSection>
 
-      <RelationSection
-        id="reference-relations"
-        title="参照"
-        borderColor={colors.ref.in}
-      >
+      <RelationSection title="参照" borderColor={colors.ref.in}>
         <div>
           <CollapsibleSection
             title="参照している"
@@ -293,6 +336,13 @@ export default function MainView({ detail, prefetched }: Props) {
               loc={headerLocation as TanbunLocation}
               tanbunId={headerTanbun.uid}
             />
+            {detail && (
+              <ParentBreadcrumb
+                parents={parents}
+                current={headerTanbun}
+                location={headerLocation as TanbunLocation}
+              />
+            )}
             <div className="mt-2 rounded-lg border bg-card py-3 shadow-sm">
               <TanbunCardContent k={headerTanbun} />
               <div className="mx-6 mt-3 border-t pt-3">
@@ -304,31 +354,6 @@ export default function MainView({ detail, prefetched }: Props) {
               </div>
             </div>
           </div>
-        )}
-        {isLoaded && (
-          <nav
-            aria-label="関係の目次"
-            className="sticky top-0 z-10 flex gap-2 border-y bg-background/95 p-2 backdrop-blur"
-          >
-            <a
-              className="rounded px-3 py-1 text-sm hover:bg-muted"
-              href="#detail-relations"
-            >
-              詳細
-            </a>
-            <a
-              className="rounded px-3 py-1 text-sm hover:bg-muted"
-              href="#logic-relations"
-            >
-              論理
-            </a>
-            <a
-              className="rounded px-3 py-1 text-sm hover:bg-muted"
-              href="#reference-relations"
-            >
-              参照
-            </a>
-          </nav>
         )}
         {relations}
       </div>
