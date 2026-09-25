@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Progress } from "~/shared/components/ui/progress";
 import { usePostFilesResourcePost } from "~/shared/generated/entry/entry";
 
@@ -22,6 +22,7 @@ export default function UploadUnit({
   const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(
     null,
   );
+  const uploadStarted = useRef(false);
 
   const handleUpload = useCallback(async () => {
     setUploadErrorMessage(null); // Reset error message on new upload
@@ -46,9 +47,14 @@ export default function UploadUnit({
   }, [file, trigger, onSuccess, onComplete]);
 
   useEffect(() => {
-    if (isUploading) {
-      handleUpload();
+    if (!isUploading) {
+      uploadStarted.current = false;
+      return;
     }
+    if (uploadStarted.current) return;
+
+    uploadStarted.current = true;
+    void handleUpload();
   }, [isUploading, handleUpload]);
 
   return (

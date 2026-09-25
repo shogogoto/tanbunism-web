@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "~/shared/components/ui/button";
 import { Progress } from "~/shared/components/ui/progress";
 import AcceptExtensions from "./AcceptExtensions";
@@ -19,11 +19,11 @@ export default function Uploader({ refresh }: Props) {
 
   const [exts, setExts] = useState<string[]>([".txt", ".md", ".kn"]);
 
-  function handleSuccess() {
+  const handleSuccess = useCallback(() => {
     setSuccessCount((prev) => prev + 1);
-  }
+  }, []);
 
-  function handleComplete() {
+  const handleComplete = useCallback(() => {
     if (!files) return;
     const completedIndex = uploadingIndex ?? -1;
     const completedCount = completedIndex + 1;
@@ -36,7 +36,7 @@ export default function Uploader({ refresh }: Props) {
       setUploadingIndex(null); // 全て完了
       refresh?.();
     }
-  }
+  }, [files, refresh, uploadingIndex]);
 
   async function handleSubmit() {
     if (!files || files.length === 0) {
