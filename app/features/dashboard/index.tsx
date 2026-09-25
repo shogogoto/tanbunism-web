@@ -90,7 +90,7 @@ export default function Dashboard() {
               <NamespaceExplorer nsprops={namespace} />
             </CardContent>
           </Card>
-          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[40vw]">
+          <DialogContent className="h-[90vh] w-[calc(100vw-2rem)] max-w-none overflow-hidden p-0 sm:max-w-5xl">
             <Uploader refresh={() => void namespace.mutate()} />
           </DialogContent>
         </Dialog>

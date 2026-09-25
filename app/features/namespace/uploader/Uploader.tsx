@@ -4,6 +4,13 @@ import { Progress } from "~/shared/components/ui/progress";
 import AcceptExtensions from "./AcceptExtensions";
 import CustomFileUploader from "./CustomFileUploader";
 import UploadUnit from "./UploadUnit";
+import {
+  type UploadHistoryRecord,
+  type UploadResult,
+  loadUploadHistory,
+  previousResult,
+  saveUploadResult,
+} from "./history";
 import { fileWithoutTopDirectory } from "./utils";
 
 type Props = {
@@ -17,10 +24,8 @@ export default function Uploader({ refresh }: Props) {
   const [successCount, setSuccessCount] = useState(0);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [queue, setQueue] = useState<number[]>([]);
-  const [results, setResults] = useState<
-    Record<number, { ok: boolean; retryable: boolean }>
-  >({});
-  const [rememberedFailures, setRememberedFailures] = useState<string[]>([]);
+  const [results, setResults] = useState<Record<number, UploadResult>>({});
+  const [history, setHistory] = useState<UploadHistoryRecord[]>([]);
 
   const [exts, setExts] = useState<string[]>([".txt", ".md", ".kn"]);
 
@@ -30,31 +35,7 @@ export default function Uploader({ refresh }: Props) {
   );
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(
-        localStorage.getItem("tanbunism.upload-failures") ?? "[]",
-      );
-      if (Array.isArray(saved))
-        setRememberedFailures(
-          saved.filter((path): path is string => typeof path === "string"),
-        );
-    } catch {
-      // localStorage is optional; uploading must still work in private browsing.
-    }
-  }, []);
-
-  const rememberFailure = useCallback((path: string, failed: boolean) => {
-    setRememberedFailures((previous) => {
-      const next = failed
-        ? [path, ...previous.filter((item) => item !== path)].slice(0, 100)
-        : previous.filter((item) => item !== path);
-      try {
-        localStorage.setItem("tanbunism.upload-failures", JSON.stringify(next));
-      } catch {
-        /* optional */
-      }
-      return next;
-    });
+    setHistory(loadUploadHistory());
   }, []);
 
   const handleComplete = useCallback(() => {
@@ -73,13 +54,18 @@ export default function Uploader({ refresh }: Props) {
   }, [files, queue, refresh, uploadingIndex]);
 
   const handleResult = useCallback(
-    (index: number, result: { ok: boolean; retryable: boolean }) => {
+    (index: number, result: UploadResult) => {
       setResults((previous) => ({ ...previous, [index]: result }));
       if (result.ok) setSuccessCount((previous) => previous + 1);
       const path = paths[index];
-      if (path) rememberFailure(path, !result.ok);
+      const file = files?.[index];
+      if (path && file) {
+        setHistory((previous) =>
+          saveUploadResult(previous, file, path, result),
+        );
+      }
     },
-    [paths, rememberFailure],
+    [files, paths],
   );
 
   async function handleSubmit() {
@@ -88,10 +74,14 @@ export default function Uploader({ refresh }: Props) {
       return;
     }
     setError(null);
-    setSuccessCount(0);
     setProgress(0);
-    setResults({});
-    const nextQueue = files.map((_, index) => index);
+    const nextQueue = files
+      .map((_, index) => index)
+      .filter((index) => !results[index] || results[index].retryable);
+    if (nextQueue.length === 0) {
+      setError("前回から変更されたファイルはありません。");
+      return;
+    }
     setQueue(nextQueue);
     setUploadingIndex(nextQueue[0] ?? null);
   }
@@ -108,29 +98,46 @@ export default function Uploader({ refresh }: Props) {
   }
 
   const isUploading = uploadingIndex !== null;
+  const skippedCount = Object.values(results).filter(
+    (result) => result.skipped,
+  ).length;
+  const sendableCount =
+    files?.filter((_, index) => !results[index] || results[index].retryable)
+      .length ?? 0;
 
   return (
-    <div className="space-y-4 p-4 w-full max-w-2xl">
+    <div className="flex h-full w-full flex-col gap-4 overflow-hidden p-5 sm:p-6">
       <AcceptExtensions exts={exts} setExts={setExts} />
       <CustomFileUploader
         acceptExt={exts}
-        setFiles={(files) => {
-          setFiles(files);
+        setFiles={(selectedFiles) => {
+          setFiles(selectedFiles);
           setError(null);
-          setSuccessCount(0);
           setProgress(0);
           setUploadingIndex(null);
+          setQueue([]);
+          const previousResults: Record<number, UploadResult> = {};
+          selectedFiles?.forEach((file, index) => {
+            const path = file.webkitRelativePath || file.name;
+            const result = previousResult(history, file, path);
+            if (result) previousResults[index] = result;
+          });
+          setResults(previousResults);
+          setSuccessCount(
+            Object.values(previousResults).filter((result) => result.ok).length,
+          );
         }}
       />
       {files && files.length > 0 && (
-        <div>
-          <ul className="overflow-auto rounded-md border p-2 text-sm">
+        <div className="min-h-0 flex-1 overflow-hidden rounded-md border">
+          <ul className="h-full overflow-y-auto divide-y text-sm">
             {files.map((file, index) => (
-              <li key={`${file.name}-${index}`} className="truncate">
+              <li key={`${file.name}-${index}`}>
                 <UploadUnit
                   file={fileWithoutTopDirectory(file)}
                   path={paths[index]}
                   isUploading={uploadingIndex === index}
+                  result={results[index]}
                   onResult={(result) => handleResult(index, result)}
                   onComplete={handleComplete}
                 />
@@ -142,7 +149,8 @@ export default function Uploader({ refresh }: Props) {
       {isUploading && <Progress value={progress} className="w-full" />}
       {files && !isUploading && successCount > 0 && (
         <p>
-          {successCount} / {files.length} files uploaded successfully.
+          処理済み {successCount} / {files.length}
+          {skippedCount > 0 && `（変更なし ${skippedCount}件）`}
         </p>
       )}
       {files &&
@@ -160,16 +168,24 @@ export default function Uploader({ refresh }: Props) {
             )}
           </div>
         )}
-      {rememberedFailures.length > 0 && !files && (
+      {history.some((record) => !record.ok) && !files && (
         <p className="text-sm text-muted-foreground">
           前回失敗したパス（フォルダを選び直すと再送できます）:{" "}
-          {rememberedFailures.join(", ")}
+          {history
+            .filter((record) => !record.ok)
+            .map((record) => record.path)
+            .join(", ")}
         </p>
       )}
-      <Button onClick={handleSubmit} disabled={isUploading || !files}>
+      <Button
+        onClick={handleSubmit}
+        disabled={isUploading || !files || sendableCount === 0}
+      >
         {isUploading
-          ? `Uploading... (${successCount}/${files?.length})`
-          : "Upload"}
+          ? `アップロード中… (${successCount}/${files?.length})`
+          : sendableCount > 0
+            ? `${sendableCount}件をアップロード`
+            : "送信対象はありません"}
       </Button>
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>

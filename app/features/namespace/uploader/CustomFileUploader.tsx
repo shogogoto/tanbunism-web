@@ -1,14 +1,8 @@
-import {
-  type ChangeEvent,
-  type Dispatch,
-  type SetStateAction,
-  useCallback,
-  useState,
-} from "react";
+import { type ChangeEvent, useCallback, useState } from "react";
 
 type Props = {
   acceptExt?: string[];
-  setFiles: Dispatch<SetStateAction<File[] | null>>;
+  setFiles: (files: File[] | null) => void;
 };
 
 // デフォルトのinput要素ではフィルタ前のfiles数が表示されてしまう

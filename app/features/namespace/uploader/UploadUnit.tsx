@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Progress } from "~/shared/components/ui/progress";
 import { usePostFilesResourcePost } from "~/shared/generated/entry/entry";
+import type { UploadResult } from "./history";
 
 type Props = {
   file: File;
   path?: string;
   isUploading: boolean;
-  onResult: (result: {
-    ok: boolean;
-    message?: string;
-    retryable: boolean;
-  }) => void;
+  result?: UploadResult;
+  onResult: (result: UploadResult) => void;
   onComplete: () => void;
 };
 
@@ -47,7 +45,7 @@ export function describeUploadError(
     else if (/Alias/i.test(message))
       advice =
         "aliasに予約済みのマーク文字が含まれています。aliasを修正してください。";
-    return { message: `${advice}\n${message}`, retryable: false };
+    return { message: advice, details: message, retryable: false };
   }
   if (
     !status ||
@@ -61,7 +59,9 @@ export function describeUploadError(
     };
   }
   return {
-    message: `アップロードできませんでした。内容を確認してから再送してください。\n${message}`,
+    message:
+      "アップロードできませんでした。内容を確認してから再送してください。",
+    details: message,
     retryable: false,
   };
 }
@@ -71,19 +71,21 @@ export default function UploadUnit({
   file,
   path,
   isUploading,
+  result,
   onResult,
   onComplete,
 }: Props) {
   const { data, trigger, isMutating, error } = usePostFilesResourcePost({
     fetch: { credentials: "include" },
   });
-  const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(
-    null,
-  );
+  const [uploadError, setUploadError] = useState<{
+    message: string;
+    details?: string;
+  } | null>(null);
   const uploadStarted = useRef(false);
 
   const handleUpload = useCallback(async () => {
-    setUploadErrorMessage(null); // Reset error message on new upload
+    setUploadError(null);
     try {
       const result = await trigger({ files: [file] });
       if (result && result.status >= 200 && result.status < 300) {
@@ -92,14 +94,14 @@ export default function UploadUnit({
         // @ts-expect-error generated response types vary by status code.
         const detail = result.data?.detail?.message ?? result.data?.detail;
         const described = describeUploadError(result.status, detail);
-        setUploadErrorMessage(described.message);
+        setUploadError(described);
         onResult({ ok: false, ...described });
       } else {
         const described = describeUploadError(
           result?.status,
           "応答を解釈できませんでした",
         );
-        setUploadErrorMessage(described.message);
+        setUploadError(described);
         onResult({ ok: false, ...described });
       }
     } catch (e) {
@@ -108,7 +110,7 @@ export default function UploadUnit({
         undefined,
         e instanceof Error ? e.message : undefined,
       );
-      setUploadErrorMessage(described.message);
+      setUploadError(described);
       onResult({ ok: false, ...described });
     } finally {
       onComplete();
@@ -127,21 +129,38 @@ export default function UploadUnit({
   }, [isUploading, handleUpload]);
 
   return (
-    <div className="p-1">
-      <p className="truncate" title={path ?? file.name}>
+    <div className="space-y-2 px-3 py-3 sm:px-4">
+      <p className="truncate font-medium" title={path ?? file.name}>
         {path ?? file.name}
       </p>
       <UploadingProgress isUploading={isMutating} isFinished={!!data} />
-      {(error || uploadErrorMessage) && (
-        <p className="text-sm text-red-500 break-words overflow-x-auto whitespace-pre-wrap">
-          {uploadErrorMessage ||
-            (error instanceof Error
-              ? error.message
-              : "不明なエラーが発生しました")}
-        </p>
+      {(error || uploadError || (result && !result.ok)) && (
+        <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm">
+          <p className="text-destructive">
+            {uploadError?.message ??
+              result?.message ??
+              (error instanceof Error
+                ? error.message
+                : "不明なエラーが発生しました")}
+          </p>
+          {(uploadError?.details ?? result?.details) && (
+            <details className="mt-2 text-muted-foreground">
+              <summary className="cursor-pointer select-none">
+                エラー詳細
+              </summary>
+              <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-background/60 p-2 text-xs">
+                {uploadError?.details ?? result?.details}
+              </pre>
+            </details>
+          )}
+        </div>
       )}
-      {data && !error && !isMutating && !uploadErrorMessage && (
-        <p className="text-sm text-green-500">✓ アップロードに成功しました</p>
+      {(data || result?.ok) && !error && !isMutating && !uploadError && (
+        <p className="text-sm text-green-500">
+          {result?.skipped
+            ? "✓ 前回から変更がないため送信を省略しました"
+            : "✓ アップロードに成功しました"}
+        </p>
       )}
     </div>
   );
