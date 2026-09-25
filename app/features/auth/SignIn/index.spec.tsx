@@ -28,7 +28,7 @@ const routesFixture = [
     ),
   },
   {
-    path: "/home",
+    path: "/dashboard",
     Component: () => <div>home</div>,
   },
   {
@@ -38,7 +38,7 @@ const routesFixture = [
 ];
 
 describe("ログイン", () => {
-  it("ログイン済みはhomeへリダイレクト", async () => {
+  it("ログイン済みはダッシュボードへリダイレクト", async () => {
     const useAuthSpy = vi
       .spyOn(AuthMock, "useAuth")
       // @ts-ignore
@@ -48,10 +48,10 @@ describe("ログイン", () => {
     });
     render(<RouterProvider router={router} />);
     await screen.findByText("home");
-    expect(router.state.location.pathname).toBe("/home");
+    expect(router.state.location.pathname).toBe("/dashboard");
     useAuthSpy.mockRestore();
   });
-  it("ログイン成功でhomeにリダイレクト", async () => {
+  it("ログイン成功でダッシュボードにリダイレクト", async () => {
     server.use(
       http.post("*/auth/cookie/login", async () => {
         await delay(200);
@@ -85,7 +85,7 @@ describe("ログイン", () => {
 
     waitFor(() => {
       expect(screen.getByText("home")).toBeInTheDocument();
-      expect(router.state.location.pathname).toBe("/home");
+      expect(router.state.location.pathname).toBe("/dashboard");
     });
   });
 

@@ -1,11 +1,20 @@
-import { BookOpen, Home, Search, SquareCheckBig } from "lucide-react";
+import {
+  BookOpen,
+  LayoutDashboard,
+  Search,
+  SquareCheckBig,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router";
 
 export default function BottomNavigation() {
   return (
     <>
-      <NavigationItem to="/home" label="ホーム" icon={<Home />} />
+      <NavigationItem
+        to="/dashboard"
+        label="ダッシュボード"
+        icon={<LayoutDashboard />}
+      />
       <NavigationItem to="/search" label="検索" icon={<Search />} />
       <NavigationItem to="/quiz" label="クイズ" icon={<SquareCheckBig />} />
       <NavigationItem to="/docs/toc" label="ドキュメント" icon={<BookOpen />} />

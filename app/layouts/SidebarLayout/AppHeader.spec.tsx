@@ -26,6 +26,11 @@ it("主要機能を固定ヘッダーから移動できる", () => {
     "href",
     "/",
   );
+  expect(screen.queryByText("Tanbun")).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "ダッシュボード" })).toHaveAttribute(
+    "href",
+    "/dashboard",
+  );
   expect(screen.getByRole("link", { name: "ドキュメント" })).toHaveAttribute(
     "href",
     "/docs/toc",
@@ -42,9 +47,8 @@ it("主要機能を固定ヘッダーから移動できる", () => {
     "href",
     "/quiz/list",
   );
-  expect(screen.getByRole("link", { name: "学習記録" })).toHaveAttribute(
-    "href",
-    "/achievement",
-  );
+  expect(
+    screen.queryByRole("link", { name: "学習記録" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "履歴" })).toBeVisible();
 });

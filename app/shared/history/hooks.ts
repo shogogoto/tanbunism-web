@@ -19,7 +19,7 @@ export function useHistory() {
   const addHistory = useCallback(
     async (item: Omit<HistoryItemType, "id" | "timestamp" | "url">) => {
       const url = location.pathname + location.search;
-      if (url.includes("/home")) return;
+      if (url.includes("/dashboard")) return;
       await historyCache.add({ ...item, url });
       const newHistories = await historyCache.getAll();
       await mutate(SWR_KEY, newHistories, { revalidate: false });

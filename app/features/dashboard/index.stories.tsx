@@ -1,10 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-
-import { AuthProvider } from "../auth/AuthProvider";
-import Index from "./index";
+import { AuthProvider } from "~/features/auth/AuthProvider";
+import Dashboard from ".";
 
 const meta = {
-  component: Index,
+  component: Dashboard,
   decorators: [
     (Story) => (
       <AuthProvider>
@@ -12,12 +11,10 @@ const meta = {
       </AuthProvider>
     ),
   ],
-} satisfies Meta<typeof Index>;
+} satisfies Meta<typeof Dashboard>;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
-  args: {},
-};
+export const Default: Story = { args: {} };

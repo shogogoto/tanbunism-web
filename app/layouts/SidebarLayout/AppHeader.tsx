@@ -7,11 +7,11 @@ import UserNavi from "./UserNavi";
 import { SiteLogo } from "./components/SiteLogo";
 
 const primaryLinks = [
+  { to: "/dashboard", label: "ダッシュボード" },
   { to: "/docs/toc", label: "ドキュメント" },
   { to: "/search", label: "検索" },
   { to: "/quiz", label: "クイズ" },
   { to: "/quiz/list", label: "作成したクイズ" },
-  { to: "/achievement", label: "学習記録" },
 ];
 
 export default function AppHeader() {
@@ -21,12 +21,11 @@ export default function AppHeader() {
     <header className="z-40 shrink-0 border-b bg-background/95 backdrop-blur">
       <div className="flex h-14 items-center gap-2 px-3 md:px-6">
         <Link
-          to="/"
+          to={isAuthenticated ? "/dashboard" : "/"}
           className="mr-2 flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Tanbun トップ"
         >
           <SiteLogo />
-          <span className="hidden font-semibold sm:inline">Tanbun</span>
         </Link>
 
         <nav

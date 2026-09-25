@@ -21,7 +21,7 @@ export default [
     route("quiz/list", "routes/quiz-list.tsx"),
     route("achievement", "routes/achievement.tsx"),
 
-    route("home", "routes/home.tsx"),
+    route("dashboard", "routes/dashboard.tsx"),
     route("tanbun/:id", "routes/tanbun/detail/index.tsx"),
     route("user/edit", "routes/user/edit.tsx"),
     route("user/:userId", "routes/user/detail.tsx"),

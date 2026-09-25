@@ -131,7 +131,7 @@ export default function UserProfileForm() {
         { revalidate: false },
       );
       toast.success(lastSubmission.message);
-      navigate("/home");
+      navigate("/dashboard");
     }
   }, [lastSubmission, mutate, navigate]);
 
@@ -200,7 +200,7 @@ export default function UserProfileForm() {
             {isSubmitting ? "更新中..." : "更新"}
           </Button>
           <Button asChild variant="outline" className="w-full">
-            <Link to="/home">ホームに戻る</Link>
+            <Link to="/dashboard">ダッシュボードに戻る</Link>
           </Button>
           <div className="text-sm text-red-500">{form.errors?.[0]}</div>
         </div>

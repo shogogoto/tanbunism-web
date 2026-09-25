@@ -9,9 +9,9 @@ it("主要画面へ名前付きの導線を表示する", () => {
     </MemoryRouter>,
   );
 
-  expect(screen.getByRole("link", { name: "ホーム" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "ダッシュボード" })).toHaveAttribute(
     "href",
-    "/home",
+    "/dashboard",
   );
   expect(screen.getByRole("link", { name: "検索" })).toHaveAttribute(
     "href",

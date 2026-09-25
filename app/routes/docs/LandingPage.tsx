@@ -9,9 +9,11 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
+import { Link, Navigate } from "react-router";
+import { useAuth } from "~/features/auth/AuthProvider";
 
 export default function LandingPage() {
+  const { isAuthenticated } = useAuth();
   const [activeFeature, setActiveFeature] = useState(0);
   const [scrollY, setScrollY] = useState(0);
 
@@ -20,6 +22,10 @@ export default function LandingPage() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const problems = [
     {

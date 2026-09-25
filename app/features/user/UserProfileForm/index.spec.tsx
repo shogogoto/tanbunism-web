@@ -50,7 +50,7 @@ function mkrouter() {
         action: editUserProfile,
       },
       {
-        path: "/home",
+        path: "/dashboard",
         Component: () => <div>home</div>,
       },
     ],
@@ -130,7 +130,7 @@ describe("UserProfileForm (Integration Test)", () => {
       expect(usernameInput).toHaveValue(update.username);
     });
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/home");
+      expect(router.state.location.pathname).toBe("/dashboard");
     });
   });
 

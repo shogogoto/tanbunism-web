@@ -44,7 +44,7 @@ const routesFixture = [
     // loader: receiveCookie,
   },
   {
-    path: "/home",
+    path: "/dashboard",
     Component: () => <div>home</div>,
   },
   {
