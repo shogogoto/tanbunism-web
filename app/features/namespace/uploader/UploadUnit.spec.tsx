@@ -1,6 +1,6 @@
 import { render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import UploadUnit from "./UploadUnit";
+import UploadUnit, { describeUploadError } from "./UploadUnit";
 
 const trigger = vi.fn();
 
@@ -25,7 +25,7 @@ describe("UploadUnit", () => {
       <UploadUnit
         file={file}
         isUploading
-        onSuccess={vi.fn()}
+        onResult={vi.fn()}
         onComplete={vi.fn()}
       />,
     );
@@ -36,11 +36,26 @@ describe("UploadUnit", () => {
       <UploadUnit
         file={file}
         isUploading
-        onSuccess={vi.fn()}
+        onResult={vi.fn()}
         onComplete={vi.fn()}
       />,
     );
 
     await waitFor(() => expect(trigger).toHaveBeenCalledTimes(1));
+  });
+
+  it("内容エラーは再送不要として修正方法を示す", () => {
+    const result = describeUploadError(
+      400,
+      "[UnexpectedToken] Unexpected token Token('TIME', '本文')",
+    );
+    expect(result.retryable).toBe(false);
+    expect(result.message).toContain("見出し");
+  });
+
+  it("通信エラーだけは再送可能にする", () => {
+    const result = describeUploadError(undefined, "NetworkError");
+    expect(result.retryable).toBe(true);
+    expect(result.message).toContain("再送");
   });
 });
