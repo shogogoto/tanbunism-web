@@ -12,7 +12,9 @@ export interface CacheItem<T> {
   value: T;
   expires: number;
 }
-const TTL = 1000 * 60 * 60 * 24; // 24 hours
+const DEFAULT_TTL = 1000 * 60 * 60 * 24; // 24 hours
+const SEARCH_CACHE_TTL = 1000 * 60 * 60; // 1 hour
+const SEARCH_CACHE_MAX = 200;
 const HISTORY_MAX = 100;
 
 class TanbunCacheDB extends Dexie {
@@ -36,10 +38,28 @@ class TanbunCacheDB extends Dexie {
 
 export const db = new TanbunCacheDB();
 
-function createTTLStore<T>(table: Table<CacheItem<T>>) {
+type TTLStoreOptions = {
+  ttl?: number;
+  maxEntries?: number;
+};
+
+function createTTLStore<T>(
+  table: Table<CacheItem<T>>,
+  { ttl = DEFAULT_TTL, maxEntries }: TTLStoreOptions = {},
+) {
   async function cleanup() {
     const now = Date.now();
     await table.where("expires").below(now).delete();
+
+    if (maxEntries === undefined) return;
+    const count = await table.count();
+    if (count <= maxEntries) return;
+
+    const keys = await table
+      .orderBy("expires")
+      .limit(count - maxEntries)
+      .primaryKeys();
+    await table.bulkDelete(keys);
   }
 
   return {
@@ -52,7 +72,7 @@ function createTTLStore<T>(table: Table<CacheItem<T>>) {
       return undefined;
     },
     async set(key: string, value: T): Promise<void> {
-      await table.put({ key, value, expires: Date.now() + TTL });
+      await table.put({ key, value, expires: Date.now() + ttl });
       await cleanup();
     },
     clear: () => table.clear(),
@@ -121,7 +141,10 @@ function createHistoryStore(table: Table<HistoryItemType>) {
 }
 
 // --- 具体的なキャッシュストアのインスタンス化 ---
-export const genericCache = createTTLStore(db.cache);
+export const genericCache = createTTLStore(db.cache, {
+  ttl: SEARCH_CACHE_TTL,
+  maxEntries: SEARCH_CACHE_MAX,
+});
 export const tanbunSearchCache = createTTLStore<TanbunSearchResult>(
   db.knowdeSearchResults,
 );
