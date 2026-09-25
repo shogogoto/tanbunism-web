@@ -69,7 +69,11 @@ const emptyState = (): SearchState => ({
 
 export default function UnifiedSearch() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const query = searchParams.get("q") ?? "";
+  const queryParam = searchParams.get("q") ?? "";
+  const [query, setQuery] = useState(queryParam);
+  useEffect(() => {
+    setQuery(queryParam);
+  }, [queryParam]);
   const typesParam = searchParams.get("types");
   const enabledTypes = useMemo(
     () => parseSearchTypes(typesParam),
@@ -91,6 +95,19 @@ export default function UnifiedSearch() {
   const lastRequestRef = useRef("");
 
   const searchKey = `${debouncedQuery}:${enabledKey}:${settingsKey}`;
+
+  useEffect(() => {
+    if (debouncedQuery === queryParam) return;
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (debouncedQuery) next.set("q", debouncedQuery);
+        else next.delete("q");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [debouncedQuery, queryParam, setSearchParams]);
 
   useEffect(() => {
     const reset = previousSearchRef.current !== searchKey;
@@ -187,15 +204,6 @@ export default function UnifiedSearch() {
     [state, enabledTypes],
   );
   const total = enabledTypes.reduce((sum, type) => sum + state.totals[type], 0);
-
-  function setQuery(value: string) {
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      if (value) next.set("q", value);
-      else next.delete("q");
-      return next;
-    });
-  }
 
   function toggleType(type: SearchType) {
     const nextTypes = enabledTypes.includes(type)
