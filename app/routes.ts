@@ -18,6 +18,7 @@ export default [
     route("register", "routes/user/register.tsx"),
     route("login", "routes/user/login.tsx"),
     route("quiz", "routes/quiz.tsx"),
+    route("study-plans", "routes/study-plans.tsx"),
     route("quiz/list", "routes/quiz-list.tsx"),
     route("achievement", "routes/achievement.tsx"),
 

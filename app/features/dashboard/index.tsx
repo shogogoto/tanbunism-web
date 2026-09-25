@@ -1,4 +1,4 @@
-import { BookOpen, FolderOpen, SquareCheckBig } from "lucide-react";
+import { BookOpen, FolderOpen, ListChecks, SquareCheckBig } from "lucide-react";
 import { Link } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
 import { useAuth } from "~/features/auth/AuthProvider";
@@ -38,7 +38,7 @@ export default function Dashboard() {
           </p>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2">
+        <section className="grid gap-3 sm:grid-cols-3">
           <Button asChild size="lg" className="h-auto justify-start gap-3 p-4">
             <Link to="/quiz">
               <SquareCheckBig className="size-5" />
@@ -62,6 +62,22 @@ export default function Dashboard() {
                 <span className="block">作成したクイズ</span>
                 <span className="block text-xs font-normal text-muted-foreground">
                   Resourceごとのクイズを確認する
+                </span>
+              </span>
+            </Link>
+          </Button>
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className="h-auto justify-start gap-3 p-4"
+          >
+            <Link to="/study-plans">
+              <ListChecks className="size-5" />
+              <span className="text-left">
+                <span className="block">学習計画</span>
+                <span className="block text-xs font-normal text-muted-foreground">
+                  Resourceとクイズ形式を管理する
                 </span>
               </span>
             </Link>

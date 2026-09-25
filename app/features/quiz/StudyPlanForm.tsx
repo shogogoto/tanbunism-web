@@ -24,11 +24,13 @@ export default function StudyPlanForm({
   plan,
   onUpdated,
   onCancel,
+  createLabel = "作成してクイズを始める",
 }: {
   onCreated: (plan: StudyPlan) => void;
   plan?: StudyPlan;
   onUpdated?: (plan: StudyPlan) => void;
   onCancel?: () => void;
+  createLabel?: string;
 }) {
   const [resources, setResources] = useState<StudyResource[]>([]);
   const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>(
@@ -241,7 +243,7 @@ export default function StudyPlanForm({
               : "作成中…"
             : plan
               ? "変更を保存"
-              : "作成してクイズを始める"}
+              : createLabel}
         </Button>
       </div>
     </form>

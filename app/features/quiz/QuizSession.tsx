@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import {
   Alert,
   AlertDescription,
@@ -53,6 +53,7 @@ type QuizResult = {
 };
 
 export default function QuizSession() {
+  const [searchParams] = useSearchParams();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [planId, setPlanId] = useState("");
   const [recommendations, setRecommendations] = useState<QuizRecommendation[]>(
@@ -84,7 +85,12 @@ export default function QuizSession() {
         const loadedPlans = await listStudyPlans();
         if (!active) return;
         setPlans(loadedPlans);
-        setPlanId(loadedPlans[0]?.uid ?? "");
+        const requestedPlanId = searchParams.get("plan");
+        setPlanId(
+          loadedPlans.some(({ uid }) => uid === requestedPlanId)
+            ? (requestedPlanId ?? "")
+            : (loadedPlans[0]?.uid ?? ""),
+        );
         setLoadState({ status: "ready" });
       } catch (error) {
         if (!active) return;
@@ -102,7 +108,7 @@ export default function QuizSession() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [searchParams]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey explicitly reloads recommendations.
   useEffect(() => {
@@ -766,6 +772,9 @@ function PlanToolbar({
       </Button>
       <Button type="button" variant="outline" onClick={onEdit}>
         編集
+      </Button>
+      <Button asChild type="button" variant="ghost">
+        <Link to="/study-plans">管理</Link>
       </Button>
       <AlertDialog>
         <AlertDialogTrigger asChild>

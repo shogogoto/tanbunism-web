@@ -153,15 +153,37 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderQuizSession() {
+function renderQuizSession(initialEntry = "/quiz") {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <QuizSession />
     </MemoryRouter>,
   );
 }
 
 describe("QuizSession", () => {
+  it("URLで指定されたStudyPlanを選んで開始する", async () => {
+    const requestedPlans: string[] = [];
+    server.use(
+      http.get("*/quiz/study-plans", () =>
+        HttpResponse.json([
+          plan,
+          { ...plan, uid: "plan-2", name: "物理の復習" },
+        ]),
+      ),
+      http.post("*/quiz/study-plans/:planId/recommendations", ({ params }) => {
+        requestedPlans.push(String(params.planId));
+        return HttpResponse.json([]);
+      }),
+    );
+
+    renderQuizSession("/quiz?plan=plan-2");
+
+    await screen.findByText("提案できるクイズがありません");
+    expect(screen.getByLabelText("StudyPlan")).toHaveValue("plan-2");
+    expect(requestedPlans).toEqual(["plan-2", "plan-2", "plan-2", "plan-2"]);
+  });
+
   it("PAIR2RELを各準備段階の最後に取得する", async () => {
     const requests: string[] = [];
     server.use(
