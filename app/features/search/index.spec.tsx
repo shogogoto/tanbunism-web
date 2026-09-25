@@ -140,6 +140,35 @@ describe("統合検索", () => {
       "!bg-purple-600",
     );
     expect(requestedTypes.sort()).toEqual(["knowledge", "resource", "user"]);
+    await waitFor(async () => expect(await genericCache.count()).toBe(3));
+  });
+
+  it("遅い検索を待たず、取得できた種類から表示する", async () => {
+    let releaseResource: (() => void) | undefined;
+    server.use(
+      http.post("*/resource/search", async () => {
+        requestedTypes.push("resource");
+        await new Promise<void>((resolve) => {
+          releaseResource = resolve;
+        });
+        return HttpResponse.json({ total: 1, data: [resourceInfo] });
+      }),
+    );
+
+    renderSearch("/search?q=数学&types=knowledge,resource");
+
+    await waitFor(() => expect(releaseResource).toBeTypeOf("function"));
+    expect(
+      await screen.findByRole("link", { name: /数学の知識/ }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: /^リソース:/ }),
+    ).not.toBeInTheDocument();
+
+    releaseResource?.();
+    expect(
+      await screen.findByRole("link", { name: /^リソース:/ }),
+    ).toBeVisible();
   });
 
   it("検索対象を同じ画面で絞り込む", async () => {
@@ -238,7 +267,7 @@ describe("統合検索", () => {
     expect(screen.getByLabelText("一致方法")).toBeVisible();
   });
 
-  it("保存した検索結果を先に表示し、再取得に失敗しても維持する", async () => {
+  it("検索対象が変わっても種類別キャッシュを再利用する", async () => {
     const firstRender = renderSearch("/search?q=数学&types=knowledge");
     expect(
       await screen.findByRole("link", { name: /数学の知識/ }),
@@ -256,17 +285,19 @@ describe("統合検索", () => {
         );
       }),
     );
-    renderSearch("/search?q=数学&types=knowledge");
+    renderSearch("/search?q=数学&types=knowledge,resource");
 
     expect(
       await screen.findByRole("link", { name: /数学の知識/ }),
     ).toBeVisible();
+    expect(await screen.findByText("数学ノート")).toBeVisible();
     await waitFor(() => {
       expect(revalidationRequests).toBe(1);
       expect(
         screen.queryByText("知識を検索できませんでした。"),
       ).not.toBeInTheDocument();
     });
+    await waitFor(async () => expect(await genericCache.count()).toBe(2));
   });
 
   it("末尾が見えたら次の検索結果を自動で追加する", async () => {

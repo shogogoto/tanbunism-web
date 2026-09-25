@@ -49,6 +49,16 @@ type SearchState = {
   totals: Record<SearchType, number>;
 };
 
+type SearchSlice =
+  | {
+      type: "knowledge";
+      data: Tanbun[];
+      resourceInfos: TanbunSearchResult["resource_infos"];
+      total: number;
+    }
+  | { type: "resource"; data: ResourceInfo[]; total: number }
+  | { type: "user"; data: UserSearchRow[]; total: number };
+
 const emptyState = (): SearchState => ({
   knowledge: [],
   resources: [],
@@ -86,12 +96,6 @@ export default function UnifiedSearch() {
     const reset = previousSearchRef.current !== searchKey;
     const requestedPage = reset ? 1 : page;
     const requestKey = `${searchKey}:${requestedPage}`;
-    const cacheKey = createCacheKey("unified-search", {
-      query: debouncedQuery,
-      types: enabledKey,
-      settings: settingsKey,
-      page: requestedPage,
-    });
     if (lastRequestRef.current === requestKey) return;
 
     previousSearchRef.current = searchKey;
@@ -106,47 +110,54 @@ export default function UnifiedSearch() {
     setError(undefined);
 
     async function load() {
-      const cached = await getCachedSearch(cacheKey);
-      if (controller.signal.aborted) return;
-      if (cached) {
-        setState((current) => mergeSearchState(current, cached, reset));
-      }
+      const errors = await Promise.all(
+        enabledTypes.map(async (type) => {
+          const cacheKey = searchCacheKey(
+            type,
+            debouncedQuery,
+            requestedPage,
+            settings,
+          );
+          const cached = await getCachedSearchSlice(cacheKey);
+          if (controller.signal.aborted) return undefined;
+          if (cached) {
+            setState((current) =>
+              mergeSearchSlice(current, cached, requestedPage > 1),
+            );
+          }
 
-      try {
-        const next = await searchAll(
-          debouncedQuery,
-          enabledTypes,
-          requestedPage,
-          settings,
-          controller.signal,
-        );
-        if (controller.signal.aborted) return;
-        setState((current) => mergeSearchState(current, next, reset));
-        void genericCache.set(cacheKey, next).catch(() => undefined);
-      } catch (reason) {
-        if (controller.signal.aborted || cached) return;
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : "検索結果を取得できませんでした。",
-        );
-      } finally {
-        if (!controller.signal.aborted) setIsLoading(false);
-      }
+          try {
+            const fresh = await searchType(
+              type,
+              debouncedQuery,
+              requestedPage,
+              settings,
+              controller.signal,
+            );
+            if (controller.signal.aborted) return undefined;
+            setState((current) =>
+              mergeSearchSlice(current, fresh, requestedPage > 1),
+            );
+            void genericCache.set(cacheKey, fresh).catch(() => undefined);
+            return undefined;
+          } catch (reason) {
+            if (controller.signal.aborted || cached) return undefined;
+            return reason instanceof Error
+              ? reason.message
+              : "検索結果を取得できませんでした。";
+          }
+        }),
+      );
+      if (controller.signal.aborted) return;
+      const messages = [...new Set(errors.filter((value) => value != null))];
+      if (messages.length > 0) setError(messages.join("\n"));
+      setIsLoading(false);
     }
 
     void load();
 
     return () => controller.abort();
-  }, [
-    debouncedQuery,
-    enabledKey,
-    enabledTypes,
-    page,
-    searchKey,
-    settings,
-    settingsKey,
-  ]);
+  }, [debouncedQuery, enabledTypes, page, searchKey, settings]);
 
   const hasMore = enabledTypes.some((type) => {
     const count =
@@ -338,101 +349,119 @@ function mixResults(state: SearchState, enabled: SearchType[]): MixedResult[] {
   ).flat();
 }
 
-async function searchAll(
+async function searchType(
+  type: SearchType,
   query: string,
-  enabled: SearchType[],
   page: number,
   settings: SearchSettings,
   signal: AbortSignal,
-): Promise<SearchState> {
-  const next = emptyState();
-  await Promise.all(
-    enabled.map(async (type) => {
-      if (type === "knowledge") {
-        const response = await searchByTextTanbunGet(
-          {
-            q: query,
-            type: settings.knowledge.matchType,
-            page,
-            size: PAGE_SIZE,
-            n_detail: settings.knowledge.weights.detail,
-            n_premise: settings.knowledge.weights.premise,
-            n_conclusion: settings.knowledge.weights.conclusion,
-            n_refer: settings.knowledge.weights.refer,
-            n_referred: settings.knowledge.weights.referred,
-            desc: settings.knowledge.desc,
-          },
-          { signal },
-        );
-        if (response.status !== 200)
-          throw new Error("知識を検索できませんでした。");
-        const result = response.data as TanbunSearchResult;
-        next.knowledge = result.data;
-        next.resourceInfos = result.resource_infos;
-        next.totals.knowledge = result.total;
-        return;
-      }
-      if (type === "resource") {
-        const response = await searchResourcePostResourceSearchPost(
-          {
-            q: query,
-            q_user: settings.resource.user,
-            paging: { page, size: PAGE_SIZE },
-            desc: settings.resource.desc,
-            order_by: [settings.resource.order],
-          },
-          { signal },
-        );
-        if (response.status !== 200)
-          throw new Error("リソースを検索できませんでした。");
-        const result = response.data as ResourceSearchResult;
-        next.resources = result.data ?? [];
-        next.totals.resource = result.total;
-        return;
-      }
-      const response = await searchUserUserSearchPost(
-        {
-          q: query,
-          paging: { page, size: PAGE_SIZE },
-          desc: settings.user.desc,
-          order_by: [settings.user.order],
-        },
-        { signal },
-      );
-      if (response.status !== 200)
-        throw new Error("ユーザーを検索できませんでした。");
-      const result = response.data as UserSearchResult;
-      next.users = result.data;
-      next.totals.user = result.total;
-    }),
+): Promise<SearchSlice> {
+  if (type === "knowledge") {
+    const response = await searchByTextTanbunGet(
+      {
+        q: query,
+        type: settings.knowledge.matchType,
+        page,
+        size: PAGE_SIZE,
+        n_detail: settings.knowledge.weights.detail,
+        n_premise: settings.knowledge.weights.premise,
+        n_conclusion: settings.knowledge.weights.conclusion,
+        n_refer: settings.knowledge.weights.refer,
+        n_referred: settings.knowledge.weights.referred,
+        desc: settings.knowledge.desc,
+      },
+      { signal },
+    );
+    if (response.status !== 200)
+      throw new Error("知識を検索できませんでした。");
+    const result = response.data as TanbunSearchResult;
+    return {
+      type,
+      data: result.data,
+      resourceInfos: result.resource_infos,
+      total: result.total,
+    };
+  }
+  if (type === "resource") {
+    const response = await searchResourcePostResourceSearchPost(
+      {
+        q: query,
+        q_user: settings.resource.user,
+        paging: { page, size: PAGE_SIZE },
+        desc: settings.resource.desc,
+        order_by: [settings.resource.order],
+      },
+      { signal },
+    );
+    if (response.status !== 200)
+      throw new Error("リソースを検索できませんでした。");
+    const result = response.data as ResourceSearchResult;
+    return { type, data: result.data ?? [], total: result.total };
+  }
+  const response = await searchUserUserSearchPost(
+    {
+      q: query,
+      paging: { page, size: PAGE_SIZE },
+      desc: settings.user.desc,
+      order_by: [settings.user.order],
+    },
+    { signal },
   );
-  return next;
+  if (response.status !== 200)
+    throw new Error("ユーザーを検索できませんでした。");
+  const result = response.data as UserSearchResult;
+  return { type, data: result.data, total: result.total };
 }
 
-function mergeSearchState(
+function searchCacheKey(
+  type: SearchType,
+  query: string,
+  page: number,
+  settings: SearchSettings,
+) {
+  return createCacheKey(`unified-search-${type}`, {
+    query,
+    settings: JSON.stringify(settings[type]),
+    page,
+  });
+}
+
+function mergeSearchSlice(
   current: SearchState,
-  next: SearchState,
-  replace: boolean,
+  slice: SearchSlice,
+  append: boolean,
 ): SearchState {
-  if (replace) return next;
+  if (slice.type === "knowledge") {
+    return {
+      ...current,
+      knowledge: append
+        ? mergeUnique(current.knowledge, slice.data, (value) => value.uid)
+        : slice.data,
+      resourceInfos: append
+        ? { ...current.resourceInfos, ...slice.resourceInfos }
+        : slice.resourceInfos,
+      totals: { ...current.totals, knowledge: slice.total },
+    };
+  }
+  if (slice.type === "resource") {
+    return {
+      ...current,
+      resources: append
+        ? mergeUnique(
+            current.resources,
+            slice.data,
+            (value) => value.resource.uid,
+          )
+        : slice.data,
+      totals: { ...current.totals, resource: slice.total },
+    };
+  }
   return {
-    knowledge: mergeUnique(
-      current.knowledge,
-      next.knowledge,
-      (value) => value.uid,
-    ),
-    resources: mergeUnique(
-      current.resources,
-      next.resources,
-      (value) => value.resource.uid,
-    ),
-    users: mergeUnique(current.users, next.users, (value) => value.user.uid),
-    resourceInfos: { ...current.resourceInfos, ...next.resourceInfos },
-    totals: {
-      knowledge: next.totals.knowledge || current.totals.knowledge,
-      resource: next.totals.resource || current.totals.resource,
-      user: next.totals.user || current.totals.user,
-    },
+    ...current,
+    users: append
+      ? mergeUnique(current.users, slice.data, (value) => value.user.uid)
+      : slice.data,
+    totals: { ...current.totals, user: slice.total },
   };
 }
 
@@ -442,9 +471,11 @@ function mergeUnique<T>(current: T[], next: T[], getId: (value: T) => string) {
   return [...merged.values()];
 }
 
-async function getCachedSearch(key: string): Promise<SearchState | undefined> {
+async function getCachedSearchSlice(
+  key: string,
+): Promise<SearchSlice | undefined> {
   try {
-    return (await genericCache.get(key)) as SearchState | undefined;
+    return (await genericCache.get(key)) as SearchSlice | undefined;
   } catch {
     return undefined;
   }
