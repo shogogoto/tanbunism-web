@@ -12,12 +12,21 @@ import type { QuizType } from "./quizType";
 export interface StudyPlanDraft {
   /** @minLength 1 */
   name: string;
-  /** @minItems 1 */
+  /**
+   * @minItems 1
+   * @maxItems 20
+   */
   resource_ids: string[];
   /** @minItems 1 */
   quiz_types: QuizType[];
-  /** @minimum 0 */
+  /**
+   * @minimum 0
+   * @maximum 20
+   */
   n_quiz: number;
-  /** @minimum 1 */
+  /**
+   * @minimum 1
+   * @maximum 6
+   */
   n_option: number;
 }

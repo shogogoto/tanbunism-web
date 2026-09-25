@@ -19,6 +19,7 @@ import {
 } from "~/shared/components/ui/dialog";
 import { useGetNamaspaceNamespaceGet } from "~/shared/generated/entry/entry";
 import DashboardAchievement from "./DashboardAchievement";
+import RecentAnswers from "./RecentAnswers";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -85,6 +86,8 @@ export default function Dashboard() {
         </section>
 
         <DashboardAchievement />
+
+        <RecentAnswers />
 
         <Dialog>
           <Card>

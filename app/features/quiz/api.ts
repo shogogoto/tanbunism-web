@@ -4,9 +4,11 @@ import {
   createStudyPlanApiQuizStudyPlansPost,
   deleteQuizApiQuizQuizIdDelete,
   deleteStudyPlanApiQuizStudyPlansPlanIdDelete,
+  expandQuizChainApiQuizChainQuizzesQuizIdGet,
   getLearningProgressApiQuizLearningProgressResourceIdGet,
   getNamaspaceNamespaceGet,
   getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostUrl,
+  listAnswerHistoryApiQuizAnswersGet,
   listCreatedQuizResourcesQuizCreatedResourcesGet,
   listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGet,
   listCreatedQuizzesQuizCreatedGet,
@@ -15,7 +17,10 @@ import {
   updateStudyPlanApiQuizStudyPlansPlanIdPut,
 } from "./generated/api";
 import type {
+  AnswerHistoryItem,
+  AnswerHistoryResult,
   HTTPValidationError,
+  ListAnswerHistoryApiQuizAnswersGetParams,
   ManagedQuiz,
   ManagedQuizResult,
   QuizChain,
@@ -30,6 +35,9 @@ import type {
 } from "./generated/models";
 
 export type {
+  AnswerHistoryItem,
+  AnswerHistoryResult,
+  ListAnswerHistoryApiQuizAnswersGetParams,
   QuizChain,
   QuizResourceStatus,
   ReadableQuiz,
@@ -87,6 +95,22 @@ export async function listStudyPlans(): Promise<StudyPlan[]> {
     credentials: "include",
   });
   return unwrap(response, "学習計画を取得できませんでした。");
+}
+
+export async function listAnswerHistory(
+  params: ListAnswerHistoryApiQuizAnswersGetParams = {},
+): Promise<AnswerHistoryResult> {
+  const response = await listAnswerHistoryApiQuizAnswersGet(params, {
+    credentials: "include",
+  });
+  return unwrap(response, "回答履歴を取得できませんでした。");
+}
+
+export async function getQuizChain(quizId: string): Promise<QuizChain> {
+  const response = await expandQuizChainApiQuizChainQuizzesQuizIdGet(quizId, {
+    credentials: "include",
+  });
+  return unwrap(response, "クイズの知識を取得できませんでした。");
 }
 
 export async function listStudyResources(): Promise<StudyResource[]> {

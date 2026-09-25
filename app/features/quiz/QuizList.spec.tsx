@@ -139,9 +139,8 @@ it("作成したQuizを確認して削除する", async () => {
 
   expect(await screen.findByText("代数学ノート")).toBeInTheDocument();
   expect(screen.getByText("用語→単文 1")).toBeInTheDocument();
-  await user.click(screen.getAllByRole("link", { name: "クイズを見る" })[0]);
-
   expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
+  expect(screen.getByText("作成済みクイズ")).toBeInTheDocument();
   expect(screen.getByText("正解")).toBeInTheDocument();
   await user.selectOptions(screen.getByLabelText("回答状態"), "true");
   await user.click(screen.getByRole("checkbox", { name: "用語→単文" }));
@@ -158,7 +157,7 @@ it("作成したQuizを確認して削除する", async () => {
   await user.click(screen.getByRole("button", { name: "削除する" }));
 
   expect(
-    await screen.findByText("このResourceから作成したクイズはありません。"),
+    await screen.findByText("条件に合う作成済みクイズはありません。"),
   ).toBeInTheDocument();
   expect(screen.queryByText(quiz.statement)).not.toBeInTheDocument();
 });

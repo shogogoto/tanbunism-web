@@ -39,7 +39,7 @@ type LoadState =
       resources: StudyResource[];
       createdByResource: Map<string, QuizResourceStatus>;
       learningByResource: Map<string, ResourceLearningStatus>;
-      quizzes?: ManagedQuiz[];
+      quizzes: ManagedQuiz[];
     }
   | { status: "error"; message: string };
 
@@ -413,30 +413,28 @@ export default function QuizList() {
     Promise.all([
       listStudyResources(),
       listCreatedQuizResources(),
-      resourceId
-        ? searchCreatedQuizzes({
-            resource_id: resourceId,
-            sentence_id: sentenceId,
-            quiz_types:
-              filters.quizTypes.length > 0 ? filters.quizTypes : undefined,
-            answered:
-              filters.answered === "" ? undefined : filters.answered === "true",
-            created_from: filters.createdFrom
-              ? `${filters.createdFrom}T00:00:00+09:00`
-              : undefined,
-            created_to: filters.createdTo
-              ? `${filters.createdTo}T23:59:59+09:00`
-              : undefined,
-            min_accuracy: filters.minAccuracy
-              ? Number(filters.minAccuracy) / 100
-              : undefined,
-            max_accuracy: filters.maxAccuracy
-              ? Number(filters.maxAccuracy) / 100
-              : undefined,
-            page: 1,
-            size: 100,
-          }).then(({ data }) => data)
-        : Promise.resolve(undefined),
+      searchCreatedQuizzes({
+        resource_id: resourceId,
+        sentence_id: sentenceId,
+        quiz_types:
+          filters.quizTypes.length > 0 ? filters.quizTypes : undefined,
+        answered:
+          filters.answered === "" ? undefined : filters.answered === "true",
+        created_from: filters.createdFrom
+          ? `${filters.createdFrom}T00:00:00+09:00`
+          : undefined,
+        created_to: filters.createdTo
+          ? `${filters.createdTo}T23:59:59+09:00`
+          : undefined,
+        min_accuracy: filters.minAccuracy
+          ? Number(filters.minAccuracy) / 100
+          : undefined,
+        max_accuracy: filters.maxAccuracy
+          ? Number(filters.maxAccuracy) / 100
+          : undefined,
+        page: 1,
+        size: 100,
+      }).then(({ data }) => data),
     ])
       .then(async ([resources, createdStatuses, quizzes]) => {
         const learning = await Promise.all(
@@ -480,7 +478,7 @@ export default function QuizList() {
       current.status === "loaded"
         ? {
             ...current,
-            quizzes: current.quizzes?.filter(
+            quizzes: current.quizzes.filter(
               ({ quiz }) => quiz.quiz_id !== quizId,
             ),
           }
@@ -494,7 +492,7 @@ export default function QuizList() {
       : undefined;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4 sm:p-6">
+    <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
       <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">
@@ -505,7 +503,7 @@ export default function QuizList() {
               ? sentenceId
                 ? "この単文から作成した問題・選択肢・正解を確認できます。"
                 : "このResourceから作成した問題・選択肢・正解を確認できます。"
-              : "Resourceを選んで、単文から作成されたクイズを確認します。"}
+              : "Resourceごとの学習状況と、作成したクイズを確認します。"}
           </p>
         </div>
         <Button asChild variant="outline">
@@ -520,47 +518,52 @@ export default function QuizList() {
         </p>
       )}
       {loadState.status === "loaded" && !resourceId && (
-        <div className="space-y-3">
-          {loadState.resources.map((resource) => (
-            <ResourceCard
-              key={resource.uid}
-              resource={resource}
-              status={loadState.createdByResource.get(resource.uid)}
-              learning={loadState.learningByResource.get(resource.uid)}
-            />
-          ))}
-        </div>
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Resource別の学習状況</h2>
+          {loadState.resources.length === 0 ? (
+            <p className="border p-4 text-sm text-muted-foreground">
+              学習対象のResourceはありません。
+            </p>
+          ) : (
+            loadState.resources.map((resource) => (
+              <ResourceCard
+                key={resource.uid}
+                resource={resource}
+                status={loadState.createdByResource.get(resource.uid)}
+                learning={loadState.learningByResource.get(resource.uid)}
+              />
+            ))
+          )}
+        </section>
       )}
-      {loadState.status === "loaded" &&
-        !resourceId &&
-        loadState.resources.length === 0 && (
-          <p className="border p-4 text-sm text-muted-foreground">
-            作成したクイズはありません。
-          </p>
-        )}
-      {loadState.status === "loaded" &&
-        resourceId &&
-        loadState.quizzes?.length === 0 && (
-          <p className="border p-4 text-sm text-muted-foreground">
-            このResourceから作成したクイズはありません。
-          </p>
-        )}
-      {loadState.status === "loaded" && resourceId && (
-        <>
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/quiz/list">← Resource一覧へ</Link>
-          </Button>
+      {loadState.status === "loaded" && (
+        <section className="space-y-3">
+          {resourceId && (
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/quiz/list">← Resource一覧へ</Link>
+            </Button>
+          )}
+          <h2 className="text-lg font-semibold">
+            {resourceId ? "このResourceのクイズ" : "作成済みクイズ"}
+          </h2>
           <QuizSearchFilters filters={filters} onChange={setFilters} />
-        </>
+          {loadState.quizzes.length === 0 ? (
+            <p className="border p-4 text-sm text-muted-foreground">
+              {resourceId
+                ? "このResourceから作成したクイズはありません。"
+                : "条件に合う作成済みクイズはありません。"}
+            </p>
+          ) : (
+            loadState.quizzes.map((managed) => (
+              <QuizCard
+                key={managed.quiz.quiz_id}
+                managed={managed}
+                onDelete={handleDelete}
+              />
+            ))
+          )}
+        </section>
       )}
-      {loadState.status === "loaded" &&
-        loadState.quizzes?.map((managed) => (
-          <QuizCard
-            key={managed.quiz.quiz_id}
-            managed={managed}
-            onDelete={handleDelete}
-          />
-        ))}
     </div>
   );
 }

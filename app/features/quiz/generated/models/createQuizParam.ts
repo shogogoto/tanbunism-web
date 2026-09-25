@@ -14,6 +14,10 @@ export interface CreateQuizParam {
   target_sent_uid: string;
   quiz_type: QuizType;
   cand_type: CandidateType;
+  /**
+   * @minimum 1
+   * @maximum 6
+   */
   n_option?: number;
   correct_sent_uids?: string[];
   allow_multiple_anwser?: boolean;
