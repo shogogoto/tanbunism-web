@@ -2,33 +2,13 @@
   <!-- Favicon optimized version -->
   <!-- Transparent background -->
 
-  <!-- K letter structure with thick edges -->
-  <!-- Vertical line (left side of K) -->
-  <line x1="25" y1="20" x2="25" y2="80" stroke="#2563eb" stroke-width="6" stroke-linecap="round"/>
+  <!-- T letter structure with graph-like nodes -->
+  <line x1="25" y1="25" x2="75" y2="25" stroke="#2563eb" stroke-width="6" stroke-linecap="round"/>
+  <line x1="50" y1="25" x2="50" y2="80" stroke="#2563eb" stroke-width="6" stroke-linecap="round"/>
 
-  <!-- Upper diagonal line -->
-  <line x1="25" y1="50" x2="65" y2="20" stroke="#2563eb" stroke-width="6" stroke-linecap="round"/>
-
-  <!-- Lower diagonal line -->
-  <line x1="25" y1="50" x2="65" y2="80" stroke="#2563eb" stroke-width="6" stroke-linecap="round"/>
-
-  <!-- Nodes at endpoints -->
-  <!-- Top left endpoint -->
-  <circle cx="25" cy="20" r="8" fill="#16a34a"/>
-
-  <!-- Bottom left endpoint -->
-  <circle cx="25" cy="80" r="8" fill="#16a34a"/>
-
-  <!-- Top right endpoint -->
-  <circle cx="65" cy="20" r="8" fill="#16a34a"/>
-
-  <!-- Bottom right endpoint -->
-  <circle cx="65" cy="80" r="8" fill="#16a34a"/>
-
-  <!-- Intersection point (center) with enhanced visibility -->
-  <circle cx="25" cy="50" r="9" fill="#f59e0b"/>
-
-  <!-- Subtle inner highlight for intersection node -->
-  <circle cx="25" cy="50" r="4" fill="#fbbf24" opacity="0.8"/>
+  <circle cx="25" cy="25" r="8" fill="#16a34a"/>
+  <circle cx="75" cy="25" r="8" fill="#16a34a"/>
+  <circle cx="50" cy="80" r="8" fill="#16a34a"/>
+  <circle cx="50" cy="25" r="9" fill="#f59e0b"/>
+  <circle cx="50" cy="25" r="4" fill="#fbbf24" opacity="0.8"/>
 </svg>
-

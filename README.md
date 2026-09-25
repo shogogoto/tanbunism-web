@@ -1,5 +1,5 @@
-# web client for Knowde
- [knowdeのウェブクライアント](https://knowde.netlify.app/)
+# Tanbunism web client
+ [tanbunismのウェブクライアント](https://tanbunism.com/)
 
 
 

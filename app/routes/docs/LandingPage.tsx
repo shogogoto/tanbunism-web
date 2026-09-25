@@ -100,7 +100,7 @@ export default function LandingPage() {
             style={{ transform: `translateY(${scrollY * 0.1}px)` }}
           >
             <h1 className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent">
-              knowde
+              tanbunism
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-gray-300 max-w-3xl mx-auto leading-relaxed">
               <span className="text-purple-400 font-semibold">単文主義</span>
@@ -299,12 +299,12 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-12 px-4 border-t border-gray-700">
         <div className="max-w-6xl mx-auto text-center">
-          <h3 className="text-2xl font-bold mb-4">knowde</h3>
+          <h3 className="text-2xl font-bold mb-4">tanbunism</h3>
           <p className="text-gray-400 mb-6">
             単文主義で知識を構造化する知識管理プラットフォーム
           </p>
           <div className="text-sm text-gray-500">
-            © 2025 knowde. All rights reserved.
+            © 2025 tanbunism. All rights reserved.
           </div>
         </div>
       </footer>
