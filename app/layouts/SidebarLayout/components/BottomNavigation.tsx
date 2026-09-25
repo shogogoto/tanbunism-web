@@ -1,25 +1,14 @@
-import { PanelLeftIcon, Search, SquareCheckBig } from "lucide-react";
+import { BookOpen, Home, Search, SquareCheckBig } from "lucide-react";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router";
 
-export default function BottomNavigation({
-  onMenuOpen,
-}: {
-  onMenuOpen: () => void;
-}) {
+export default function BottomNavigation() {
   return (
     <>
-      <button
-        type="button"
-        onClick={onMenuOpen}
-        aria-label="メニューを開く"
-        className="flex flex-col items-center gap-1 text-xs"
-      >
-        <PanelLeftIcon size={22} />
-        <span>メニュー</span>
-      </button>
+      <NavigationItem to="/home" label="ホーム" icon={<Home />} />
       <NavigationItem to="/search" label="検索" icon={<Search />} />
       <NavigationItem to="/quiz" label="クイズ" icon={<SquareCheckBig />} />
+      <NavigationItem to="/docs/toc" label="ドキュメント" icon={<BookOpen />} />
     </>
   );
 }
