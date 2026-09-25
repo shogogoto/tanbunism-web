@@ -12,10 +12,9 @@ it("主要画面へ名前付きの導線を表示する", () => {
   );
 
   expect(screen.getByRole("button", { name: "メニューを開く" })).toBeVisible();
-  expect(screen.getByRole("link", { name: "ホーム" })).toHaveAttribute(
-    "href",
-    "/home",
-  );
+  expect(
+    screen.queryByRole("link", { name: "ホーム" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "検索" })).toHaveAttribute(
     "href",
     "/search",

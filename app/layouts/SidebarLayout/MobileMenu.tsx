@@ -2,6 +2,7 @@ import {
   BookOpen,
   ChartColumn,
   Folder,
+  Home,
   LogIn,
   Settings,
   UserPlus,
@@ -34,6 +35,9 @@ export default function MobileMenu({ open, onOpenChange }: Props) {
           <SheetDescription>補助画面とアカウント操作</SheetDescription>
         </SheetHeader>
         <nav className="grid gap-1 p-3" aria-label="その他">
+          <MenuLink to="/home" icon={<Home />}>
+            ホーム
+          </MenuLink>
           <MenuLink to="/quiz/list" icon={<Folder />}>
             作成したクイズ
           </MenuLink>

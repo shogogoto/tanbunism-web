@@ -1,4 +1,4 @@
-import { Home, PanelLeftIcon, Search, SquareCheckBig } from "lucide-react";
+import { PanelLeftIcon, Search, SquareCheckBig } from "lucide-react";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router";
 
@@ -18,7 +18,6 @@ export default function BottomNavigation({
         <PanelLeftIcon size={22} />
         <span>メニュー</span>
       </button>
-      <NavigationItem to="/home" label="ホーム" icon={<Home />} />
       <NavigationItem to="/search" label="検索" icon={<Search />} />
       <NavigationItem to="/quiz" label="クイズ" icon={<SquareCheckBig />} />
     </>

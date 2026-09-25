@@ -15,6 +15,10 @@ it("予定機能を並べず補助画面だけを表示する", () => {
   );
 
   expect(screen.getByRole("dialog")).toBeVisible();
+  expect(screen.getByRole("link", { name: "ホーム" })).toHaveAttribute(
+    "href",
+    "/home",
+  );
   expect(screen.getByRole("link", { name: "作成したクイズ" })).toHaveAttribute(
     "href",
     "/quiz/list",
