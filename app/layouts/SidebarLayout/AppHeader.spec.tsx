@@ -26,6 +26,10 @@ it("主要機能を固定ヘッダーから移動できる", () => {
     "href",
     "/",
   );
+  expect(screen.getByRole("link", { name: "ドキュメント" })).toHaveAttribute(
+    "href",
+    "/docs/toc",
+  );
   expect(screen.getByRole("link", { name: "検索" })).toHaveAttribute(
     "href",
     "/search",

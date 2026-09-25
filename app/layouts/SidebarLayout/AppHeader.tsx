@@ -7,6 +7,7 @@ import UserNavi from "./UserNavi";
 import { SiteLogo } from "./components/SiteLogo";
 
 const primaryLinks = [
+  { to: "/docs/toc", label: "ドキュメント" },
   { to: "/search", label: "検索" },
   { to: "/quiz", label: "クイズ" },
   { to: "/quiz/list", label: "作成したクイズ" },

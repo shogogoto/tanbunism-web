@@ -41,7 +41,7 @@ export default function MobileMenu({ open, onOpenChange }: Props) {
             学習記録
           </MenuLink>
           <MenuLink to="/docs/toc" icon={<BookOpen />}>
-            ガイド
+            ドキュメント
           </MenuLink>
           {isAuthenticated ? (
             <MenuLink to="/user/edit" icon={<Settings />}>

@@ -23,7 +23,7 @@ it("予定機能を並べず補助画面だけを表示する", () => {
     "href",
     "/achievement",
   );
-  expect(screen.getByRole("link", { name: "ガイド" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "ドキュメント" })).toHaveAttribute(
     "href",
     "/docs/toc",
   );

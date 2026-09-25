@@ -24,10 +24,12 @@ it("主要画面へ名前付きの導線を表示する", () => {
     "href",
     "/quiz",
   );
-  expect(screen.getByRole("link", { name: "ガイド" })).toHaveAttribute(
-    "href",
-    "/docs/toc",
-  );
+  expect(
+    screen.queryByRole("link", { name: "ガイド" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "ドキュメント" }),
+  ).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "メニューを開く" }));
   expect(onMenuOpen).toHaveBeenCalledOnce();
