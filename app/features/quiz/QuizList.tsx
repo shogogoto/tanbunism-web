@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import HybridTooltip from "~/shared/components/HybridTooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -193,6 +194,46 @@ function Percentage({ value }: { value: number }) {
   return <>{Math.round(value * 100)}%</>;
 }
 
+export function formatCompactQuizDate(value: string, now = new Date()): string {
+  const date = new Date(value);
+  const dateDay = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const daysAgo = Math.round((today - dateDay) / 86_400_000);
+
+  if (daysAgo === 0) return "今日";
+  if (daysAgo >= 1 && daysAgo <= 7) return `${daysAgo}日前`;
+  if (date.getFullYear() === now.getFullYear()) {
+    return `${date.getMonth() + 1}月${date.getDate()}日`;
+  }
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+function FullCreatedAt({ value }: { value: string }) {
+  const date = new Date(value);
+  const full = new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(date);
+
+  return (
+    <HybridTooltip content={`作成日時 ${full}`}>
+      <button
+        type="button"
+        className="shrink-0 rounded-sm px-1 tabular-nums hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={`作成日時 ${full}`}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <time dateTime={value}>{formatCompactQuizDate(value)}</time>
+      </button>
+    </HybridTooltip>
+  );
+}
+
 function CompactLearningProgress({
   status,
 }: {
@@ -259,13 +300,16 @@ function CompactQuiz({
             <p className="whitespace-pre-line text-sm leading-relaxed">
               {quiz.statement}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {managed.attempts === 0
-                ? "未回答"
-                : `${managed.attempts}回答 · 正答率 ${Math.round(
-                    (managed.accuracy ?? 0) * 100,
-                  )}%`}
-            </p>
+            <div className="mt-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span>
+                {managed.attempts === 0
+                  ? "未回答"
+                  : `${managed.attempts}回答 · 正答率 ${Math.round(
+                      (managed.accuracy ?? 0) * 100,
+                    )}%`}
+              </span>
+              <FullCreatedAt value={quiz.created} />
+            </div>
           </div>
         </div>
       </summary>
@@ -278,8 +322,7 @@ function CompactQuiz({
             <span>{option}</span>
           </div>
         ))}
-        <div className="flex items-center justify-between gap-3 pt-1 text-xs text-muted-foreground">
-          <time>{new Date(quiz.created).toLocaleString("ja-JP")}</time>
+        <div className="flex justify-end pt-1">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button type="button" variant="ghost" size="sm">

@@ -3,7 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router";
-import QuizList from "./QuizList";
+import { vi } from "vitest";
+import QuizList, { formatCompactQuizDate } from "./QuizList";
+
+vi.mock("~/shared/hooks/use-mobile", () => ({
+  useIsMobile: () => false,
+}));
 
 const quiz = {
   quiz_id: "quiz-1",
@@ -133,6 +138,18 @@ function renderQuizList(initialEntry = "/quiz/list") {
   );
 }
 
+it("作成日時を現在日からの距離に応じて短く表示する", () => {
+  const now = new Date(2026, 8, 26, 12);
+
+  expect(formatCompactQuizDate("2026-09-26T12:00:00", now)).toBe("今日");
+  expect(formatCompactQuizDate("2026-09-25T12:00:00", now)).toBe("1日前");
+  expect(formatCompactQuizDate("2026-09-19T12:00:00", now)).toBe("7日前");
+  expect(formatCompactQuizDate("2026-07-28T12:00:00", now)).toBe("7月28日");
+  expect(formatCompactQuizDate("2025-07-28T12:00:00", now)).toBe(
+    "2025年7月28日",
+  );
+});
+
 it("Resourceを開いて作成したQuizを確認して削除する", async () => {
   const user = userEvent.setup();
   renderQuizList();
@@ -146,6 +163,11 @@ it("Resourceを開いて作成したQuizを確認して削除する", async () =
   expect(await screen.findByText("用語→単文 1")).toBeInTheDocument();
   expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
   expect(searchRequests.at(-1)).toContain("resource_id=resource-1");
+  expect(screen.getByText("7月28日")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /作成日時/ })).toHaveAttribute(
+    "aria-label",
+    expect.stringContaining("2026"),
+  );
   await user.click(screen.getByText(quiz.statement));
   expect(screen.getByText("正解")).toBeInTheDocument();
 
