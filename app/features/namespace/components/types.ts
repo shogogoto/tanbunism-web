@@ -1,15 +1,15 @@
-import type { TreeDataItem } from "~/shared/components/tree-view";
 import type {
   MResource,
   ResourceStats,
 } from "~/shared/generated/fastAPI.schemas";
 
-type MResourceAuthors = MResource["authors"];
-type MResourcePublished = MResource["published"];
-
-export interface ExplorerTreeDataItem extends TreeDataItem {
-  authors?: MResourceAuthors;
-  published?: MResourcePublished;
-  content_size?: ResourceStats | undefined;
+export interface ExplorerTreeDataItem {
+  id: string;
+  name: string;
+  isResource: boolean;
+  authors?: MResource["authors"];
+  published?: MResource["published"];
+  stats?: ResourceStats;
+  resourceCount: number;
   children?: ExplorerTreeDataItem[];
 }
