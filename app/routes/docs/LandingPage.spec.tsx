@@ -19,3 +19,15 @@ it("ログイン済みならダッシュボードへ移動する", async () => {
 
   expect(await screen.findByText("ダッシュボード画面")).toBeVisible();
 });
+
+it("明示的に開いたトップはログイン済みでも表示する", () => {
+  render(
+    <MemoryRouter initialEntries={["/about"]}>
+      <LandingPage redirectAuthenticated={false} />
+    </MemoryRouter>,
+  );
+
+  expect(
+    screen.getByRole("heading", { level: 1, name: "tanbunism" }),
+  ).toBeInTheDocument();
+});

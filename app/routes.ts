@@ -9,6 +9,7 @@ export default [
   layout("layouts/SidebarLayout/index.tsx", [
     // Docs
     index("routes/docs/LandingPage.tsx"),
+    route("about", "routes/docs/about.tsx"),
     route("docs/toc", "routes/docs/toc.tsx"),
     route("docs/get-started", "routes/docs/get-started.mdx"),
     route("docs/concept", "routes/docs/concept.mdx"),

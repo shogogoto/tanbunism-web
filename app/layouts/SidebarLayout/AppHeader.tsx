@@ -21,7 +21,7 @@ export default function AppHeader() {
     <header className="z-40 shrink-0 border-b bg-background/95 backdrop-blur">
       <div className="flex h-14 items-center gap-2 px-3 md:px-6">
         <Link
-          to={isAuthenticated ? "/dashboard" : "/"}
+          to={isAuthenticated ? "/about" : "/"}
           className="mr-2 flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Tanbun トップ"
         >

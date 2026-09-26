@@ -12,7 +12,11 @@ import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 
-export default function LandingPage() {
+export default function LandingPage({
+  redirectAuthenticated = true,
+}: {
+  redirectAuthenticated?: boolean;
+}) {
   const { isAuthenticated } = useAuth();
   const [activeFeature, setActiveFeature] = useState(0);
   const [scrollY, setScrollY] = useState(0);
@@ -23,7 +27,7 @@ export default function LandingPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  if (isAuthenticated) {
+  if (isAuthenticated && redirectAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
