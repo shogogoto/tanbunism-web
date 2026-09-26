@@ -125,30 +125,29 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderQuizList() {
+function renderQuizList(initialEntry = "/quiz/list") {
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <QuizList />
     </MemoryRouter>,
   );
 }
 
-it("作成したQuizを確認して削除する", async () => {
+it("Resourceを開いて作成したQuizを確認して削除する", async () => {
   const user = userEvent.setup();
   renderQuizList();
 
   expect(await screen.findByText("代数学ノート")).toBeInTheDocument();
-  expect(screen.getByText("用語→単文 1")).toBeInTheDocument();
+  expect(screen.queryByText(quiz.statement)).not.toBeInTheDocument();
+  expect(searchRequests).toHaveLength(0);
+
+  await user.click(screen.getByRole("button", { name: /代数学ノート/ }));
+
+  expect(await screen.findByText("用語→単文 1")).toBeInTheDocument();
   expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
-  expect(screen.getByText("作成済みクイズ")).toBeInTheDocument();
+  expect(searchRequests.at(-1)).toContain("resource_id=resource-1");
+  await user.click(screen.getByText(quiz.statement));
   expect(screen.getByText("正解")).toBeInTheDocument();
-  await user.selectOptions(screen.getByLabelText("回答状態"), "true");
-  await user.click(screen.getByRole("checkbox", { name: "用語→単文" }));
-  await waitFor(() =>
-    expect(searchRequests.at(-1)).toMatch(
-      /answered=true.*quiz_types=term2sent|quiz_types=term2sent.*answered=true/,
-    ),
-  );
 
   await user.click(screen.getByRole("button", { name: "削除" }));
   expect(
@@ -157,9 +156,23 @@ it("作成したQuizを確認して削除する", async () => {
   await user.click(screen.getByRole("button", { name: "削除する" }));
 
   expect(
-    await screen.findByText("条件に合う作成済みクイズはありません。"),
+    await screen.findByText("このResourceから作成したクイズはありません。"),
   ).toBeInTheDocument();
   expect(screen.queryByText(quiz.statement)).not.toBeInTheDocument();
+});
+
+it("Resourceを指定した画面ではクイズを絞り込める", async () => {
+  const user = userEvent.setup();
+  renderQuizList("/quiz/list?resource=resource-1");
+
+  expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText("回答状態"), "true");
+  await user.click(screen.getByRole("checkbox", { name: "用語→単文" }));
+  await waitFor(() =>
+    expect(searchRequests.at(-1)).toMatch(
+      /answered=true.*quiz_types=term2sent|quiz_types=term2sent.*answered=true/,
+    ),
+  );
 });
 
 it("Resourceごとの学習指標を表示する", async () => {
@@ -167,16 +180,9 @@ it("Resourceごとの学習指標を表示する", async () => {
 
   expect(await screen.findAllByText("Coverage")).toHaveLength(2);
   expect(screen.getByText("未着手ノート")).toBeInTheDocument();
-  expect(
-    screen.getByText(
-      (_, element) =>
-        element?.tagName === "SPAN" &&
-        element.textContent === "最終作成: まだありません",
-    ),
-  ).toBeInTheDocument();
   expect(screen.getAllByText("Attempt")).toHaveLength(2);
   expect(screen.getAllByText("Accuracy")).toHaveLength(2);
-  expect(screen.getAllByText("50%")).toHaveLength(4);
-  expect(screen.getAllByText("100%")).toHaveLength(2);
-  expect(screen.getAllByText(/最終復習:/)[0]).toHaveTextContent("2026");
+  expect(screen.getAllByText("50%")).toHaveLength(2);
+  expect(screen.getAllByText("100%")).toHaveLength(1);
+  expect(screen.getByText("0問作成済み")).toBeInTheDocument();
 });

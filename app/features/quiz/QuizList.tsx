@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
@@ -21,6 +22,11 @@ import {
   CardTitle,
 } from "~/shared/components/ui/card";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/shared/components/ui/collapsible";
+import {
   type ManagedQuiz,
   type QuizResourceStatus,
   type ResourceLearningStatus,
@@ -39,7 +45,7 @@ type LoadState =
       resources: StudyResource[];
       createdByResource: Map<string, QuizResourceStatus>;
       learningByResource: Map<string, ResourceLearningStatus>;
-      quizzes: ManagedQuiz[];
+      quizzes?: ManagedQuiz[];
     }
   | { status: "error"; message: string };
 
@@ -187,77 +193,121 @@ function Percentage({ value }: { value: number }) {
   return <>{Math.round(value * 100)}%</>;
 }
 
-function LearningProgress({ status }: { status: ResourceLearningStatus }) {
+function CompactLearningProgress({
+  status,
+}: {
+  status: ResourceLearningStatus;
+}) {
   const attempts = Object.values(status.by_quiz_type).reduce(
     (total, learning) => total + learning.performance.attempts,
     0,
   );
-  const lastAttemptedAt = status.last_attempted_at
-    ? new Date(status.last_attempted_at as unknown as string).toLocaleString(
-        "ja-JP",
-      )
-    : "まだ復習していません";
 
   return (
-    <div className="space-y-3 border-t pt-3">
-      <p className="text-xs text-muted-foreground">
-        Coverage＝対象単文にクイズを用意した割合 ·
-        Attempt＝用意したクイズに回答した割合 · Accuracy＝回答の正答率
-      </p>
-      <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <div>
-          <div className="font-semibold">
-            <Percentage value={status.overall_coverage} />
-          </div>
-          <div className="text-muted-foreground">Coverage</div>
+    <div className="grid shrink-0 grid-cols-3 gap-3 text-right text-xs sm:gap-5">
+      <div title="対象単文にクイズを用意した割合">
+        <div className="font-semibold tabular-nums">
+          <Percentage value={status.overall_coverage} />
         </div>
-        <div>
-          <div className="font-semibold">
-            <Percentage value={status.overall_attempt_rate} />
-          </div>
-          <div className="text-muted-foreground">Attempt</div>
-        </div>
-        <div>
-          <div className="font-semibold">
-            {attempts === 0 ? (
-              "—"
-            ) : (
-              <Percentage value={status.overall_accuracy} />
-            )}
-          </div>
-          <div className="text-muted-foreground">Accuracy</div>
-        </div>
+        <div className="text-muted-foreground">Coverage</div>
       </div>
-      <div className="space-y-1 text-xs">
-        {Object.entries(status.by_quiz_type).map(([type, learning]) => (
-          <div key={type} className="grid grid-cols-[1fr_repeat(3,3rem)] gap-2">
-            <span>
-              {quizTypeLabels[type as keyof typeof quizTypeLabels] ?? type}
-            </span>
-            <span title="Coverage">
-              <Percentage value={learning.coverage.ratio} />
-            </span>
-            <span title="Attempt">
-              <Percentage value={learning.attempt_rate.ratio} />
-            </span>
-            <span title="Accuracy">
-              {learning.performance.attempts === 0 ? (
-                "—"
-              ) : (
-                <Percentage value={learning.performance.accuracy} />
-              )}
-            </span>
-          </div>
-        ))}
+      <div title="用意したクイズに回答した割合">
+        <div className="font-semibold tabular-nums">
+          <Percentage value={status.overall_attempt_rate} />
+        </div>
+        <div className="text-muted-foreground">Attempt</div>
       </div>
-      <p className="text-xs text-muted-foreground">
-        最終復習: {lastAttemptedAt}
-      </p>
+      <div title="回答の正答率">
+        <div className="font-semibold tabular-nums">
+          {attempts === 0 ? (
+            "—"
+          ) : (
+            <Percentage value={status.overall_accuracy} />
+          )}
+        </div>
+        <div className="text-muted-foreground">Accuracy</div>
+      </div>
     </div>
   );
 }
 
-function ResourceCard({
+function CompactQuiz({
+  managed,
+  onDelete,
+}: {
+  managed: ManagedQuiz;
+  onDelete: (quizId: string) => Promise<void>;
+}) {
+  const { quiz } = managed;
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    try {
+      await onDelete(quiz.quiz_id);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  return (
+    <details className="group border-t first:border-t-0">
+      <summary className="cursor-pointer list-none px-3 py-3 hover:bg-muted/40">
+        <div className="flex items-start gap-2">
+          <ChevronRight className="mt-0.5 size-4 shrink-0 transition-transform group-open:rotate-90" />
+          <div className="min-w-0 flex-1">
+            <p className="whitespace-pre-line text-sm leading-relaxed">
+              {quiz.statement}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {managed.attempts === 0
+                ? "未回答"
+                : `${managed.attempts}回答 · 正答率 ${Math.round(
+                    (managed.accuracy ?? 0) * 100,
+                  )}%`}
+            </p>
+          </div>
+        </div>
+      </summary>
+      <div className="space-y-2 bg-muted/20 px-4 pb-4 pt-2">
+        {Object.entries(quiz.options).map(([optionId, option]) => (
+          <div key={optionId} className="flex items-start gap-2 text-sm">
+            {quiz.correct.includes(optionId) && (
+              <Badge className="shrink-0">正解</Badge>
+            )}
+            <span>{option}</span>
+          </div>
+        ))}
+        <div className="flex items-center justify-between gap-3 pt-1 text-xs text-muted-foreground">
+          <time>{new Date(quiz.created).toLocaleString("ja-JP")}</time>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="ghost" size="sm">
+                削除
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>クイズを削除しますか？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  このクイズに対する回答履歴も削除されます。元の単文や知識関係は削除されません。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction disabled={isDeleting} onClick={handleDelete}>
+                  {isDeleting ? "削除中…" : "削除する"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function ResourceDisclosure({
   resource,
   status,
   learning,
@@ -266,49 +316,116 @@ function ResourceCard({
   status?: QuizResourceStatus;
   learning?: ResourceLearningStatus;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [quizzes, setQuizzes] = useState<ManagedQuiz[]>();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>();
+  const [quizCount, setQuizCount] = useState(status?.total_quizzes ?? 0);
   const counts = Object.entries(status?.quiz_counts ?? {});
 
+  async function handleOpenChange(open: boolean) {
+    setIsOpen(open);
+    if (!open || quizzes || quizCount === 0) return;
+    setIsLoading(true);
+    setError(undefined);
+    try {
+      const result = await searchCreatedQuizzes({
+        resource_id: resource.uid,
+        page: 1,
+        size: 100,
+      });
+      setQuizzes(result.data);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "クイズを取得できませんでした。",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleDelete(quizId: string) {
+    await deleteQuiz(quizId);
+    setQuizzes((current) =>
+      current?.filter(({ quiz }) => quiz.quiz_id !== quizId),
+    );
+    setQuizCount((current) => Math.max(0, current - 1));
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle className="text-lg">{resource.name}</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {status?.total_quizzes ?? 0}問作成済み
+    <Collapsible
+      open={isOpen}
+      onOpenChange={handleOpenChange}
+      className="rounded-md border bg-card"
+    >
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="group flex w-full items-center gap-3 p-3 text-left hover:bg-muted/40 sm:p-4"
+        >
+          <ChevronRight className="size-5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium">{resource.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {quizCount}問作成済み
             </p>
           </div>
-          <Button asChild size="sm">
-            <Link to={`?resource=${resource.uid}`}>クイズを見る</Link>
-          </Button>
+          {learning && <CompactLearningProgress status={learning} />}
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="border-t">
+          <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+            {counts.map(([type, count]) => (
+              <Badge key={type} variant="secondary">
+                {quizTypeLabels[type as keyof typeof quizTypeLabels] ?? type}{" "}
+                {count}
+              </Badge>
+            ))}
+            <div className="ml-auto flex gap-3 text-xs">
+              <Link
+                className="underline underline-offset-4"
+                to={`/resource/${resource.uid}`}
+              >
+                単文を見る
+              </Link>
+              <Link
+                className="underline underline-offset-4"
+                to={`?resource=${resource.uid}`}
+              >
+                絞り込む
+              </Link>
+            </div>
+          </div>
+          {isLoading && (
+            <p className="border-t p-4 text-sm text-muted-foreground">
+              クイズを読み込み中…
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="border-t p-4 text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          {!isLoading && !error && quizCount === 0 && (
+            <p className="border-t p-4 text-sm text-muted-foreground">
+              このResourceから作成したクイズはありません。
+            </p>
+          )}
+          {!isLoading &&
+            !error &&
+            quizzes?.map((managed) => (
+              <CompactQuiz
+                key={managed.quiz.quiz_id}
+                managed={managed}
+                onDelete={handleDelete}
+              />
+            ))}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          {counts.map(([type, count]) => (
-            <Badge key={type} variant="secondary">
-              {quizTypeLabels[type as keyof typeof quizTypeLabels] ?? type}{" "}
-              {count}
-            </Badge>
-          ))}
-        </div>
-        {learning && <LearningProgress status={learning} />}
-        <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground">
-          <span>
-            最終作成:{" "}
-            {status
-              ? new Date(status.last_created_at).toLocaleString("ja-JP")
-              : "まだありません"}
-          </span>
-          <Link
-            className="underline underline-offset-4"
-            to={`/resource/${resource.uid}`}
-          >
-            単文を見る
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -413,28 +530,30 @@ export default function QuizList() {
     Promise.all([
       listStudyResources(),
       listCreatedQuizResources(),
-      searchCreatedQuizzes({
-        resource_id: resourceId,
-        sentence_id: sentenceId,
-        quiz_types:
-          filters.quizTypes.length > 0 ? filters.quizTypes : undefined,
-        answered:
-          filters.answered === "" ? undefined : filters.answered === "true",
-        created_from: filters.createdFrom
-          ? `${filters.createdFrom}T00:00:00+09:00`
-          : undefined,
-        created_to: filters.createdTo
-          ? `${filters.createdTo}T23:59:59+09:00`
-          : undefined,
-        min_accuracy: filters.minAccuracy
-          ? Number(filters.minAccuracy) / 100
-          : undefined,
-        max_accuracy: filters.maxAccuracy
-          ? Number(filters.maxAccuracy) / 100
-          : undefined,
-        page: 1,
-        size: 100,
-      }).then(({ data }) => data),
+      resourceId
+        ? searchCreatedQuizzes({
+            resource_id: resourceId,
+            sentence_id: sentenceId,
+            quiz_types:
+              filters.quizTypes.length > 0 ? filters.quizTypes : undefined,
+            answered:
+              filters.answered === "" ? undefined : filters.answered === "true",
+            created_from: filters.createdFrom
+              ? `${filters.createdFrom}T00:00:00+09:00`
+              : undefined,
+            created_to: filters.createdTo
+              ? `${filters.createdTo}T23:59:59+09:00`
+              : undefined,
+            min_accuracy: filters.minAccuracy
+              ? Number(filters.minAccuracy) / 100
+              : undefined,
+            max_accuracy: filters.maxAccuracy
+              ? Number(filters.maxAccuracy) / 100
+              : undefined,
+            page: 1,
+            size: 100,
+          }).then(({ data }) => data)
+        : Promise.resolve(undefined),
     ])
       .then(async ([resources, createdStatuses, quizzes]) => {
         const learning = await Promise.all(
@@ -478,7 +597,7 @@ export default function QuizList() {
       current.status === "loaded"
         ? {
             ...current,
-            quizzes: current.quizzes.filter(
+            quizzes: current.quizzes?.filter(
               ({ quiz }) => quiz.quiz_id !== quizId,
             ),
           }
@@ -503,7 +622,7 @@ export default function QuizList() {
               ? sentenceId
                 ? "この単文から作成した問題・選択肢・正解を確認できます。"
                 : "このResourceから作成した問題・選択肢・正解を確認できます。"
-              : "Resourceごとの学習状況と、作成したクイズを確認します。"}
+              : "Resourceを開いて、学習状況と作成したクイズを確認します。"}
           </p>
         </div>
         <Button asChild variant="outline">
@@ -526,7 +645,7 @@ export default function QuizList() {
             </p>
           ) : (
             loadState.resources.map((resource) => (
-              <ResourceCard
+              <ResourceDisclosure
                 key={resource.uid}
                 resource={resource}
                 status={loadState.createdByResource.get(resource.uid)}
@@ -536,7 +655,7 @@ export default function QuizList() {
           )}
         </section>
       )}
-      {loadState.status === "loaded" && (
+      {loadState.status === "loaded" && resourceId && (
         <section className="space-y-3">
           {resourceId && (
             <Button asChild variant="ghost" size="sm">
@@ -547,14 +666,14 @@ export default function QuizList() {
             {resourceId ? "このResourceのクイズ" : "作成済みクイズ"}
           </h2>
           <QuizSearchFilters filters={filters} onChange={setFilters} />
-          {loadState.quizzes.length === 0 ? (
+          {loadState.quizzes?.length === 0 ? (
             <p className="border p-4 text-sm text-muted-foreground">
               {resourceId
                 ? "このResourceから作成したクイズはありません。"
                 : "条件に合う作成済みクイズはありません。"}
             </p>
           ) : (
-            loadState.quizzes.map((managed) => (
+            loadState.quizzes?.map((managed) => (
               <QuizCard
                 key={managed.quiz.quiz_id}
                 managed={managed}
