@@ -365,6 +365,39 @@ export type _KNElem = Sentency | Template;
 export type KNode = Term | _KNElem;
 
 /**
+ * ユーザーが積み上げた学習活動の総量.
+ */
+export interface LearningActivityCounts {
+  n_sentence?: number;
+  n_quiz_created?: number;
+  n_quiz_answered?: number;
+  n_quiz_correct?: number;
+}
+
+/**
+ * 活動種別ごとの経験値.
+ */
+export interface XpBreakdown {
+  knowledge: number;
+  quiz_creation: number;
+  quiz_answer: number;
+  correct_bonus: number;
+}
+
+/**
+ * 学習活動にゲーム規則を適用した現在の進捗.
+ */
+export interface LearningProgress {
+  activity: LearningActivityCounts;
+  xp: XpBreakdown;
+  total_xp: number;
+  level: number;
+  current_level_xp: number;
+  xp_for_next_level: number;
+  xp_to_next_level: number;
+}
+
+/**
  * 回答状況を含む管理対象Quiz.
  */
 export interface ManagedQuiz {

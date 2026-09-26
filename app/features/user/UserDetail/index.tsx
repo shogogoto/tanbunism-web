@@ -15,7 +15,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/shared/components/ui/collapsible";
-import type { NameSpace } from "~/shared/generated/fastAPI.schemas";
+import { Progress } from "~/shared/components/ui/progress";
+import type {
+  LearningProgress,
+  NameSpace,
+} from "~/shared/generated/fastAPI.schemas";
 import type { getArchievementHistoryUserArchievementHistoryPostResponse } from "~/shared/generated/public-user/public-user";
 import { cn } from "~/shared/lib/utils";
 import AchieveHistoryChart from "../AchieveHistory";
@@ -29,6 +33,7 @@ type Props = UserProps &
       | getArchievementHistoryUserArchievementHistoryPostResponse
       | undefined;
     namespace: NameSpace;
+    learningProgress: LearningProgress;
     isLoading: boolean;
   };
 
@@ -37,6 +42,7 @@ export default function UserDetail({
   children,
   achievementsData,
   namespace,
+  learningProgress,
   isLoading,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
@@ -49,6 +55,8 @@ export default function UserDetail({
           <UserProfile user={user} />
         </CardContent>
       </Card>
+
+      <LearningLevel progress={learningProgress} />
 
       <LearningSummary namespace={namespace} />
 
@@ -105,6 +113,47 @@ export default function UserDetail({
         </Collapsible>
       </Card>
     </main>
+  );
+}
+
+export function LearningLevel({ progress }: { progress: LearningProgress }) {
+  const percentage =
+    progress.xp_for_next_level === 0
+      ? 100
+      : Math.min(
+          100,
+          Math.max(
+            0,
+            (progress.current_level_xp / progress.xp_for_next_level) * 100,
+          ),
+        );
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <div>
+            <CardTitle>学習レベル</CardTitle>
+            <CardDescription>クイズと知識の積み重ね</CardDescription>
+          </div>
+          <p className="text-2xl font-semibold tabular-nums">
+            Lv. {progress.level}
+          </p>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Progress value={percentage} aria-label={`レベル進捗 ${percentage}%`} />
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span className="tabular-nums">
+            {progress.total_xp.toLocaleString("ja-JP")} XP
+          </span>
+          <span className="tabular-nums">
+            次のレベルまで {progress.xp_to_next_level.toLocaleString("ja-JP")}{" "}
+            XP
+          </span>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
