@@ -123,6 +123,23 @@ export const getSearchByTextTanbunGetResponseMock = (
         uid: faker.string.uuid(),
         created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
       },
+      folders: faker.helpers.arrayElement([
+        Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => ({
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          element_id_property: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            undefined,
+          ]),
+          uid: faker.string.uuid(),
+        })),
+        undefined,
+      ]),
       resource: {
         name: faker.string.alpha({ length: { min: 10, max: 20 } }),
         element_id_property: faker.helpers.arrayElement([

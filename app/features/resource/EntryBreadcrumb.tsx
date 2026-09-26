@@ -9,31 +9,39 @@ import {
   BreadcrumbSeparator,
 } from "~/shared/components/ui/breadcrumb";
 import type {
+  MFolder,
   MResource,
   UidStr,
   UserReadPublic,
 } from "~/shared/generated/fastAPI.schemas";
 
+type FolderCrumb = string | UidStr | MFolder;
+
 type Props = {
   user: UserReadPublic;
-  folders?: Array<string | UidStr> | null;
-  resource: MResource;
+  folders?: FolderCrumb[] | null;
+  resource?: MResource;
   currentLabel?: string;
   resourceHref?: string;
 };
 
-function folderName(folder: string | UidStr) {
-  return typeof folder === "string" ? folder : folder.val;
+function folderInfo(folder: FolderCrumb) {
+  if (typeof folder === "string") return { name: folder };
+  return {
+    name: "name" in folder ? folder.name : folder.val,
+    uid: folder.uid,
+  };
 }
 
-function breadcrumbFolders(folders: Array<string | UidStr>) {
-  return folders.reduce<Array<{ key: string; name: string }>>(
+function breadcrumbFolders(folders: FolderCrumb[]) {
+  return folders.reduce<Array<{ key: string; name: string; uid?: string }>>(
     (items, folder) => {
-      const name = folderName(folder);
+      const { name, uid } = folderInfo(folder);
       const parentKey = items.at(-1)?.key ?? "";
       items.push({
-        key: typeof folder === "string" ? `${parentKey}/${name}` : folder.uid,
+        key: uid ?? `${parentKey}/${name}`,
         name,
+        uid,
       });
       return items;
     },
@@ -49,6 +57,7 @@ export default function EntryBreadcrumb({
   resourceHref,
 }: Props) {
   const username = user.username || user.uid;
+  const folderItems = breadcrumbFolders(folders ?? []);
 
   return (
     <Breadcrumb className="overflow-x-auto pb-2" aria-label="保存場所">
@@ -66,42 +75,67 @@ export default function EntryBreadcrumb({
             </Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
-        {breadcrumbFolders(folders ?? []).map(({ key, name }) => {
+        {folderItems.map(({ key, name, uid }, index) => {
+          const isCurrent =
+            !resource && !currentLabel && index === folderItems.length - 1;
           return (
             <Fragment key={key}>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <span className="max-w-40 truncate" title={name}>
-                  {name}
-                </span>
+                {isCurrent ? (
+                  <BreadcrumbPage className="max-w-40 truncate" title={name}>
+                    {name}
+                  </BreadcrumbPage>
+                ) : uid ? (
+                  <BreadcrumbLink
+                    asChild
+                    className="!text-muted-foreground !no-underline"
+                  >
+                    <Link
+                      to={`/entry/${uid}`}
+                      className="block max-w-40 truncate"
+                      title={name}
+                    >
+                      {name}
+                    </Link>
+                  </BreadcrumbLink>
+                ) : (
+                  <span className="max-w-40 truncate" title={name}>
+                    {name}
+                  </span>
+                )}
               </BreadcrumbItem>
             </Fragment>
           );
         })}
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          {currentLabel ? (
-            <BreadcrumbLink
-              asChild
-              className="!text-muted-foreground !no-underline"
-            >
-              <Link
-                to={resourceHref ?? `/resource/${resource.uid}`}
-                className="block max-w-56 truncate"
-                title={resource.name}
-              >
-                {resource.name}
-              </Link>
-            </BreadcrumbLink>
-          ) : (
-            <BreadcrumbPage
-              className="block max-w-56 truncate"
-              title={resource.name}
-            >
-              {resource.name}
-            </BreadcrumbPage>
-          )}
-        </BreadcrumbItem>
+        {resource && (
+          <>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              {currentLabel ? (
+                <BreadcrumbLink
+                  asChild
+                  className="!text-muted-foreground !no-underline"
+                >
+                  <Link
+                    to={resourceHref ?? `/resource/${resource.uid}`}
+                    className="block max-w-56 truncate"
+                    title={resource.name}
+                  >
+                    {resource.name}
+                  </Link>
+                </BreadcrumbLink>
+              ) : (
+                <BreadcrumbPage
+                  className="block max-w-56 truncate"
+                  title={resource.name}
+                >
+                  {resource.name}
+                </BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+          </>
+        )}
         {currentLabel && (
           <>
             <BreadcrumbSeparator />

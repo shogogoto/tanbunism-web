@@ -11,10 +11,12 @@ import useSWRMutation from "swr/mutation";
 import type { SWRMutationConfiguration } from "swr/mutation";
 
 import type {
+  AnswerHistoryResult,
   AnswerParam,
   Answers,
   CreateQuizParam,
   HTTPValidationError,
+  ListAnswerHistoryApiQuizAnswersGetParams,
   ListCreatedQuizzesQuizCreatedGetParams,
   ListQuizQuizGetParams,
   ManagedQuizResult,
@@ -967,6 +969,119 @@ export const useListAnswerQuizAnswerQuizIdGet = <
     swrOptions?.swrKey ??
     (() => (isEnabled ? getListAnswerQuizAnswerQuizIdGetKey(quizId) : null));
   const swrFn = () => listAnswerQuizAnswerQuizIdGet(quizId, fetchOptions);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(
+    swrKey,
+    swrFn,
+    swrOptions,
+  );
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+export type listAnswerHistoryApiQuizAnswersGetResponse200 = {
+  data: AnswerHistoryResult;
+  status: 200;
+};
+
+export type listAnswerHistoryApiQuizAnswersGetResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listAnswerHistoryApiQuizAnswersGetResponseSuccess =
+  listAnswerHistoryApiQuizAnswersGetResponse200 & {
+    headers: Headers;
+  };
+export type listAnswerHistoryApiQuizAnswersGetResponseError =
+  listAnswerHistoryApiQuizAnswersGetResponse422 & {
+    headers: Headers;
+  };
+
+export type listAnswerHistoryApiQuizAnswersGetResponse =
+  | listAnswerHistoryApiQuizAnswersGetResponseSuccess
+  | listAnswerHistoryApiQuizAnswersGetResponseError;
+
+export const getListAnswerHistoryApiQuizAnswersGetUrl = (
+  params?: ListAnswerHistoryApiQuizAnswersGetParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `https://knowde.onrender.com/quiz/answers?${stringifiedParams}`
+    : "https://knowde.onrender.com/quiz/answers";
+};
+
+/**
+ * 認証ユーザー自身の回答履歴を新しい順に取得.
+ * @summary List Answer History Api
+ */
+export const listAnswerHistoryApiQuizAnswersGet = async (
+  params?: ListAnswerHistoryApiQuizAnswersGetParams,
+  options?: RequestInit,
+): Promise<listAnswerHistoryApiQuizAnswersGetResponse> => {
+  const res = await fetch(getListAnswerHistoryApiQuizAnswersGetUrl(params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listAnswerHistoryApiQuizAnswersGetResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as listAnswerHistoryApiQuizAnswersGetResponse;
+};
+
+export const getListAnswerHistoryApiQuizAnswersGetKey = (
+  params?: ListAnswerHistoryApiQuizAnswersGetParams,
+) =>
+  [
+    "https://knowde.onrender.com/quiz/answers",
+    ...(params ? [params] : []),
+  ] as const;
+
+export type ListAnswerHistoryApiQuizAnswersGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAnswerHistoryApiQuizAnswersGet>>
+>;
+
+/**
+ * @summary List Answer History Api
+ */
+export const useListAnswerHistoryApiQuizAnswersGet = <
+  TError = Promise<HTTPValidationError>,
+>(
+  params?: ListAnswerHistoryApiQuizAnswersGetParams,
+  options?: {
+    swr?: SWRConfiguration<
+      Awaited<ReturnType<typeof listAnswerHistoryApiQuizAnswersGet>>,
+      TError
+    > & { swrKey?: Key; enabled?: boolean };
+    fetch?: RequestInit;
+  },
+) => {
+  const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey =
+    swrOptions?.swrKey ??
+    (() =>
+      isEnabled ? getListAnswerHistoryApiQuizAnswersGetKey(params) : null);
+  const swrFn = () => listAnswerHistoryApiQuizAnswersGet(params, fetchOptions);
 
   const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(
     swrKey,

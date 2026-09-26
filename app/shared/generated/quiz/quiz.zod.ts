@@ -13,6 +13,8 @@ import * as zod from "zod";
  * @summary Create Quiz Api
  */
 export const createQuizApiQuizPostBodyNOptionDefault = 4;
+export const createQuizApiQuizPostBodyNOptionMax = 6;
+
 export const createQuizApiQuizPostBodyAllowMultipleAnwserDefault = false;
 export const createQuizApiQuizPostBodyAllowNoCorrectOptionDefault = false;
 
@@ -36,6 +38,8 @@ export const CreateQuizApiQuizPostBody = zod
     n_option: zod
       .number()
       .int()
+      .min(1)
+      .max(createQuizApiQuizPostBodyNOptionMax)
       .default(createQuizApiQuizPostBodyNOptionDefault),
     correct_sent_uids: zod.array(zod.string()).optional(),
     allow_multiple_anwser: zod
@@ -540,6 +544,77 @@ export const ListAnswerQuizAnswerQuizIdGetResponse = zod.array(
 );
 
 /**
+ * 認証ユーザー自身の回答履歴を新しい順に取得.
+ * @summary List Answer History Api
+ */
+export const listAnswerHistoryApiQuizAnswersGetQueryPageDefault = 1;
+export const listAnswerHistoryApiQuizAnswersGetQueryPageExclusiveMin = 0;
+
+export const listAnswerHistoryApiQuizAnswersGetQuerySizeDefault = 20;
+export const listAnswerHistoryApiQuizAnswersGetQuerySizeExclusiveMin = 0;
+export const listAnswerHistoryApiQuizAnswersGetQuerySizeMax = 100;
+
+export const ListAnswerHistoryApiQuizAnswersGetQueryParams = zod.object({
+  is_correct: zod.union([zod.boolean(), zod.null()]).optional(),
+  quiz_type: zod
+    .union([
+      zod
+        .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+        .describe("問題文の種類."),
+      zod.null(),
+    ])
+    .optional(),
+  resource_id: zod.union([zod.string().uuid(), zod.null()]).optional(),
+  page: zod
+    .number()
+    .int()
+    .gt(listAnswerHistoryApiQuizAnswersGetQueryPageExclusiveMin)
+    .default(listAnswerHistoryApiQuizAnswersGetQueryPageDefault),
+  size: zod
+    .number()
+    .int()
+    .gt(listAnswerHistoryApiQuizAnswersGetQuerySizeExclusiveMin)
+    .max(listAnswerHistoryApiQuizAnswersGetQuerySizeMax)
+    .default(listAnswerHistoryApiQuizAnswersGetQuerySizeDefault),
+});
+
+export const ListAnswerHistoryApiQuizAnswersGetResponse = zod
+  .object({
+    data: zod.array(
+      zod
+        .object({
+          answer: zod
+            .object({
+              answer_uid: zod.string().uuid(),
+              quiz_uid: zod.string().uuid(),
+              selected: zod.array(zod.string()),
+              who: zod.string().uuid(),
+              is_correct: zod.boolean(),
+              created: zod.string().datetime({ offset: true }),
+            })
+            .describe("誰がいつ何を選択して回答したか、とその正誤."),
+          quiz_type: zod
+            .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+            .describe("問題文の種類."),
+          resource_id: zod.string().uuid(),
+          quiz: zod
+            .object({
+              quiz_id: zod.string().uuid(),
+              statement: zod.string(),
+              options: zod.record(zod.string(), zod.string()),
+              correct: zod.array(zod.string()),
+              created: zod.string().datetime({ offset: true }),
+              no_correct_option: zod.boolean(),
+            })
+            .describe("「読める状態」の問題文と選択肢を備えたクイズ."),
+        })
+        .describe("回答履歴一覧の1件."),
+    ),
+    total: zod.number().int(),
+  })
+  .describe("ページングされた回答履歴.");
+
+/**
  * 所有resourceのクイズ学習進捗を取得.
  * @summary Get Learning Progress Api
  */
@@ -620,12 +695,20 @@ export const GetLearningProgressApiQuizLearningProgressResourceIdGetResponse =
  * @summary List Study Plans Api
  */
 
+export const listStudyPlansApiQuizStudyPlansGetResponseResourceIdsMax = 20;
+
 export const listStudyPlansApiQuizStudyPlansGetResponseNQuizMin = 0;
+export const listStudyPlansApiQuizStudyPlansGetResponseNQuizMax = 20;
+
+export const listStudyPlansApiQuizStudyPlansGetResponseNOptionMax = 6;
 
 export const ListStudyPlansApiQuizStudyPlansGetResponseItem = zod
   .object({
     name: zod.string().min(1),
-    resource_ids: zod.array(zod.string().uuid()).min(1),
+    resource_ids: zod
+      .array(zod.string().uuid())
+      .min(1)
+      .max(listStudyPlansApiQuizStudyPlansGetResponseResourceIdsMax),
     quiz_types: zod
       .array(
         zod
@@ -636,8 +719,13 @@ export const ListStudyPlansApiQuizStudyPlansGetResponseItem = zod
     n_quiz: zod
       .number()
       .int()
-      .min(listStudyPlansApiQuizStudyPlansGetResponseNQuizMin),
-    n_option: zod.number().int().min(1),
+      .min(listStudyPlansApiQuizStudyPlansGetResponseNQuizMin)
+      .max(listStudyPlansApiQuizStudyPlansGetResponseNQuizMax),
+    n_option: zod
+      .number()
+      .int()
+      .min(1)
+      .max(listStudyPlansApiQuizStudyPlansGetResponseNOptionMax),
     uid: zod.string().uuid(),
     created: zod.string().datetime({ offset: true }),
   })
@@ -651,12 +739,20 @@ export const ListStudyPlansApiQuizStudyPlansGetResponse = zod.array(
  * @summary Create Study Plan Api
  */
 
+export const createStudyPlanApiQuizStudyPlansPostBodyResourceIdsMax = 20;
+
 export const createStudyPlanApiQuizStudyPlansPostBodyNQuizMin = 0;
+export const createStudyPlanApiQuizStudyPlansPostBodyNQuizMax = 20;
+
+export const createStudyPlanApiQuizStudyPlansPostBodyNOptionMax = 6;
 
 export const CreateStudyPlanApiQuizStudyPlansPostBody = zod
   .object({
     name: zod.string().min(1),
-    resource_ids: zod.array(zod.string().uuid()).min(1),
+    resource_ids: zod
+      .array(zod.string().uuid())
+      .min(1)
+      .max(createStudyPlanApiQuizStudyPlansPostBodyResourceIdsMax),
     quiz_types: zod
       .array(
         zod
@@ -667,17 +763,30 @@ export const CreateStudyPlanApiQuizStudyPlansPostBody = zod
     n_quiz: zod
       .number()
       .int()
-      .min(createStudyPlanApiQuizStudyPlansPostBodyNQuizMin),
-    n_option: zod.number().int().min(1),
+      .min(createStudyPlanApiQuizStudyPlansPostBodyNQuizMin)
+      .max(createStudyPlanApiQuizStudyPlansPostBodyNQuizMax),
+    n_option: zod
+      .number()
+      .int()
+      .min(1)
+      .max(createStudyPlanApiQuizStudyPlansPostBodyNOptionMax),
   })
   .describe("StudyPlan作成時の設定.");
 
+export const createStudyPlanApiQuizStudyPlansPostResponseResourceIdsMax = 20;
+
 export const createStudyPlanApiQuizStudyPlansPostResponseNQuizMin = 0;
+export const createStudyPlanApiQuizStudyPlansPostResponseNQuizMax = 20;
+
+export const createStudyPlanApiQuizStudyPlansPostResponseNOptionMax = 6;
 
 export const CreateStudyPlanApiQuizStudyPlansPostResponse = zod
   .object({
     name: zod.string().min(1),
-    resource_ids: zod.array(zod.string().uuid()).min(1),
+    resource_ids: zod
+      .array(zod.string().uuid())
+      .min(1)
+      .max(createStudyPlanApiQuizStudyPlansPostResponseResourceIdsMax),
     quiz_types: zod
       .array(
         zod
@@ -688,8 +797,13 @@ export const CreateStudyPlanApiQuizStudyPlansPostResponse = zod
     n_quiz: zod
       .number()
       .int()
-      .min(createStudyPlanApiQuizStudyPlansPostResponseNQuizMin),
-    n_option: zod.number().int().min(1),
+      .min(createStudyPlanApiQuizStudyPlansPostResponseNQuizMin)
+      .max(createStudyPlanApiQuizStudyPlansPostResponseNQuizMax),
+    n_option: zod
+      .number()
+      .int()
+      .min(1)
+      .max(createStudyPlanApiQuizStudyPlansPostResponseNOptionMax),
     uid: zod.string().uuid(),
     created: zod.string().datetime({ offset: true }),
   })
@@ -703,12 +817,20 @@ export const GetStudyPlanApiQuizStudyPlansPlanIdGetParams = zod.object({
   plan_id: zod.string().uuid(),
 });
 
+export const getStudyPlanApiQuizStudyPlansPlanIdGetResponseResourceIdsMax = 20;
+
 export const getStudyPlanApiQuizStudyPlansPlanIdGetResponseNQuizMin = 0;
+export const getStudyPlanApiQuizStudyPlansPlanIdGetResponseNQuizMax = 20;
+
+export const getStudyPlanApiQuizStudyPlansPlanIdGetResponseNOptionMax = 6;
 
 export const GetStudyPlanApiQuizStudyPlansPlanIdGetResponse = zod
   .object({
     name: zod.string().min(1),
-    resource_ids: zod.array(zod.string().uuid()).min(1),
+    resource_ids: zod
+      .array(zod.string().uuid())
+      .min(1)
+      .max(getStudyPlanApiQuizStudyPlansPlanIdGetResponseResourceIdsMax),
     quiz_types: zod
       .array(
         zod
@@ -719,8 +841,13 @@ export const GetStudyPlanApiQuizStudyPlansPlanIdGetResponse = zod
     n_quiz: zod
       .number()
       .int()
-      .min(getStudyPlanApiQuizStudyPlansPlanIdGetResponseNQuizMin),
-    n_option: zod.number().int().min(1),
+      .min(getStudyPlanApiQuizStudyPlansPlanIdGetResponseNQuizMin)
+      .max(getStudyPlanApiQuizStudyPlansPlanIdGetResponseNQuizMax),
+    n_option: zod
+      .number()
+      .int()
+      .min(1)
+      .max(getStudyPlanApiQuizStudyPlansPlanIdGetResponseNOptionMax),
     uid: zod.string().uuid(),
     created: zod.string().datetime({ offset: true }),
   })
@@ -734,12 +861,20 @@ export const UpdateStudyPlanApiQuizStudyPlansPlanIdPutParams = zod.object({
   plan_id: zod.string().uuid(),
 });
 
+export const updateStudyPlanApiQuizStudyPlansPlanIdPutBodyResourceIdsMax = 20;
+
 export const updateStudyPlanApiQuizStudyPlansPlanIdPutBodyNQuizMin = 0;
+export const updateStudyPlanApiQuizStudyPlansPlanIdPutBodyNQuizMax = 20;
+
+export const updateStudyPlanApiQuizStudyPlansPlanIdPutBodyNOptionMax = 6;
 
 export const UpdateStudyPlanApiQuizStudyPlansPlanIdPutBody = zod
   .object({
     name: zod.string().min(1),
-    resource_ids: zod.array(zod.string().uuid()).min(1),
+    resource_ids: zod
+      .array(zod.string().uuid())
+      .min(1)
+      .max(updateStudyPlanApiQuizStudyPlansPlanIdPutBodyResourceIdsMax),
     quiz_types: zod
       .array(
         zod
@@ -750,17 +885,30 @@ export const UpdateStudyPlanApiQuizStudyPlansPlanIdPutBody = zod
     n_quiz: zod
       .number()
       .int()
-      .min(updateStudyPlanApiQuizStudyPlansPlanIdPutBodyNQuizMin),
-    n_option: zod.number().int().min(1),
+      .min(updateStudyPlanApiQuizStudyPlansPlanIdPutBodyNQuizMin)
+      .max(updateStudyPlanApiQuizStudyPlansPlanIdPutBodyNQuizMax),
+    n_option: zod
+      .number()
+      .int()
+      .min(1)
+      .max(updateStudyPlanApiQuizStudyPlansPlanIdPutBodyNOptionMax),
   })
   .describe("StudyPlan作成時の設定.");
 
+export const updateStudyPlanApiQuizStudyPlansPlanIdPutResponseResourceIdsMax = 20;
+
 export const updateStudyPlanApiQuizStudyPlansPlanIdPutResponseNQuizMin = 0;
+export const updateStudyPlanApiQuizStudyPlansPlanIdPutResponseNQuizMax = 20;
+
+export const updateStudyPlanApiQuizStudyPlansPlanIdPutResponseNOptionMax = 6;
 
 export const UpdateStudyPlanApiQuizStudyPlansPlanIdPutResponse = zod
   .object({
     name: zod.string().min(1),
-    resource_ids: zod.array(zod.string().uuid()).min(1),
+    resource_ids: zod
+      .array(zod.string().uuid())
+      .min(1)
+      .max(updateStudyPlanApiQuizStudyPlansPlanIdPutResponseResourceIdsMax),
     quiz_types: zod
       .array(
         zod
@@ -771,8 +919,13 @@ export const UpdateStudyPlanApiQuizStudyPlansPlanIdPutResponse = zod
     n_quiz: zod
       .number()
       .int()
-      .min(updateStudyPlanApiQuizStudyPlansPlanIdPutResponseNQuizMin),
-    n_option: zod.number().int().min(1),
+      .min(updateStudyPlanApiQuizStudyPlansPlanIdPutResponseNQuizMin)
+      .max(updateStudyPlanApiQuizStudyPlansPlanIdPutResponseNQuizMax),
+    n_option: zod
+      .number()
+      .int()
+      .min(1)
+      .max(updateStudyPlanApiQuizStudyPlansPlanIdPutResponseNOptionMax),
     uid: zod.string().uuid(),
     created: zod.string().datetime({ offset: true }),
   })

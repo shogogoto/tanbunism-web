@@ -4,17 +4,18 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
+import type { EntryDetailStats } from "./entryDetailStats";
 import type { MFolder } from "./mFolder";
 import type { MResource } from "./mResource";
-import type { ResourceStats } from "./resourceStats";
 import type { UserReadPublic } from "./userReadPublic";
 
 /**
- * リソースの所有者や統計を含む情報.
+ * Entryと、その直下を表示するための情報.
  */
-export interface ResourceInfo {
+export interface EntryDetail {
   user: UserReadPublic;
-  folders?: MFolder[];
-  resource: MResource;
-  resource_stats: ResourceStats;
+  ancestors?: MFolder[];
+  entry: MFolder;
+  children?: (MFolder | MResource)[];
+  stats?: EntryDetailStats;
 }

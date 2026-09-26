@@ -87,7 +87,7 @@ export default function ResourceDetail({ id }: Props) {
           <div className="markdown-body p-4 sm:p-6">
             <EntryBreadcrumb
               user={user}
-              folders={resource.path}
+              folders={resource_info.folders ?? resource.path}
               resource={resource}
             />
             <Presenter id={resource.uid} />

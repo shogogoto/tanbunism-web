@@ -211,6 +211,19 @@ export const SearchByTextTanbunGetResponse = zod
               created: zod.string().datetime({ offset: true }),
             })
             .describe("公開ユーザー情報."),
+          folders: zod
+            .array(
+              zod
+                .object({
+                  name: zod.string(),
+                  element_id_property: zod
+                    .union([zod.string(), zod.null()])
+                    .optional(),
+                  uid: zod.string().uuid(),
+                })
+                .describe("LFolderのgraph用Mapper."),
+            )
+            .optional(),
           resource: zod
             .object({
               name: zod.string(),

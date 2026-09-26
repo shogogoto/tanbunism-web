@@ -16,6 +16,7 @@ import {
   QuizType,
 } from "../fastAPI.schemas";
 import type {
+  AnswerHistoryResult,
   Answers,
   ManagedQuizResult,
   QuizChain,
@@ -371,6 +372,46 @@ export const getListAnswerQuizAnswerQuizIdGetResponseMock = (): Answers =>
     created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
   }));
 
+export const getListAnswerHistoryApiQuizAnswersGetResponseMock = (
+  overrideResponse: Partial<Extract<AnswerHistoryResult, object>> = {},
+): AnswerHistoryResult => ({
+  data: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    answer: {
+      answer_uid: faker.string.uuid(),
+      quiz_uid: faker.string.uuid(),
+      selected: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+      who: faker.string.uuid(),
+      is_correct: faker.datatype.boolean(),
+      created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
+    },
+    quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
+    resource_id: faker.string.uuid(),
+    quiz: {
+      quiz_id: faker.string.uuid(),
+      statement: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      options: {
+        [faker.string.alphanumeric(5)]: faker.string.alpha({
+          length: { min: 10, max: 20 },
+        }),
+      },
+      correct: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+      created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
+      no_correct_option: faker.datatype.boolean(),
+    },
+  })),
+  total: faker.number.int(),
+  ...overrideResponse,
+});
+
 export const getGetLearningProgressApiQuizLearningProgressResourceIdGetResponseMock =
   (
     overrideResponse: Partial<Extract<ResourceLearningStatus, object>> = {},
@@ -427,12 +468,12 @@ export const getListStudyPlansApiQuizStudyPlansGetResponseMock =
     ).map(() => ({
       name: faker.string.alpha({ length: { min: 1, max: 20 } }),
       resource_ids: Array.from(
-        { length: faker.number.int({ min: 1, max: 10 }) },
+        { length: faker.number.int({ min: 1, max: 20 }) },
         (_, i) => i + 1,
       ).map(() => faker.string.uuid()),
       quiz_types: faker.helpers.arrayElements(Object.values(QuizType)),
-      n_quiz: faker.number.int({ min: 0 }),
-      n_option: faker.number.int({ min: 1 }),
+      n_quiz: faker.number.int({ min: 0, max: 20 }),
+      n_option: faker.number.int({ min: 1, max: 6 }),
       uid: faker.string.uuid(),
       created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
     }));
@@ -442,12 +483,12 @@ export const getCreateStudyPlanApiQuizStudyPlansPostResponseMock = (
 ): StudyPlan => ({
   name: faker.string.alpha({ length: { min: 1, max: 20 } }),
   resource_ids: Array.from(
-    { length: faker.number.int({ min: 1, max: 10 }) },
+    { length: faker.number.int({ min: 1, max: 20 }) },
     (_, i) => i + 1,
   ).map(() => faker.string.uuid()),
   quiz_types: faker.helpers.arrayElements(Object.values(QuizType)),
-  n_quiz: faker.number.int({ min: 0 }),
-  n_option: faker.number.int({ min: 1 }),
+  n_quiz: faker.number.int({ min: 0, max: 20 }),
+  n_option: faker.number.int({ min: 1, max: 6 }),
   uid: faker.string.uuid(),
   created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
   ...overrideResponse,
@@ -458,12 +499,12 @@ export const getGetStudyPlanApiQuizStudyPlansPlanIdGetResponseMock = (
 ): StudyPlan => ({
   name: faker.string.alpha({ length: { min: 1, max: 20 } }),
   resource_ids: Array.from(
-    { length: faker.number.int({ min: 1, max: 10 }) },
+    { length: faker.number.int({ min: 1, max: 20 }) },
     (_, i) => i + 1,
   ).map(() => faker.string.uuid()),
   quiz_types: faker.helpers.arrayElements(Object.values(QuizType)),
-  n_quiz: faker.number.int({ min: 0 }),
-  n_option: faker.number.int({ min: 1 }),
+  n_quiz: faker.number.int({ min: 0, max: 20 }),
+  n_option: faker.number.int({ min: 1, max: 6 }),
   uid: faker.string.uuid(),
   created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
   ...overrideResponse,
@@ -474,12 +515,12 @@ export const getUpdateStudyPlanApiQuizStudyPlansPlanIdPutResponseMock = (
 ): StudyPlan => ({
   name: faker.string.alpha({ length: { min: 1, max: 20 } }),
   resource_ids: Array.from(
-    { length: faker.number.int({ min: 1, max: 10 }) },
+    { length: faker.number.int({ min: 1, max: 20 }) },
     (_, i) => i + 1,
   ).map(() => faker.string.uuid()),
   quiz_types: faker.helpers.arrayElements(Object.values(QuizType)),
-  n_quiz: faker.number.int({ min: 0 }),
-  n_option: faker.number.int({ min: 1 }),
+  n_quiz: faker.number.int({ min: 0, max: 20 }),
+  n_option: faker.number.int({ min: 1, max: 6 }),
   uid: faker.string.uuid(),
   created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
   ...overrideResponse,
@@ -1003,6 +1044,32 @@ export const getListAnswerQuizAnswerQuizIdGetMockHandler = (
   );
 };
 
+export const getListAnswerHistoryApiQuizAnswersGetMockHandler = (
+  overrideResponse?:
+    | AnswerHistoryResult
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<AnswerHistoryResult> | AnswerHistoryResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/quiz/answers",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      await delay(200);
+
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListAnswerHistoryApiQuizAnswersGetResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetLearningProgressApiQuizLearningProgressResourceIdGetMockHandler =
   (
     overrideResponse?:
@@ -1247,6 +1314,7 @@ export const getQuizMock = () => [
   getDeleteQuizApiQuizQuizIdDeleteMockHandler(),
   getAnswerQuizApiQuizAnswerQuizIdPostMockHandler(),
   getListAnswerQuizAnswerQuizIdGetMockHandler(),
+  getListAnswerHistoryApiQuizAnswersGetMockHandler(),
   getGetLearningProgressApiQuizLearningProgressResourceIdGetMockHandler(),
   getListStudyPlansApiQuizStudyPlansGetMockHandler(),
   getCreateStudyPlanApiQuizStudyPlansPostMockHandler(),

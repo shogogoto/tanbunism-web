@@ -13,6 +13,7 @@ import type { SWRMutationConfiguration } from "swr/mutation";
 import type {
   BodyPostFilesResourcePost,
   BodyPostTextResourceTextPost,
+  EntryDetail,
   HTTPValidationError,
   NameSpace,
   PostTextResourceTextPost200,
@@ -485,6 +486,100 @@ export const useGetResourceDetailResourceResourceIdGet = <
         : null);
   const swrFn = () =>
     getResourceDetailResourceResourceIdGet(resourceId, fetchOptions);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(
+    swrKey,
+    swrFn,
+    swrOptions,
+  );
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+export type getEntryDetailEntryEntryIdGetResponse200 = {
+  data: EntryDetail;
+  status: 200;
+};
+
+export type getEntryDetailEntryEntryIdGetResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getEntryDetailEntryEntryIdGetResponseSuccess =
+  getEntryDetailEntryEntryIdGetResponse200 & {
+    headers: Headers;
+  };
+export type getEntryDetailEntryEntryIdGetResponseError =
+  getEntryDetailEntryEntryIdGetResponse422 & {
+    headers: Headers;
+  };
+
+export type getEntryDetailEntryEntryIdGetResponse =
+  | getEntryDetailEntryEntryIdGetResponseSuccess
+  | getEntryDetailEntryEntryIdGetResponseError;
+
+export const getGetEntryDetailEntryEntryIdGetUrl = (entryId: string) => {
+  return `https://knowde.onrender.com/entry/${entryId}`;
+};
+
+/**
+ * Entryの親階層と直下のEntryを取得.
+ * @summary Get Entry Detail
+ */
+export const getEntryDetailEntryEntryIdGet = async (
+  entryId: string,
+  options?: RequestInit,
+): Promise<getEntryDetailEntryEntryIdGetResponse> => {
+  const res = await fetch(getGetEntryDetailEntryEntryIdGetUrl(entryId), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getEntryDetailEntryEntryIdGetResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as getEntryDetailEntryEntryIdGetResponse;
+};
+
+export const getGetEntryDetailEntryEntryIdGetKey = (entryId: string) =>
+  [`https://knowde.onrender.com/entry/${entryId}`] as const;
+
+export type GetEntryDetailEntryEntryIdGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEntryDetailEntryEntryIdGet>>
+>;
+
+/**
+ * @summary Get Entry Detail
+ */
+export const useGetEntryDetailEntryEntryIdGet = <
+  TError = Promise<HTTPValidationError>,
+>(
+  entryId: string,
+  options?: {
+    swr?: SWRConfiguration<
+      Awaited<ReturnType<typeof getEntryDetailEntryEntryIdGet>>,
+      TError
+    > & { swrKey?: Key; enabled?: boolean };
+    fetch?: RequestInit;
+  },
+) => {
+  const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+  const isEnabled =
+    swrOptions?.enabled !== false && entryId !== null && entryId !== undefined;
+  const swrKey =
+    swrOptions?.swrKey ??
+    (() => (isEnabled ? getGetEntryDetailEntryEntryIdGetKey(entryId) : null));
+  const swrFn = () => getEntryDetailEntryEntryIdGet(entryId, fetchOptions);
 
   const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(
     swrKey,

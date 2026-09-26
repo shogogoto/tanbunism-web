@@ -73,6 +73,50 @@ export interface Answer {
 }
 
 /**
+ * 問題文の種類.
+ */
+export type QuizType = (typeof QuizType)[keyof typeof QuizType];
+
+export const QuizType = {
+  sent2term: "sent2term",
+  term2sent: "term2sent",
+  pair2rel: "pair2rel",
+  rel2pair: "rel2pair",
+} as const;
+
+export type ReadableQuizOptions = { [key: string]: string };
+
+/**
+ * 「読める状態」の問題文と選択肢を備えたクイズ.
+ */
+export interface ReadableQuiz {
+  quiz_id: string;
+  statement: string;
+  options: ReadableQuizOptions;
+  correct: string[];
+  created: Neo4jDateTime;
+  no_correct_option: boolean;
+}
+
+/**
+ * 回答履歴一覧の1件.
+ */
+export interface AnswerHistoryItem {
+  answer: Answer;
+  quiz_type: QuizType;
+  resource_id: string;
+  quiz: ReadableQuiz;
+}
+
+/**
+ * ページングされた回答履歴.
+ */
+export interface AnswerHistoryResult {
+  data: AnswerHistoryItem[];
+  total: number;
+}
+
+/**
  * 回答パラメータ.
  */
 export interface AnswerParam {
@@ -149,24 +193,16 @@ export const CandidateType = {
 } as const;
 
 /**
- * 問題文の種類.
- */
-export type QuizType = (typeof QuizType)[keyof typeof QuizType];
-
-export const QuizType = {
-  sent2term: "sent2term",
-  term2sent: "term2sent",
-  pair2rel: "pair2rel",
-  rel2pair: "rel2pair",
-} as const;
-
-/**
  * 指定単文からクイズ作成.
  */
 export interface CreateQuizParam {
   target_sent_uid: string;
   quiz_type: QuizType;
   cand_type: CandidateType;
+  /**
+   * @minimum 1
+   * @maximum 6
+   */
   n_option?: number;
   correct_sent_uids?: string[];
   allow_multiple_anwser?: boolean;
@@ -216,6 +252,77 @@ export interface Entry {
   uid: string;
 }
 
+/**
+ * 知識の量を示す指標 for API.
+ */
+export interface ResourceStats {
+  /** 辺の割合。高いほど、ノード同士が密に結合している */
+  density?: number | null;
+  /** 最大離心距離。ネットワーク内の最も遠いノード間の距離。低いほど、ネットワークがコンパクトで情報の伝達効率が高い。非連結のグラフの場合は、最大の強連結成分に対して計算 */
+  diameter?: number | null;
+  /** 各ノードからの最大距離の最小値。低いほど、中心的なノードから全体にアクセスしやすい。非連結のグラフの場合は、最大の強連結成分に対して計算 */
+  radius?: number | null;
+  /** グラフがいくつの独立した「島」に分かれているか。低いほど、知識が分断されていない */
+  n_scc?: number | null;
+  /** 一つの知識が平均していくつの他の知識と関連付いているか。高いほど、知識が密に関連し合う */
+  average_degree: number;
+  /** テキストの絶対的なボリューム */
+  n_char: number;
+  /** 知識の基本的な構成単位の数 */
+  n_sentence: number;
+  /** 語彙の規模 */
+  n_term: number;
+  /** 知識間の関係性の数 */
+  n_edge: number;
+  n_isolation: number;
+  n_axiom: number;
+  /** 他のどこからも参照されていない用語数 */
+  n_unrefered: number;
+  /** 低いほど、知識が相互に接続されている */
+  readonly r_isolation: number;
+  /** 低いほど、少数の原理から多くの知識が得られている */
+  readonly r_axiom: number;
+  /** 低いほど、定義された用語が無駄なく活用されている */
+  readonly r_unrefered: number;
+}
+
+export type EntryDetailStats = { [key: string]: ResourceStats };
+
+/**
+ * LFolderのgraph用Mapper.
+ */
+export interface MFolder {
+  name: string;
+  element_id_property?: string | null;
+  uid: string;
+}
+
+/**
+ * LResourceのOGM, リソースのメタ情報.
+ */
+export interface MResource {
+  name: string;
+  element_id_property?: string | null;
+  uid: string;
+  authors?: string[] | null;
+  published?: string | null;
+  urls?: string[] | null;
+  path?: string[] | null;
+  updated?: string | null;
+  txt_hash?: number | null;
+}
+
+/**
+ * Entryと、その直下を表示するための情報.
+ */
+export interface EntryDetail {
+  user: UserReadPublic;
+  ancestors?: MFolder[];
+  entry: MFolder;
+  children?: (MFolder | MResource)[];
+  stats?: EntryDetailStats;
+}
+
 export type ErrorModelDetail = string | { [key: string]: string };
 
 export interface ErrorModel {
@@ -258,35 +365,6 @@ export type _KNElem = Sentency | Template;
 export type KNode = Term | _KNElem;
 
 /**
- * LResourceのOGM, リソースのメタ情報.
- */
-export interface MResource {
-  name: string;
-  element_id_property?: string | null;
-  uid: string;
-  authors?: string[] | null;
-  published?: string | null;
-  urls?: string[] | null;
-  path?: string[] | null;
-  updated?: string | null;
-  txt_hash?: number | null;
-}
-
-export type ReadableQuizOptions = { [key: string]: string };
-
-/**
- * 「読める状態」の問題文と選択肢を備えたクイズ.
- */
-export interface ReadableQuiz {
-  quiz_id: string;
-  statement: string;
-  options: ReadableQuizOptions;
-  correct: string[];
-  created: Neo4jDateTime;
-  no_correct_option: boolean;
-}
-
-/**
  * 回答状況を含む管理対象Quiz.
  */
 export interface ManagedQuiz {
@@ -327,40 +405,6 @@ export interface MonthlyQuizAchievement {
 }
 
 export type NameSpaceRoots = { [key: string]: Entry };
-
-/**
- * 知識の量を示す指標 for API.
- */
-export interface ResourceStats {
-  /** 辺の割合。高いほど、ノード同士が密に結合している */
-  density?: number | null;
-  /** 最大離心距離。ネットワーク内の最も遠いノード間の距離。低いほど、ネットワークがコンパクトで情報の伝達効率が高い。非連結のグラフの場合は、最大の強連結成分に対して計算 */
-  diameter?: number | null;
-  /** 各ノードからの最大距離の最小値。低いほど、中心的なノードから全体にアクセスしやすい。非連結のグラフの場合は、最大の強連結成分に対して計算 */
-  radius?: number | null;
-  /** グラフがいくつの独立した「島」に分かれているか。低いほど、知識が分断されていない */
-  n_scc?: number | null;
-  /** 一つの知識が平均していくつの他の知識と関連付いているか。高いほど、知識が密に関連し合う */
-  average_degree: number;
-  /** テキストの絶対的なボリューム */
-  n_char: number;
-  /** 知識の基本的な構成単位の数 */
-  n_sentence: number;
-  /** 語彙の規模 */
-  n_term: number;
-  /** 知識間の関係性の数 */
-  n_edge: number;
-  n_isolation: number;
-  n_axiom: number;
-  /** 他のどこからも参照されていない用語数 */
-  n_unrefered: number;
-  /** 低いほど、知識が相互に接続されている */
-  readonly r_isolation: number;
-  /** 低いほど、少数の原理から多くの知識が得られている */
-  readonly r_axiom: number;
-  /** 低いほど、定義された用語が無駄なく活用されている */
-  readonly r_unrefered: number;
-}
 
 export type NameSpaceStats = { [key: string]: ResourceStats };
 
@@ -614,6 +658,7 @@ export type ResourceDetailTerms = { [key: string]: Term };
  */
 export interface ResourceInfo {
   user: UserReadPublic;
+  folders?: MFolder[];
   resource: MResource;
   resource_stats: ResourceStats;
 }
@@ -715,13 +760,22 @@ export interface SentenceQuizStatus {
 export interface StudyPlan {
   /** @minLength 1 */
   name: string;
-  /** @minItems 1 */
+  /**
+   * @minItems 1
+   * @maxItems 20
+   */
   resource_ids: string[];
   /** @minItems 1 */
   quiz_types: QuizType[];
-  /** @minimum 0 */
+  /**
+   * @minimum 0
+   * @maximum 20
+   */
   n_quiz: number;
-  /** @minimum 1 */
+  /**
+   * @minimum 1
+   * @maximum 6
+   */
   n_option: number;
   uid: string;
   created: string;
@@ -733,13 +787,22 @@ export interface StudyPlan {
 export interface StudyPlanDraft {
   /** @minLength 1 */
   name: string;
-  /** @minItems 1 */
+  /**
+   * @minItems 1
+   * @maxItems 20
+   */
   resource_ids: string[];
   /** @minItems 1 */
   quiz_types: QuizType[];
-  /** @minimum 0 */
+  /**
+   * @minimum 0
+   * @maximum 20
+   */
   n_quiz: number;
-  /** @minimum 1 */
+  /**
+   * @minimum 1
+   * @maximum 6
+   */
   n_option: number;
 }
 
@@ -1014,6 +1077,21 @@ export type SearchCreatedQuizzesApiQuizCreatedSearchGetParams = {
    */
   page?: number;
   /**
+   * @exclusiveMinimum 0
+   */
+  size?: number;
+};
+
+export type ListAnswerHistoryApiQuizAnswersGetParams = {
+  is_correct?: boolean | null;
+  quiz_type?: QuizType | null;
+  resource_id?: string | null;
+  /**
+   * @exclusiveMinimum 0
+   */
+  page?: number;
+  /**
+   * @maximum 100
    * @exclusiveMinimum 0
    */
   size?: number;

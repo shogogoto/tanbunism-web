@@ -5,15 +5,14 @@ import { resourceDetailFiture } from "./detail/fixture";
 
 it("ユーザーからEntryを経てResourceまでの保存場所を表示する", () => {
   const { user, resource } = resourceDetailFiture.resource_info;
-  const resourceWithPath = { ...resource, path: ["humanities", "philosophy"] };
+  const folders = [
+    { uid: "entry-1", name: "humanities" },
+    { uid: "entry-2", name: "philosophy" },
+  ];
 
   render(
     <MemoryRouter>
-      <EntryBreadcrumb
-        user={user}
-        folders={resourceWithPath.path}
-        resource={resourceWithPath}
-      />
+      <EntryBreadcrumb user={user} folders={folders} resource={resource} />
     </MemoryRouter>,
   );
 
@@ -24,6 +23,14 @@ it("ユーザーからEntryを経てResourceまでの保存場所を表示する
   expect(screen.getByRole("link", { name: "@GTO" })).toHaveAttribute(
     "href",
     "/user/GTO",
+  );
+  expect(screen.getByRole("link", { name: "humanities" })).toHaveAttribute(
+    "href",
+    "/entry/entry-1",
+  );
+  expect(screen.getByRole("link", { name: "philosophy" })).toHaveAttribute(
+    "href",
+    "/entry/entry-2",
   );
   expect(screen.getByText(resource.name)).toHaveAttribute(
     "aria-current",

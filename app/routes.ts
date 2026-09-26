@@ -29,6 +29,7 @@ export default [
     route("user/edit", "routes/user/edit.tsx"),
     route("user/:userId", "routes/user/detail.tsx"),
     route("resource/:id", "routes/resource/detail.tsx"),
+    route("entry/:id", "routes/entry/detail.tsx"),
     route("search", "routes/search.tsx"),
     route("search/resource", "routes/search-resource-redirect.ts"),
     route("search/user", "routes/search-user-redirect.ts"),

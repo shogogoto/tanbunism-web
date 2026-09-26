@@ -11,6 +11,7 @@ import type {
   BodyPostFilesResourcePost,
   BodyPostTextResourceTextPost,
   CreateQuizParam,
+  EntryDetail,
   HTTPValidationError,
   ListAnswerHistoryApiQuizAnswersGetParams,
   ListCreatedQuizzesQuizCreatedGetParams,
@@ -297,6 +298,58 @@ export const getResourceDetailResourceResourceIdGet = async (
     status: res.status,
     headers: res.headers,
   } as getResourceDetailResourceResourceIdGetResponse;
+};
+
+export type getEntryDetailEntryEntryIdGetResponse200 = {
+  data: EntryDetail;
+  status: 200;
+};
+
+export type getEntryDetailEntryEntryIdGetResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getEntryDetailEntryEntryIdGetResponseSuccess =
+  getEntryDetailEntryEntryIdGetResponse200 & {
+    headers: Headers;
+  };
+export type getEntryDetailEntryEntryIdGetResponseError =
+  getEntryDetailEntryEntryIdGetResponse422 & {
+    headers: Headers;
+  };
+
+export type getEntryDetailEntryEntryIdGetResponse =
+  | getEntryDetailEntryEntryIdGetResponseSuccess
+  | getEntryDetailEntryEntryIdGetResponseError;
+
+export const getGetEntryDetailEntryEntryIdGetUrl = (entryId: string) => {
+  return `https://knowde.onrender.com/entry/${entryId}`;
+};
+
+/**
+ * Entryの親階層と直下のEntryを取得.
+ * @summary Get Entry Detail
+ */
+export const getEntryDetailEntryEntryIdGet = async (
+  entryId: string,
+  options?: RequestInit,
+): Promise<getEntryDetailEntryEntryIdGetResponse> => {
+  const res = await fetch(getGetEntryDetailEntryEntryIdGetUrl(entryId), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getEntryDetailEntryEntryIdGetResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as getEntryDetailEntryEntryIdGetResponse;
 };
 
 export type deleteEntryApiEntryEntryIdDeleteResponse200 = {

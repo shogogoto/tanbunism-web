@@ -11,6 +11,7 @@ import type { RequestHandlerOptions } from "msw";
 
 import { EdgeType } from "../fastAPI.schemas";
 import type {
+  EntryDetail,
   NameSpace,
   PostTextResourceTextPost200,
   ResourceDetail,
@@ -175,6 +176,23 @@ export const getGetResourceDetailResourceResourceIdGetResponseMock = (
       uid: faker.string.uuid(),
       created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
     },
+    folders: faker.helpers.arrayElement([
+      Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        element_id_property: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          undefined,
+        ]),
+        uid: faker.string.uuid(),
+      })),
+      undefined,
+    ]),
     resource: {
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       element_id_property: faker.helpers.arrayElement([
@@ -325,6 +343,195 @@ export const getGetResourceDetailResourceResourceIdGetResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetEntryDetailEntryEntryIdGetResponseMock = (
+  overrideResponse: Partial<Extract<EntryDetail, object>> = {},
+): EntryDetail => ({
+  user: {
+    display_name: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 32 } }),
+        null,
+      ]),
+      undefined,
+    ]),
+    profile: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 160 } }),
+        null,
+      ]),
+      undefined,
+    ]),
+    avatar_url: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      undefined,
+    ]),
+    username: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^[a-zA-Z0-9_-]+$"),
+        null,
+      ]),
+      undefined,
+    ]),
+    uid: faker.string.uuid(),
+    created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
+  },
+  ancestors: faker.helpers.arrayElement([
+    Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      element_id_property: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        undefined,
+      ]),
+      uid: faker.string.uuid(),
+    })),
+    undefined,
+  ]),
+  entry: {
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    element_id_property: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      undefined,
+    ]),
+    uid: faker.string.uuid(),
+  },
+  children: faker.helpers.arrayElement([
+    Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() =>
+      faker.helpers.arrayElement([
+        {
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          element_id_property: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            undefined,
+          ]),
+          uid: faker.string.uuid(),
+        },
+        {
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          element_id_property: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            undefined,
+          ]),
+          uid: faker.string.uuid(),
+          authors: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+              Array.from(
+                { length: faker.number.int({ min: 1, max: 10 }) },
+                (_, i) => i + 1,
+              ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+              null,
+            ]),
+            undefined,
+          ]),
+          published: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+              faker.date.past().toISOString().slice(0, 10),
+              null,
+            ]),
+            undefined,
+          ]),
+          urls: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+              Array.from(
+                { length: faker.number.int({ min: 1, max: 10 }) },
+                (_, i) => i + 1,
+              ).map(() => faker.internet.url()),
+              null,
+            ]),
+            undefined,
+          ]),
+          path: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+              Array.from(
+                { length: faker.number.int({ min: 1, max: 10 }) },
+                (_, i) => i + 1,
+              ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+              null,
+            ]),
+            undefined,
+          ]),
+          updated: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+              `${faker.date.past().toISOString().slice(0, 19)}Z`,
+              null,
+            ]),
+            undefined,
+          ]),
+          txt_hash: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([faker.number.int(), null]),
+            undefined,
+          ]),
+        },
+      ]),
+    ),
+    undefined,
+  ]),
+  stats: faker.helpers.arrayElement([
+    {
+      [faker.string.alphanumeric(5)]: {
+        density: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.number.float({ fractionDigits: 2 }),
+            null,
+          ]),
+          null,
+        ]),
+        diameter: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.number.float({ fractionDigits: 2 }),
+            null,
+          ]),
+          null,
+        ]),
+        radius: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.number.float({ fractionDigits: 2 }),
+            null,
+          ]),
+          null,
+        ]),
+        n_scc: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([faker.number.int(), null]),
+          null,
+        ]),
+        average_degree: faker.number.float({ fractionDigits: 2 }),
+        n_char: faker.number.int(),
+        n_sentence: faker.number.int(),
+        n_term: faker.number.int(),
+        n_edge: faker.number.int(),
+        n_isolation: faker.number.int(),
+        n_axiom: faker.number.int(),
+        n_unrefered: faker.number.int(),
+        r_isolation: faker.number.float({ fractionDigits: 2 }),
+        r_axiom: faker.number.float({ fractionDigits: 2 }),
+        r_unrefered: faker.number.float({ fractionDigits: 2 }),
+      },
+    },
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
 export const getSearchResourcePostResourceSearchPostResponseMock = (
   overrideResponse: Partial<Extract<ResourceSearchResult, object>> = {},
 ): ResourceSearchResult => ({
@@ -366,6 +573,23 @@ export const getSearchResourcePostResourceSearchPostResponseMock = (
         uid: faker.string.uuid(),
         created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
       },
+      folders: faker.helpers.arrayElement([
+        Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => ({
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          element_id_property: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            undefined,
+          ]),
+          uid: faker.string.uuid(),
+        })),
+        undefined,
+      ]),
       resource: {
         name: faker.string.alpha({ length: { min: 10, max: 20 } }),
         element_id_property: faker.helpers.arrayElement([
@@ -595,6 +819,32 @@ export const getGetResourceDetailResourceResourceIdGetMockHandler = (
   );
 };
 
+export const getGetEntryDetailEntryEntryIdGetMockHandler = (
+  overrideResponse?:
+    | EntryDetail
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EntryDetail> | EntryDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/entry/:entryId",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      await delay(200);
+
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetEntryDetailEntryEntryIdGetResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getDeleteEntryApiEntryEntryIdDeleteMockHandler = (
   overrideResponse?:
     | null
@@ -648,6 +898,7 @@ export const getEntryMock = () => [
   getPostTextResourceTextPostMockHandler(),
   getPostFilesResourcePostMockHandler(),
   getGetResourceDetailResourceResourceIdGetMockHandler(),
+  getGetEntryDetailEntryEntryIdGetMockHandler(),
   getDeleteEntryApiEntryEntryIdDeleteMockHandler(),
   getSearchResourcePostResourceSearchPostMockHandler(),
 ];
