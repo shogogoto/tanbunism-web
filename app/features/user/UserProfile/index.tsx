@@ -1,3 +1,4 @@
+import { CalendarDays } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import { useHistory } from "~/shared/history/hooks";
@@ -16,24 +17,27 @@ export default function UserProfile({ user }: UserProps) {
   }, [addHistory, getUserTitle, user]);
 
   return (
-    <>
-      <div className="flex item-center space-x-4">
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
         <ProfileImage user={user} />
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 break-words">
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl font-bold tracking-tight">
             {user?.display_name || "名無しさん"}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 text-sm break-words">
+          </h1>
+          <p className="break-words text-sm text-muted-foreground">
             {`@${user?.username}`}
           </p>
-          <p className="text-gray-600 dark:text-gray-300 text-sm break-words">
-            {`${user?.uid}`}
-          </p>
+          {user?.created && (
+            <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+              <CalendarDays className="size-3.5" aria-hidden="true" />
+              {new Date(user.created).toLocaleDateString("ja-JP")}から利用
+            </p>
+          )}
         </div>
       </div>
-      <div className="text-gray-700 dark:text-gray-200 text-base pt-4 overflow-hidden break-words whitespace-pre-line">
+      <div className="overflow-hidden whitespace-pre-line break-words text-sm leading-relaxed">
         {user?.profile || "プロフィールが設定されていません。"}
       </div>
-    </>
+    </div>
   );
 }

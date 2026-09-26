@@ -146,6 +146,124 @@ export const SyncNamespaceApiNamespacePostResponse = zod.array(
 );
 
 /**
+ * 公開ユーザーのEntryとResourceを取得.
+ * @summary Get Public Namespace
+ */
+export const GetPublicNamespaceUserUserIdNamespaceGetParams = zod.object({
+  user_id: zod.string().uuid(),
+});
+
+export const GetPublicNamespaceUserUserIdNamespaceGetResponse = zod
+  .object({
+    g: zod
+      .object({
+        directed: zod.boolean(),
+        edges: zod.array(
+          zod
+            .object({
+              type: zod
+                .enum([
+                  "sibling",
+                  "below",
+                  "def",
+                  "resolved",
+                  "quoterm",
+                  "to",
+                  "example",
+                  "when",
+                  "where",
+                  "num",
+                  "by",
+                  "ref",
+                  "anti",
+                  "similar",
+                ])
+                .describe("グラフ関係の種類."),
+              source: zod.string(),
+              target: zod.string(),
+              key: zod.number().int(),
+            })
+            .describe("FastAPI schema用の辺."),
+        ),
+        graph: zod.record(zod.string(), zod.unknown()),
+        multigraph: zod.boolean(),
+        nodes: zod.array(zod.record(zod.string(), zod.string())),
+      })
+      .optional()
+      .describe("FastAPI schema用のグラフ."),
+    roots_: zod.record(
+      zod.string(),
+      zod
+        .object({
+          name: zod.string(),
+          element_id_property: zod.union([zod.string(), zod.null()]).optional(),
+          uid: zod.string().uuid(),
+        })
+        .describe("namespace用のhashableな表現."),
+    ),
+    user_id: zod.string().uuid(),
+    stats: zod
+      .record(
+        zod.string(),
+        zod
+          .object({
+            density: zod
+              .union([zod.number(), zod.null()])
+              .nullish()
+              .describe("辺の割合。高いほど、ノード同士が密に結合している"),
+            diameter: zod
+              .union([zod.number(), zod.null()])
+              .nullish()
+              .describe(
+                "最大離心距離。ネットワーク内の最も遠いノード間の距離。低いほど、ネットワークがコンパクトで情報の伝達効率が高い。非連結のグラフの場合は、最大の強連結成分に対して計算",
+              ),
+            radius: zod
+              .union([zod.number(), zod.null()])
+              .nullish()
+              .describe(
+                "各ノードからの最大距離の最小値。低いほど、中心的なノードから全体にアクセスしやすい。非連結のグラフの場合は、最大の強連結成分に対して計算",
+              ),
+            n_scc: zod
+              .union([zod.number().int(), zod.null()])
+              .nullish()
+              .describe(
+                "グラフがいくつの独立した「島」に分かれているか。低いほど、知識が分断されていない",
+              ),
+            average_degree: zod
+              .number()
+              .describe(
+                "一つの知識が平均していくつの他の知識と関連付いているか。高いほど、知識が密に関連し合う",
+              ),
+            n_char: zod.number().int().describe("テキストの絶対的なボリューム"),
+            n_sentence: zod
+              .number()
+              .int()
+              .describe("知識の基本的な構成単位の数"),
+            n_term: zod.number().int().describe("語彙の規模"),
+            n_edge: zod.number().int().describe("知識間の関係性の数"),
+            n_isolation: zod.number().int(),
+            n_axiom: zod.number().int(),
+            n_unrefered: zod
+              .number()
+              .int()
+              .describe("他のどこからも参照されていない用語数"),
+            r_isolation: zod
+              .number()
+              .describe("低いほど、知識が相互に接続されている"),
+            r_axiom: zod
+              .number()
+              .describe("低いほど、少数の原理から多くの知識が得られている"),
+            r_unrefered: zod
+              .number()
+              .describe("低いほど、定義された用語が無駄なく活用されている"),
+          })
+          .describe("知識の量を示す指標 for API."),
+      )
+      .optional(),
+  })
+  .describe("リソースの分類.");
+
+/**
  * テキストからsysnetを読み取って永続化.
  * @summary Post Text
  */

@@ -111,6 +111,94 @@ export const getSyncNamespaceApiNamespacePostResponseMock = (): string[] =>
     faker.word.sample(),
   );
 
+export const getGetPublicNamespaceUserUserIdNamespaceGetResponseMock = (
+  overrideResponse: Partial<Extract<NameSpace, object>> = {},
+): NameSpace => ({
+  g: faker.helpers.arrayElement([
+    {
+      directed: faker.datatype.boolean(),
+      edges: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        type: faker.helpers.arrayElement(Object.values(EdgeType)),
+        source: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        target: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        key: faker.number.int(),
+      })),
+      graph: {},
+      multigraph: faker.datatype.boolean(),
+      nodes: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        [faker.string.alphanumeric(5)]: faker.string.alpha({
+          length: { min: 10, max: 20 },
+        }),
+      })),
+    },
+    undefined,
+  ]),
+  roots_: {
+    [faker.string.alphanumeric(5)]: {
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      element_id_property: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        undefined,
+      ]),
+      uid: faker.string.uuid(),
+    },
+  },
+  user_id: faker.string.uuid(),
+  stats: faker.helpers.arrayElement([
+    {
+      [faker.string.alphanumeric(5)]: {
+        density: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.number.float({ fractionDigits: 2 }),
+            null,
+          ]),
+          null,
+        ]),
+        diameter: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.number.float({ fractionDigits: 2 }),
+            null,
+          ]),
+          null,
+        ]),
+        radius: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.number.float({ fractionDigits: 2 }),
+            null,
+          ]),
+          null,
+        ]),
+        n_scc: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([faker.number.int(), null]),
+          null,
+        ]),
+        average_degree: faker.number.float({ fractionDigits: 2 }),
+        n_char: faker.number.int(),
+        n_sentence: faker.number.int(),
+        n_term: faker.number.int(),
+        n_edge: faker.number.int(),
+        n_isolation: faker.number.int(),
+        n_axiom: faker.number.int(),
+        n_unrefered: faker.number.int(),
+        r_isolation: faker.number.float({ fractionDigits: 2 }),
+        r_axiom: faker.number.float({ fractionDigits: 2 }),
+        r_unrefered: faker.number.float({ fractionDigits: 2 }),
+      },
+    },
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
 export const getPostTextResourceTextPostResponseMock =
   (): PostTextResourceTextPost200 => ({
     [faker.string.alphanumeric(5)]: faker.string.alpha({
@@ -745,6 +833,32 @@ export const getSyncNamespaceApiNamespacePostMockHandler = (
   );
 };
 
+export const getGetPublicNamespaceUserUserIdNamespaceGetMockHandler = (
+  overrideResponse?:
+    | NameSpace
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<NameSpace> | NameSpace),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/user/:userId/namespace",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      await delay(200);
+
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetPublicNamespaceUserUserIdNamespaceGetResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getPostTextResourceTextPostMockHandler = (
   overrideResponse?:
     | PostTextResourceTextPost200
@@ -895,6 +1009,7 @@ export const getSearchResourcePostResourceSearchPostMockHandler = (
 export const getEntryMock = () => [
   getGetNamaspaceNamespaceGetMockHandler(),
   getSyncNamespaceApiNamespacePostMockHandler(),
+  getGetPublicNamespaceUserUserIdNamespaceGetMockHandler(),
   getPostTextResourceTextPostMockHandler(),
   getPostFilesResourcePostMockHandler(),
   getGetResourceDetailResourceResourceIdGetMockHandler(),

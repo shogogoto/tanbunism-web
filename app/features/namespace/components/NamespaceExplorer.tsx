@@ -33,10 +33,27 @@ export default function NamespaceExplorer({ updater, nsprops }: Props) {
     updater?.();
   }
 
+  return <NamespaceTree data={data} refresh={refresh} />;
+}
+
+export function NamespaceTree({
+  data,
+  refresh,
+  readOnly = false,
+}: {
+  data: NameSpace;
+  refresh?: () => void;
+  readOnly?: boolean;
+}) {
   return (
     <div className="divide-y divide-border/60 border-y border-border/60">
       {transformToTreeData(data).map((item) => (
-        <NamespaceItem item={item} key={item.id} refresh={refresh} />
+        <NamespaceItem
+          item={item}
+          key={item.id}
+          refresh={refresh}
+          readOnly={readOnly}
+        />
       ))}
     </div>
   );
@@ -45,12 +62,14 @@ export default function NamespaceExplorer({ updater, nsprops }: Props) {
 function NamespaceItem({
   item,
   refresh,
+  readOnly,
 }: {
   item: ExplorerTreeDataItem;
-  refresh: () => void;
+  refresh?: () => void;
+  readOnly: boolean;
 }) {
   if (item.isResource) {
-    return <ResourceRow item={item} refresh={refresh} />;
+    return <ResourceRow item={item} refresh={refresh} readOnly={readOnly} />;
   }
 
   const hasChildren = Boolean(item.children?.length);
@@ -73,7 +92,7 @@ function NamespaceItem({
             {item.resourceCount} Resources
           </span>
         </CollapsibleTrigger>
-        {!hasChildren && (
+        {!readOnly && !hasChildren && refresh && (
           <EntryDeleteButton
             entryId={item.id}
             name={item.name}
@@ -84,7 +103,12 @@ function NamespaceItem({
       {hasChildren && (
         <CollapsibleContent className="ml-4 border-l border-border/60 pl-2">
           {item.children?.map((child) => (
-            <NamespaceItem item={child} key={child.id} refresh={refresh} />
+            <NamespaceItem
+              item={child}
+              key={child.id}
+              refresh={refresh}
+              readOnly={readOnly}
+            />
           ))}
         </CollapsibleContent>
       )}
@@ -95,9 +119,11 @@ function NamespaceItem({
 function ResourceRow({
   item,
   refresh,
+  readOnly,
 }: {
   item: ExplorerTreeDataItem;
-  refresh: () => void;
+  refresh?: () => void;
+  readOnly: boolean;
 }) {
   return (
     <div className="flex min-h-12 items-stretch gap-1">
@@ -143,7 +169,13 @@ function ResourceRow({
         <ListChecks className="h-4 w-4" />
         <span className="hidden sm:inline">クイズ</span>
       </Link>
-      <EntryDeleteButton entryId={item.id} name={item.name} refresh={refresh} />
+      {!readOnly && refresh && (
+        <EntryDeleteButton
+          entryId={item.id}
+          name={item.name}
+          refresh={refresh}
+        />
+      )}
     </div>
   );
 }

@@ -198,6 +198,110 @@ export const useSyncNamespaceApiNamespacePost = <
     ...query,
   };
 };
+export type getPublicNamespaceUserUserIdNamespaceGetResponse200 = {
+  data: NameSpace;
+  status: 200;
+};
+
+export type getPublicNamespaceUserUserIdNamespaceGetResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getPublicNamespaceUserUserIdNamespaceGetResponseSuccess =
+  getPublicNamespaceUserUserIdNamespaceGetResponse200 & {
+    headers: Headers;
+  };
+export type getPublicNamespaceUserUserIdNamespaceGetResponseError =
+  getPublicNamespaceUserUserIdNamespaceGetResponse422 & {
+    headers: Headers;
+  };
+
+export type getPublicNamespaceUserUserIdNamespaceGetResponse =
+  | getPublicNamespaceUserUserIdNamespaceGetResponseSuccess
+  | getPublicNamespaceUserUserIdNamespaceGetResponseError;
+
+export const getGetPublicNamespaceUserUserIdNamespaceGetUrl = (
+  userId: string,
+) => {
+  return `https://knowde.onrender.com/user/${userId}/namespace`;
+};
+
+/**
+ * 公開ユーザーのEntryとResourceを取得.
+ * @summary Get Public Namespace
+ */
+export const getPublicNamespaceUserUserIdNamespaceGet = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<getPublicNamespaceUserUserIdNamespaceGetResponse> => {
+  const res = await fetch(
+    getGetPublicNamespaceUserUserIdNamespaceGetUrl(userId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getPublicNamespaceUserUserIdNamespaceGetResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as getPublicNamespaceUserUserIdNamespaceGetResponse;
+};
+
+export const getGetPublicNamespaceUserUserIdNamespaceGetKey = (
+  userId: string,
+) => [`https://knowde.onrender.com/user/${userId}/namespace`] as const;
+
+export type GetPublicNamespaceUserUserIdNamespaceGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPublicNamespaceUserUserIdNamespaceGet>>
+>;
+
+/**
+ * @summary Get Public Namespace
+ */
+export const useGetPublicNamespaceUserUserIdNamespaceGet = <
+  TError = Promise<HTTPValidationError>,
+>(
+  userId: string,
+  options?: {
+    swr?: SWRConfiguration<
+      Awaited<ReturnType<typeof getPublicNamespaceUserUserIdNamespaceGet>>,
+      TError
+    > & { swrKey?: Key; enabled?: boolean };
+    fetch?: RequestInit;
+  },
+) => {
+  const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+  const isEnabled =
+    swrOptions?.enabled !== false && userId !== null && userId !== undefined;
+  const swrKey =
+    swrOptions?.swrKey ??
+    (() =>
+      isEnabled
+        ? getGetPublicNamespaceUserUserIdNamespaceGetKey(userId)
+        : null);
+  const swrFn = () =>
+    getPublicNamespaceUserUserIdNamespaceGet(userId, fetchOptions);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(
+    swrKey,
+    swrFn,
+    swrOptions,
+  );
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
 export type postTextResourceTextPostResponse200 = {
   data: PostTextResourceTextPost200;
   status: 200;
