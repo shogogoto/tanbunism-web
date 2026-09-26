@@ -1,3 +1,4 @@
+import { invalidateQuizCache, quizCacheTtl, withQuizCache } from "./cache";
 import {
   answerQuizApiQuizAnswerQuizIdPost,
   createQuizApiQuizPost,
@@ -91,26 +92,37 @@ function unwrap<T>(
 }
 
 export async function listStudyPlans(): Promise<StudyPlan[]> {
-  const response = await listStudyPlansApiQuizStudyPlansGet({
-    credentials: "include",
+  return withQuizCache("study-plans", {}, quizCacheTtl.medium, async () => {
+    const response = await listStudyPlansApiQuizStudyPlansGet({
+      credentials: "include",
+    });
+    return unwrap(response, "学習計画を取得できませんでした。");
   });
-  return unwrap(response, "学習計画を取得できませんでした。");
 }
 
 export async function listAnswerHistory(
   params: ListAnswerHistoryApiQuizAnswersGetParams = {},
 ): Promise<AnswerHistoryResult> {
-  const response = await listAnswerHistoryApiQuizAnswersGet(params, {
-    credentials: "include",
-  });
-  return unwrap(response, "回答履歴を取得できませんでした。");
+  return withQuizCache(
+    "answer-history",
+    params,
+    quizCacheTtl.short,
+    async () => {
+      const response = await listAnswerHistoryApiQuizAnswersGet(params, {
+        credentials: "include",
+      });
+      return unwrap(response, "回答履歴を取得できませんでした。");
+    },
+  );
 }
 
 export async function getQuizChain(quizId: string): Promise<QuizChain> {
-  const response = await expandQuizChainApiQuizChainQuizzesQuizIdGet(quizId, {
-    credentials: "include",
+  return withQuizCache("quiz-chain", quizId, quizCacheTtl.long, async () => {
+    const response = await expandQuizChainApiQuizChainQuizzesQuizIdGet(quizId, {
+      credentials: "include",
+    });
+    return unwrap(response, "クイズの知識を取得できませんでした。");
   });
-  return unwrap(response, "クイズの知識を取得できませんでした。");
 }
 
 export async function listStudyResources(): Promise<StudyResource[]> {
@@ -145,7 +157,9 @@ export async function createStudyPlan(
   const response = await createStudyPlanApiQuizStudyPlansPost(draft, {
     credentials: "include",
   });
-  return unwrap(response, "学習計画を作成できませんでした。");
+  const plan = unwrap(response, "学習計画を作成できませんでした。");
+  await invalidateQuizCache("study-plans");
+  return plan;
 }
 
 export async function updateStudyPlan(
@@ -157,7 +171,9 @@ export async function updateStudyPlan(
     draft,
     { credentials: "include" },
   );
-  return unwrap(response, "学習計画を更新できませんでした。");
+  const plan = unwrap(response, "学習計画を更新できませんでした。");
+  await invalidateQuizCache("study-plans");
+  return plan;
 }
 
 export async function deleteStudyPlan(planId: string): Promise<void> {
@@ -167,6 +183,7 @@ export async function deleteStudyPlan(planId: string): Promise<void> {
   if (response.status >= 400) {
     throw new QuizApiError("学習計画を削除できませんでした。", response.status);
   }
+  await invalidateQuizCache("study-plans");
 }
 
 export async function recommendQuizzes(
@@ -206,6 +223,15 @@ export async function recommendQuizzes(
     { data, status: response.status },
     "おすすめのクイズを取得できませんでした。",
   );
+  if (generateMissing) {
+    await invalidateQuizCache(
+      "created-list",
+      "created-resources",
+      "created-search",
+      "created-sentences",
+      "learning-progress",
+    );
+  }
   return recommendations.map((recommendation) => ({
     ...recommendation,
     quiz_type: recommendation.quiz_type ?? quizType,
@@ -223,62 +249,109 @@ export async function answerQuiz(
       credentials: "include",
     },
   );
-  return unwrap(response, "回答を送信できませんでした。");
+  const chain = unwrap(response, "回答を送信できませんでした。");
+  await invalidateQuizCache(
+    "answer-history",
+    "created-search",
+    "learning-progress",
+    "quiz-chain",
+  );
+  return chain;
 }
 
 export async function listCreatedQuizResources(): Promise<
   QuizResourceStatus[]
 > {
-  const response = await listCreatedQuizResourcesQuizCreatedResourcesGet({
-    credentials: "include",
-  });
-  return unwrap(response, "Resourceごとのクイズ状況を取得できませんでした。");
+  return withQuizCache(
+    "created-resources",
+    {},
+    quizCacheTtl.medium,
+    async () => {
+      const response = await listCreatedQuizResourcesQuizCreatedResourcesGet({
+        credentials: "include",
+      });
+      return unwrap(
+        response,
+        "Resourceごとのクイズ状況を取得できませんでした。",
+      );
+    },
+  );
 }
 
 export async function getLearningProgress(
   resourceId: string,
 ): Promise<ResourceLearningStatus> {
-  const response =
-    await getLearningProgressApiQuizLearningProgressResourceIdGet(resourceId, {
-      credentials: "include",
-    });
-  return unwrap(response, "Resourceの学習状況を取得できませんでした。");
+  return withQuizCache(
+    "learning-progress",
+    resourceId,
+    quizCacheTtl.short,
+    async () => {
+      const response =
+        await getLearningProgressApiQuizLearningProgressResourceIdGet(
+          resourceId,
+          { credentials: "include" },
+        );
+      return unwrap(response, "Resourceの学習状況を取得できませんでした。");
+    },
+  );
 }
 
 export async function listCreatedQuizSentences(
   resourceId: string,
 ): Promise<SentenceQuizStatus[]> {
-  const response =
-    await listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGet(
-      resourceId,
-      { credentials: "include" },
-    );
-  return unwrap(response, "単文ごとのクイズ状況を取得できませんでした。");
+  return withQuizCache(
+    "created-sentences",
+    resourceId,
+    quizCacheTtl.medium,
+    async () => {
+      const response =
+        await listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGet(
+          resourceId,
+          { credentials: "include" },
+        );
+      return unwrap(response, "単文ごとのクイズ状況を取得できませんでした。");
+    },
+  );
 }
 
 export async function listCreatedQuizzes(
   resourceId?: string,
   sentenceId?: string,
 ): Promise<ReadableQuiz[]> {
-  const response = await listCreatedQuizzesQuizCreatedGet(
-    {
-      resource_id: resourceId,
-      sentence_id: sentenceId,
-      page: 1,
-      size: 100,
+  const params = {
+    resource_id: resourceId,
+    sentence_id: sentenceId,
+    page: 1,
+    size: 100,
+  };
+  return withQuizCache(
+    "created-list",
+    params,
+    quizCacheTtl.medium,
+    async () => {
+      const response = await listCreatedQuizzesQuizCreatedGet(params, {
+        credentials: "include",
+      });
+      return unwrap(response, "作成したクイズを取得できませんでした。").data;
     },
-    { credentials: "include" },
   );
-  return unwrap(response, "作成したクイズを取得できませんでした。").data;
 }
 
 export async function searchCreatedQuizzes(
   params: QuizSearchParams,
 ): Promise<ManagedQuizResult> {
-  const response = await searchCreatedQuizzesApiQuizCreatedSearchGet(params, {
-    credentials: "include",
-  });
-  return unwrap(response, "作成したクイズを検索できませんでした。");
+  return withQuizCache(
+    "created-search",
+    params,
+    quizCacheTtl.medium,
+    async () => {
+      const response = await searchCreatedQuizzesApiQuizCreatedSearchGet(
+        params,
+        { credentials: "include" },
+      );
+      return unwrap(response, "作成したクイズを検索できませんでした。");
+    },
+  );
 }
 
 export async function createSentenceQuiz(
@@ -294,7 +367,15 @@ export async function createSentenceQuiz(
     },
     { credentials: "include" },
   );
-  return unwrap(response, "この単文からクイズを作成できませんでした。");
+  const quiz = unwrap(response, "この単文からクイズを作成できませんでした。");
+  await invalidateQuizCache(
+    "created-list",
+    "created-resources",
+    "created-search",
+    "created-sentences",
+    "learning-progress",
+  );
+  return quiz;
 }
 
 export async function createRelationQuiz(
@@ -312,7 +393,15 @@ export async function createRelationQuiz(
     },
     { credentials: "include" },
   );
-  return unwrap(response, "関係クイズを作成できませんでした。");
+  const quiz = unwrap(response, "関係クイズを作成できませんでした。");
+  await invalidateQuizCache(
+    "created-list",
+    "created-resources",
+    "created-search",
+    "created-sentences",
+    "learning-progress",
+  );
+  return quiz;
 }
 
 export async function deleteQuiz(quizId: string): Promise<void> {
@@ -322,4 +411,13 @@ export async function deleteQuiz(quizId: string): Promise<void> {
   if (response.status >= 400) {
     throw new QuizApiError("クイズを削除できませんでした。", response.status);
   }
+  await invalidateQuizCache(
+    "answer-history",
+    "created-list",
+    "created-resources",
+    "created-search",
+    "created-sentences",
+    "learning-progress",
+    "quiz-chain",
+  );
 }

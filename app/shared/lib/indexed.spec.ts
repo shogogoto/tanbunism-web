@@ -35,4 +35,16 @@ describe("genericCache", () => {
     expect(await genericCache.get("old-0")).toBeUndefined();
     expect(await genericCache.get("new")).toBe("latest");
   });
+
+  it("項目ごとのTTLとprefixによる削除を利用できる", async () => {
+    await genericCache.set("quiz:answers:1", "answer", 60_000);
+    await genericCache.set("quiz:chains:1", "chain", 60_000);
+    await genericCache.set("search:knowledge", "result", 60_000);
+
+    await genericCache.deletePrefix("quiz:");
+
+    expect(await genericCache.get("quiz:answers:1")).toBeUndefined();
+    expect(await genericCache.get("quiz:chains:1")).toBeUndefined();
+    expect(await genericCache.get("search:knowledge")).toBe("result");
+  });
 });

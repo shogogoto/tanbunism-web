@@ -71,10 +71,13 @@ function createTTLStore<T>(
       if (item) await table.delete(key); // 期限切れを削除
       return undefined;
     },
-    async set(key: string, value: T): Promise<void> {
-      await table.put({ key, value, expires: Date.now() + ttl });
+    async set(key: string, value: T, ttlOverride = ttl): Promise<void> {
+      await table.put({ key, value, expires: Date.now() + ttlOverride });
       await cleanup();
     },
+    delete: (key: string) => table.delete(key),
+    deletePrefix: (prefix: string) =>
+      table.where("key").startsWith(prefix).delete(),
     clear: () => table.clear(),
     count: () => table.count(),
   };
@@ -145,6 +148,7 @@ export const genericCache = createTTLStore(db.cache, {
   ttl: SEARCH_CACHE_TTL,
   maxEntries: SEARCH_CACHE_MAX,
 });
+export const clearPrivateCache = () => genericCache.deletePrefix("private:");
 export const tanbunSearchCache = createTTLStore<TanbunSearchResult>(
   db.knowdeSearchResults,
 );

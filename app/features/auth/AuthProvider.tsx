@@ -8,6 +8,7 @@ import {
   useUsersCurrentUserUserMeGet,
   type usersCurrentUserUserMeGetResponse,
 } from "~/shared/generated/user/user";
+import { clearPrivateCache } from "~/shared/lib/indexed";
 import { easyStorage } from "~/shared/lib/storage";
 
 interface AuthContextT {
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   const signOut = useCallback(async () => {
     try {
       await authCookieLogoutAuthCookieLogoutPost({ credentials: "include" });
+      await clearPrivateCache();
       await mutate();
       removeItem();
       toast.success("ロクアウトしました");
