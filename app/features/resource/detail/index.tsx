@@ -4,6 +4,7 @@ import {
   type SentenceQuizStatus,
   listCreatedQuizSentences,
 } from "~/features/quiz/api";
+import EntryBreadcrumb from "~/features/resource/EntryBreadcrumb";
 import Loading from "~/shared/components/Loading";
 import { Separator } from "~/shared/components/ui/separator";
 import { useGetResourceDetailResourceResourceIdGet } from "~/shared/generated/entry/entry";
@@ -13,8 +14,8 @@ import Backbone from "./Backbone";
 import { ResourceDetailProvider } from "./Context";
 import Presenter from "./Presenter";
 import ResourceMeta from "./ResourceMeta";
+import ResourceStats from "./ResourceStats";
 import { TraceMemoryProvider } from "./TraceMemory/Context";
-import UserHeader from "./UserHeader";
 
 type Props = {
   id: string;
@@ -84,10 +85,14 @@ export default function ResourceDetail({ id }: Props) {
       <TraceMemoryProvider>
         <div className="mx-auto max-w-5xl">
           <div className="markdown-body p-4 sm:p-6">
+            <EntryBreadcrumb
+              user={user}
+              folders={resource.path}
+              resource={resource}
+            />
             <Presenter id={resource.uid} />
             <ResourceMeta info={resource_info} />
-            <UserHeader user={user} />
-            {/* <ResourceStats stats={resource_stats} /> */}
+            <ResourceStats stats={resource_stats} resourceId={resource.uid} />
             <Separator className="my-4" />
             <Backbone startId={resource.uid} key={id} />
           </div>

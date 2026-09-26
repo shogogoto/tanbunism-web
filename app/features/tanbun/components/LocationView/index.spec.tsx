@@ -3,19 +3,24 @@ import { MemoryRouter } from "react-router";
 import { fixtureDetail1 } from "../../detail/fixture";
 import LocationView from "./index";
 
-it("Resource情報を主にして登録ユーザーはusernameだけ表示する", () => {
+it("ユーザーから現在の単文までの保存場所を表示する", () => {
+  const current =
+    fixtureDetail1.knowdes[fixtureDetail1.uid.replaceAll("-", "")];
   render(
     <MemoryRouter>
       <LocationView
         loc={fixtureDetail1.location}
         tanbunId={fixtureDetail1.uid}
+        current={current}
       />
     </MemoryRouter>,
   );
 
-  const resourceLink = screen.getByRole("link", {
-    name: /神は数学者か.*マオリ・リヴィオ.*2017-01-01/,
-  });
+  const breadcrumb = screen.getByRole("navigation", { name: "保存場所" });
+  expect(breadcrumb).toHaveTextContent(
+    "@GTOphilos# 神は数学者か？アルキメデス",
+  );
+  const resourceLink = screen.getByRole("link", { name: "# 神は数学者か？" });
   expect(resourceLink).toHaveAttribute(
     "href",
     `/resource/${fixtureDetail1.location.resource.uid}#${fixtureDetail1.uid}`,
@@ -24,6 +29,8 @@ it("Resource情報を主にして登録ユーザーはusernameだけ表示する
     "href",
     "/user/GTO",
   );
-  expect(screen.queryByText("ニートおじさん")).not.toBeInTheDocument();
-  expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  expect(screen.getByText("アルキメデス")).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
 });

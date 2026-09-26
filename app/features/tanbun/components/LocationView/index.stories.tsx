@@ -15,5 +15,6 @@ export const Default: Story = {
   args: {
     loc: fixtureDetail1.location,
     tanbunId: fixtureDetail1.uid,
+    current: fixtureDetail1.knowdes[fixtureDetail1.uid.replaceAll("-", "")],
   },
 };

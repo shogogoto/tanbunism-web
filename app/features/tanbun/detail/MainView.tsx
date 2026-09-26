@@ -438,6 +438,7 @@ export default function MainView({ detail, prefetched }: Props) {
             <LocationView
               loc={headerLocation as TanbunLocation}
               tanbunId={headerTanbun.uid}
+              current={headerTanbun}
             />
             {detail && (
               <ContextBreadcrumbs

@@ -9,7 +9,6 @@ vi.mock("~/shared/history/hooks", () => ({
     getTanbunTitle: vi.fn(() => "単文"),
   }),
 }));
-vi.mock("../components/LocationView", () => ({ default: () => null }));
 vi.mock("../components/TanbunCard", () => ({
   default: ({ k }: { k: { sentence: string } }) => (
     <div>関係する単文: {k.sentence}</div>
@@ -28,6 +27,9 @@ describe("単文詳細", () => {
     );
 
     expect(screen.getByRole("heading", { name: "詳細" })).toBeVisible();
+    expect(
+      screen.getByRole("navigation", { name: "保存場所" }),
+    ).toHaveTextContent("@GTOphilos# 神は数学者か？アルキメデス");
     expect(
       screen.queryByRole("heading", { name: "論理" }),
     ).not.toBeInTheDocument();
