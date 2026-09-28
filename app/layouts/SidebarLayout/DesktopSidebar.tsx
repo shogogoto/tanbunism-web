@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Link, NavLink, useLocation } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
+import { HotkeyHelpButton } from "~/features/hotkeys/GlobalHotkeys";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
 import { Button } from "~/shared/components/ui/button";
 import { HistoryPanel } from "~/shared/history/HistoryPanel";
@@ -110,6 +111,7 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
             buttonClassName="inline-flex size-9 items-center justify-center hover:bg-accent"
             iconClassName="size-4"
           />
+          <HotkeyHelpButton />
         </div>
         {isAuthenticated && <UserNavi user={user} side="right" />}
       </div>

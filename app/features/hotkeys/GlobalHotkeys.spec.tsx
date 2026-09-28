@@ -3,7 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router";
 import { vi } from "vitest";
 import { HistoryPanelProvider } from "~/shared/history/HistoryPanel";
-import GlobalHotkeys from "./GlobalHotkeys";
+import GlobalHotkeys, {
+  HotkeyHelpButton,
+  HotkeyProvider,
+} from "./GlobalHotkeys";
 
 vi.mock("~/features/auth/AuthProvider", () => ({
   useAuth: () => ({ isAuthenticated: true }),
@@ -27,11 +30,13 @@ function renderHotkeys() {
   return render(
     <MemoryRouter>
       <HistoryPanelProvider>
-        <input aria-label="入力欄" />
-        <input aria-label="検索入力" data-global-search-input />
-        <button type="button">入力を終了</button>
-        <GlobalHotkeys />
-        <Location />
+        <HotkeyProvider>
+          <input aria-label="入力欄" />
+          <input aria-label="検索入力" data-global-search-input />
+          <button type="button">入力を終了</button>
+          <GlobalHotkeys />
+          <Location />
+        </HotkeyProvider>
       </HistoryPanelProvider>
     </MemoryRouter>,
   );
@@ -94,6 +99,27 @@ it("疑問符でショートカット一覧を開く", async () => {
   ).toBeVisible();
 });
 
+it("ヘルプボタンでショートカット一覧を開く", async () => {
+  const user = userEvent.setup();
+  render(
+    <MemoryRouter>
+      <HistoryPanelProvider>
+        <HotkeyProvider>
+          <HotkeyHelpButton />
+        </HotkeyProvider>
+      </HistoryPanelProvider>
+    </MemoryRouter>,
+  );
+
+  await user.click(
+    screen.getByRole("button", { name: "キーボードショートカットを開く" }),
+  );
+
+  expect(
+    screen.getByRole("heading", { name: "キーボードショートカット" }),
+  ).toBeVisible();
+});
+
 it("スラッシュで検索へ移動して入力欄へフォーカスする", async () => {
   const user = userEvent.setup();
   renderHotkeys();
@@ -115,20 +141,22 @@ it("角括弧で前後のタブへ移動する", async () => {
   render(
     <MemoryRouter>
       <HistoryPanelProvider>
-        <div role="tablist">
-          <button type="button" role="tab" aria-selected="true">
-            現在のタブ
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected="false"
-            onClick={selectNext}
-          >
-            次のタブ
-          </button>
-        </div>
-        <GlobalHotkeys />
+        <HotkeyProvider>
+          <div role="tablist">
+            <button type="button" role="tab" aria-selected="true">
+              現在のタブ
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected="false"
+              onClick={selectNext}
+            >
+              次のタブ
+            </button>
+          </div>
+          <GlobalHotkeys />
+        </HotkeyProvider>
       </HistoryPanelProvider>
     </MemoryRouter>,
   );

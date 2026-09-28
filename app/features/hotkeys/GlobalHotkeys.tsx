@@ -1,6 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { CircleHelp } from "lucide-react";
+import {
+  type PropsWithChildren,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
+import { Button } from "~/shared/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,12 +22,68 @@ import { useHistoryPanel } from "~/shared/history/HistoryPanel";
 
 const CHORD_TIMEOUT_MS = 1_200;
 
+type HotkeyContextValue = {
+  openHelp: () => void;
+};
+
+const HotkeyContext = createContext<HotkeyContextValue | null>(null);
+
+export function HotkeyProvider({ children }: PropsWithChildren) {
+  const { isAuthenticated } = useAuth();
+  const [helpOpen, setHelpOpen] = useState(false);
+  const openHelp = useCallback(() => setHelpOpen(true), []);
+
+  return (
+    <HotkeyContext.Provider value={{ openHelp }}>
+      {children}
+      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>キーボードショートカット</DialogTitle>
+            <DialogDescription>
+              入力欄へ入力している間は反応しません。
+            </DialogDescription>
+          </DialogHeader>
+          <dl className="divide-y">
+            <HotkeyRow keys={["g", "h"]} label="履歴を開く" />
+            {isAuthenticated && (
+              <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
+            )}
+            <HotkeyRow keys={["g", "s"]} label="検索へ移動" />
+            <HotkeyRow keys={["g", "q"]} label="クイズへ移動" />
+            <HotkeyRow keys={["[", "]"]} label="前後のタブへ移動" />
+            <HotkeyRow keys={["↑", "↓"]} label="履歴の項目を移動" />
+            <HotkeyRow keys={["Enter"]} label="選択した履歴を開く" />
+            <HotkeyRow keys={["/"]} label="検索入力へフォーカス" />
+            <HotkeyRow keys={["?"]} label="この一覧を開く" />
+          </dl>
+        </DialogContent>
+      </Dialog>
+    </HotkeyContext.Provider>
+  );
+}
+
+export function HotkeyHelpButton() {
+  const { openHelp } = useHotkeys();
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      onClick={openHelp}
+      aria-label="キーボードショートカットを開く"
+    >
+      <CircleHelp className="size-4" />
+    </Button>
+  );
+}
+
 export default function GlobalHotkeys() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { isAuthenticated } = useAuth();
   const { openHistory } = useHistoryPanel();
-  const [helpOpen, setHelpOpen] = useState(false);
+  const { openHelp } = useHotkeys();
   const waitingForDestination = useRef(false);
   const chordTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const focusSearchAfterNavigation = useRef(false);
@@ -65,7 +131,7 @@ export default function GlobalHotkeys() {
       if (key === "?" && !dialogOpen) {
         event.preventDefault();
         resetChord();
-        setHelpOpen(true);
+        openHelp();
         return;
       }
 
@@ -117,33 +183,17 @@ export default function GlobalHotkeys() {
       window.removeEventListener("keydown", handleKeyDown);
       resetChord();
     };
-  }, [isAuthenticated, navigate, openHistory, pathname]);
+  }, [isAuthenticated, navigate, openHelp, openHistory, pathname]);
 
-  return (
-    <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>キーボードショートカット</DialogTitle>
-          <DialogDescription>
-            入力欄へ入力している間は反応しません。
-          </DialogDescription>
-        </DialogHeader>
-        <dl className="divide-y">
-          <HotkeyRow keys={["g", "h"]} label="履歴を開く" />
-          {isAuthenticated && (
-            <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
-          )}
-          <HotkeyRow keys={["g", "s"]} label="検索へ移動" />
-          <HotkeyRow keys={["g", "q"]} label="クイズへ移動" />
-          <HotkeyRow keys={["[", "]"]} label="前後のタブへ移動" />
-          <HotkeyRow keys={["↑", "↓"]} label="履歴の項目を移動" />
-          <HotkeyRow keys={["Enter"]} label="選択した履歴を開く" />
-          <HotkeyRow keys={["/"]} label="検索入力へフォーカス" />
-          <HotkeyRow keys={["?"]} label="この一覧を開く" />
-        </dl>
-      </DialogContent>
-    </Dialog>
-  );
+  return null;
+}
+
+function useHotkeys() {
+  const context = useContext(HotkeyContext);
+  if (!context) {
+    throw new Error("useHotkeys must be used within HotkeyProvider");
+  }
+  return context;
 }
 
 function HotkeyRow({ keys, label }: { keys: string[]; label: string }) {
