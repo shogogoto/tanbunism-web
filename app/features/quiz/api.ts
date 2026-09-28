@@ -238,6 +238,33 @@ export async function recommendQuizzes(
   }));
 }
 
+export async function prepareStudyPlanQuizzes(
+  plan: StudyPlan,
+): Promise<QuizRecommendation[]> {
+  const quizTypes = [
+    ...plan.quiz_types.filter((quizType) => quizType !== "pair2rel"),
+    ...plan.quiz_types.filter((quizType) => quizType === "pair2rel"),
+  ];
+  const prepared: QuizRecommendation[] = [];
+
+  for (const quizType of quizTypes) {
+    prepared.push(
+      ...(await recommendQuizzes(plan.uid, quizType, {
+        generateMissing: true,
+      })),
+    );
+  }
+
+  return [
+    ...new Map(
+      prepared.map((recommendation) => [
+        recommendation.quiz.quiz_id,
+        recommendation,
+      ]),
+    ).values(),
+  ];
+}
+
 export async function answerQuiz(
   quizId: string,
   selected: string[],

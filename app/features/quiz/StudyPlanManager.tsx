@@ -36,6 +36,7 @@ import {
   deleteStudyPlan,
   listStudyPlans,
   listStudyResources,
+  prepareStudyPlanQuizzes,
 } from "./api";
 
 const quizTypeLabels: Record<QuizType, string> = {
@@ -52,6 +53,10 @@ export default function StudyPlanManager() {
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string>();
+  const [preparingId, setPreparingId] = useState<string>();
+  const [preparedCounts, setPreparedCounts] = useState<Record<string, number>>(
+    {},
+  );
   const [error, setError] = useState<string>();
 
   useEffect(() => {
@@ -109,6 +114,26 @@ export default function StudyPlanManager() {
     }
   }
 
+  async function preparePlan(plan: StudyPlan) {
+    setPreparingId(plan.uid);
+    setError(undefined);
+    try {
+      const prepared = await prepareStudyPlanQuizzes(plan);
+      setPreparedCounts((current) => ({
+        ...current,
+        [plan.uid]: prepared.length,
+      }));
+    } catch (prepareError) {
+      setError(
+        prepareError instanceof Error
+          ? prepareError.message
+          : "クイズを準備できませんでした。",
+      );
+    } finally {
+      setPreparingId(undefined);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -160,6 +185,11 @@ export default function StudyPlanManager() {
               setPlans((current) =>
                 current.map((item) => (item.uid === plan.uid ? plan : item)),
               );
+              setPreparedCounts((current) => {
+                const next = { ...current };
+                delete next[plan.uid];
+                return next;
+              });
               setEditingPlan(undefined);
             }}
             onCancel={() => {
@@ -193,7 +223,14 @@ export default function StudyPlanManager() {
             <TableBody>
               {plans.map((plan) => (
                 <TableRow key={plan.uid}>
-                  <TableCell className="font-medium">{plan.name}</TableCell>
+                  <TableCell>
+                    <div className="font-medium">{plan.name}</div>
+                    {preparedCounts[plan.uid] !== undefined && (
+                      <div className="text-xs text-muted-foreground">
+                        準備完了 · {preparedCounts[plan.uid]}問
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div className="flex max-w-56 flex-wrap gap-1">
                       {plan.resource_ids.map((resourceId) => (
@@ -217,7 +254,19 @@ export default function StudyPlanManager() {
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
-                      <Button asChild size="sm">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={Boolean(preparingId)}
+                        onClick={() => void preparePlan(plan)}
+                      >
+                        {preparingId === plan.uid
+                          ? "準備中…"
+                          : preparedCounts[plan.uid] === undefined
+                            ? "準備する"
+                            : "再準備"}
+                      </Button>
+                      <Button asChild size="sm" variant="outline">
                         <Link to={`/quiz?plan=${encodeURIComponent(plan.uid)}`}>
                           解く
                         </Link>

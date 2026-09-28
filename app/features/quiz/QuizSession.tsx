@@ -54,9 +54,6 @@ export default function QuizSession() {
   const [isPreparingRecommendations, setIsPreparingRecommendations] =
     useState(false);
   const [preparingQuizType, setPreparingQuizType] = useState<QuizType>();
-  const [preparationPhase, setPreparationPhase] = useState<
-    "existing" | "generating"
-  >("existing");
   const [preparationError, setPreparationError] = useState<string>();
   const [submitError, setSubmitError] = useState<string>();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -124,33 +121,30 @@ export default function QuizSession() {
     async function loadRecommendations() {
       let accumulated: QuizRecommendation[] = [];
       const errors: string[] = [];
-      for (const phase of ["existing", "generating"] as const) {
-        setPreparationPhase(phase);
-        for (const quizType of planQuizTypes) {
+      for (const quizType of planQuizTypes) {
+        if (!active) return;
+        setPreparingQuizType(quizType);
+        try {
+          const loaded = await recommendQuizzes(planId, quizType, {
+            generateMissing: false,
+            signal: controller.signal,
+          });
           if (!active) return;
-          setPreparingQuizType(quizType);
-          try {
-            const loaded = await recommendQuizzes(planId, quizType, {
-              generateMissing: phase === "generating",
-              signal: controller.signal,
-            });
-            if (!active) return;
-            const byId = new Map(
-              [...accumulated, ...loaded].map((item) => [
-                item.quiz.quiz_id,
-                item,
-              ]),
-            );
-            accumulated = [...byId.values()];
-            setRecommendations(accumulated);
-          } catch (error) {
-            if (!active || controller.signal.aborted) return;
-            errors.push(
-              error instanceof Error
-                ? error.message
-                : `${quizType}のクイズを取得できませんでした。`,
-            );
-          }
+          const byId = new Map(
+            [...accumulated, ...loaded].map((item) => [
+              item.quiz.quiz_id,
+              item,
+            ]),
+          );
+          accumulated = [...byId.values()];
+          setRecommendations(accumulated);
+        } catch (error) {
+          if (!active || controller.signal.aborted) return;
+          errors.push(
+            error instanceof Error
+              ? error.message
+              : `${quizType}のクイズを取得できませんでした。`,
+          );
         }
       }
       if (!active) return;
@@ -163,7 +157,7 @@ export default function QuizSession() {
         });
       } else if (errors.length > 0) {
         setPreparationError(
-          `${errors.length}形式のクイズを準備できませんでした。取得済みの問題は回答できます。`,
+          `${errors.length}形式のクイズを取得できませんでした。取得済みの問題は回答できます。`,
         );
       }
     }
@@ -291,7 +285,7 @@ export default function QuizSession() {
   }
 
   if (loadState.status === "loading") {
-    return <p className="p-6">クイズを準備しています…</p>;
+    return <p className="p-6">クイズを読み込んでいます…</p>;
   }
 
   if (loadState.status === "error") {
@@ -331,9 +325,14 @@ export default function QuizSession() {
       <div className="mx-auto max-w-2xl p-6 space-y-4">
         <PlanToolbar plans={plans} planId={planId} onChange={setPlanId} />
         <EmptyState
-          title="提案できるクイズがありません"
-          description="このStudyPlanの対象リソースやクイズ設定を見直してください。"
+          title="準備済みのクイズがありません"
+          description="ダッシュボードでこのStudyPlanのクイズを準備してください。"
         />
+        <div className="flex justify-center">
+          <Button asChild>
+            <Link to="/dashboard?view=study-plans">クイズを準備する</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -366,10 +365,8 @@ export default function QuizSession() {
           <CardContent className="py-4">
             <p className="font-medium">
               {preparingQuizType
-                ? preparationPhase === "existing"
-                  ? `既存の${quizTypeLabels[preparingQuizType]}を確認しています…`
-                  : `${quizTypeLabels[preparingQuizType]}を作成しています…`
-                : "クイズを準備しています…"}
+                ? `${quizTypeLabels[preparingQuizType]}を読み込んでいます…`
+                : "クイズを読み込んでいます…"}
             </p>
             {recommendations.length > 0 && (
               <p className="text-sm text-muted-foreground">
@@ -675,7 +672,7 @@ function PlanToolbar({ ...selectorProps }: Parameters<typeof PlanSelector>[0]) {
         <PlanSelector {...selectorProps} />
       </div>
       <Button asChild type="button" variant="ghost">
-        <Link to="/study-plans">管理</Link>
+        <Link to="/dashboard?view=study-plans">管理</Link>
       </Button>
     </div>
   );

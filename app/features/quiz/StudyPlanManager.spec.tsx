@@ -8,6 +8,7 @@ import {
   deleteStudyPlan,
   listStudyPlans,
   listStudyResources,
+  prepareStudyPlanQuizzes,
 } from "./api";
 
 vi.mock("./api", () => ({
@@ -16,6 +17,7 @@ vi.mock("./api", () => ({
   deleteStudyPlan: vi.fn(),
   listStudyPlans: vi.fn(),
   listStudyResources: vi.fn(),
+  prepareStudyPlanQuizzes: vi.fn(),
 }));
 
 const plan: StudyPlan = {
@@ -35,6 +37,7 @@ describe("StudyPlanManager", () => {
       { uid: "resource-1", name: "数学の本" },
     ]);
     vi.mocked(deleteStudyPlan).mockResolvedValue();
+    vi.mocked(prepareStudyPlanQuizzes).mockResolvedValue([]);
   });
 
   it("計画の内容を確認し、その計画でクイズを始められる", async () => {
@@ -52,6 +55,24 @@ describe("StudyPlanManager", () => {
       "href",
       "/quiz?plan=plan-1",
     );
+  });
+
+  it("回答前にStudyPlanのクイズを準備する", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <StudyPlanManager />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("数学の復習");
+    await user.click(screen.getByRole("button", { name: "準備する" }));
+
+    await waitFor(() =>
+      expect(prepareStudyPlanQuizzes).toHaveBeenCalledWith(plan),
+    );
+    expect(screen.getByText("準備完了 · 0問")).toBeVisible();
+    expect(screen.getByRole("button", { name: "再準備" })).toBeVisible();
   });
 
   it("計画を削除して一覧から取り除く", async () => {

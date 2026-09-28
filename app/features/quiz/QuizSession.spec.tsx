@@ -179,12 +179,12 @@ describe("QuizSession", () => {
 
     renderQuizSession("/quiz?plan=plan-2");
 
-    await screen.findByText("提案できるクイズがありません");
+    await screen.findByText("準備済みのクイズがありません");
     expect(screen.getByLabelText("StudyPlan")).toHaveValue("plan-2");
-    expect(requestedPlans).toEqual(["plan-2", "plan-2", "plan-2", "plan-2"]);
+    expect(requestedPlans).toEqual(["plan-2", "plan-2"]);
   });
 
-  it("PAIR2RELを各準備段階の最後に取得する", async () => {
+  it("既存クイズだけを取得しPAIR2RELを最後にする", async () => {
     const requests: string[] = [];
     server.use(
       http.get("*/quiz/study-plans", () =>
@@ -206,14 +206,11 @@ describe("QuizSession", () => {
 
     renderQuizSession();
 
-    await screen.findByText("提案できるクイズがありません");
+    await screen.findByText("準備済みのクイズがありません");
     expect(requests).toEqual([
       "false:term2sent",
       "false:sent2term",
       "false:pair2rel",
-      "true:term2sent",
-      "true:sent2term",
-      "true:pair2rel",
     ]);
   });
 
@@ -241,15 +238,13 @@ describe("QuizSession", () => {
     expect(
       await screen.findByText(recommendation.quiz.statement),
     ).toBeVisible();
-    expect(
-      screen.getByText("既存の単文から用語を確認しています…"),
-    ).toBeVisible();
+    expect(screen.getByText("単文から用語を読み込んでいます…")).toBeVisible();
     expect(screen.getByText("1 / 2")).toBeVisible();
 
     finishSecondType();
     await waitFor(() => {
       expect(
-        screen.queryByText("既存の単文から用語を確認しています…"),
+        screen.queryByText("単文から用語を読み込んでいます…"),
       ).not.toBeInTheDocument();
     });
   });
@@ -402,7 +397,7 @@ describe("QuizSession", () => {
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "管理" })).toHaveAttribute(
       "href",
-      "/study-plans",
+      "/dashboard?view=study-plans",
     );
     expect(
       screen.queryByRole("button", { name: "編集" }),
