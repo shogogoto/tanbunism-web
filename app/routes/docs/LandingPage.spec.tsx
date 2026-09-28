@@ -3,9 +3,15 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { vi } from "vitest";
 import LandingPage from "./LandingPage";
 
+const auth = vi.hoisted(() => ({ isAuthenticated: true }));
+
 vi.mock("~/features/auth/AuthProvider", () => ({
-  useAuth: () => ({ isAuthenticated: true }),
+  useAuth: () => auth,
 }));
+
+beforeEach(() => {
+  auth.isAuthenticated = true;
+});
 
 it("ログイン済みならダッシュボードへ移動する", async () => {
   render(
@@ -30,4 +36,23 @@ it("明示的に開いたトップはログイン済みでも表示する", () =
   expect(
     screen.getByRole("heading", { level: 1, name: "tanbunism" }),
   ).toBeInTheDocument();
+});
+
+it("未ログインのトップにアカウント導線を表示する", () => {
+  auth.isAuthenticated = false;
+
+  render(
+    <MemoryRouter initialEntries={["/"]}>
+      <LandingPage />
+    </MemoryRouter>,
+  );
+
+  expect(screen.getByRole("link", { name: "ログイン" })).toHaveAttribute(
+    "href",
+    "/login",
+  );
+  expect(screen.getByRole("link", { name: "新規登録" })).toHaveAttribute(
+    "href",
+    "/register",
+  );
 });
