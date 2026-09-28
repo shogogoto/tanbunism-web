@@ -37,10 +37,16 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
         collapsed ? "w-16" : "w-56"
       }`}
     >
-      <div className="flex h-14 items-center justify-between border-b px-3">
+      <div
+        className={`border-b ${
+          collapsed
+            ? "flex h-20 flex-col justify-center gap-1 px-2"
+            : "flex h-14 items-center justify-between px-3"
+        }`}
+      >
         <Link
           to={isAuthenticated ? "/about" : "/"}
-          className="flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={`flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${collapsed ? "justify-center" : ""}`}
           aria-label="Tanbun トップ"
         >
           <SiteLogo />
@@ -52,7 +58,7 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
           type="button"
           variant="ghost"
           size="icon"
-          className="shrink-0"
+          className={`shrink-0 ${collapsed ? "self-center" : ""}`}
           onClick={onToggle}
           aria-label={collapsed ? "サイドバーを開く" : "サイドバーを閉じる"}
         >

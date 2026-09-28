@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
 import { Button } from "~/shared/components/ui/button";
@@ -8,6 +8,7 @@ import { SiteLogo } from "./components/SiteLogo";
 
 export default function AppHeader() {
   const { user, isAuthenticated } = useAuth();
+  const { pathname } = useLocation();
 
   return (
     <header className="z-40 shrink-0 border-b bg-background/95 backdrop-blur">
@@ -20,8 +21,8 @@ export default function AppHeader() {
           <SiteLogo />
         </Link>
 
-        <span className="hidden text-sm font-medium text-muted-foreground md:block">
-          Tanbunism
+        <span className="text-sm font-medium text-muted-foreground">
+          {pageTitle(pathname)}
         </span>
 
         <div className="ml-auto flex items-center gap-1 md:hidden">
@@ -46,4 +47,19 @@ export default function AppHeader() {
       </div>
     </header>
   );
+}
+
+function pageTitle(pathname: string): string {
+  if (pathname === "/dashboard") return "ダッシュボード";
+  if (pathname === "/quiz/list") return "作成したクイズ";
+  if (pathname === "/quiz") return "クイズ";
+  if (pathname === "/study-plans") return "学習計画";
+  if (pathname === "/answers") return "回答履歴";
+  if (pathname === "/achievement") return "学習記録";
+  if (pathname.startsWith("/docs")) return "ドキュメント";
+  if (pathname.startsWith("/search")) return "検索";
+  if (pathname.startsWith("/entry/")) return "Entry";
+  if (pathname.startsWith("/resource/")) return "Resource";
+  if (pathname.startsWith("/tanbun/")) return "Tanbun";
+  return "Tanbunism";
 }
