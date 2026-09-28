@@ -132,14 +132,17 @@ describe("統合検索", () => {
     expect(screen.getByLabelText("関係数: 0")).toBeVisible();
     expect(screen.queryByText("詳細数")).not.toBeInTheDocument();
     expect(document.querySelector("[data-slot=badge]")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "知識" })).toHaveClass(
-      "!bg-blue-600",
+    expect(screen.getByRole("button", { name: "知識" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
-    expect(screen.getByRole("button", { name: "リソース" })).toHaveClass(
-      "!bg-orange-600",
+    expect(screen.getByRole("button", { name: "リソース" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
-    expect(screen.getByRole("button", { name: "ユーザー" })).toHaveClass(
-      "!bg-purple-600",
+    expect(screen.getByRole("button", { name: "ユーザー" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
     expect(requestedTypes.sort()).toEqual(["knowledge", "resource", "user"]);
     await waitFor(async () => expect(await genericCache.count()).toBe(3));
@@ -187,11 +190,8 @@ describe("統合検索", () => {
       "false",
     );
     expect(screen.getByRole("button", { name: "リソース" })).toHaveClass(
-      "!bg-muted",
-      "!text-muted-foreground",
-    );
-    expect(screen.getByRole("button", { name: "リソース" })).not.toHaveClass(
-      "!bg-orange-600",
+      "text-muted-foreground",
+      "opacity-55",
     );
     expect(screen.getByText("1件の検索結果")).toBeVisible();
   });
@@ -244,11 +244,7 @@ describe("統合検索", () => {
     await screen.findByText("3件の検索結果");
 
     await ui.click(screen.getByRole("button", { name: "詳細設定" }));
-    const details = document.getElementById(
-      screen
-        .getByRole("button", { name: "詳細設定" })
-        .getAttribute("aria-controls") ?? "",
-    );
+    const details = document.querySelector("[data-slot=popover-content]");
     expect(details).toHaveClass(
       "overflow-y-auto",
       "overscroll-contain",

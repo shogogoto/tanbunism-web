@@ -18,29 +18,6 @@ const labels: Record<SearchType, string> = {
   user: "ユーザー",
 };
 
-const buttonStyles: Record<
-  SearchType,
-  { selected: string; unselected: string }
-> = {
-  knowledge: {
-    selected: "!border-blue-600 !bg-blue-600 !text-white hover:!bg-blue-700",
-    unselected:
-      "!border-border !bg-muted !text-muted-foreground hover:!bg-muted/80",
-  },
-  resource: {
-    selected:
-      "!border-orange-600 !bg-orange-600 !text-white hover:!bg-orange-700",
-    unselected:
-      "!border-border !bg-muted !text-muted-foreground hover:!bg-muted/80",
-  },
-  user: {
-    selected:
-      "!border-purple-600 !bg-purple-600 !text-white hover:!bg-purple-700",
-    unselected:
-      "!border-border !bg-muted !text-muted-foreground hover:!bg-muted/80",
-  },
-};
-
 export default function SearchHeaderControls() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";
@@ -77,7 +54,7 @@ export default function SearchHeaderControls() {
 
   return (
     <div className="border-t px-3 pb-3 pt-3 md:px-6">
-      <div className="mx-auto max-w-3xl space-y-3">
+      <div className="mx-auto max-w-3xl space-y-2">
         <div className="relative">
           <Search className="absolute left-3 top-2.5 size-5 text-muted-foreground" />
           <Input
@@ -91,46 +68,56 @@ export default function SearchHeaderControls() {
             }
             placeholder="知識、リソース、ユーザーを検索"
             aria-label="検索"
-            className="pl-10"
+            className="pl-10 pr-12"
           />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap gap-2" aria-label="検索対象">
-            {searchTypes.map((type) => (
-              <Button
-                key={type}
-                type="button"
-                size="sm"
-                variant="outline"
-                className={
-                  buttonStyles[type][
-                    enabledTypes.includes(type) ? "selected" : "unselected"
-                  ]
-                }
-                aria-pressed={enabledTypes.includes(type)}
-                onClick={() => toggleType(type)}
-              >
-                {labels[type]}
-              </Button>
-            ))}
+          <div className="absolute right-1 top-1">
+            <SearchSettingsPanel
+              enabledTypes={enabledTypes}
+              settings={settings}
+              onChange={(nextSettings) =>
+                setSearchParams(
+                  (current) => writeSearchSettings(current, nextSettings),
+                  { replace: true },
+                )
+              }
+              onReset={() =>
+                setSearchParams(
+                  (current) =>
+                    writeSearchSettings(current, defaultSearchSettings),
+                  { replace: true },
+                )
+              }
+            />
           </div>
-          <SearchSettingsPanel
-            enabledTypes={enabledTypes}
-            settings={settings}
-            onChange={(nextSettings) =>
-              setSearchParams(
-                (current) => writeSearchSettings(current, nextSettings),
-                { replace: true },
-              )
-            }
-            onReset={() =>
-              setSearchParams(
-                (current) =>
-                  writeSearchSettings(current, defaultSearchSettings),
-                { replace: true },
-              )
-            }
-          />
+        </div>
+        <div
+          className="flex flex-wrap items-center gap-1"
+          aria-label="検索対象"
+        >
+          {searchTypes.map((type) => (
+            <Button
+              key={type}
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={`h-7 gap-1.5 px-2 text-xs ${
+                enabledTypes.includes(type)
+                  ? "font-medium text-foreground"
+                  : "text-muted-foreground opacity-55"
+              }`}
+              aria-pressed={enabledTypes.includes(type)}
+              onClick={() => toggleType(type)}
+            >
+              <span
+                className={`size-1.5 rounded-full ${
+                  enabledTypes.includes(type)
+                    ? "bg-current"
+                    : "border border-current"
+                }`}
+              />
+              {labels[type]}
+            </Button>
+          ))}
         </div>
       </div>
     </div>

@@ -8,6 +8,11 @@ import {
 } from "~/shared/components/ui/collapsible";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/shared/components/ui/popover";
 import { SearchByTextTanbunGetType } from "~/shared/generated/fastAPI.schemas";
 import type { SearchSettings, SearchType } from "./settings";
 
@@ -23,15 +28,23 @@ export default function SearchSettingsPanel({
   onReset: () => void;
 }) {
   return (
-    <Collapsible>
-      <div className="flex items-center justify-between">
-        <CollapsibleTrigger asChild>
-          <Button type="button" variant="ghost" size="sm">
-            <Settings /> 詳細設定
-          </Button>
-        </CollapsibleTrigger>
-      </div>
-      <CollapsibleContent className="mt-3 max-h-[calc(100dvh-12rem)] touch-pan-y space-y-3 overflow-y-auto overscroll-contain rounded-md border bg-background p-4">
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="詳細設定"
+          title="詳細設定"
+          className="size-8"
+        >
+          <Settings className="size-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="max-h-[calc(100dvh-8rem)] w-[min(42rem,calc(100vw-2rem))] touch-pan-y space-y-3 overflow-y-auto overscroll-contain"
+      >
         {enabledTypes.includes("knowledge") && (
           <KnowledgeSettings settings={settings} onChange={onChange} />
         )}
@@ -44,8 +57,8 @@ export default function SearchSettingsPanel({
         <Button type="button" variant="outline" size="sm" onClick={onReset}>
           <RotateCcw /> 初期値に戻す
         </Button>
-      </CollapsibleContent>
-    </Collapsible>
+      </PopoverContent>
+    </Popover>
   );
 }
 
