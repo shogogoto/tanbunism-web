@@ -4,7 +4,7 @@ import { dashboardSections, isDashboardSection } from "./sections";
 export default function DashboardHeaderTabs() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get("view");
-  const active = isDashboardSection(requested) ? requested : "profile";
+  const active = isDashboardSection(requested) ? requested : "timeline";
 
   return (
     <nav
@@ -26,7 +26,7 @@ export default function DashboardHeaderTabs() {
           onClick={() => {
             setSearchParams((current) => {
               const next = new URLSearchParams(current);
-              if (section.id === "profile") next.delete("view");
+              if (section.id === "timeline") next.delete("view");
               else next.set("view", section.id);
               return next;
             });

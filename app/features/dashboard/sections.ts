@@ -1,8 +1,9 @@
 export const dashboardSections = [
-  { id: "profile", label: "プロフィール" },
+  { id: "timeline", label: "TL" },
+  { id: "quiz-timeline", label: "クイズTL" },
   { id: "answers", label: "回答履歴" },
-  { id: "notes", label: "読書メモ" },
   { id: "study-plans", label: "学習計画" },
+  { id: "notes", label: "読書メモ" },
 ] as const;
 
 export type DashboardSection = (typeof dashboardSections)[number]["id"];

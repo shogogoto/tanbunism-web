@@ -134,7 +134,7 @@ export function LearningLevel({
             variant="ghost"
             className="h-auto w-full justify-between px-0 py-2 text-sm"
           >
-            XPの獲得内訳
+            XPの加点ルールと獲得内訳
             <ChevronDown
               className={cn(
                 "size-4 transition-transform",
@@ -144,6 +144,9 @@ export function LearningLevel({
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-1">
+          <p className="pb-2 text-xs text-muted-foreground">
+            活動1回あたりのXPと、現在までの獲得量です。
+          </p>
           <div className="divide-y rounded-md border px-3">
             {(progress.xp_details ?? []).map((detail) => {
               const presentation = xpSourcePresentation[detail.source];

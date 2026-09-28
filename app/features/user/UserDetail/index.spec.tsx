@@ -81,7 +81,9 @@ describe("LearningLevel", () => {
       "レベル進捗 88%",
     );
 
-    await user.click(screen.getByRole("button", { name: "XPの獲得内訳" }));
+    await user.click(
+      screen.getByRole("button", { name: "XPの加点ルールと獲得内訳" }),
+    );
     expect(screen.getByText("知識の整理")).toBeVisible();
     expect(screen.getByText("12文 × 1 XP")).toBeVisible();
     expect(screen.getByText("+25 XP")).toBeVisible();

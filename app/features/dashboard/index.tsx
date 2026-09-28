@@ -1,8 +1,7 @@
 import { Plus } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
-import { useAuth } from "~/features/auth/AuthProvider";
 import NamespaceExplorer from "~/features/namespace/components/NamespaceExplorer";
 import Uploader from "~/features/namespace/uploader/Uploader";
 import AnswerHistory from "~/features/quiz/AnswerHistory";
@@ -15,7 +14,8 @@ import {
   DialogTrigger,
 } from "~/shared/components/ui/dialog";
 import { useGetNamaspaceNamespaceGet } from "~/shared/generated/entry/entry";
-import DashboardProfile from "./DashboardProfile";
+import PersonalTimeline from "./PersonalTimeline";
+import QuizTimeline from "./QuizTimeline";
 import {
   type DashboardSection,
   dashboardSections,
@@ -23,21 +23,31 @@ import {
 } from "./sections";
 
 export default function Dashboard() {
-  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get("view");
   const activeSection = isDashboardSection(requestedSection)
     ? requestedSection
-    : "profile";
+    : "timeline";
+  const [mountedSections, setMountedSections] = useState<Set<DashboardSection>>(
+    () => new Set([activeSection]),
+  );
   const touchStartX = useRef<number | undefined>(undefined);
   const namespace = useGetNamaspaceNamespaceGet({
     fetch: { credentials: "include" },
+    swr: { enabled: mountedSections.has("notes") },
   });
+
+  useEffect(() => {
+    setMountedSections((current) => {
+      if (current.has(activeSection)) return current;
+      return new Set([...current, activeSection]);
+    });
+  }, [activeSection]);
 
   function setActiveSection(section: DashboardSection) {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
-      if (section === "profile") next.delete("view");
+      if (section === "timeline") next.delete("view");
       else next.set("view", section);
       return next;
     });
@@ -69,37 +79,50 @@ export default function Dashboard() {
           }}
         >
           <div className="relative">
-            <div hidden={activeSection !== "profile"}>
-              <DashboardProfile user={user} />
-            </div>
-            <div hidden={activeSection !== "answers"}>
-              <AnswerHistory />
-            </div>
-            <div hidden={activeSection !== "notes"}>
-              <Dialog>
-                <Card>
-                  <CardContent className="p-4 sm:p-6">
-                    <NamespaceExplorer nsprops={namespace} />
-                  </CardContent>
-                </Card>
-                <DialogTrigger asChild>
-                  <Button
-                    size="icon"
-                    className="fixed bottom-20 right-4 z-30 size-12 rounded-full shadow-xl ring-4 ring-background transition-transform hover:scale-105 md:bottom-6 md:right-6"
-                    aria-label="読書メモを取り込む"
-                    title="読書メモを取り込む"
-                  >
-                    <Plus className="size-6" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="h-[90vh] w-[calc(100vw-2rem)] max-w-none overflow-hidden p-0 sm:max-w-5xl">
-                  <Uploader refresh={() => void namespace.mutate()} />
-                </DialogContent>
-              </Dialog>
-            </div>
-            <div hidden={activeSection !== "study-plans"}>
-              <StudyPlanManager />
-            </div>
+            {mountedSections.has("timeline") && (
+              <div hidden={activeSection !== "timeline"}>
+                <PersonalTimeline />
+              </div>
+            )}
+            {mountedSections.has("quiz-timeline") && (
+              <div hidden={activeSection !== "quiz-timeline"}>
+                <QuizTimeline />
+              </div>
+            )}
+            {mountedSections.has("answers") && (
+              <div hidden={activeSection !== "answers"}>
+                <AnswerHistory />
+              </div>
+            )}
+            {mountedSections.has("notes") && (
+              <div hidden={activeSection !== "notes"}>
+                <Dialog>
+                  <Card>
+                    <CardContent className="p-4 sm:p-6">
+                      <NamespaceExplorer nsprops={namespace} />
+                    </CardContent>
+                  </Card>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="icon"
+                      className="fixed bottom-20 right-4 z-30 size-12 rounded-full shadow-xl ring-4 ring-background transition-transform hover:scale-105 md:bottom-6 md:right-6"
+                      aria-label="読書メモを取り込む"
+                      title="読書メモを取り込む"
+                    >
+                      <Plus className="size-6" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="h-[90vh] w-[calc(100vw-2rem)] max-w-none overflow-hidden p-0 sm:max-w-5xl">
+                    <Uploader refresh={() => void namespace.mutate()} />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
+            {mountedSections.has("study-plans") && (
+              <div hidden={activeSection !== "study-plans"}>
+                <StudyPlanManager />
+              </div>
+            )}
           </div>
         </section>
       </div>
