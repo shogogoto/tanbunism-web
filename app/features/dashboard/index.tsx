@@ -1,33 +1,19 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  FolderOpen,
-  ListChecks,
-  Plus,
-  SquareCheckBig,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useRef } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
 import { useAuth } from "~/features/auth/AuthProvider";
 import NamespaceExplorer from "~/features/namespace/components/NamespaceExplorer";
 import Uploader from "~/features/namespace/uploader/Uploader";
 import { Button } from "~/shared/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/shared/components/ui/card";
+import { Card, CardContent } from "~/shared/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogTrigger,
 } from "~/shared/components/ui/dialog";
 import { useGetNamaspaceNamespaceGet } from "~/shared/generated/entry/entry";
-import DashboardAchievement from "./DashboardAchievement";
-import DashboardActivity from "./DashboardActivity";
+import DashboardProfile from "./DashboardProfile";
 import RecentAnswers from "./RecentAnswers";
 import {
   type DashboardSection,
@@ -41,7 +27,7 @@ export default function Dashboard() {
   const requestedSection = searchParams.get("view");
   const activeSection = isDashboardSection(requestedSection)
     ? requestedSection
-    : "start";
+    : "profile";
   const touchStartX = useRef<number | undefined>(undefined);
   const namespace = useGetNamaspaceNamespaceGet({
     fetch: { credentials: "include" },
@@ -50,7 +36,7 @@ export default function Dashboard() {
   function setActiveSection(section: DashboardSection) {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
-      if (section === "start") next.delete("view");
+      if (section === "profile") next.delete("view");
       else next.set("view", section);
       return next;
     });
@@ -106,17 +92,8 @@ export default function Dashboard() {
             >
               <ChevronRight className="size-4" />
             </Button>
-            <div hidden={activeSection !== "start"}>
-              <StartPanel />
-            </div>
-            <div hidden={activeSection !== "activity"}>
-              <DashboardActivity
-                userId={user?.uid}
-                userPath={user?.username || user?.uid}
-              />
-            </div>
-            <div hidden={activeSection !== "achievement"}>
-              <DashboardAchievement />
+            <div hidden={activeSection !== "profile"}>
+              <DashboardProfile user={user} />
             </div>
             <div hidden={activeSection !== "answers"}>
               <RecentAnswers />
@@ -160,58 +137,4 @@ function moveDashboardSection(
   );
   const next = dashboardSections[index + offset];
   if (next) setSection(next.id);
-}
-
-function StartPanel() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>今日の学習</CardTitle>
-        <CardDescription>やることを1つ選んで始めます。</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-3">
-        <Button asChild className="h-auto justify-start gap-3 p-4">
-          <Link to="/quiz">
-            <SquareCheckBig className="size-5" />
-            <span className="text-left">
-              <span className="block">クイズを解く</span>
-              <span className="block text-xs font-normal opacity-80">
-                StudyPlanから次の問題を始める
-              </span>
-            </span>
-          </Link>
-        </Button>
-        <Button
-          asChild
-          variant="outline"
-          className="h-auto justify-start gap-3 p-4"
-        >
-          <Link to="/quiz/list">
-            <FolderOpen className="size-5" />
-            <span className="text-left">
-              <span className="block">作成したクイズ</span>
-              <span className="block text-xs font-normal text-muted-foreground">
-                Resourceごとのクイズを確認する
-              </span>
-            </span>
-          </Link>
-        </Button>
-        <Button
-          asChild
-          variant="outline"
-          className="h-auto justify-start gap-3 p-4"
-        >
-          <Link to="/study-plans">
-            <ListChecks className="size-5" />
-            <span className="text-left">
-              <span className="block">学習計画</span>
-              <span className="block text-xs font-normal text-muted-foreground">
-                Resourceとクイズ形式を管理する
-              </span>
-            </span>
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
-  );
 }
