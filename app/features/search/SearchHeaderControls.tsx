@@ -18,6 +18,14 @@ const labels: Record<SearchType, string> = {
   user: "ユーザー",
 };
 
+const activeTypeStyles: Record<SearchType, string> = {
+  knowledge:
+    "text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300",
+  resource:
+    "text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300",
+  user: "text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300",
+};
+
 export default function SearchHeaderControls() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";
@@ -102,7 +110,7 @@ export default function SearchHeaderControls() {
               variant="ghost"
               className={`h-7 gap-1.5 px-2 text-xs ${
                 enabledTypes.includes(type)
-                  ? "font-medium text-foreground"
+                  ? `font-medium ${activeTypeStyles[type]}`
                   : "text-muted-foreground opacity-55"
               }`}
               aria-pressed={enabledTypes.includes(type)}
