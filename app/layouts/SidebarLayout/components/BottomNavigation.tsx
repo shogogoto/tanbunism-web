@@ -1,15 +1,20 @@
 import { LayoutDashboard, Search, SquareCheckBig } from "lucide-react";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router";
+import { useAuth } from "~/features/auth/AuthProvider";
 
 export default function BottomNavigation() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <>
-      <NavigationItem
-        to="/dashboard"
-        label="ダッシュボード"
-        icon={<LayoutDashboard />}
-      />
+      {isAuthenticated && (
+        <NavigationItem
+          to="/dashboard"
+          label="ダッシュボード"
+          icon={<LayoutDashboard />}
+        />
+      )}
       <NavigationItem to="/search" label="検索" icon={<Search />} />
       <NavigationItem to="/quiz" label="クイズ" icon={<SquareCheckBig />} />
     </>

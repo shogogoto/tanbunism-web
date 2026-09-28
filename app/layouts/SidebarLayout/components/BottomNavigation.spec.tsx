@@ -1,8 +1,19 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { vi } from "vitest";
 import BottomNavigation from "./BottomNavigation";
 
-it("主要画面へ名前付きの導線を表示する", () => {
+const auth = vi.hoisted(() => ({ isAuthenticated: true }));
+
+vi.mock("~/features/auth/AuthProvider", () => ({
+  useAuth: () => auth,
+}));
+
+beforeEach(() => {
+  auth.isAuthenticated = true;
+});
+
+it("ログイン中は個人用画面を含む主要導線を表示する", () => {
   render(
     <MemoryRouter initialEntries={["/quiz"]}>
       <BottomNavigation />
@@ -27,4 +38,20 @@ it("主要画面へ名前付きの導線を表示する", () => {
   expect(
     screen.queryByRole("link", { name: "ドキュメント" }),
   ).not.toBeInTheDocument();
+});
+
+it("未ログインではダッシュボードを表示しない", () => {
+  auth.isAuthenticated = false;
+
+  render(
+    <MemoryRouter initialEntries={["/search"]}>
+      <BottomNavigation />
+    </MemoryRouter>,
+  );
+
+  expect(
+    screen.queryByRole("link", { name: "ダッシュボード" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "検索" })).toBeVisible();
+  expect(screen.getByRole("link", { name: "クイズ" })).toBeVisible();
 });

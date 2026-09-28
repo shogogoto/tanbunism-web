@@ -13,8 +13,7 @@ import { HistoryPanel } from "~/shared/history/HistoryPanel";
 import UserNavi from "./UserNavi";
 import { SiteLogo } from "./components/SiteLogo";
 
-const links = [
-  { to: "/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
+const publicLinks = [
   { to: "/search", label: "検索", icon: Search },
   { to: "/quiz", label: "クイズ", icon: FileQuestion },
 ] as const;
@@ -27,6 +26,16 @@ type Props = {
 export default function DesktopSidebar({ collapsed, onToggle }: Props) {
   const { user, isAuthenticated } = useAuth();
   const { pathname } = useLocation();
+  const links = isAuthenticated
+    ? [
+        {
+          to: "/dashboard",
+          label: "ダッシュボード",
+          icon: LayoutDashboard,
+        },
+        ...publicLinks,
+      ]
+    : publicLinks;
 
   return (
     <aside

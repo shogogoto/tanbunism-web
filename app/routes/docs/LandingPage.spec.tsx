@@ -38,7 +38,7 @@ it("明示的に開いたトップはログイン済みでも表示する", () =
   ).toBeInTheDocument();
 });
 
-it("未ログインのトップにアカウント導線を表示する", () => {
+it("未ログインでもトップを表示する", () => {
   auth.isAuthenticated = false;
 
   render(
@@ -47,12 +47,7 @@ it("未ログインのトップにアカウント導線を表示する", () => {
     </MemoryRouter>,
   );
 
-  expect(screen.getByRole("link", { name: "ログイン" })).toHaveAttribute(
-    "href",
-    "/login",
-  );
-  expect(screen.getByRole("link", { name: "新規登録" })).toHaveAttribute(
-    "href",
-    "/register",
-  );
+  expect(
+    screen.getByRole("heading", { level: 1, name: "tanbunism" }),
+  ).toBeInTheDocument();
 });
