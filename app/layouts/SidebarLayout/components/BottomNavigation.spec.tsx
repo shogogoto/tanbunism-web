@@ -24,8 +24,7 @@ it("主要画面へ名前付きの導線を表示する", () => {
   expect(
     screen.queryByRole("link", { name: "ガイド" }),
   ).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "ドキュメント" })).toHaveAttribute(
-    "href",
-    "/docs/toc",
-  );
+  expect(
+    screen.queryByRole("link", { name: "ドキュメント" }),
+  ).not.toBeInTheDocument();
 });

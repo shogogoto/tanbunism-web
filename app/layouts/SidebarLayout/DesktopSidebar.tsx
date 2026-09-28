@@ -1,5 +1,4 @@
 import {
-  BookOpen,
   ChevronLeft,
   ChevronRight,
   FileQuestion,
@@ -16,7 +15,6 @@ import { SiteLogo } from "./components/SiteLogo";
 
 const links = [
   { to: "/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
-  { to: "/docs/toc", label: "ドキュメント", icon: BookOpen },
   { to: "/search", label: "検索", icon: Search },
   { to: "/quiz", label: "クイズ", icon: FileQuestion },
 ] as const;

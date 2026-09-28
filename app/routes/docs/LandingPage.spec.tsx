@@ -23,7 +23,7 @@ it("ログイン済みならダッシュボードへ移動する", async () => {
 it("明示的に開いたトップはログイン済みでも表示する", () => {
   render(
     <MemoryRouter initialEntries={["/about"]}>
-      <LandingPage redirectAuthenticated={false} />
+      <LandingPage />
     </MemoryRouter>,
   );
 
