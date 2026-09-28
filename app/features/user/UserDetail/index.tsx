@@ -1,7 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import { NamespaceTree } from "~/features/namespace/components/NamespaceExplorer";
-import Loading from "~/shared/components/Loading";
 import { Button } from "~/shared/components/ui/button";
 import {
   Card,
@@ -19,34 +18,24 @@ import { Progress } from "~/shared/components/ui/progress";
 import type {
   LearningProgress,
   NameSpace,
+  XpSource,
 } from "~/shared/generated/fastAPI.schemas";
-import type { getArchievementHistoryUserArchievementHistoryPostResponse } from "~/shared/generated/public-user/public-user";
 import { cn } from "~/shared/lib/utils";
-import AchieveHistoryChart from "../AchieveHistory";
-import AchieveHistoryTable from "../AchieveHistory/HistoryTable";
 import UserProfile from "../UserProfile";
 import type { UserProps } from "../types";
 
 type Props = UserProps &
   React.PropsWithChildren & {
-    achievementsData:
-      | getArchievementHistoryUserArchievementHistoryPostResponse
-      | undefined;
     namespace: NameSpace;
     learningProgress: LearningProgress;
-    isLoading: boolean;
   };
 
 export default function UserDetail({
   user,
   children,
-  achievementsData,
   namespace,
   learningProgress,
-  isLoading,
 }: Props) {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
       {children}
@@ -75,48 +64,12 @@ export default function UserDetail({
           )}
         </CardContent>
       </Card>
-
-      <Card>
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <CardHeader className="flex-row items-center justify-between gap-3">
-            <div>
-              <CardTitle>活動の推移</CardTitle>
-              <CardDescription>知識量のこれまでの変化</CardDescription>
-            </div>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="活動の推移を開閉">
-                <ChevronDown
-                  className={cn(
-                    "size-4 transition-transform",
-                    isOpen && "rotate-180",
-                  )}
-                />
-              </Button>
-            </CollapsibleTrigger>
-          </CardHeader>
-          <CollapsibleContent>
-            <CardContent>
-              {isLoading ? (
-                <Loading type="center-x" />
-              ) : achievementsData?.data && achievementsData.status === 200 ? (
-                <div className="flex flex-col space-y-10">
-                  <AchieveHistoryChart aHistories={achievementsData.data} />
-                  <AchieveHistoryTable aHistories={achievementsData.data} />
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  活動履歴はまだありません。
-                </p>
-              )}
-            </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
     </main>
   );
 }
 
 export function LearningLevel({ progress }: { progress: LearningProgress }) {
+  const [isXpDetailsOpen, setIsXpDetailsOpen] = useState(false);
   const percentage =
     progress.xp_for_next_level === 0
       ? 100
@@ -152,10 +105,72 @@ export function LearningLevel({ progress }: { progress: LearningProgress }) {
             XP
           </span>
         </div>
+        <Collapsible open={isXpDetailsOpen} onOpenChange={setIsXpDetailsOpen}>
+          <CollapsibleTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-auto w-full justify-between px-0 py-2 text-sm"
+            >
+              XPの内訳
+              <ChevronDown
+                className={cn(
+                  "size-4 transition-transform",
+                  isXpDetailsOpen && "rotate-180",
+                )}
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 pt-1">
+            <div className="divide-y rounded-md border px-3">
+              {(progress.xp_details ?? []).map((detail) => {
+                const presentation = xpSourcePresentation[detail.source];
+                return (
+                  <div
+                    key={detail.source}
+                    className="flex items-center justify-between gap-3 py-2 text-sm"
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-medium">
+                        {presentation.label}
+                      </span>
+                      <span className="text-xs tabular-nums text-muted-foreground">
+                        {detail.activity_count.toLocaleString("ja-JP")}
+                        {presentation.unit} × {detail.xp_per_activity} XP
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-medium tabular-nums">
+                      +{detail.earned_xp.toLocaleString("ja-JP")} XP
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs tabular-nums text-muted-foreground">
+              Lv. {progress.level} は累計
+              {(progress.total_xp - progress.current_level_xp).toLocaleString(
+                "ja-JP",
+              )}{" "}
+              XPから・次のレベルは累計
+              {(progress.total_xp + progress.xp_to_next_level).toLocaleString(
+                "ja-JP",
+              )}{" "}
+              XP
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
       </CardContent>
     </Card>
   );
 }
+
+const xpSourcePresentation: Record<XpSource, { label: string; unit: string }> =
+  {
+    knowledge: { label: "知識の整理", unit: "文" },
+    quiz_creation: { label: "クイズ作成", unit: "問" },
+    quiz_answer: { label: "クイズ回答", unit: "回" },
+    correct_bonus: { label: "正解ボーナス", unit: "回" },
+  };
 
 export function LearningSummary({ namespace }: { namespace: NameSpace }) {
   const summary = useMemo(() => {

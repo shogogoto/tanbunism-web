@@ -9,6 +9,7 @@ import { faker } from "@faker-js/faker";
 import { http, HttpResponse, delay } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
+import { XpSource } from "../fastAPI.schemas";
 import type { LearningProgress } from "../fastAPI.schemas";
 
 export const getGetLearningProgressUserUserIdLearningProgressGetResponseMock = (
@@ -26,6 +27,15 @@ export const getGetLearningProgressUserUserIdLearningProgressGetResponseMock = (
     quiz_answer: faker.number.int(),
     correct_bonus: faker.number.int(),
   },
+  xp_details: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    source: faker.helpers.arrayElement(Object.values(XpSource)),
+    activity_count: faker.number.int(),
+    xp_per_activity: faker.number.int(),
+    earned_xp: faker.number.int(),
+  })),
   total_xp: faker.number.int(),
   level: faker.number.int(),
   current_level_xp: faker.number.int(),

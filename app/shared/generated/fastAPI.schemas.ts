@@ -499,11 +499,34 @@ export interface XpBreakdown {
 }
 
 /**
+ * XPを生んだ学習活動の種別.
+ */
+export type XpSource = (typeof XpSource)[keyof typeof XpSource];
+
+export const XpSource = {
+  knowledge: "knowledge",
+  quiz_creation: "quiz_creation",
+  quiz_answer: "quiz_answer",
+  correct_bonus: "correct_bonus",
+} as const;
+
+/**
+ * XPの計算根拠となる活動量と単価.
+ */
+export interface XpBreakdownItem {
+  source: XpSource;
+  activity_count: number;
+  xp_per_activity: number;
+  earned_xp: number;
+}
+
+/**
  * 学習活動にゲーム規則を適用した現在の進捗.
  */
 export interface LearningProgress {
   activity: LearningActivityCounts;
   xp: XpBreakdown;
+  xp_details: XpBreakdownItem[];
   total_xp: number;
   level: number;
   current_level_xp: number;

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type { NameSpace } from "~/shared/generated/fastAPI.schemas";
 import { LearningLevel, LearningSummary } from ".";
@@ -6,6 +7,32 @@ import { LearningLevel, LearningSummary } from ".";
 const learningProgress = {
   activity: {},
   xp: { knowledge: 12, quiz_creation: 3, quiz_answer: 25, correct_bonus: 4 },
+  xp_details: [
+    {
+      source: "knowledge" as const,
+      activity_count: 12,
+      xp_per_activity: 1,
+      earned_xp: 12,
+    },
+    {
+      source: "quiz_creation" as const,
+      activity_count: 3,
+      xp_per_activity: 1,
+      earned_xp: 3,
+    },
+    {
+      source: "quiz_answer" as const,
+      activity_count: 5,
+      xp_per_activity: 5,
+      earned_xp: 25,
+    },
+    {
+      source: "correct_bonus" as const,
+      activity_count: 2,
+      xp_per_activity: 2,
+      earned_xp: 4,
+    },
+  ],
   total_xp: 44,
   level: 1,
   current_level_xp: 44,
@@ -40,7 +67,8 @@ describe("LearningSummary", () => {
 });
 
 describe("LearningLevel", () => {
-  it("現在のレベルと次のレベルまでのXPを表示する", () => {
+  it("現在のレベルと次のレベルまでのXPを表示する", async () => {
+    const user = userEvent.setup();
     render(<LearningLevel progress={learningProgress} />);
 
     expect(screen.getByText("Lv. 1")).toBeInTheDocument();
@@ -50,5 +78,11 @@ describe("LearningLevel", () => {
       "aria-label",
       "レベル進捗 88%",
     );
+
+    await user.click(screen.getByRole("button", { name: "XPの内訳" }));
+    expect(screen.getByText("知識の整理")).toBeVisible();
+    expect(screen.getByText("12文 × 1 XP")).toBeVisible();
+    expect(screen.getByText("+25 XP")).toBeVisible();
+    expect(screen.getByText(/次のレベルは累計50 XP/)).toBeVisible();
   });
 });

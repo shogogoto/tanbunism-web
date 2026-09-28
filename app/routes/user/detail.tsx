@@ -1,6 +1,5 @@
 import { useLoaderData } from "react-router";
 import UserDetail from "~/features/user/UserDetail";
-import useUserDetail from "~/features/user/UserDetail/hooks";
 import { getPublicNamespaceUserUserIdNamespaceGet } from "~/shared/generated/entry/entry";
 import { getLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
 import { userProfileUserProfileUsernameGet } from "~/shared/generated/public-user/public-user";
@@ -39,13 +38,11 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 export default function _() {
   const data = useLoaderData<typeof loader>();
-  const props = useUserDetail({ user: data.user });
   return (
     <UserDetail
       user={data.user}
       namespace={data.namespace}
       learningProgress={data.learningProgress}
-      {...props}
     />
   );
 }

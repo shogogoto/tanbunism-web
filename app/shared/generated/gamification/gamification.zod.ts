@@ -58,6 +58,23 @@ export const GetLearningProgressUserUserIdLearningProgressGetResponse = zod
         correct_bonus: zod.number().int(),
       })
       .describe("活動種別ごとの経験値."),
+    xp_details: zod.array(
+      zod
+        .object({
+          source: zod
+            .enum([
+              "knowledge",
+              "quiz_creation",
+              "quiz_answer",
+              "correct_bonus",
+            ])
+            .describe("XPを生んだ学習活動の種別."),
+          activity_count: zod.number().int(),
+          xp_per_activity: zod.number().int(),
+          earned_xp: zod.number().int(),
+        })
+        .describe("XPの計算根拠となる活動量と単価."),
+    ),
     total_xp: zod.number().int(),
     level: zod.number().int(),
     current_level_xp: zod.number().int(),
