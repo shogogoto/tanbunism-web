@@ -1,18 +1,10 @@
-import { Link, NavLink } from "react-router";
+import { Link } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
 import { Button } from "~/shared/components/ui/button";
 import { HistoryPanel } from "~/shared/history/HistoryPanel";
 import UserNavi from "./UserNavi";
 import { SiteLogo } from "./components/SiteLogo";
-
-const primaryLinks = [
-  { to: "/dashboard", label: "ダッシュボード" },
-  { to: "/docs/toc", label: "ドキュメント" },
-  { to: "/search", label: "検索" },
-  { to: "/quiz", label: "クイズ" },
-  { to: "/quiz/list", label: "作成したクイズ" },
-];
 
 export default function AppHeader() {
   const { user, isAuthenticated } = useAuth();
@@ -22,34 +14,17 @@ export default function AppHeader() {
       <div className="flex h-14 items-center gap-2 px-3 md:px-6">
         <Link
           to={isAuthenticated ? "/about" : "/"}
-          className="mr-2 flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="mr-2 flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
           aria-label="Tanbun トップ"
         >
           <SiteLogo />
         </Link>
 
-        <nav
-          className="hidden h-full items-center gap-1 md:flex"
-          aria-label="主要"
-        >
-          {primaryLinks.map(({ to, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex h-full items-center border-b-2 px-3 text-sm transition-colors ${
-                  isActive
-                    ? "border-primary font-medium text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`
-              }
-            >
-              {label}
-            </NavLink>
-          ))}
-        </nav>
+        <span className="hidden text-sm font-medium text-muted-foreground md:block">
+          Tanbunism
+        </span>
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1 md:hidden">
           <HistoryPanel showLabel />
           <ThemeToggle
             buttonClassName="inline-flex size-9 items-center justify-center hover:bg-accent"

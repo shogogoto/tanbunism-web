@@ -17,7 +17,7 @@ vi.mock("~/shared/history/HistoryPanel", () => ({
   HistoryPanel: () => <button type="button">履歴</button>,
 }));
 
-it("主要機能を固定ヘッダーから移動できる", () => {
+it("主要機能をヘッダーに表示しない", () => {
   auth.isAuthenticated = false;
   render(
     <MemoryRouter initialEntries={["/quiz"]}>
@@ -30,26 +30,19 @@ it("主要機能を固定ヘッダーから移動できる", () => {
     "/",
   );
   expect(screen.queryByText("Tanbun")).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "ダッシュボード" })).toHaveAttribute(
-    "href",
-    "/dashboard",
-  );
-  expect(screen.getByRole("link", { name: "ドキュメント" })).toHaveAttribute(
-    "href",
-    "/docs/toc",
-  );
-  expect(screen.getByRole("link", { name: "検索" })).toHaveAttribute(
-    "href",
-    "/search",
-  );
-  expect(screen.getByRole("link", { name: "クイズ" })).toHaveAttribute(
-    "href",
-    "/quiz",
-  );
-  expect(screen.getByRole("link", { name: "作成したクイズ" })).toHaveAttribute(
-    "href",
-    "/quiz/list",
-  );
+  expect(
+    screen.queryByRole("link", { name: "ダッシュボード" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "ドキュメント" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "検索" })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "クイズ" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "作成したクイズ" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("link", { name: "学習記録" }),
   ).not.toBeInTheDocument();

@@ -75,7 +75,7 @@ export default function Dashboard() {
           <nav
             aria-label="ダッシュボードの表示切り替え"
             role="tablist"
-            className="mx-auto flex max-w-full snap-x justify-start gap-6 overflow-x-auto border-b px-2 sm:justify-center"
+            className="sticky top-0 z-30 mx-auto flex max-w-full snap-x justify-start gap-6 overflow-x-auto border-b bg-background/95 px-2 backdrop-blur sm:justify-center"
           >
             {dashboardSections.map((section) => (
               <button
