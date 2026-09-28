@@ -1,10 +1,14 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { expect, it, vi } from "vitest";
-import { searchCreatedQuizzes } from "~/features/quiz/api";
+import { answerQuiz, searchCreatedQuizzes } from "~/features/quiz/api";
 import QuizTimeline from "./QuizTimeline";
 
-vi.mock("~/features/quiz/api", () => ({ searchCreatedQuizzes: vi.fn() }));
+vi.mock("~/features/quiz/api", () => ({
+  answerQuiz: vi.fn(),
+  searchCreatedQuizzes: vi.fn(),
+}));
 
 it("未回答のクイズを回答済みのクイズより先に表示する", async () => {
   vi.mocked(searchCreatedQuizzes).mockResolvedValue({
@@ -14,8 +18,8 @@ it("未回答のクイズを回答済みのクイズより先に表示する", a
         quiz: {
           quiz_id: "answered",
           statement: "回答済みの問題",
-          options: {},
-          correct: [],
+          options: { "option-1": "回答候補" },
+          correct: ["option-1"],
           created: "2026-09-28T00:00:00Z",
           no_correct_option: false,
         },
@@ -54,4 +58,57 @@ it("未回答のクイズを回答済みのクイズより先に表示する", a
       Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   expect(screen.getByText("未回答")).toBeInTheDocument();
+});
+
+it("クイズTL上で回答して結果を確認できる", async () => {
+  const quiz = {
+    quiz_id: "quiz-1",
+    statement: "その場で解く問題",
+    options: { "option-1": "正しい選択肢" },
+    correct: ["option-1"],
+    created: "2026-09-28T00:00:00Z",
+    no_correct_option: false,
+  };
+  vi.mocked(searchCreatedQuizzes).mockResolvedValue({
+    total: 1,
+    data: [
+      {
+        quiz,
+        attempts: 0,
+        corrects: 0,
+        accuracy: null,
+        last_attempted_at: null,
+      },
+    ],
+  });
+  vi.mocked(answerQuiz).mockResolvedValue({
+    sentences: [],
+    links: [],
+    quizzes: [
+      { quiz_id: quiz.quiz_id, quiz_type: "term2sent", readable: quiz },
+    ],
+    answers: [
+      {
+        answer_uid: "answer-1",
+        quiz_uid: quiz.quiz_id,
+        selected: ["option-1"],
+        who: "user-1",
+        is_correct: true,
+        created: "2026-09-28T01:00:00Z",
+      },
+    ],
+  });
+  const user = userEvent.setup();
+
+  render(
+    <MemoryRouter>
+      <QuizTimeline />
+    </MemoryRouter>,
+  );
+  await user.click(await screen.findByRole("button", { name: "正しい選択肢" }));
+  await user.click(screen.getByRole("button", { name: "回答する" }));
+
+  expect(answerQuiz).toHaveBeenCalledWith("quiz-1", ["option-1"]);
+  expect(await screen.findByText("正解です")).toBeInTheDocument();
+  expect(screen.getByText("今回 正解")).toBeInTheDocument();
 });

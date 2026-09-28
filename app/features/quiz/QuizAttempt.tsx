@@ -6,6 +6,7 @@ import {
 } from "~/shared/components/ui/alert";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
+import { cn } from "~/shared/lib/utils";
 import {
   ChainSentenceLink,
   RelationAnnotation,
@@ -13,7 +14,13 @@ import {
 } from "./QuizKnowledge";
 import { type QuizChain, type ReadableQuiz, answerQuiz } from "./api";
 
-export default function QuizAttempt({ quiz }: { quiz: ReadableQuiz }) {
+type Props = {
+  quiz: ReadableQuiz;
+  className?: string;
+  onAnswered?: (isCorrect: boolean) => void;
+};
+
+export default function QuizAttempt({ quiz, className, onAnswered }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [chain, setChain] = useState<QuizChain>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,7 +41,10 @@ export default function QuizAttempt({ quiz }: { quiz: ReadableQuiz }) {
     setIsSubmitting(true);
     setError(undefined);
     try {
-      setChain(await answerQuiz(quiz.quiz_id, selected));
+      const answeredChain = await answerQuiz(quiz.quiz_id, selected);
+      setChain(answeredChain);
+      const answered = answeredChain.answers?.at(-1);
+      if (answered) onAnswered?.(answered.is_correct);
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "回答を送信できませんでした。",
@@ -45,7 +55,7 @@ export default function QuizAttempt({ quiz }: { quiz: ReadableQuiz }) {
   }
 
   return (
-    <div className="space-y-3 border p-3">
+    <div className={cn("space-y-3 border p-3", className)}>
       <p className="whitespace-pre-line text-sm font-medium">
         <ChainSentenceLink
           chain={chain}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
+import QuizAttempt from "~/features/quiz/QuizAttempt";
 import { type ManagedQuiz, searchCreatedQuizzes } from "~/features/quiz/api";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
@@ -9,6 +10,9 @@ export default function QuizTimeline() {
   const [quizzes, setQuizzes] = useState<ManagedQuiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [sessionResults, setSessionResults] = useState<Record<string, boolean>>(
+    {},
+  );
 
   useEffect(() => {
     let active = true;
@@ -66,21 +70,38 @@ export default function QuizTimeline() {
       )}
       {sorted.map((item) => (
         <Card key={item.quiz.quiz_id}>
-          <CardContent className="flex items-start justify-between gap-4 p-4">
-            <div className="min-w-0 space-y-2">
-              <p className="whitespace-pre-wrap leading-relaxed">
-                {item.quiz.statement}
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
+          <CardContent className="space-y-2 p-0">
+            <QuizAttempt
+              quiz={item.quiz}
+              className="border-0"
+              onAnswered={(isCorrect) =>
+                setSessionResults((current) => ({
+                  ...current,
+                  [item.quiz.quiz_id]: isCorrect,
+                }))
+              }
+            />
+            <div className="flex flex-wrap items-center gap-2 border-t px-4 py-3">
+              {item.quiz.quiz_id in sessionResults ? (
+                <Badge
+                  variant={
+                    sessionResults[item.quiz.quiz_id]
+                      ? "secondary"
+                      : "destructive"
+                  }
+                >
+                  今回 {sessionResults[item.quiz.quiz_id] ? "正解" : "不正解"}
+                </Badge>
+              ) : (
                 <Badge variant={item.attempts === 0 ? "default" : "secondary"}>
                   {item.attempts === 0 ? "未回答" : `${item.attempts}回答`}
                 </Badge>
-                {item.accuracy !== null && (
-                  <span className="text-xs text-muted-foreground">
-                    正答率 {Math.round(item.accuracy * 100)}%
-                  </span>
-                )}
-              </div>
+              )}
+              {item.accuracy !== null && (
+                <span className="text-xs text-muted-foreground">
+                  これまでの正答率 {Math.round(item.accuracy * 100)}%
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>
