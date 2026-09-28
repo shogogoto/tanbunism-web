@@ -14,12 +14,20 @@ import {
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/shared/components/ui/card";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "~/shared/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/shared/components/ui/table";
 import StudyPlanForm from "./StudyPlanForm";
 import {
   type QuizType,
@@ -102,10 +110,10 @@ export default function StudyPlanManager() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
+    <div className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          学習するResourceとクイズ形式を組み合わせて管理します。
+          学習するResourceとクイズ形式をあらかじめ準備します。
         </p>
         <Button
           onClick={() => {
@@ -123,128 +131,144 @@ export default function StudyPlanManager() {
         </p>
       )}
 
-      {(isCreating || editingPlan) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
+      <Dialog
+        open={isCreating || Boolean(editingPlan)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreating(false);
+            setEditingPlan(undefined);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
               {editingPlan ? "学習計画を編集" : "学習計画を作成"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <StudyPlanForm
-              plan={editingPlan}
-              createLabel="学習計画を作成"
-              onCreated={(plan) => {
-                setPlans((current) => [...current, plan]);
-                setIsCreating(false);
-              }}
-              onUpdated={(plan) => {
-                setPlans((current) =>
-                  current.map((item) => (item.uid === plan.uid ? plan : item)),
-                );
-                setEditingPlan(undefined);
-              }}
-              onCancel={() => {
-                setIsCreating(false);
-                setEditingPlan(undefined);
-              }}
-            />
-          </CardContent>
-        </Card>
-      )}
+            </DialogTitle>
+            <DialogDescription>
+              クイズを解く前に、対象Resourceと形式を準備します。
+            </DialogDescription>
+          </DialogHeader>
+          <StudyPlanForm
+            plan={editingPlan}
+            createLabel="学習計画を作成"
+            onCreated={(plan) => {
+              setPlans((current) => [...current, plan]);
+              setIsCreating(false);
+            }}
+            onUpdated={(plan) => {
+              setPlans((current) =>
+                current.map((item) => (item.uid === plan.uid ? plan : item)),
+              );
+              setEditingPlan(undefined);
+            }}
+            onCancel={() => {
+              setIsCreating(false);
+              setEditingPlan(undefined);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
 
       {isLoading && (
         <p className="text-sm text-muted-foreground">読み込み中…</p>
       )}
 
-      {!isLoading && plans.length === 0 && !isCreating && (
-        <Card>
-          <CardHeader>
-            <CardTitle>学習計画がありません</CardTitle>
-            <CardDescription>
-              Resourceとクイズ形式を選び、最初の計画を作成してください。
-            </CardDescription>
-          </CardHeader>
-        </Card>
+      {!isLoading && plans.length === 0 && !isCreating ? (
+        <p className="rounded-md border p-4 text-sm text-muted-foreground">
+          学習計画がありません。Resourceとクイズ形式を選び、最初の計画を作成してください。
+        </p>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Plan</TableHead>
+                <TableHead>Resource</TableHead>
+                <TableHead>クイズ形式</TableHead>
+                <TableHead>問題数</TableHead>
+                <TableHead className="text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {plans.map((plan) => (
+                <TableRow key={plan.uid}>
+                  <TableCell className="font-medium">{plan.name}</TableCell>
+                  <TableCell>
+                    <div className="flex max-w-56 flex-wrap gap-1">
+                      {plan.resource_ids.map((resourceId) => (
+                        <Badge key={resourceId} variant="secondary">
+                          {resourceName(resourceId)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex max-w-72 flex-wrap gap-1">
+                      {plan.quiz_types.map((quizType) => (
+                        <Badge key={quizType} variant="outline">
+                          {quizTypeLabels[quizType]}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {plan.n_quiz}問・{plan.n_option}択
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1">
+                      <Button asChild size="sm">
+                        <Link to={`/quiz?plan=${encodeURIComponent(plan.uid)}`}>
+                          解く
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsCreating(false);
+                          setEditingPlan(plan);
+                        }}
+                      >
+                        編集
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={deletingId === plan.uid}
+                          >
+                            削除
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              「{plan.name}」を削除しますか？
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              クイズや回答履歴は削除されません。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => void removePlan(plan)}
+                            >
+                              削除する
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {plans.map((plan) => (
-          <Card key={plan.uid}>
-            <CardHeader>
-              <CardTitle>{plan.name}</CardTitle>
-              <CardDescription>
-                {plan.n_quiz}問・各{plan.n_option}択
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <section className="space-y-2">
-                <h2 className="text-xs font-medium text-muted-foreground">
-                  Resource
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {plan.resource_ids.map((resourceId) => (
-                    <Badge key={resourceId} variant="secondary">
-                      {resourceName(resourceId)}
-                    </Badge>
-                  ))}
-                </div>
-              </section>
-              <section className="space-y-2">
-                <h2 className="text-xs font-medium text-muted-foreground">
-                  クイズ形式
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {plan.quiz_types.map((quizType) => (
-                    <Badge key={quizType} variant="outline">
-                      {quizTypeLabels[quizType]}
-                    </Badge>
-                  ))}
-                </div>
-              </section>
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Button asChild>
-                  <Link to={`/quiz?plan=${encodeURIComponent(plan.uid)}`}>
-                    この計画でクイズを解く
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsCreating(false);
-                    setEditingPlan(plan);
-                  }}
-                >
-                  編集
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" disabled={deletingId === plan.uid}>
-                      削除
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        「{plan.name}」を削除しますか？
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        クイズや回答履歴は削除されません。
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => void removePlan(plan)}>
-                        削除する
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
     </div>
   );
 }

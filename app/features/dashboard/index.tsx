@@ -5,6 +5,7 @@ import AuthGuard from "~/features/auth/AuthGuard";
 import { useAuth } from "~/features/auth/AuthProvider";
 import NamespaceExplorer from "~/features/namespace/components/NamespaceExplorer";
 import Uploader from "~/features/namespace/uploader/Uploader";
+import AnswerHistory from "~/features/quiz/AnswerHistory";
 import StudyPlanManager from "~/features/quiz/StudyPlanManager";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
@@ -15,7 +16,6 @@ import {
 } from "~/shared/components/ui/dialog";
 import { useGetNamaspaceNamespaceGet } from "~/shared/generated/entry/entry";
 import DashboardProfile from "./DashboardProfile";
-import RecentAnswers from "./RecentAnswers";
 import {
   type DashboardSection,
   dashboardSections,
@@ -97,7 +97,7 @@ export default function Dashboard() {
               <DashboardProfile user={user} />
             </div>
             <div hidden={activeSection !== "answers"}>
-              <RecentAnswers />
+              <AnswerHistory />
             </div>
             <div hidden={activeSection !== "notes"}>
               <Dialog>

@@ -54,10 +54,6 @@ it("主要機能をヘッダーに表示しない", () => {
     "href",
     "/quiz/list",
   );
-  expect(screen.getByRole("link", { name: "回答履歴" })).toHaveAttribute(
-    "href",
-    "/answers",
-  );
   expect(screen.getByRole("button", { name: "履歴" })).toBeVisible();
 });
 

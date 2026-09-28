@@ -59,6 +59,7 @@ export default function AppHeader() {
 function pageTitle(pathname: string): string {
   if (pathname === "/dashboard") return "ダッシュボード";
   if (isQuizSection(pathname)) return "クイズ";
+  if (pathname === "/answers") return "回答履歴";
   if (pathname === "/achievement") return "学習記録";
   if (pathname === "/study-plans") return "学習計画";
   if (pathname.startsWith("/docs")) return "ドキュメント";
@@ -70,5 +71,5 @@ function pageTitle(pathname: string): string {
 }
 
 function isQuizSection(pathname: string): boolean {
-  return ["/quiz", "/quiz/list", "/answers"].includes(pathname);
+  return ["/quiz", "/quiz/list"].includes(pathname);
 }

@@ -3,7 +3,6 @@ import { NavLink } from "react-router";
 const tabs = [
   { to: "/quiz", label: "解く", end: true },
   { to: "/quiz/list", label: "作成済み", end: false },
-  { to: "/answers", label: "回答履歴", end: false },
 ] as const;
 
 export default function QuizHeaderTabs() {

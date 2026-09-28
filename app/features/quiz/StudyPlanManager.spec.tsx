@@ -48,9 +48,10 @@ describe("StudyPlanManager", () => {
     expect(screen.getByText("数学の本")).toBeInTheDocument();
     expect(screen.getByText("用語 → 単文")).toBeInTheDocument();
     expect(screen.getByText("単文組 → 関係")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "この計画でクイズを解く" }),
-    ).toHaveAttribute("href", "/quiz?plan=plan-1");
+    expect(screen.getByRole("link", { name: "解く" })).toHaveAttribute(
+      "href",
+      "/quiz?plan=plan-1",
+    );
   });
 
   it("計画を削除して一覧から取り除く", async () => {
