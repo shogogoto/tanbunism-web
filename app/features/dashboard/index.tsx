@@ -51,7 +51,7 @@ export default function Dashboard() {
         </header>
 
         <section
-          className="space-y-3"
+          className="min-h-[65vh] space-y-4 pb-8"
           onTouchStart={(event) => {
             touchStartX.current = event.touches[0]?.clientX;
           }}
@@ -59,6 +59,7 @@ export default function Dashboard() {
             const start = touchStartX.current;
             const end = event.changedTouches[0]?.clientX;
             if (start === undefined || end === undefined) return;
+            touchStartX.current = undefined;
             const index = dashboardSections.findIndex(
               (section) => section.id === activeSection,
             );
@@ -67,23 +68,30 @@ export default function Dashboard() {
             const next = dashboardSections[nextIndex];
             if (next) setActiveSection(next.id);
           }}
+          onTouchCancel={() => {
+            touchStartX.current = undefined;
+          }}
         >
           <nav
             aria-label="ダッシュボードの表示切り替え"
-            className="flex snap-x gap-2 overflow-x-auto pb-1"
+            role="tablist"
+            className="mx-auto flex max-w-full snap-x justify-start gap-6 overflow-x-auto border-b px-2 sm:justify-center"
           >
             {dashboardSections.map((section) => (
-              <Button
+              <button
                 key={section.id}
                 type="button"
-                size="sm"
-                variant={activeSection === section.id ? "default" : "outline"}
-                className="shrink-0 snap-start"
+                role="tab"
+                aria-selected={activeSection === section.id}
+                className={`relative shrink-0 snap-start px-1 py-2 text-sm transition-colors after:absolute after:inset-x-0 after:bottom-[-1px] after:h-0.5 after:transition-opacity ${
+                  activeSection === section.id
+                    ? "font-medium text-foreground after:bg-primary after:opacity-100"
+                    : "text-muted-foreground hover:text-foreground after:opacity-0"
+                }`}
                 onClick={() => setActiveSection(section.id)}
-                aria-pressed={activeSection === section.id}
               >
                 {section.label}
-              </Button>
+              </button>
             ))}
           </nav>
           <div className="relative">
