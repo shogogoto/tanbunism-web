@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
-import { HistoryPanel } from "./HistoryPanel";
+import { HistoryPanel, HistoryPanelProvider } from "./HistoryPanel";
 
 vi.mock("./hooks", () => ({
   useHistory: () => ({
@@ -22,7 +22,9 @@ it("必要なときだけ履歴をパネルで表示する", async () => {
 
   render(
     <MemoryRouter>
-      <HistoryPanel />
+      <HistoryPanelProvider>
+        <HistoryPanel />
+      </HistoryPanelProvider>
     </MemoryRouter>,
   );
 

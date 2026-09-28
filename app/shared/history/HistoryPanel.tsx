@@ -1,5 +1,11 @@
 import { History as HistoryIcon } from "lucide-react";
-import { useState } from "react";
+import {
+  type PropsWithChildren,
+  createContext,
+  useContext,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "~/shared/components/ui/button";
 import { ScrollArea } from "~/shared/components/ui/scroll-area";
 import {
@@ -12,25 +18,35 @@ import {
 import { useHistory } from "./hooks";
 import { HistoryList } from "./index";
 
-export function HistoryPanel({ showLabel = false }: { showLabel?: boolean }) {
+type HistoryPanelContextValue = {
+  openHistory: () => void;
+};
+
+const HistoryPanelContext = createContext<HistoryPanelContextValue | null>(
+  null,
+);
+
+export function HistoryPanelProvider({ children }: PropsWithChildren) {
   const [open, setOpen] = useState(false);
   const { histories } = useHistory();
+  const contentRef = useRef<HTMLDivElement>(null);
 
   return (
-    <>
-      <Button
-        type="button"
-        variant="ghost"
-        size={showLabel ? "sm" : "icon"}
-        onClick={() => setOpen(true)}
-        aria-label="履歴を開く"
-      >
-        <HistoryIcon />
-        {showLabel && <span className="hidden sm:inline">履歴</span>}
-      </Button>
-
+    <HistoryPanelContext.Provider value={{ openHistory: () => setOpen(true) }}>
+      {children}
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="p-0">
+        <SheetContent
+          ref={contentRef}
+          className="p-0"
+          onOpenAutoFocus={(event) => {
+            const firstHistory = contentRef.current?.querySelector<HTMLElement>(
+              "[data-history-item]",
+            );
+            if (!firstHistory) return;
+            event.preventDefault();
+            firstHistory.focus();
+          }}
+        >
           <SheetHeader className="border-b pr-12">
             <SheetTitle>履歴</SheetTitle>
             <SheetDescription>
@@ -45,6 +61,31 @@ export function HistoryPanel({ showLabel = false }: { showLabel?: boolean }) {
           </ScrollArea>
         </SheetContent>
       </Sheet>
-    </>
+    </HistoryPanelContext.Provider>
+  );
+}
+
+export function useHistoryPanel() {
+  const context = useContext(HistoryPanelContext);
+  if (!context) {
+    throw new Error("useHistoryPanel must be used within HistoryPanelProvider");
+  }
+  return context;
+}
+
+export function HistoryPanel({ showLabel = false }: { showLabel?: boolean }) {
+  const { openHistory } = useHistoryPanel();
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size={showLabel ? "sm" : "icon"}
+      onClick={openHistory}
+      aria-label="履歴を開く"
+    >
+      <HistoryIcon />
+      {showLabel && <span className="hidden sm:inline">履歴</span>}
+    </Button>
   );
 }

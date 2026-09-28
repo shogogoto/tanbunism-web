@@ -67,6 +67,7 @@ export default function SearchHeaderControls() {
           <Search className="absolute left-3 top-2.5 size-5 text-muted-foreground" />
           <Input
             type="search"
+            data-global-search-input
             value={query}
             onChange={(event) =>
               updateParams((next) => {
