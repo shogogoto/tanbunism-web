@@ -1,5 +1,8 @@
 import { Link, useLocation } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
+import DashboardHeaderTabs from "~/features/dashboard/DashboardHeaderTabs";
+import QuizHeaderTabs from "~/features/quiz/QuizHeaderTabs";
+import SearchHeaderControls from "~/features/search/SearchHeaderControls";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
 import { Button } from "~/shared/components/ui/button";
 import { HistoryPanel } from "~/shared/history/HistoryPanel";
@@ -9,6 +12,7 @@ import { SiteLogo } from "./components/SiteLogo";
 export default function AppHeader() {
   const { user, isAuthenticated } = useAuth();
   const { pathname } = useLocation();
+  const quizSection = isQuizSection(pathname);
 
   return (
     <header className="z-40 shrink-0 border-b bg-background/95 backdrop-blur">
@@ -45,16 +49,16 @@ export default function AppHeader() {
           )}
         </div>
       </div>
+      {pathname === "/dashboard" && <DashboardHeaderTabs />}
+      {quizSection && <QuizHeaderTabs />}
+      {pathname.startsWith("/search") && <SearchHeaderControls />}
     </header>
   );
 }
 
 function pageTitle(pathname: string): string {
   if (pathname === "/dashboard") return "ダッシュボード";
-  if (pathname === "/quiz/list") return "作成したクイズ";
-  if (pathname === "/quiz") return "クイズ";
-  if (pathname === "/study-plans") return "学習計画";
-  if (pathname === "/answers") return "回答履歴";
+  if (isQuizSection(pathname)) return "クイズ";
   if (pathname === "/achievement") return "学習記録";
   if (pathname.startsWith("/docs")) return "ドキュメント";
   if (pathname.startsWith("/search")) return "検索";
@@ -62,4 +66,8 @@ function pageTitle(pathname: string): string {
   if (pathname.startsWith("/resource/")) return "Resource";
   if (pathname.startsWith("/tanbun/")) return "Tanbun";
   return "Tanbunism";
+}
+
+function isQuizSection(pathname: string): boolean {
+  return ["/quiz", "/quiz/list", "/study-plans", "/answers"].includes(pathname);
 }

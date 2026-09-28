@@ -9,6 +9,7 @@ import type {
 } from "~/shared/generated/fastAPI.schemas";
 import { genericCache } from "~/shared/lib/indexed";
 import UnifiedSearch from ".";
+import SearchHeaderControls from "./SearchHeaderControls";
 
 const originalIntersectionObserver = globalThis.IntersectionObserver;
 
@@ -110,6 +111,7 @@ afterAll(() => server.close());
 function renderSearch(initialEntry = "/search?q=数学") {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
+      <SearchHeaderControls />
       <UnifiedSearch />
     </MemoryRouter>,
   );

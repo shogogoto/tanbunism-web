@@ -4,10 +4,9 @@ import {
   ChevronRight,
   FileQuestion,
   LayoutDashboard,
-  ListChecks,
   Search,
 } from "lucide-react";
-import { Link, NavLink } from "react-router";
+import { Link, NavLink, useLocation } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
 import { Button } from "~/shared/components/ui/button";
@@ -20,7 +19,6 @@ const links = [
   { to: "/docs/toc", label: "ドキュメント", icon: BookOpen },
   { to: "/search", label: "検索", icon: Search },
   { to: "/quiz", label: "クイズ", icon: FileQuestion },
-  { to: "/quiz/list", label: "作成したクイズ", icon: ListChecks },
 ] as const;
 
 type Props = {
@@ -30,6 +28,7 @@ type Props = {
 
 export default function DesktopSidebar({ collapsed, onToggle }: Props) {
   const { user, isAuthenticated } = useAuth();
+  const { pathname } = useLocation();
 
   return (
     <aside
@@ -75,7 +74,13 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
             title={collapsed ? label : undefined}
             className={({ isActive }) =>
               `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                isActive
+                isActive ||
+                (
+                  to === "/quiz" &&
+                    ["/quiz/list", "/study-plans", "/answers"].includes(
+                      pathname,
+                    )
+                )
                   ? "bg-accent font-medium text-accent-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               } ${collapsed ? "justify-center px-2" : ""}`

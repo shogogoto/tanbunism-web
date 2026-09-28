@@ -6,8 +6,8 @@ import {
   Plus,
   SquareCheckBig,
 } from "lucide-react";
-import { useRef, useState } from "react";
-import { Link } from "react-router";
+import { useRef } from "react";
+import { Link, useSearchParams } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
 import { useAuth } from "~/features/auth/AuthProvider";
 import NamespaceExplorer from "~/features/namespace/components/NamespaceExplorer";
@@ -29,14 +29,32 @@ import { useGetNamaspaceNamespaceGet } from "~/shared/generated/entry/entry";
 import DashboardAchievement from "./DashboardAchievement";
 import DashboardActivity from "./DashboardActivity";
 import RecentAnswers from "./RecentAnswers";
+import {
+  type DashboardSection,
+  dashboardSections,
+  isDashboardSection,
+} from "./sections";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [activeSection, setActiveSection] = useState("start");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedSection = searchParams.get("view");
+  const activeSection = isDashboardSection(requestedSection)
+    ? requestedSection
+    : "start";
   const touchStartX = useRef<number | undefined>(undefined);
   const namespace = useGetNamaspaceNamespaceGet({
     fetch: { credentials: "include" },
   });
+
+  function setActiveSection(section: DashboardSection) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (section === "start") next.delete("view");
+      else next.set("view", section);
+      return next;
+    });
+  }
 
   return (
     <AuthGuard>
@@ -69,28 +87,6 @@ export default function Dashboard() {
             touchStartX.current = undefined;
           }}
         >
-          <nav
-            aria-label="ダッシュボードの表示切り替え"
-            role="tablist"
-            className="sticky top-0 z-30 mx-auto flex max-w-full snap-x justify-start gap-6 overflow-x-auto border-b bg-background/95 px-2 backdrop-blur sm:justify-center"
-          >
-            {dashboardSections.map((section) => (
-              <button
-                key={section.id}
-                type="button"
-                role="tab"
-                aria-selected={activeSection === section.id}
-                className={`relative shrink-0 snap-start px-1 py-2 text-sm transition-colors after:absolute after:inset-x-0 after:bottom-[-1px] after:h-0.5 after:transition-opacity ${
-                  activeSection === section.id
-                    ? "font-medium text-foreground after:bg-primary after:opacity-100"
-                    : "text-muted-foreground hover:text-foreground after:opacity-0"
-                }`}
-                onClick={() => setActiveSection(section.id)}
-              >
-                {section.label}
-              </button>
-            ))}
-          </nav>
           <div className="relative">
             <Button
               type="button"
@@ -168,18 +164,10 @@ export default function Dashboard() {
   );
 }
 
-const dashboardSections = [
-  { id: "start", label: "はじめる" },
-  { id: "activity", label: "活動" },
-  { id: "achievement", label: "今月" },
-  { id: "answers", label: "最近の回答" },
-  { id: "notes", label: "読書メモ" },
-] as const;
-
 function moveDashboardSection(
-  current: string,
+  current: DashboardSection,
   offset: number,
-  setSection: (section: string) => void,
+  setSection: (section: DashboardSection) => void,
 ) {
   const index = dashboardSections.findIndex(
     (section) => section.id === current,

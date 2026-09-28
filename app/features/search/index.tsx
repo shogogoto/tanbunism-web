@@ -5,16 +5,13 @@ import {
   List,
   LoaderCircle,
   type LucideIcon,
-  Search,
   TextInitial,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Highlight } from "~/features/tanbun/components/Highlight";
 import UserAvatar from "~/features/user/UserAvatar";
-import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent, CardFooter } from "~/shared/components/ui/card";
-import { Input } from "~/shared/components/ui/input";
 import { searchResourcePostResourceSearchPost } from "~/shared/generated/entry/entry";
 import type {
   ResourceInfo,
@@ -29,14 +26,11 @@ import { searchByTextTanbunGet } from "~/shared/generated/tanbun/tanbun";
 import { createCacheKey } from "~/shared/hooks/swr/useCache";
 import { useDebounce } from "~/shared/hooks/useDebounce";
 import { genericCache } from "~/shared/lib/indexed";
-import SearchSettingsPanel from "./SearchSettings";
 import {
   type SearchSettings,
   type SearchType,
-  defaultSearchSettings,
   readSearchSettings,
   searchTypes,
-  writeSearchSettings,
 } from "./settings";
 
 const PAGE_SIZE = 20;
@@ -68,12 +62,8 @@ const emptyState = (): SearchState => ({
 });
 
 export default function UnifiedSearch() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const queryParam = searchParams.get("q") ?? "";
-  const [query, setQuery] = useState(queryParam);
-  useEffect(() => {
-    setQuery(queryParam);
-  }, [queryParam]);
   const typesParam = searchParams.get("types");
   const enabledTypes = useMemo(
     () => parseSearchTypes(typesParam),
@@ -85,7 +75,7 @@ export default function UnifiedSearch() {
   );
   const enabledKey = enabledTypes.join(",");
   const settingsKey = JSON.stringify(settings);
-  const debouncedQuery = useDebounce(query, 400);
+  const debouncedQuery = useDebounce(queryParam, 400);
   const [page, setPage] = useState(1);
   const [state, setState] = useState<SearchState>(emptyState);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,19 +85,6 @@ export default function UnifiedSearch() {
   const lastRequestRef = useRef("");
 
   const searchKey = `${debouncedQuery}:${enabledKey}:${settingsKey}`;
-
-  useEffect(() => {
-    if (debouncedQuery === queryParam) return;
-    setSearchParams(
-      (current) => {
-        const next = new URLSearchParams(current);
-        if (debouncedQuery) next.set("q", debouncedQuery);
-        else next.delete("q");
-        return next;
-      },
-      { replace: true },
-    );
-  }, [debouncedQuery, queryParam, setSearchParams]);
 
   useEffect(() => {
     const reset = previousSearchRef.current !== searchKey;
@@ -205,70 +182,8 @@ export default function UnifiedSearch() {
   );
   const total = enabledTypes.reduce((sum, type) => sum + state.totals[type], 0);
 
-  function toggleType(type: SearchType) {
-    const nextTypes = enabledTypes.includes(type)
-      ? enabledTypes.filter((item) => item !== type)
-      : [...enabledTypes, type];
-    if (nextTypes.length === 0) return;
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      if (nextTypes.length === searchTypes.length) next.delete("types");
-      else next.set("types", nextTypes.join(","));
-      return next;
-    });
-  }
-
-  function setSettings(nextSettings: SearchSettings) {
-    setSearchParams((current) => writeSearchSettings(current, nextSettings), {
-      replace: true,
-    });
-  }
-
   return (
     <div className="mx-auto min-h-full w-full max-w-3xl bg-background px-4 sm:px-6">
-      <header className="sticky top-0 z-10 space-y-3 border-b bg-background/95 py-4 backdrop-blur">
-        <div className="relative">
-          {isLoading ? (
-            <LoaderCircle className="absolute left-3 top-2.5 size-5 animate-spin text-muted-foreground" />
-          ) : (
-            <Search className="absolute left-3 top-2.5 size-5 text-muted-foreground" />
-          )}
-          <Input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="知識、リソース、ユーザーを検索"
-            aria-label="検索"
-            className="pl-10"
-          />
-        </div>
-        <div className="flex flex-wrap gap-2" aria-label="検索対象">
-          {searchTypes.map((type) => (
-            <Button
-              key={type}
-              type="button"
-              size="sm"
-              variant="outline"
-              className={
-                searchTypeButtonStyles[type][
-                  enabledTypes.includes(type) ? "selected" : "unselected"
-                ]
-              }
-              aria-pressed={enabledTypes.includes(type)}
-              onClick={() => toggleType(type)}
-            >
-              {searchTypeLabels[type]}
-            </Button>
-          ))}
-        </div>
-        <SearchSettingsPanel
-          enabledTypes={enabledTypes}
-          settings={settings}
-          onChange={setSettings}
-          onReset={() => setSettings(defaultSearchSettings)}
-        />
-      </header>
-
       <div className="py-4">
         <p className="text-sm text-muted-foreground">
           {isLoading && mixedResults.length === 0
@@ -498,35 +413,6 @@ function parseSearchTypes(value: string | null): SearchType[] {
     );
   return parsed.length > 0 ? parsed : [...searchTypes];
 }
-
-const searchTypeLabels: Record<SearchType, string> = {
-  knowledge: "知識",
-  resource: "リソース",
-  user: "ユーザー",
-};
-
-const searchTypeButtonStyles: Record<
-  SearchType,
-  { selected: string; unselected: string }
-> = {
-  knowledge: {
-    selected: "!border-blue-600 !bg-blue-600 !text-white hover:!bg-blue-700",
-    unselected:
-      "!border-border !bg-muted !text-muted-foreground hover:!bg-muted/80",
-  },
-  resource: {
-    selected:
-      "!border-orange-600 !bg-orange-600 !text-white hover:!bg-orange-700",
-    unselected:
-      "!border-border !bg-muted !text-muted-foreground hover:!bg-muted/80",
-  },
-  user: {
-    selected:
-      "!border-purple-600 !bg-purple-600 !text-white hover:!bg-purple-700",
-    unselected:
-      "!border-border !bg-muted !text-muted-foreground hover:!bg-muted/80",
-  },
-};
 
 function KnowledgeResult({
   value,
