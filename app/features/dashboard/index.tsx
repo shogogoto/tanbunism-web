@@ -41,14 +41,11 @@ export default function Dashboard() {
   return (
     <AuthGuard>
       <div className="mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
-        <header className="space-y-1">
-          <h1 className="text-2xl font-semibold">ダッシュボード</h1>
-          <p className="text-sm text-muted-foreground">
-            {user?.display_name || user?.username
-              ? `${user.display_name || user.username}さん、今日は何を学びますか？`
-              : "今日は何を学びますか？"}
-          </p>
-        </header>
+        <p className="text-sm text-muted-foreground">
+          {user?.display_name || user?.username
+            ? `${user.display_name || user.username}さん、今日は何を学びますか？`
+            : "今日は何を学びますか？"}
+        </p>
 
         <section
           className="min-h-[65vh] space-y-4 pb-8"

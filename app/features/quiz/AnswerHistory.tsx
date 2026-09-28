@@ -99,12 +99,9 @@ export default function AnswerHistory() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-5 p-4 sm:p-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">回答履歴</h1>
-          <p className="text-sm text-muted-foreground">
-            最近の回答を確認し、間違えたクイズを復習します。
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          最近の回答を確認し、間違えたクイズを復習します。
+        </p>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
             <Link to="/quiz/list">作成したクイズ</Link>

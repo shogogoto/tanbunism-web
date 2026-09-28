@@ -657,9 +657,9 @@ export default function QuizList() {
     <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">
-            {selectedResource?.name ?? "クイズと学習状況"}
-          </h1>
+          {selectedResource && (
+            <h1 className="text-2xl font-semibold">{selectedResource.name}</h1>
+          )}
           <p className="text-sm text-muted-foreground">
             {resourceId
               ? sentenceId

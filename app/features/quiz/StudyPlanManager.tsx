@@ -104,12 +104,9 @@ export default function StudyPlanManager() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">学習計画</h1>
-          <p className="text-sm text-muted-foreground">
-            学習するResourceとクイズ形式を組み合わせて管理します。
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          学習するResourceとクイズ形式を組み合わせて管理します。
+        </p>
         <Button
           onClick={() => {
             setEditingPlan(undefined);

@@ -85,12 +85,9 @@ export default function QuizAchievement({
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-4 sm:p-6">
-      <header>
-        <h1 className="text-2xl font-semibold">学習記録</h1>
-        <p className="text-sm text-muted-foreground">
-          クイズの作成と回答を、一件ずつ作業として記録します。
-        </p>
-      </header>
+      <p className="text-sm text-muted-foreground">
+        クイズの作成と回答を、一件ずつ作業として記録します。
+      </p>
 
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-3">

@@ -347,7 +347,6 @@ export default function QuizSession() {
     >
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">クイズ</h1>
           <p className="text-sm text-muted-foreground">
             StudyPlanから提案された問題を解きます。
           </p>

@@ -33,9 +33,6 @@ export const documents = [
 export default function Docs() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">
-        ドキュメント一覧
-      </h1>
       <ol className="space-y-4">
         {" "}
         {/* リストの項目間にスペースを追加 */}

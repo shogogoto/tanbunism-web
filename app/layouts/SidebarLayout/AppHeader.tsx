@@ -21,9 +21,9 @@ export default function AppHeader() {
           <SiteLogo />
         </Link>
 
-        <span className="text-sm font-medium text-muted-foreground">
+        <h1 className="text-sm font-medium text-muted-foreground">
           {pageTitle(pathname)}
-        </span>
+        </h1>
 
         <div className="ml-auto flex items-center gap-1 md:hidden">
           <HistoryPanel showLabel />
