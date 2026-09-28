@@ -391,7 +391,7 @@ describe("QuizSession", () => {
 
     expect(
       await screen.findByRole("link", { name: "学習計画を作る" }),
-    ).toHaveAttribute("href", "/study-plans");
+    ).toHaveAttribute("href", "/dashboard?view=study-plans");
   });
 
   it("回答画面からはStudyPlanを管理画面で管理する", async () => {

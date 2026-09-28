@@ -315,10 +315,10 @@ export default function QuizSession() {
         <Card className="border">
           <CardContent className="pt-4">
             <p className="mb-4 text-sm text-muted-foreground">
-              学習計画の作成・編集は、専用ページでまとめて行えます。
+              学習計画の作成・編集は、ダッシュボードでまとめて行えます。
             </p>
             <Button asChild>
-              <Link to="/study-plans">学習計画を作る</Link>
+              <Link to="/dashboard?view=study-plans">学習計画を作る</Link>
             </Button>
           </CardContent>
         </Card>

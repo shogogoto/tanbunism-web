@@ -60,6 +60,7 @@ function pageTitle(pathname: string): string {
   if (pathname === "/dashboard") return "ダッシュボード";
   if (isQuizSection(pathname)) return "クイズ";
   if (pathname === "/achievement") return "学習記録";
+  if (pathname === "/study-plans") return "学習計画";
   if (pathname.startsWith("/docs")) return "ドキュメント";
   if (pathname.startsWith("/search")) return "検索";
   if (pathname.startsWith("/entry/")) return "Entry";
@@ -69,5 +70,5 @@ function pageTitle(pathname: string): string {
 }
 
 function isQuizSection(pathname: string): boolean {
-  return ["/quiz", "/quiz/list", "/study-plans", "/answers"].includes(pathname);
+  return ["/quiz", "/quiz/list", "/answers"].includes(pathname);
 }

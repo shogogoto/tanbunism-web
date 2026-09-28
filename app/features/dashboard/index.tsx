@@ -5,6 +5,7 @@ import AuthGuard from "~/features/auth/AuthGuard";
 import { useAuth } from "~/features/auth/AuthProvider";
 import NamespaceExplorer from "~/features/namespace/components/NamespaceExplorer";
 import Uploader from "~/features/namespace/uploader/Uploader";
+import StudyPlanManager from "~/features/quiz/StudyPlanManager";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
 import {
@@ -119,6 +120,9 @@ export default function Dashboard() {
                   <Uploader refresh={() => void namespace.mutate()} />
                 </DialogContent>
               </Dialog>
+            </div>
+            <div hidden={activeSection !== "study-plans"}>
+              <StudyPlanManager />
             </div>
           </div>
         </section>
