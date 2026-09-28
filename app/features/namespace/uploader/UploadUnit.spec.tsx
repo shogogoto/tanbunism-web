@@ -53,6 +53,38 @@ describe("UploadUnit", () => {
     await waitFor(() => expect(trigger).toHaveBeenCalledTimes(1));
   });
 
+  it("事前確認で選んだ同一性解決を確定時にも送る", async () => {
+    postText.mockResolvedValue({
+      status: 200,
+      data: { resource_id: "resource" },
+    });
+    const resolution = {
+      kind: "sentence" as const,
+      original: "旧単文",
+      replacement: "新単文",
+    };
+    render(
+      <UploadUnit
+        file={new File(["# title"], "humanities/memo.tb")}
+        isUploading
+        identityResolutions={[resolution]}
+        onResult={vi.fn()}
+        onComplete={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(postText).toHaveBeenCalledTimes(1));
+    expect(trigger).not.toHaveBeenCalled();
+    expect(postText).toHaveBeenCalledWith(
+      {
+        txt: "# title",
+        path: ["humanities", "memo.tb"],
+        identity_resolutions: [resolution],
+      },
+      { credentials: "include" },
+    );
+  });
+
   it("内容エラーは再送不要として修正方法を示す", () => {
     const result = describeUploadError(
       400,

@@ -6,9 +6,14 @@ import { Input } from "~/shared/components/ui/input";
 type Props = {
   exts?: string[];
   setExts: Dispatch<SetStateAction<string[]>>;
+  compact?: boolean;
 };
 
-export default function AcceptExtensions({ exts = [], setExts }: Props) {
+export default function AcceptExtensions({
+  exts = [],
+  setExts,
+  compact = false,
+}: Props) {
   const [customExt, setCustomExt] = useState("");
 
   function handleAddCustomExt() {
@@ -26,8 +31,10 @@ export default function AcceptExtensions({ exts = [], setExts }: Props) {
   }
 
   return (
-    <div className="space-y-2 rounded-md border p-4">
-      <p className="text-base font-semibold">拡張子を選択してください</p>
+    <div className={compact ? "space-y-2" : "space-y-2 rounded-md border p-4"}>
+      {!compact && (
+        <p className="text-base font-semibold">拡張子を選択してください</p>
+      )}
       <div className="flex min-h-[2.5rem] flex-wrap items-center gap-2 rounded-md border bg-muted p-2">
         {exts.map((ext) => (
           <div

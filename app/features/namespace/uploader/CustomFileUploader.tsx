@@ -2,11 +2,16 @@ import { type ChangeEvent, useCallback, useState } from "react";
 
 type Props = {
   acceptExt?: string[];
+  recentPaths?: string[];
   setFiles: (files: File[] | null) => void;
 };
 
 // デフォルトのinput要素ではフィルタ前のfiles数が表示されてしまう
-export default function CustomFileUploader({ acceptExt, setFiles }: Props) {
+export default function CustomFileUploader({
+  acceptExt,
+  recentPaths = [],
+  setFiles,
+}: Props) {
   const [filteredFileCount, setFilteredFileCount] = useState(0);
   const [directoryName, setDirectoryName] = useState(
     "フォルダを選択してください",
@@ -101,6 +106,14 @@ export default function CustomFileUploader({ acceptExt, setFiles }: Props) {
         disabled={!originalFiles || originalFiles.length === 0}
         className="w-full h-10 border rounded-md px-3 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
       />
+      {recentPaths.length > 0 && (
+        <p className="text-xs text-muted-foreground" aria-live="polite">
+          最近の取り込み先: {recentPaths.slice(0, 3).join(" / ")}
+          <span className="ml-1">
+            （同じフォルダを選ぶと前回の履歴を利用できます）
+          </span>
+        </p>
+      )}
     </div>
   );
 }

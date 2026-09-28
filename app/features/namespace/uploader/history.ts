@@ -81,6 +81,6 @@ export function previousResult(
   path: string,
 ): UploadResult | undefined {
   const record = history.find((item) => matchesFile(item, file, path));
-  if (!record || record.retryable) return undefined;
+  if (!record?.ok) return undefined;
   return { ...record, skipped: true };
 }

@@ -1,4 +1,4 @@
-import { BookOpen, FolderOpen, ListChecks, SquareCheckBig } from "lucide-react";
+import { FolderOpen, ListChecks, Plus, SquareCheckBig } from "lucide-react";
 import { Link } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
 import { useAuth } from "~/features/auth/AuthProvider";
@@ -99,9 +99,13 @@ export default function Dashboard() {
                 </CardDescription>
               </div>
               <DialogTrigger asChild>
-                <Button size="sm">
-                  <BookOpen className="size-4" />
-                  取り込む
+                <Button
+                  size="icon"
+                  className="rounded-full"
+                  aria-label="読書メモを取り込む"
+                  title="読書メモを取り込む"
+                >
+                  <Plus className="size-5" />
                 </Button>
               </DialogTrigger>
             </CardHeader>

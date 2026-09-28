@@ -15,8 +15,10 @@ import type { UploadResult } from "./history";
 type Props = {
   file: File;
   path?: string;
+  hidePath?: boolean;
   isUploading: boolean;
   result?: UploadResult;
+  identityResolutions?: IdentityResolutionBody[];
   onResult: (result: UploadResult) => void;
   onComplete: () => void;
   onResolved?: () => void;
@@ -101,8 +103,10 @@ export function describeUploadError(
 export default function UploadUnit({
   file,
   path,
+  hidePath = false,
   isUploading,
   result,
+  identityResolutions = [],
   onResult,
   onComplete,
   onResolved,
@@ -120,12 +124,22 @@ export default function UploadUnit({
   const [isResolving, setIsResolving] = useState(false);
   const [resolutionError, setResolutionError] = useState<string>();
   const uploadStarted = useRef(false);
-  const accumulatedResolutions = useRef<IdentityResolutionBody[]>([]);
+  const accumulatedResolutions =
+    useRef<IdentityResolutionBody[]>(identityResolutions);
 
   const handleUpload = useCallback(async () => {
     setUploadError(null);
     try {
-      const result = await trigger({ files: [file] });
+      const result = identityResolutions.length
+        ? await postTextResourceTextPost(
+            {
+              txt: await file.text(),
+              path: file.name.split("/"),
+              identity_resolutions: identityResolutions,
+            },
+            { credentials: "include" },
+          )
+        : await trigger({ files: [file] });
       if (result && result.status >= 200 && result.status < 300) {
         onResult({ ok: true, retryable: false });
       } else if (result && result.status >= 400) {
@@ -164,7 +178,7 @@ export default function UploadUnit({
     } finally {
       onComplete();
     }
-  }, [file, trigger, onResult, onComplete]);
+  }, [file, identityResolutions, trigger, onResult, onComplete]);
 
   const resolveIdentityConflict = useCallback(
     async (resolutions: IdentityResolutionBody[]) => {
@@ -238,9 +252,11 @@ export default function UploadUnit({
 
   return (
     <div className="space-y-2 px-3 py-3 sm:px-4">
-      <p className="truncate font-medium" title={path ?? file.name}>
-        {path ?? file.name}
-      </p>
+      {!hidePath && (
+        <p className="truncate font-medium" title={path ?? file.name}>
+          {path ?? file.name}
+        </p>
+      )}
       <UploadingProgress isUploading={isMutating} isFinished={!!data} />
       {identityConflict && (
         <div className="flex items-center justify-between gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">

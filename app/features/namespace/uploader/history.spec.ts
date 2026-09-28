@@ -44,4 +44,15 @@ describe("upload history", () => {
 
     expect(previousResult(history, file, "notes/memo.kn")).toBeUndefined();
   });
+
+  it("内容エラーも事前確認からやり直せる", () => {
+    const file = makeFile();
+    const history = saveUploadResult([], file, "notes/memo.kn", {
+      ok: false,
+      retryable: false,
+      message: "修正してください",
+    });
+
+    expect(previousResult(history, file, "notes/memo.kn")).toBeUndefined();
+  });
 });
