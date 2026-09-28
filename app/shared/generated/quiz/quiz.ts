@@ -14,6 +14,7 @@ import type {
   AnswerHistoryResult,
   AnswerParam,
   Answers,
+  BrokenQuizReference,
   CreateQuizParam,
   HTTPValidationError,
   ListAnswerHistoryApiQuizAnswersGetParams,
@@ -21,11 +22,13 @@ import type {
   ListQuizQuizGetParams,
   ManagedQuizResult,
   QuizChain,
+  QuizReattachmentResult,
   QuizRecommendationResponse,
   QuizResourceStatus,
   ReadableQuiz,
   ReadableQuizResult,
   RecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostParams,
+  RepairQuizReferenceParam,
   ResourceLearningStatus,
   SearchCreatedQuizzesApiQuizCreatedSearchGetParams,
   SentenceQuizStatus,
@@ -674,6 +677,229 @@ export const useListCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesG
       swrFn,
       swrOptions,
     );
+
+    return {
+      swrKey,
+      ...query,
+    };
+  };
+export type listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse200 = {
+  data: BrokenQuizReference[];
+  status: 200;
+};
+
+export type listBrokenCreatedQuizzesQuizCreatedBrokenGetResponseSuccess =
+  listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse200 & {
+    headers: Headers;
+  };
+
+export type listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse =
+  listBrokenCreatedQuizzesQuizCreatedBrokenGetResponseSuccess;
+
+export const getListBrokenCreatedQuizzesQuizCreatedBrokenGetUrl = () => {
+  return "https://knowde.onrender.com/quiz/created/broken";
+};
+
+/**
+ * 自分が作成したQuizの修復待ち参照を取得.
+ * @summary List Broken Created Quizzes
+ */
+export const listBrokenCreatedQuizzesQuizCreatedBrokenGet = async (
+  options?: RequestInit,
+): Promise<listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse> => {
+  const res = await fetch(
+    getListBrokenCreatedQuizzesQuizCreatedBrokenGetUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse["data"] =
+    body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse;
+};
+
+export const getListBrokenCreatedQuizzesQuizCreatedBrokenGetKey = () =>
+  ["https://knowde.onrender.com/quiz/created/broken"] as const;
+
+export type ListBrokenCreatedQuizzesQuizCreatedBrokenGetQueryResult =
+  NonNullable<
+    Awaited<ReturnType<typeof listBrokenCreatedQuizzesQuizCreatedBrokenGet>>
+  >;
+
+/**
+ * @summary List Broken Created Quizzes
+ */
+export const useListBrokenCreatedQuizzesQuizCreatedBrokenGet = <
+  TError = Promise<unknown>,
+>(options?: {
+  swr?: SWRConfiguration<
+    Awaited<ReturnType<typeof listBrokenCreatedQuizzesQuizCreatedBrokenGet>>,
+    TError
+  > & { swrKey?: Key; enabled?: boolean };
+  fetch?: RequestInit;
+}) => {
+  const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey =
+    swrOptions?.swrKey ??
+    (() =>
+      isEnabled ? getListBrokenCreatedQuizzesQuizCreatedBrokenGetKey() : null);
+  const swrFn = () =>
+    listBrokenCreatedQuizzesQuizCreatedBrokenGet(fetchOptions);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(
+    swrKey,
+    swrFn,
+    swrOptions,
+  );
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+export type repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse200 =
+  {
+    data: QuizReattachmentResult;
+    status: 200;
+  };
+
+export type repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse422 =
+  {
+    data: HTTPValidationError;
+    status: 422;
+  };
+
+export type repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponseSuccess =
+  repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse200 & {
+    headers: Headers;
+  };
+export type repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponseError =
+  repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse422 & {
+    headers: Headers;
+  };
+
+export type repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse =
+  | repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponseSuccess
+  | repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponseError;
+
+export const getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostUrl =
+  (quizId: string, retiredSentenceId: string) => {
+    return `https://knowde.onrender.com/quiz/${quizId}/broken/${retiredSentenceId}/reattach`;
+  };
+
+/**
+ * 退役単文へのQuiz参照を選択した現行単文へ付け替える.
+ * @summary Repair Quiz Reference Api
+ */
+export const repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPost =
+  async (
+    quizId: string,
+    retiredSentenceId: string,
+    repairQuizReferenceParam: RepairQuizReferenceParam,
+    options?: RequestInit,
+  ): Promise<repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse> => {
+    const res = await fetch(
+      getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostUrl(
+        quizId,
+        retiredSentenceId,
+      ),
+      {
+        ...options,
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...options?.headers },
+        body: JSON.stringify(repairQuizReferenceParam),
+      },
+    );
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse["data"] =
+      body ? JSON.parse(body) : {};
+    return {
+      data,
+      status: res.status,
+      headers: res.headers,
+    } as repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse;
+  };
+
+export const getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostMutationFetcher =
+  (quizId: string, retiredSentenceId: string, options?: RequestInit) => {
+    return (_: Key, { arg }: { arg: RepairQuizReferenceParam }) => {
+      return repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPost(
+        quizId,
+        retiredSentenceId,
+        arg,
+        options,
+      );
+    };
+  };
+export const getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostMutationKey =
+  (quizId: string, retiredSentenceId: string) =>
+    [
+      `https://knowde.onrender.com/quiz/${quizId}/broken/${retiredSentenceId}/reattach`,
+    ] as const;
+
+export type RepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostMutationResult =
+  NonNullable<
+    Awaited<
+      ReturnType<
+        typeof repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPost
+      >
+    >
+  >;
+
+/**
+ * @summary Repair Quiz Reference Api
+ */
+export const useRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPost =
+  <TError = Promise<HTTPValidationError>>(
+    quizId: string,
+    retiredSentenceId: string,
+    options?: {
+      swr?: SWRMutationConfiguration<
+        Awaited<
+          ReturnType<
+            typeof repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPost
+          >
+        >,
+        TError,
+        Key,
+        RepairQuizReferenceParam,
+        Awaited<
+          ReturnType<
+            typeof repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPost
+          >
+        >
+      > & { swrKey?: string };
+      fetch?: RequestInit;
+    },
+  ) => {
+    const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+    const swrKey =
+      swrOptions?.swrKey ??
+      getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostMutationKey(
+        quizId,
+        retiredSentenceId,
+      );
+    const swrFn =
+      getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostMutationFetcher(
+        quizId,
+        retiredSentenceId,
+        fetchOptions,
+      );
+
+    const query = useSWRMutation(swrKey, swrFn, swrOptions);
 
     return {
       swrKey,

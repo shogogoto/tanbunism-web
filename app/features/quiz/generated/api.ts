@@ -9,10 +9,11 @@ import type {
   AnswerParam,
   Answers,
   BodyPostFilesResourcePost,
-  BodyPostTextResourceTextPost,
+  BrokenQuizReference,
   CreateQuizParam,
   EntryDetail,
   HTTPValidationError,
+  IdentityConflictResponse,
   ListAnswerHistoryApiQuizAnswersGetParams,
   ListCreatedQuizzesQuizCreatedGetParams,
   ListQuizQuizGetParams,
@@ -20,16 +21,20 @@ import type {
   NameSpace,
   PostTextResourceTextPost200,
   QuizChain,
+  QuizReattachmentResult,
   QuizRecommendationResponse,
   QuizResourceStatus,
   ReadableQuiz,
   ReadableQuizResult,
   RecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostParams,
+  RepairQuizReferenceParam,
   ResourceDetail,
+  ResourceDiffPreview,
   ResourceLearningStatus,
   ResourceMetas,
   ResourceSearchBody,
   ResourceSearchResult,
+  ResourceTextBody,
   SearchCreatedQuizzesApiQuizCreatedSearchGetParams,
   SentenceQuizStatus,
   StudyPlan,
@@ -193,6 +198,11 @@ export type postTextResourceTextPostResponse200 = {
   status: 200;
 };
 
+export type postTextResourceTextPostResponse409 = {
+  data: IdentityConflictResponse;
+  status: 409;
+};
+
 export type postTextResourceTextPostResponse422 = {
   data: HTTPValidationError;
   status: 422;
@@ -202,10 +212,12 @@ export type postTextResourceTextPostResponseSuccess =
   postTextResourceTextPostResponse200 & {
     headers: Headers;
   };
-export type postTextResourceTextPostResponseError =
-  postTextResourceTextPostResponse422 & {
-    headers: Headers;
-  };
+export type postTextResourceTextPostResponseError = (
+  | postTextResourceTextPostResponse409
+  | postTextResourceTextPostResponse422
+) & {
+  headers: Headers;
+};
 
 export type postTextResourceTextPostResponse =
   | postTextResourceTextPostResponseSuccess
@@ -220,14 +232,14 @@ export const getPostTextResourceTextPostUrl = () => {
  * @summary Post Text
  */
 export const postTextResourceTextPost = async (
-  bodyPostTextResourceTextPost: BodyPostTextResourceTextPost,
+  resourceTextBody: ResourceTextBody,
   options?: RequestInit,
 ): Promise<postTextResourceTextPostResponse> => {
   const res = await fetch(getPostTextResourceTextPostUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(bodyPostTextResourceTextPost),
+    body: JSON.stringify(resourceTextBody),
   });
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
@@ -240,6 +252,67 @@ export const postTextResourceTextPost = async (
     status: res.status,
     headers: res.headers,
   } as postTextResourceTextPostResponse;
+};
+
+export type previewTextUpdateResourceTextPreviewPostResponse200 = {
+  data: ResourceDiffPreview;
+  status: 200;
+};
+
+export type previewTextUpdateResourceTextPreviewPostResponse409 = {
+  data: IdentityConflictResponse;
+  status: 409;
+};
+
+export type previewTextUpdateResourceTextPreviewPostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type previewTextUpdateResourceTextPreviewPostResponseSuccess =
+  previewTextUpdateResourceTextPreviewPostResponse200 & {
+    headers: Headers;
+  };
+export type previewTextUpdateResourceTextPreviewPostResponseError = (
+  | previewTextUpdateResourceTextPreviewPostResponse409
+  | previewTextUpdateResourceTextPreviewPostResponse422
+) & {
+  headers: Headers;
+};
+
+export type previewTextUpdateResourceTextPreviewPostResponse =
+  | previewTextUpdateResourceTextPreviewPostResponseSuccess
+  | previewTextUpdateResourceTextPreviewPostResponseError;
+
+export const getPreviewTextUpdateResourceTextPreviewPostUrl = () => {
+  return "https://knowde.onrender.com/resource-text/preview";
+};
+
+/**
+ * 保存せずにResourceの差分と同一性競合を検証する.
+ * @summary Preview Text Update
+ */
+export const previewTextUpdateResourceTextPreviewPost = async (
+  resourceTextBody: ResourceTextBody,
+  options?: RequestInit,
+): Promise<previewTextUpdateResourceTextPreviewPostResponse> => {
+  const res = await fetch(getPreviewTextUpdateResourceTextPreviewPostUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(resourceTextBody),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: previewTextUpdateResourceTextPreviewPostResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as previewTextUpdateResourceTextPreviewPostResponse;
 };
 
 export type postFilesResourcePostResponse200 = {
@@ -876,6 +949,114 @@ export const listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGet 
       status: res.status,
       headers: res.headers,
     } as listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetResponse;
+  };
+
+export type listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse200 = {
+  data: BrokenQuizReference[];
+  status: 200;
+};
+
+export type listBrokenCreatedQuizzesQuizCreatedBrokenGetResponseSuccess =
+  listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse200 & {
+    headers: Headers;
+  };
+
+export type listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse =
+  listBrokenCreatedQuizzesQuizCreatedBrokenGetResponseSuccess;
+
+export const getListBrokenCreatedQuizzesQuizCreatedBrokenGetUrl = () => {
+  return "https://knowde.onrender.com/quiz/created/broken";
+};
+
+/**
+ * 自分が作成したQuizの修復待ち参照を取得.
+ * @summary List Broken Created Quizzes
+ */
+export const listBrokenCreatedQuizzesQuizCreatedBrokenGet = async (
+  options?: RequestInit,
+): Promise<listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse> => {
+  const res = await fetch(
+    getListBrokenCreatedQuizzesQuizCreatedBrokenGetUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse["data"] =
+    body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse;
+};
+
+export type repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse200 =
+  {
+    data: QuizReattachmentResult;
+    status: 200;
+  };
+
+export type repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse422 =
+  {
+    data: HTTPValidationError;
+    status: 422;
+  };
+
+export type repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponseSuccess =
+  repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse200 & {
+    headers: Headers;
+  };
+export type repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponseError =
+  repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse422 & {
+    headers: Headers;
+  };
+
+export type repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse =
+  | repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponseSuccess
+  | repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponseError;
+
+export const getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostUrl =
+  (quizId: string, retiredSentenceId: string) => {
+    return `https://knowde.onrender.com/quiz/${quizId}/broken/${retiredSentenceId}/reattach`;
+  };
+
+/**
+ * 退役単文へのQuiz参照を選択した現行単文へ付け替える.
+ * @summary Repair Quiz Reference Api
+ */
+export const repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPost =
+  async (
+    quizId: string,
+    retiredSentenceId: string,
+    repairQuizReferenceParam: RepairQuizReferenceParam,
+    options?: RequestInit,
+  ): Promise<repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse> => {
+    const res = await fetch(
+      getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostUrl(
+        quizId,
+        retiredSentenceId,
+      ),
+      {
+        ...options,
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...options?.headers },
+        body: JSON.stringify(repairQuizReferenceParam),
+      },
+    );
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse["data"] =
+      body ? JSON.parse(body) : {};
+    return {
+      data,
+      status: res.status,
+      headers: res.headers,
+    } as repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse;
   };
 
 export type deleteQuizApiQuizQuizIdDeleteResponse204 = {

@@ -15,6 +15,7 @@ import type {
   NameSpace,
   PostTextResourceTextPost200,
   ResourceDetail,
+  ResourceDiffPreview,
   ResourceSearchResult,
 } from "../fastAPI.schemas";
 
@@ -205,6 +206,20 @@ export const getPostTextResourceTextPostResponseMock =
       length: { min: 10, max: 20 },
     }),
   });
+
+export const getPreviewTextUpdateResourceTextPreviewPostResponseMock = (
+  overrideResponse: Partial<Extract<ResourceDiffPreview, object>> = {},
+): ResourceDiffPreview => ({
+  resource_id: faker.helpers.arrayElement([faker.string.uuid(), null]),
+  is_new: faker.datatype.boolean(),
+  sentences_added: faker.number.int(),
+  sentences_removed: faker.number.int(),
+  sentences_updated: faker.number.int(),
+  terms_added: faker.number.int(),
+  terms_removed: faker.number.int(),
+  terms_updated: faker.number.int(),
+  ...overrideResponse,
+});
 
 export const getGetResourceDetailResourceResourceIdGetResponseMock = (
   overrideResponse: Partial<Extract<ResourceDetail, object>> = {},
@@ -885,6 +900,32 @@ export const getPostTextResourceTextPostMockHandler = (
   );
 };
 
+export const getPreviewTextUpdateResourceTextPreviewPostMockHandler = (
+  overrideResponse?:
+    | ResourceDiffPreview
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ResourceDiffPreview> | ResourceDiffPreview),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/resource-text/preview",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      await delay(200);
+
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPreviewTextUpdateResourceTextPreviewPostResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getPostFilesResourcePostMockHandler = (
   overrideResponse?:
     | null
@@ -1011,6 +1052,7 @@ export const getEntryMock = () => [
   getSyncNamespaceApiNamespacePostMockHandler(),
   getGetPublicNamespaceUserUserIdNamespaceGetMockHandler(),
   getPostTextResourceTextPostMockHandler(),
+  getPreviewTextUpdateResourceTextPreviewPostMockHandler(),
   getPostFilesResourcePostMockHandler(),
   getGetResourceDetailResourceResourceIdGetMockHandler(),
   getGetEntryDetailEntryEntryIdGetMockHandler(),

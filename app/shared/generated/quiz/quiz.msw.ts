@@ -18,8 +18,10 @@ import {
 import type {
   AnswerHistoryResult,
   Answers,
+  BrokenQuizReference,
   ManagedQuizResult,
   QuizChain,
+  QuizReattachmentResult,
   QuizRecommendationResponse,
   QuizResourceStatus,
   ReadableQuiz,
@@ -225,6 +227,34 @@ export const getListCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesG
         undefined,
       ]),
     }));
+
+export const getListBrokenCreatedQuizzesQuizCreatedBrokenGetResponseMock =
+  (): BrokenQuizReference[] =>
+    Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      quiz_id: faker.string.uuid(),
+      retired_sentence_id: faker.string.uuid(),
+      retired_value: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      resource_id: faker.string.uuid(),
+      roles: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+      retired_at: `${faker.date.past().toISOString().slice(0, 19)}Z`,
+    }));
+
+export const getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponseMock =
+  (
+    overrideResponse: Partial<Extract<QuizReattachmentResult, object>> = {},
+  ): QuizReattachmentResult => ({
+    quiz_targets: faker.number.int(),
+    quiz_options: faker.number.int(),
+    quiz_corrects: faker.number.int(),
+    retained: faker.datatype.boolean(),
+    ...overrideResponse,
+  });
 
 export const getAnswerQuizApiQuizAnswerQuizIdPostResponseMock = (
   overrideResponse: Partial<Extract<QuizChain, object>> = {},
@@ -970,6 +1000,59 @@ export const getListCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesG
     );
   };
 
+export const getListBrokenCreatedQuizzesQuizCreatedBrokenGetMockHandler = (
+  overrideResponse?:
+    | BrokenQuizReference[]
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<BrokenQuizReference[]> | BrokenQuizReference[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/quiz/created/broken",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      await delay(200);
+
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListBrokenCreatedQuizzesQuizCreatedBrokenGetResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostMockHandler =
+  (
+    overrideResponse?:
+      | QuizReattachmentResult
+      | ((
+          info: Parameters<Parameters<typeof http.post>[1]>[0],
+        ) => Promise<QuizReattachmentResult> | QuizReattachmentResult),
+    options?: RequestHandlerOptions,
+  ) => {
+    return http.post(
+      "*/quiz/:quizId/broken/:retiredSentenceId/reattach",
+      async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+        await delay(200);
+
+        return HttpResponse.json(
+          overrideResponse !== undefined
+            ? typeof overrideResponse === "function"
+              ? await overrideResponse(info)
+              : overrideResponse
+            : getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponseMock(),
+          { status: 200 },
+        );
+      },
+      options,
+    );
+  };
+
 export const getDeleteQuizApiQuizQuizIdDeleteMockHandler = (
   overrideResponse?:
     | void
@@ -1311,6 +1394,8 @@ export const getQuizMock = () => [
   getListCreatedQuizResourcesQuizCreatedResourcesGetMockHandler(),
   getSearchCreatedQuizzesApiQuizCreatedSearchGetMockHandler(),
   getListCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetMockHandler(),
+  getListBrokenCreatedQuizzesQuizCreatedBrokenGetMockHandler(),
+  getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostMockHandler(),
   getDeleteQuizApiQuizQuizIdDeleteMockHandler(),
   getAnswerQuizApiQuizAnswerQuizIdPostMockHandler(),
   getListAnswerQuizAnswerQuizIdGetMockHandler(),

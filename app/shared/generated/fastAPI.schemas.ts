@@ -61,6 +61,45 @@ export interface Additional {
 }
 
 /**
+ * APIで返すソース範囲.
+ */
+export interface SourceRangeResult {
+  line: number;
+  start_character: number;
+  end_character: number;
+}
+
+/**
+ * APIで返す利用者向け診断.
+ */
+export interface DiagnosticResult {
+  code: string;
+  message: string;
+  suggestion: string | null;
+  severity: string;
+  source_range: SourceRangeResult;
+}
+
+/**
+ * APIで返す文書統計.
+ */
+export interface StatisticsResult {
+  duration_ms: number;
+  line_count: number;
+  term_count: number | null;
+  node_count: number | null;
+  relation_count: number | null;
+}
+
+/**
+ * 診断と文書統計.
+ */
+export interface AnalysisResult {
+  diagnostics: DiagnosticResult[];
+  statistics: StatisticsResult;
+}
+
+/**
  * 誰がいつ何を選択して回答したか、とその正誤.
  */
 export interface Answer {
@@ -155,11 +194,6 @@ export interface BodyPostFilesResourcePost {
   files: Blob[];
 }
 
-export interface BodyPostTextResourceTextPost {
-  txt: string;
-  path: string[];
-}
-
 export interface BodyResetForgotPasswordAuthForgotPasswordPost {
   email: string;
 }
@@ -178,6 +212,18 @@ export interface BodyVerifyVerifyAuthVerifyPost {
 }
 
 /**
+ * 作成Quizから退役単文へ残された、修復可能な参照.
+ */
+export interface BrokenQuizReference {
+  quiz_id: string;
+  retired_sentence_id: string;
+  retired_value: string;
+  resource_id: string;
+  roles: string[];
+  retired_at: Neo4jDateTime;
+}
+
+/**
  * 候補出しタイプ.
  */
 export type CandidateType = (typeof CandidateType)[keyof typeof CandidateType];
@@ -191,6 +237,23 @@ export const CandidateType = {
   top_normal: "top_normal",
   top_wide: "top_wide",
 } as const;
+
+/**
+ * 補完候補.
+ */
+export interface CompletionSymbolResult {
+  label: string;
+  detail: string;
+}
+
+/**
+ * 補完候補と置換範囲.
+ */
+export interface CompletionResultBody {
+  replace_range: SourceRangeResult;
+  symbols: CompletionSymbolResult[];
+  closing: string;
+}
 
 /**
  * 指定単文からクイズ作成.
@@ -219,6 +282,14 @@ export interface DailyQuizAchievement {
   date: string;
   /** 作成と回答をそれぞれ一作業として数える. */
   readonly n_work: number;
+}
+
+/**
+ * 解析対象文書.
+ */
+export interface DocumentBody {
+  /** @maxLength 1000000 */
+  text: string;
 }
 
 /**
@@ -337,6 +408,49 @@ export interface ValidationError {
 
 export interface HTTPValidationError {
   detail?: ValidationError[];
+}
+
+/**
+ * 競合画面へ返す更新候補.
+ */
+export interface IdentityCandidateResponse {
+  value: string;
+  similarity: number;
+}
+
+/**
+ * 競合画面へ返す旧値と候補群.
+ */
+export interface IdentityConflictItemResponse {
+  original: string;
+  candidates: IdentityCandidateResponse[];
+}
+
+export type IdentityKind = (typeof IdentityKind)[keyof typeof IdentityKind];
+
+export const IdentityKind = {
+  sentence: "sentence",
+  term: "term",
+} as const;
+
+/**
+ * HTTP 409の機械可読な同一性競合.
+ */
+export interface IdentityConflictResponse {
+  code: number;
+  message: string;
+  type?: "identity_conflict";
+  kind: IdentityKind;
+  conflicts: IdentityConflictItemResponse[];
+}
+
+/**
+ * 1件の同一性競合に対するユーザーの選択.
+ */
+export interface IdentityResolutionBody {
+  kind?: IdentityKind;
+  original: string;
+  replacement: string | null;
 }
 
 /**
@@ -491,6 +605,25 @@ export interface Paging {
 }
 
 /**
+ * HTTP上の0始まり文書位置.
+ */
+export interface PositionBody {
+  /** @minimum 0 */
+  line: number;
+  /** @minimum 0 */
+  character: number;
+}
+
+/**
+ * カーソル位置を含む解析対象文書.
+ */
+export interface PositionedDocumentBody {
+  /** @maxLength 1000000 */
+  text: string;
+  position: PositionBody;
+}
+
+/**
  * 用意されたクイズのうち回答した取り組み割合.
  */
 export interface QuizAttemptRate {
@@ -629,6 +762,16 @@ export interface QuizPerformance {
 }
 
 /**
+ * 1件のQuizで付け替えた関係数と退役単文の保持状態.
+ */
+export interface QuizReattachmentResult {
+  quiz_targets: number;
+  quiz_options: number;
+  quiz_corrects: number;
+  retained: boolean;
+}
+
+/**
  * このクイズを推薦した理由.
  */
 export type QuizRecommendationReason =
@@ -682,6 +825,28 @@ export interface ReadableQuizResult {
   total: number;
 }
 
+/**
+ * 参照位置.
+ */
+export interface ReferenceResult {
+  source_range: SourceRangeResult;
+}
+
+/**
+ * 種類ごとにまとめた参照位置.
+ */
+export interface ReferenceGroupResult {
+  kind: string;
+  references: ReferenceResult[];
+}
+
+/**
+ * 退役単文の代わりに使う現行単文.
+ */
+export interface RepairQuizReferenceParam {
+  replacement_sentence_id: string;
+}
+
 export type ResourceDetailUids = { [key: string]: KNode };
 
 export type ResourceDetailTerms = { [key: string]: Term };
@@ -704,6 +869,20 @@ export interface ResourceDetail {
   resource_info: ResourceInfo;
   uids: ResourceDetailUids;
   terms: ResourceDetailTerms;
+}
+
+/**
+ * Webの競合確認画面へ返す、DB非更新の差分概要.
+ */
+export interface ResourceDiffPreview {
+  resource_id: string | null;
+  is_new: boolean;
+  sentences_added: number;
+  sentences_removed: number;
+  sentences_updated: number;
+  terms_added: number;
+  terms_removed: number;
+  terms_updated: number;
 }
 
 /**
@@ -776,6 +955,15 @@ export interface ResourceSearchBody {
 export interface ResourceSearchResult {
   total: number;
   data?: ResourceInfo[];
+}
+
+/**
+ * テキストResourceの保存と任意の競合解決.
+ */
+export interface ResourceTextBody {
+  txt: string;
+  path: string[];
+  identity_resolutions?: IdentityResolutionBody[];
 }
 
 /**

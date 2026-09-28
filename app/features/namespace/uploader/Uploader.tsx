@@ -27,7 +27,7 @@ export default function Uploader({ refresh }: Props) {
   const [results, setResults] = useState<Record<number, UploadResult>>({});
   const [history, setHistory] = useState<UploadHistoryRecord[]>([]);
 
-  const [exts, setExts] = useState<string[]>([".txt", ".md", ".kn"]);
+  const [exts, setExts] = useState<string[]>([".txt", ".md", ".kn", ".tb"]);
 
   const paths = useMemo(
     () => files?.map((file) => file.webkitRelativePath || file.name) ?? [],
@@ -140,6 +140,7 @@ export default function Uploader({ refresh }: Props) {
                   result={results[index]}
                   onResult={(result) => handleResult(index, result)}
                   onComplete={handleComplete}
+                  onResolved={refresh}
                 />
               </li>
             ))}

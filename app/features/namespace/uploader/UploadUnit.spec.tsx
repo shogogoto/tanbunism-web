@@ -1,10 +1,18 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import UploadUnit, { describeUploadError } from "./UploadUnit";
+import UploadUnit, {
+  describeUploadError,
+  readIdentityConflict,
+} from "./UploadUnit";
 
-const trigger = vi.fn();
+const { trigger, postText } = vi.hoisted(() => ({
+  trigger: vi.fn(),
+  postText: vi.fn(),
+}));
 
 vi.mock("~/shared/generated/entry/entry", () => ({
+  postTextResourceTextPost: postText,
   usePostFilesResourcePost: () => ({
     data: undefined,
     error: undefined,
@@ -16,6 +24,7 @@ vi.mock("~/shared/generated/entry/entry", () => ({
 describe("UploadUnit", () => {
   beforeEach(() => {
     trigger.mockReset();
+    postText.mockReset();
     trigger.mockResolvedValue({ status: 200 });
   });
 
@@ -57,5 +66,80 @@ describe("UploadUnit", () => {
     const result = describeUploadError(undefined, "NetworkError");
     expect(result.retryable).toBe(true);
     expect(result.message).toContain("再送");
+  });
+
+  it("FastAPIのdetailに包まれた同一性競合を読み取る", () => {
+    const conflict = readIdentityConflict({
+      detail: {
+        code: 409,
+        type: "identity_conflict",
+        kind: "sentence",
+        message: "確認が必要です",
+        conflicts: [{ original: "旧文", candidates: [] }],
+      },
+    });
+
+    expect(conflict?.conflicts[0]?.original).toBe("旧文");
+  });
+
+  it("単文と用語の競合が続いても前の選択を保持して再送する", async () => {
+    const user = userEvent.setup();
+    trigger.mockResolvedValue({
+      status: 409,
+      data: {
+        detail: {
+          code: 409,
+          type: "identity_conflict",
+          kind: "sentence",
+          message: "単文を確認",
+          conflicts: [
+            {
+              original: "旧単文",
+              candidates: [{ value: "新単文", similarity: 0.9 }],
+            },
+          ],
+        },
+      },
+    });
+    postText
+      .mockResolvedValueOnce({
+        status: 409,
+        data: {
+          code: 409,
+          type: "identity_conflict",
+          kind: "term",
+          message: "用語を確認",
+          conflicts: [
+            {
+              original: "旧用語",
+              candidates: [{ value: "新用語", similarity: 0.8 }],
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { resource_id: "resource" },
+      });
+
+    render(
+      <UploadUnit
+        file={new File(["# title"], "humanities/memo.tb")}
+        isUploading
+        onResult={vi.fn()}
+        onComplete={vi.fn()}
+      />,
+    );
+
+    await user.click(await screen.findByLabelText(/この候補へ引き継ぐ/));
+    await user.click(screen.getByRole("button", { name: "選択内容で更新" }));
+    await user.click(await screen.findByLabelText(/この候補へ引き継ぐ/));
+    await user.click(screen.getByRole("button", { name: "選択内容で更新" }));
+
+    await waitFor(() => expect(postText).toHaveBeenCalledTimes(2));
+    expect(postText.mock.calls[1]?.[0].identity_resolutions).toEqual([
+      { kind: "sentence", original: "旧単文", replacement: "新単文" },
+      { kind: "term", original: "旧用語", replacement: "新用語" },
+    ]);
   });
 });

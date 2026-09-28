@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "~/shared/components/ui/button";
 import { Progress } from "~/shared/components/ui/progress";
-import { usePostFilesResourcePost } from "~/shared/generated/entry/entry";
+import {
+  postTextResourceTextPost,
+  usePostFilesResourcePost,
+} from "~/shared/generated/entry/entry";
+import type {
+  IdentityConflictResponse,
+  IdentityResolutionBody,
+} from "~/shared/generated/fastAPI.schemas";
+import { IdentityConflictDialog } from "./IdentityConflictDialog";
 import type { UploadResult } from "./history";
 
 type Props = {
@@ -10,7 +19,29 @@ type Props = {
   result?: UploadResult;
   onResult: (result: UploadResult) => void;
   onComplete: () => void;
+  onResolved?: () => void;
 };
+
+function isIdentityConflict(value: unknown): value is IdentityConflictResponse {
+  if (!value || typeof value !== "object") return false;
+  const conflict = value as Partial<IdentityConflictResponse>;
+  return (
+    conflict.type === "identity_conflict" &&
+    (conflict.kind === "sentence" || conflict.kind === "term") &&
+    Array.isArray(conflict.conflicts)
+  );
+}
+
+export function readIdentityConflict(
+  value: unknown,
+): IdentityConflictResponse | null {
+  if (isIdentityConflict(value)) return value;
+  if (value && typeof value === "object" && "detail" in value) {
+    const detail = (value as { detail?: unknown }).detail;
+    if (isIdentityConflict(detail)) return detail;
+  }
+  return null;
+}
 
 export function describeUploadError(
   status: number | undefined,
@@ -74,6 +105,7 @@ export default function UploadUnit({
   result,
   onResult,
   onComplete,
+  onResolved,
 }: Props) {
   const { data, trigger, isMutating, error } = usePostFilesResourcePost({
     fetch: { credentials: "include" },
@@ -82,7 +114,13 @@ export default function UploadUnit({
     message: string;
     details?: string;
   } | null>(null);
+  const [identityConflict, setIdentityConflict] =
+    useState<IdentityConflictResponse | null>(null);
+  const [isConflictOpen, setIsConflictOpen] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
+  const [resolutionError, setResolutionError] = useState<string>();
   const uploadStarted = useRef(false);
+  const accumulatedResolutions = useRef<IdentityResolutionBody[]>([]);
 
   const handleUpload = useCallback(async () => {
     setUploadError(null);
@@ -91,6 +129,17 @@ export default function UploadUnit({
       if (result && result.status >= 200 && result.status < 300) {
         onResult({ ok: true, retryable: false });
       } else if (result && result.status >= 400) {
+        const conflict = readIdentityConflict(result.data);
+        if (conflict) {
+          setIdentityConflict(conflict);
+          setIsConflictOpen(true);
+          onResult({
+            ok: false,
+            message: "更新内容の確認が必要です。",
+            retryable: false,
+          });
+          return;
+        }
         // @ts-expect-error generated response types vary by status code.
         const detail = result.data?.detail?.message ?? result.data?.detail;
         const described = describeUploadError(result.status, detail);
@@ -117,6 +166,65 @@ export default function UploadUnit({
     }
   }, [file, trigger, onResult, onComplete]);
 
+  const resolveIdentityConflict = useCallback(
+    async (resolutions: IdentityResolutionBody[]) => {
+      setIsResolving(true);
+      setResolutionError(undefined);
+      try {
+        const resolutionKeys = new Set(
+          resolutions.map(
+            (resolution) => `${resolution.kind}:${resolution.original}`,
+          ),
+        );
+        const allResolutions = [
+          ...accumulatedResolutions.current.filter(
+            (resolution) =>
+              !resolutionKeys.has(
+                `${resolution.kind ?? "sentence"}:${resolution.original}`,
+              ),
+          ),
+          ...resolutions,
+        ];
+        const response = await postTextResourceTextPost(
+          {
+            txt: await file.text(),
+            path: file.name.split("/"),
+            identity_resolutions: allResolutions,
+          },
+          { credentials: "include" },
+        );
+        if (response.status >= 200 && response.status < 300) {
+          setIdentityConflict(null);
+          setIsConflictOpen(false);
+          setUploadError(null);
+          accumulatedResolutions.current = [];
+          onResult({ ok: true, retryable: false });
+          onResolved?.();
+          return;
+        }
+
+        const nextConflict = readIdentityConflict(response.data);
+        if (nextConflict) {
+          accumulatedResolutions.current = allResolutions;
+          setIdentityConflict(nextConflict);
+          setResolutionError(
+            "ファイルが変わったため候補を更新しました。もう一度確認してください。",
+          );
+          return;
+        }
+        setResolutionError("更新できませんでした。内容を確認してください。");
+      } catch (e) {
+        console.error(e);
+        setResolutionError(
+          "通信に失敗しました。時間を置いてもう一度お試しください。",
+        );
+      } finally {
+        setIsResolving(false);
+      }
+    },
+    [file, onResolved, onResult],
+  );
+
   useEffect(() => {
     if (!isUploading) {
       uploadStarted.current = false;
@@ -134,33 +242,62 @@ export default function UploadUnit({
         {path ?? file.name}
       </p>
       <UploadingProgress isUploading={isMutating} isFinished={!!data} />
-      {(error || uploadError || (result && !result.ok)) && (
-        <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm">
-          <p className="text-destructive">
-            {uploadError?.message ??
-              result?.message ??
-              (error instanceof Error
-                ? error.message
-                : "不明なエラーが発生しました")}
+      {identityConflict && (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+          <p>
+            似た{identityConflict.kind === "term" ? "用語" : "単文"}が
+            {identityConflict.conflicts.length}件あります。
           </p>
-          {(uploadError?.details ?? result?.details) && (
-            <details className="mt-2 text-muted-foreground">
-              <summary className="cursor-pointer select-none">
-                エラー詳細
-              </summary>
-              <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-background/60 p-2 text-xs">
-                {uploadError?.details ?? result?.details}
-              </pre>
-            </details>
-          )}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setIsConflictOpen(true)}
+          >
+            競合を確認
+          </Button>
         </div>
       )}
-      {(data || result?.ok) && !error && !isMutating && !uploadError && (
+      {!identityConflict &&
+        (error || uploadError || (result && !result.ok)) && (
+          <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm">
+            <p className="text-destructive">
+              {uploadError?.message ??
+                result?.message ??
+                (error instanceof Error
+                  ? error.message
+                  : "不明なエラーが発生しました")}
+            </p>
+            {(uploadError?.details ?? result?.details) && (
+              <details className="mt-2 text-muted-foreground">
+                <summary className="cursor-pointer select-none">
+                  エラー詳細
+                </summary>
+                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-background/60 p-2 text-xs">
+                  {uploadError?.details ?? result?.details}
+                </pre>
+              </details>
+            )}
+          </div>
+        )}
+      {result?.ok && !error && !isMutating && !uploadError && (
         <p className="text-sm text-green-500">
           {result?.skipped
             ? "✓ 前回から変更がないため送信を省略しました"
             : "✓ アップロードに成功しました"}
         </p>
+      )}
+      {identityConflict && (
+        <IdentityConflictDialog
+          key={JSON.stringify(identityConflict.conflicts)}
+          conflict={identityConflict}
+          filePath={path ?? file.name}
+          open={isConflictOpen}
+          isSubmitting={isResolving}
+          submitError={resolutionError}
+          onOpenChange={setIsConflictOpen}
+          onResolve={resolveIdentityConflict}
+        />
       )}
     </div>
   );

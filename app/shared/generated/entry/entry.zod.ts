@@ -267,15 +267,77 @@ export const GetPublicNamespaceUserUserIdNamespaceGetResponse = zod
  * テキストからsysnetを読み取って永続化.
  * @summary Post Text
  */
-export const PostTextResourceTextPostBody = zod.object({
-  txt: zod.string(),
-  path: zod.array(zod.string()),
-});
+export const postTextResourceTextPostBodyIdentityResolutionsItemKindDefault =
+  "sentence";
+
+export const PostTextResourceTextPostBody = zod
+  .object({
+    txt: zod.string(),
+    path: zod.array(zod.string()),
+    identity_resolutions: zod
+      .array(
+        zod
+          .object({
+            kind: zod
+              .enum(["sentence", "term"])
+              .default(
+                postTextResourceTextPostBodyIdentityResolutionsItemKindDefault,
+              ),
+            original: zod.string(),
+            replacement: zod.union([zod.string(), zod.null()]),
+          })
+          .describe("1件の同一性競合に対するユーザーの選択."),
+      )
+      .optional(),
+  })
+  .describe("テキストResourceの保存と任意の競合解決.");
 
 export const PostTextResourceTextPostResponse = zod.record(
   zod.string(),
   zod.string(),
 );
+
+/**
+ * 保存せずにResourceの差分と同一性競合を検証する.
+ * @summary Preview Text Update
+ */
+export const previewTextUpdateResourceTextPreviewPostBodyIdentityResolutionsItemKindDefault =
+  "sentence";
+
+export const PreviewTextUpdateResourceTextPreviewPostBody = zod
+  .object({
+    txt: zod.string(),
+    path: zod.array(zod.string()),
+    identity_resolutions: zod
+      .array(
+        zod
+          .object({
+            kind: zod
+              .enum(["sentence", "term"])
+              .default(
+                previewTextUpdateResourceTextPreviewPostBodyIdentityResolutionsItemKindDefault,
+              ),
+            original: zod.string(),
+            replacement: zod.union([zod.string(), zod.null()]),
+          })
+          .describe("1件の同一性競合に対するユーザーの選択."),
+      )
+      .optional(),
+  })
+  .describe("テキストResourceの保存と任意の競合解決.");
+
+export const PreviewTextUpdateResourceTextPreviewPostResponse = zod
+  .object({
+    resource_id: zod.union([zod.string().uuid(), zod.null()]),
+    is_new: zod.boolean(),
+    sentences_added: zod.number().int(),
+    sentences_removed: zod.number().int(),
+    sentences_updated: zod.number().int(),
+    terms_added: zod.number().int(),
+    terms_removed: zod.number().int(),
+    terms_updated: zod.number().int(),
+  })
+  .describe("Webの競合確認画面へ返す、DB非更新の差分概要.");
 
 /**
  * ファイルからsysnetを読み取って永続化.

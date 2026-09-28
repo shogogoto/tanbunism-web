@@ -309,6 +309,51 @@ export const ListCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetR
   );
 
 /**
+ * 自分が作成したQuizの修復待ち参照を取得.
+ * @summary List Broken Created Quizzes
+ */
+export const ListBrokenCreatedQuizzesQuizCreatedBrokenGetResponseItem = zod
+  .object({
+    quiz_id: zod.string().uuid(),
+    retired_sentence_id: zod.string().uuid(),
+    retired_value: zod.string(),
+    resource_id: zod.string().uuid(),
+    roles: zod.array(zod.string()),
+    retired_at: zod.string().datetime({ offset: true }),
+  })
+  .describe("作成Quizから退役単文へ残された、修復可能な参照.");
+export const ListBrokenCreatedQuizzesQuizCreatedBrokenGetResponse = zod.array(
+  ListBrokenCreatedQuizzesQuizCreatedBrokenGetResponseItem,
+);
+
+/**
+ * 退役単文へのQuiz参照を選択した現行単文へ付け替える.
+ * @summary Repair Quiz Reference Api
+ */
+export const RepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostParams =
+  zod.object({
+    quiz_id: zod.string().uuid(),
+    retired_sentence_id: zod.string().uuid(),
+  });
+
+export const RepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostBody =
+  zod
+    .object({
+      replacement_sentence_id: zod.string(),
+    })
+    .describe("退役単文の代わりに使う現行単文.");
+
+export const RepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse =
+  zod
+    .object({
+      quiz_targets: zod.number().int(),
+      quiz_options: zod.number().int(),
+      quiz_corrects: zod.number().int(),
+      retained: zod.boolean(),
+    })
+    .describe("1件のQuizで付け替えた関係数と退役単文の保持状態.");
+
+/**
  * 認証ユーザー自身が作成したQuizを削除.
  * @summary Delete Quiz Api
  */

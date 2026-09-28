@@ -12,15 +12,17 @@ import type { SWRMutationConfiguration } from "swr/mutation";
 
 import type {
   BodyPostFilesResourcePost,
-  BodyPostTextResourceTextPost,
   EntryDetail,
   HTTPValidationError,
+  IdentityConflictResponse,
   NameSpace,
   PostTextResourceTextPost200,
   ResourceDetail,
+  ResourceDiffPreview,
   ResourceMetas,
   ResourceSearchBody,
   ResourceSearchResult,
+  ResourceTextBody,
 } from "../fastAPI.schemas";
 
 export type getNamaspaceNamespaceGetResponse200 = {
@@ -307,6 +309,11 @@ export type postTextResourceTextPostResponse200 = {
   status: 200;
 };
 
+export type postTextResourceTextPostResponse409 = {
+  data: IdentityConflictResponse;
+  status: 409;
+};
+
 export type postTextResourceTextPostResponse422 = {
   data: HTTPValidationError;
   status: 422;
@@ -316,10 +323,12 @@ export type postTextResourceTextPostResponseSuccess =
   postTextResourceTextPostResponse200 & {
     headers: Headers;
   };
-export type postTextResourceTextPostResponseError =
-  postTextResourceTextPostResponse422 & {
-    headers: Headers;
-  };
+export type postTextResourceTextPostResponseError = (
+  | postTextResourceTextPostResponse409
+  | postTextResourceTextPostResponse422
+) & {
+  headers: Headers;
+};
 
 export type postTextResourceTextPostResponse =
   | postTextResourceTextPostResponseSuccess
@@ -334,14 +343,14 @@ export const getPostTextResourceTextPostUrl = () => {
  * @summary Post Text
  */
 export const postTextResourceTextPost = async (
-  bodyPostTextResourceTextPost: BodyPostTextResourceTextPost,
+  resourceTextBody: ResourceTextBody,
   options?: RequestInit,
 ): Promise<postTextResourceTextPostResponse> => {
   const res = await fetch(getPostTextResourceTextPostUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(bodyPostTextResourceTextPost),
+    body: JSON.stringify(resourceTextBody),
   });
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
@@ -359,7 +368,7 @@ export const postTextResourceTextPost = async (
 export const getPostTextResourceTextPostMutationFetcher = (
   options?: RequestInit,
 ) => {
-  return (_: Key, { arg }: { arg: BodyPostTextResourceTextPost }) => {
+  return (_: Key, { arg }: { arg: ResourceTextBody }) => {
     return postTextResourceTextPost(arg, options);
   };
 };
@@ -374,13 +383,13 @@ export type PostTextResourceTextPostMutationResult = NonNullable<
  * @summary Post Text
  */
 export const usePostTextResourceTextPost = <
-  TError = Promise<HTTPValidationError>,
+  TError = Promise<IdentityConflictResponse | HTTPValidationError>,
 >(options?: {
   swr?: SWRMutationConfiguration<
     Awaited<ReturnType<typeof postTextResourceTextPost>>,
     TError,
     Key,
-    BodyPostTextResourceTextPost,
+    ResourceTextBody,
     Awaited<ReturnType<typeof postTextResourceTextPost>>
   > & { swrKey?: string };
   fetch?: RequestInit;
@@ -389,6 +398,112 @@ export const usePostTextResourceTextPost = <
 
   const swrKey = swrOptions?.swrKey ?? getPostTextResourceTextPostMutationKey();
   const swrFn = getPostTextResourceTextPostMutationFetcher(fetchOptions);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+export type previewTextUpdateResourceTextPreviewPostResponse200 = {
+  data: ResourceDiffPreview;
+  status: 200;
+};
+
+export type previewTextUpdateResourceTextPreviewPostResponse409 = {
+  data: IdentityConflictResponse;
+  status: 409;
+};
+
+export type previewTextUpdateResourceTextPreviewPostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type previewTextUpdateResourceTextPreviewPostResponseSuccess =
+  previewTextUpdateResourceTextPreviewPostResponse200 & {
+    headers: Headers;
+  };
+export type previewTextUpdateResourceTextPreviewPostResponseError = (
+  | previewTextUpdateResourceTextPreviewPostResponse409
+  | previewTextUpdateResourceTextPreviewPostResponse422
+) & {
+  headers: Headers;
+};
+
+export type previewTextUpdateResourceTextPreviewPostResponse =
+  | previewTextUpdateResourceTextPreviewPostResponseSuccess
+  | previewTextUpdateResourceTextPreviewPostResponseError;
+
+export const getPreviewTextUpdateResourceTextPreviewPostUrl = () => {
+  return "https://knowde.onrender.com/resource-text/preview";
+};
+
+/**
+ * 保存せずにResourceの差分と同一性競合を検証する.
+ * @summary Preview Text Update
+ */
+export const previewTextUpdateResourceTextPreviewPost = async (
+  resourceTextBody: ResourceTextBody,
+  options?: RequestInit,
+): Promise<previewTextUpdateResourceTextPreviewPostResponse> => {
+  const res = await fetch(getPreviewTextUpdateResourceTextPreviewPostUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(resourceTextBody),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: previewTextUpdateResourceTextPreviewPostResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as previewTextUpdateResourceTextPreviewPostResponse;
+};
+
+export const getPreviewTextUpdateResourceTextPreviewPostMutationFetcher = (
+  options?: RequestInit,
+) => {
+  return (_: Key, { arg }: { arg: ResourceTextBody }) => {
+    return previewTextUpdateResourceTextPreviewPost(arg, options);
+  };
+};
+export const getPreviewTextUpdateResourceTextPreviewPostMutationKey = () =>
+  ["https://knowde.onrender.com/resource-text/preview"] as const;
+
+export type PreviewTextUpdateResourceTextPreviewPostMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof previewTextUpdateResourceTextPreviewPost>>
+  >;
+
+/**
+ * @summary Preview Text Update
+ */
+export const usePreviewTextUpdateResourceTextPreviewPost = <
+  TError = Promise<IdentityConflictResponse | HTTPValidationError>,
+>(options?: {
+  swr?: SWRMutationConfiguration<
+    Awaited<ReturnType<typeof previewTextUpdateResourceTextPreviewPost>>,
+    TError,
+    Key,
+    ResourceTextBody,
+    Awaited<ReturnType<typeof previewTextUpdateResourceTextPreviewPost>>
+  > & { swrKey?: string };
+  fetch?: RequestInit;
+}) => {
+  const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+  const swrKey =
+    swrOptions?.swrKey ??
+    getPreviewTextUpdateResourceTextPreviewPostMutationKey();
+  const swrFn =
+    getPreviewTextUpdateResourceTextPreviewPostMutationFetcher(fetchOptions);
 
   const query = useSWRMutation(swrKey, swrFn, swrOptions);
 
