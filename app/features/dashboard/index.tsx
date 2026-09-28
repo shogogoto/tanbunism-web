@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useRef } from "react";
 import { useSearchParams } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
@@ -69,30 +69,6 @@ export default function Dashboard() {
           }}
         >
           <div className="relative">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute -left-3 top-1/2 z-10 hidden -translate-y-1/2 rounded-full bg-background/80 shadow sm:flex"
-              aria-label="前のダッシュボード項目"
-              onClick={() =>
-                moveDashboardSection(activeSection, -1, setActiveSection)
-              }
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute -right-3 top-1/2 z-10 hidden -translate-y-1/2 rounded-full bg-background/80 shadow sm:flex"
-              aria-label="次のダッシュボード項目"
-              onClick={() =>
-                moveDashboardSection(activeSection, 1, setActiveSection)
-              }
-            >
-              <ChevronRight className="size-4" />
-            </Button>
             <div hidden={activeSection !== "profile"}>
               <DashboardProfile user={user} />
             </div>
@@ -129,16 +105,4 @@ export default function Dashboard() {
       </div>
     </AuthGuard>
   );
-}
-
-function moveDashboardSection(
-  current: DashboardSection,
-  offset: number,
-  setSection: (section: DashboardSection) => void,
-) {
-  const index = dashboardSections.findIndex(
-    (section) => section.id === current,
-  );
-  const next = dashboardSections[index + offset];
-  if (next) setSection(next.id);
 }
