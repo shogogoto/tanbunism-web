@@ -119,16 +119,22 @@ export default function Dashboard() {
             >
               <ChevronRight className="size-4" />
             </Button>
-            {activeSection === "start" && <StartPanel />}
-            {activeSection === "activity" && (
+            <div hidden={activeSection !== "start"}>
+              <StartPanel />
+            </div>
+            <div hidden={activeSection !== "activity"}>
               <DashboardActivity
                 userId={user?.uid}
                 userPath={user?.username || user?.uid}
               />
-            )}
-            {activeSection === "achievement" && <DashboardAchievement />}
-            {activeSection === "answers" && <RecentAnswers />}
-            {activeSection === "notes" && (
+            </div>
+            <div hidden={activeSection !== "achievement"}>
+              <DashboardAchievement />
+            </div>
+            <div hidden={activeSection !== "answers"}>
+              <RecentAnswers />
+            </div>
+            <div hidden={activeSection !== "notes"}>
               <Dialog>
                 <Card>
                   <CardHeader className="flex-row items-start justify-between gap-3">
@@ -157,7 +163,7 @@ export default function Dashboard() {
                   <Uploader refresh={() => void namespace.mutate()} />
                 </DialogContent>
               </Dialog>
-            )}
+            </div>
           </div>
         </section>
       </div>
