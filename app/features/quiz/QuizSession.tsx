@@ -5,17 +5,6 @@ import {
   AlertDescription,
   AlertTitle,
 } from "~/shared/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "~/shared/components/ui/alert-dialog";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import {
@@ -30,14 +19,12 @@ import {
   RelationAnnotation,
   findTargetSentenceId,
 } from "./QuizKnowledge";
-import StudyPlanForm from "./StudyPlanForm";
 import {
   type QuizChain,
   type QuizRecommendation,
   type QuizType,
   type StudyPlan,
   answerQuiz,
-  deleteStudyPlan,
   listStudyPlans,
   recommendQuizzes,
 } from "./api";
@@ -72,8 +59,6 @@ export default function QuizSession() {
   >("existing");
   const [preparationError, setPreparationError] = useState<string>();
   const [submitError, setSubmitError] = useState<string>();
-  const [showPlanForm, setShowPlanForm] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<StudyPlan>();
   const [refreshKey, setRefreshKey] = useState(0);
   const sessionRef = useRef<HTMLDivElement>(null);
 
@@ -242,28 +227,6 @@ export default function QuizSession() {
     setIsSubmitting(false);
   }
 
-  function handlePlanCreated(plan: StudyPlan) {
-    setPlans((current) => [...current, plan]);
-    setPlanId(plan.uid);
-    setShowPlanForm(false);
-  }
-
-  function handlePlanUpdated(plan: StudyPlan) {
-    setPlans((current) =>
-      current.map((item) => (item.uid === plan.uid ? plan : item)),
-    );
-    setEditingPlan(undefined);
-    setRefreshKey((current) => current + 1);
-  }
-
-  async function handlePlanDeleted() {
-    await deleteStudyPlan(planId);
-    const remaining = plans.filter((plan) => plan.uid !== planId);
-    setPlans(remaining);
-    setPlanId(remaining[0]?.uid ?? "");
-    setEditingPlan(undefined);
-  }
-
   function retryIncorrectQuizzes() {
     setRecommendations((current) =>
       current.filter(({ quiz }) => results[quiz.quiz_id]?.isCorrect === false),
@@ -346,12 +309,17 @@ export default function QuizSession() {
         <header>
           <h1 className="text-2xl font-semibold">学習計画を作る</h1>
           <p className="text-sm text-muted-foreground">
-            学習するリソースとクイズ形式を選んでください。
+            クイズを解く前に、学習計画を作成してください。
           </p>
         </header>
         <Card className="border">
           <CardContent className="pt-4">
-            <StudyPlanForm onCreated={handlePlanCreated} />
+            <p className="mb-4 text-sm text-muted-foreground">
+              学習計画の作成・編集は、専用ページでまとめて行えます。
+            </p>
+            <Button asChild>
+              <Link to="/study-plans">学習計画を作る</Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -361,32 +329,7 @@ export default function QuizSession() {
   if (recommendations.length === 0 && !isPreparingRecommendations) {
     return (
       <div className="mx-auto max-w-2xl p-6 space-y-4">
-        <PlanToolbar
-          plans={plans}
-          planId={planId}
-          onChange={setPlanId}
-          onCreate={() => {
-            setEditingPlan(undefined);
-            setShowPlanForm(true);
-          }}
-          onEdit={() => setEditingPlan(plans.find(({ uid }) => uid === planId))}
-          onDelete={handlePlanDeleted}
-        />
-        {(showPlanForm || editingPlan) && (
-          <Card className="border">
-            <CardContent className="pt-4">
-              <StudyPlanForm
-                plan={editingPlan}
-                onCreated={handlePlanCreated}
-                onUpdated={handlePlanUpdated}
-                onCancel={() => {
-                  setShowPlanForm(false);
-                  setEditingPlan(undefined);
-                }}
-              />
-            </CardContent>
-          </Card>
-        )}
+        <PlanToolbar plans={plans} planId={planId} onChange={setPlanId} />
         <EmptyState
           title="提案できるクイズがありません"
           description="このStudyPlanの対象リソースやクイズ設定を見直してください。"
@@ -417,33 +360,7 @@ export default function QuizSession() {
         </Button>
       </header>
 
-      <PlanToolbar
-        plans={plans}
-        planId={planId}
-        onChange={setPlanId}
-        onCreate={() => {
-          setEditingPlan(undefined);
-          setShowPlanForm(true);
-        }}
-        onEdit={() => setEditingPlan(plans.find(({ uid }) => uid === planId))}
-        onDelete={handlePlanDeleted}
-      />
-
-      {(showPlanForm || editingPlan) && (
-        <Card className="border">
-          <CardContent className="pt-4">
-            <StudyPlanForm
-              plan={editingPlan}
-              onCreated={handlePlanCreated}
-              onUpdated={handlePlanUpdated}
-              onCancel={() => {
-                setShowPlanForm(false);
-                setEditingPlan(undefined);
-              }}
-            />
-          </CardContent>
-        </Card>
-      )}
+      <PlanToolbar plans={plans} planId={planId} onChange={setPlanId} />
 
       {isPreparingRecommendations && (
         <Card className="border">
@@ -752,51 +669,15 @@ function PlanSelector({
   );
 }
 
-function PlanToolbar({
-  onCreate,
-  onEdit,
-  onDelete,
-  ...selectorProps
-}: Parameters<typeof PlanSelector>[0] & {
-  onCreate: () => void;
-  onEdit: () => void;
-  onDelete: () => Promise<void>;
-}) {
+function PlanToolbar({ ...selectorProps }: Parameters<typeof PlanSelector>[0]) {
   return (
     <div className="flex items-end gap-2">
       <div className="flex-1">
         <PlanSelector {...selectorProps} />
       </div>
-      <Button type="button" variant="outline" onClick={onCreate}>
-        新規作成
-      </Button>
-      <Button type="button" variant="outline" onClick={onEdit}>
-        編集
-      </Button>
       <Button asChild type="button" variant="ghost">
         <Link to="/study-plans">管理</Link>
       </Button>
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button type="button" variant="ghost">
-            削除
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>StudyPlanを削除しますか？</AlertDialogTitle>
-            <AlertDialogDescription>
-              クイズや回答履歴は削除されません。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void onDelete()}>
-              削除する
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

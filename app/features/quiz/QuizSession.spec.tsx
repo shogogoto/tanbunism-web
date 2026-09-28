@@ -359,9 +359,7 @@ describe("QuizSession", () => {
     expect(answeredQuizIds).toEqual(["quiz-1", "quiz-2"]);
   });
 
-  it("StudyPlanがなければ作成してクイズを開始できる", async () => {
-    const user = userEvent.setup();
-    let createdPlan: typeof plan | undefined;
+  it("StudyPlanがなければ管理画面への導線を表示する", async () => {
     const resourceId = "11111111-1111-1111-1111-111111111111";
     server.use(
       http.get("*/quiz/study-plans", () => HttpResponse.json([])),
@@ -387,71 +385,31 @@ describe("QuizSession", () => {
           stats: { "11111111111111111111111111111111": { n_sentence: 10 } },
         }),
       ),
-      http.post("*/quiz/study-plans", async ({ request }) => {
-        const draft = (await request.json()) as typeof plan;
-        createdPlan = draft;
-        return HttpResponse.json(
-          { ...draft, uid: "plan-new", created: plan.created },
-          { status: 201 },
-        );
-      }),
-      http.post("*/quiz/study-plans/plan-new/recommendations", () =>
-        HttpResponse.json([recommendation]),
-      ),
     );
 
     renderQuizSession();
 
-    expect(await screen.findByText("学習計画を作る")).toBeInTheDocument();
-    await user.type(screen.getByLabelText("Plan名"), "数学の復習");
-    await user.click(screen.getByRole("checkbox", { name: "数学ノート" }));
-    for (const quizType of [
-      "単文から用語",
-      "関係から単文の組",
-      "単文の組から関係",
-    ]) {
-      await user.click(screen.getByRole("checkbox", { name: quizType }));
-    }
-    await user.clear(screen.getByLabelText("出題数（合計）"));
-    await user.type(screen.getByLabelText("出題数（合計）"), "1");
-    await user.click(
-      screen.getByRole("button", { name: "作成してクイズを始める" }),
-    );
-
     expect(
-      await screen.findByText("「可換」とはどのような性質ですか？"),
-    ).toBeInTheDocument();
-    expect(createdPlan?.resource_ids).toEqual([resourceId]);
-    expect(createdPlan?.quiz_types).toEqual([
-      "term2sent",
-      "sent2term",
-      "rel2pair",
-      "pair2rel",
-    ]);
-    expect(createdPlan?.n_quiz).toBe(4);
+      await screen.findByRole("link", { name: "学習計画を作る" }),
+    ).toHaveAttribute("href", "/study-plans");
   });
 
-  it("StudyPlanを編集・削除できる", async () => {
-    const user = userEvent.setup();
+  it("回答画面からはStudyPlanを管理画面で管理する", async () => {
     renderQuizSession();
 
     expect(
       await screen.findByText(recommendation.quiz.statement),
     ).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "編集" }));
-
-    const name = screen.getByLabelText("Plan名");
-    await user.clear(name);
-    await user.type(name, "数学を重点復習");
-    await user.click(screen.getByRole("button", { name: "変更を保存" }));
-
+    expect(screen.getByRole("link", { name: "管理" })).toHaveAttribute(
+      "href",
+      "/study-plans",
+    );
     expect(
-      await screen.findByRole("option", { name: "数学を重点復習" }),
-    ).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "削除" }));
-    await user.click(screen.getByRole("button", { name: "削除する" }));
-
-    expect(await screen.findByText("学習計画を作る")).toBeInTheDocument();
+      screen.queryByRole("button", { name: "編集" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "削除" }),
+    ).not.toBeInTheDocument();
   });
 
   it("推薦できない理由をAPIから表示する", async () => {
