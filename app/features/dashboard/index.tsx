@@ -59,12 +59,6 @@ export default function Dashboard() {
   return (
     <AuthGuard>
       <div className="mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
-        <p className="text-sm text-muted-foreground">
-          {user?.display_name || user?.username
-            ? `${user.display_name || user.username}さん、今日は何を学びますか？`
-            : "今日は何を学びますか？"}
-        </p>
-
         <section
           className="min-h-[65vh] space-y-4 pb-8"
           onTouchStart={(event) => {
@@ -130,28 +124,20 @@ export default function Dashboard() {
             <div hidden={activeSection !== "notes"}>
               <Dialog>
                 <Card>
-                  <CardHeader className="flex-row items-start justify-between gap-3">
-                    <div>
-                      <CardTitle>読書メモ</CardTitle>
-                      <CardDescription>
-                        Resourceを更新して、次のクイズや発見につなげます。
-                      </CardDescription>
-                    </div>
-                    <DialogTrigger asChild>
-                      <Button
-                        size="icon"
-                        className="rounded-full"
-                        aria-label="読書メモを取り込む"
-                        title="読書メモを取り込む"
-                      >
-                        <Plus className="size-5" />
-                      </Button>
-                    </DialogTrigger>
-                  </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-4 sm:p-6">
                     <NamespaceExplorer nsprops={namespace} />
                   </CardContent>
                 </Card>
+                <DialogTrigger asChild>
+                  <Button
+                    size="icon"
+                    className="fixed bottom-20 right-4 z-30 size-12 rounded-full shadow-xl ring-4 ring-background transition-transform hover:scale-105 md:bottom-6 md:right-6"
+                    aria-label="読書メモを取り込む"
+                    title="読書メモを取り込む"
+                  >
+                    <Plus className="size-6" />
+                  </Button>
+                </DialogTrigger>
                 <DialogContent className="h-[90vh] w-[calc(100vw-2rem)] max-w-none overflow-hidden p-0 sm:max-w-5xl">
                   <Uploader refresh={() => void namespace.mutate()} />
                 </DialogContent>
