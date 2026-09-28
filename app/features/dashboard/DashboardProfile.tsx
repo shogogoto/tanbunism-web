@@ -21,45 +21,41 @@ export default function DashboardProfile({ user }: { user?: UserRead }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center gap-4">
-              <UserAvatar user={user} className="size-14" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-lg font-semibold">
-                  {user?.display_name || "名無しさん"}
-                </p>
-                <p className="truncate text-sm text-muted-foreground">
-                  @{user?.username}
-                </p>
-              </div>
-              <Button asChild variant="ghost" size="icon">
-                <Link to="/user/edit" aria-label="プロフィールを編集">
-                  <Settings className="size-4" />
-                </Link>
-              </Button>
-            </div>
-            {user?.profile && (
-              <p className="mt-4 whitespace-pre-line break-words border-t pt-4 text-sm leading-relaxed">
-                {user.profile}
+      <Card>
+        <CardContent className="space-y-4 p-4 sm:p-6">
+          <div className="flex items-center gap-4">
+            <UserAvatar user={user} className="size-14" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-lg font-semibold">
+                {user?.display_name || "名無しさん"}
               </p>
-            )}
-          </CardContent>
-        </Card>
+              <p className="truncate text-sm text-muted-foreground">
+                @{user?.username}
+              </p>
+            </div>
+            <Button asChild variant="ghost" size="icon">
+              <Link to="/user/edit" aria-label="プロフィールを編集">
+                <Settings className="size-4" />
+              </Link>
+            </Button>
+          </div>
+          {user?.profile && (
+            <p className="whitespace-pre-line break-words text-sm leading-relaxed">
+              {user.profile}
+            </p>
+          )}
 
-        {learningProgress ? (
-          <LearningLevel progress={learningProgress} />
-        ) : (
-          <Card>
-            <CardContent className="flex h-full min-h-24 items-center p-4 text-sm text-muted-foreground sm:p-6">
+          {learningProgress ? (
+            <LearningLevel progress={learningProgress} embedded />
+          ) : (
+            <div className="border-t pt-4 text-sm text-muted-foreground">
               {progress.error
                 ? "学習レベルを取得できませんでした。"
                 : "学習レベルを読み込み中…"}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <DashboardAchievement />
     </div>

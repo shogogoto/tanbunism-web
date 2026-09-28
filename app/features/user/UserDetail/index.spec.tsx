@@ -72,17 +72,18 @@ describe("LearningLevel", () => {
     render(<LearningLevel progress={learningProgress} />);
 
     expect(screen.getByText("Lv. 1")).toBeInTheDocument();
-    expect(screen.getByText("44 XP")).toBeInTheDocument();
+    expect(screen.getByText("累計 44 XP")).toBeInTheDocument();
     expect(screen.getByText("次のレベルまで 6 XP")).toBeInTheDocument();
+    expect(screen.getByText("Lv. 1：累計 0 XP以上")).toBeInTheDocument();
+    expect(screen.getByText("Lv. 2：累計 50 XP")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-label",
       "レベル進捗 88%",
     );
 
-    await user.click(screen.getByRole("button", { name: "XPの内訳" }));
+    await user.click(screen.getByRole("button", { name: "XPの獲得内訳" }));
     expect(screen.getByText("知識の整理")).toBeVisible();
     expect(screen.getByText("12文 × 1 XP")).toBeVisible();
     expect(screen.getByText("+25 XP")).toBeVisible();
-    expect(screen.getByText(/次のレベルは累計50 XP/)).toBeVisible();
   });
 });
