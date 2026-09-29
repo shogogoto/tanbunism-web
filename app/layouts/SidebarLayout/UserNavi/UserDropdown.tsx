@@ -1,7 +1,8 @@
 import { DialogTrigger } from "@radix-ui/react-dialog";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, ShieldCheck } from "lucide-react";
 
 import { Link } from "react-router";
+import { useAuth } from "~/features/auth/AuthProvider";
 import {
   DropdownMenuContent,
   DropdownMenuGroup,
@@ -14,6 +15,8 @@ type Props = {
 };
 
 export default function UserDropdown({ side }: Props) {
+  const { user } = useAuth();
+
   return (
     <DropdownMenuContent
       side={side}
@@ -28,6 +31,14 @@ export default function UserDropdown({ side }: Props) {
             アカウント設定
           </Link>
         </DropdownMenuItem>
+        {user?.is_superuser && (
+          <DropdownMenuItem asChild>
+            <Link to="/admin">
+              <ShieldCheck />
+              管理
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DialogTrigger asChild>
           <DropdownMenuItem>

@@ -57,6 +57,7 @@ export default function AppHeader() {
 }
 
 function pageTitle(pathname: string): string {
+  if (pathname === "/admin") return "管理";
   if (pathname === "/dashboard") return "ダッシュボード";
   if (isQuizSection(pathname)) return "クイズ";
   if (pathname === "/answers") return "回答履歴";

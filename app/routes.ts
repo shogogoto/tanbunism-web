@@ -25,6 +25,7 @@ export default [
     route("achievement", "routes/achievement.tsx"),
 
     route("dashboard", "routes/dashboard.tsx"),
+    route("admin", "routes/admin.tsx"),
     route("tanbun/:id", "routes/tanbun/detail/index.tsx"),
     route("user/edit", "routes/user/edit.tsx"),
     route("user/:userId", "routes/user/detail.tsx"),
