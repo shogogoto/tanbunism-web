@@ -47,7 +47,10 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
           <dl className="divide-y">
             <HotkeyRow keys={["g", "h"]} label="履歴を開く" />
             {isAuthenticated && (
-              <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
+              <>
+                <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
+                <HotkeyRow keys={["g", "p"]} label="プロフィールへ移動" />
+              </>
             )}
             <HotkeyRow keys={["g", "s"]} label="検索へ移動" />
             <HotkeyRow keys={["g", "q"]} label="クイズへ移動" />
@@ -81,7 +84,7 @@ export function HotkeyHelpButton() {
 export default function GlobalHotkeys() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { openHistory } = useHistoryPanel();
   const { openHelp } = useHotkeys();
   const waitingForDestination = useRef(false);
@@ -169,6 +172,9 @@ export default function GlobalHotkeys() {
       const actions: Record<string, (() => void) | undefined> = {
         h: openHistory,
         d: isAuthenticated ? () => navigate("/dashboard") : undefined,
+        p: user
+          ? () => navigate(`/user/${user.username || user.uid}`)
+          : undefined,
         s: () => navigate("/search"),
         q: () => navigate("/quiz"),
       };
@@ -183,7 +189,7 @@ export default function GlobalHotkeys() {
       window.removeEventListener("keydown", handleKeyDown);
       resetChord();
     };
-  }, [isAuthenticated, navigate, openHelp, openHistory, pathname]);
+  }, [isAuthenticated, navigate, openHelp, openHistory, pathname, user]);
 
   return null;
 }

@@ -84,7 +84,7 @@ describe("UserProfileForm (Integration Test)", () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText("表示名")).toHaveValue(muser.display_name);
-      expect(screen.getByLabelText("プロフィール")).toHaveValue(muser.profile);
+      expect(screen.getByLabelText("説明文")).toHaveValue(muser.profile);
       expect(screen.getByLabelText("ユーザー名")).toHaveValue(muser.username);
       expect(screen.getByText("12 / 160")).toBeInTheDocument();
     });
@@ -95,7 +95,7 @@ describe("UserProfileForm (Integration Test)", () => {
     const router = mkrouter();
     render(<RouterProvider router={router} />);
     const displayNameInput = await screen.findByLabelText("表示名");
-    const profileInput = screen.getByLabelText("プロフィール");
+    const profileInput = screen.getByLabelText("説明文");
     const usernameInput = screen.getByLabelText("ユーザー名");
     const submitButton = screen.getByRole("button", { name: "更新" });
 

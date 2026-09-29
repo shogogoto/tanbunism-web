@@ -9,7 +9,10 @@ import GlobalHotkeys, {
 } from "./GlobalHotkeys";
 
 vi.mock("~/features/auth/AuthProvider", () => ({
-  useAuth: () => ({ isAuthenticated: true }),
+  useAuth: () => ({
+    isAuthenticated: true,
+    user: { uid: "user-1", username: "reader" },
+  }),
 }));
 
 vi.mock("~/shared/history/hooks", () => ({
@@ -50,6 +53,17 @@ it("gから始まるショートカットで主要画面へ移動する", async 
 
   expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
     "/search",
+  );
+});
+
+it("g pで自分のプロフィールへ移動する", async () => {
+  const user = userEvent.setup();
+  renderHotkeys();
+
+  await user.keyboard("gp");
+
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
+    "/user/reader",
   );
 });
 

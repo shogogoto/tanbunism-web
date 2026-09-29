@@ -1,5 +1,7 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Settings } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router";
+import { useAuth } from "~/features/auth/AuthProvider";
 import { NamespaceTree } from "~/features/namespace/components/NamespaceExplorer";
 import { Button } from "~/shared/components/ui/button";
 import {
@@ -36,12 +38,27 @@ export default function UserDetail({
   namespace,
   learningProgress,
 }: Props) {
+  const { user: currentUser } = useAuth();
+  const isOwnProfile = currentUser?.uid === user?.uid;
+
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
       {children}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="relative pt-6">
           <UserProfile user={user} />
+          {isOwnProfile && (
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 top-4"
+            >
+              <Link to="/user/edit" aria-label="プロフィールを編集">
+                <Settings className="size-4" />
+              </Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
 

@@ -60,7 +60,7 @@ export const UserProfileSchema = UserProfileUserProfileUsernameGetResponse.pick(
     profile: z
       .string()
       .max(usersPatchCurrentUserUserMePatchResponseProfileOneMax, {
-        message: `プロフィールは${usersPatchCurrentUserUserMePatchResponseProfileOneMax}文字以下で入力してください。`,
+        message: `説明文は${usersPatchCurrentUserUserMePatchResponseProfileOneMax}文字以下で入力してください。`,
       })
       .optional(),
   });
@@ -188,9 +188,9 @@ export default function UserProfileForm() {
           disabled={isSubmitting}
         />
         <TextareaFormControl
-          label="プロフィール"
+          label="説明文"
           field={fields.profile}
-          placeholder="プロフィールを入力してください"
+          placeholder="説明文を入力してください"
           rows={4}
           maxLength={usersPatchCurrentUserUserMePatchResponseProfileOneMax}
           disabled={isSubmitting}
