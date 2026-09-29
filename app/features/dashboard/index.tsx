@@ -55,9 +55,9 @@ export default function Dashboard() {
 
   return (
     <AuthGuard>
-      <div className="mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-5xl p-2 sm:p-3">
         <section
-          className="min-h-[65vh] space-y-4 pb-8"
+          className="min-h-[65vh] pb-8"
           onTouchStart={(event) => {
             touchStartX.current = event.touches[0]?.clientX;
           }}

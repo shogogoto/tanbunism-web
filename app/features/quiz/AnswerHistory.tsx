@@ -97,23 +97,9 @@ export default function AnswerHistory() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-5 p-4 sm:p-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          最近の回答を確認し、間違えたクイズを復習します。
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link to="/quiz/list">作成したクイズ</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/quiz">クイズを解く</Link>
-          </Button>
-        </div>
-      </header>
-
-      <Card>
-        <CardContent className="grid gap-3 pt-4 sm:grid-cols-3">
+    <div className="mx-auto w-full max-w-4xl space-y-3 p-2 sm:p-3">
+      <Card className="py-0 shadow-none">
+        <CardContent className="grid gap-2 p-2 sm:grid-cols-3">
           <label className="grid gap-1 text-sm">
             正誤
             <select
@@ -178,12 +164,12 @@ export default function AnswerHistory() {
         </p>
       )}
       {!isLoading && !error && items.length === 0 && (
-        <p className="rounded-md border p-4 text-sm text-muted-foreground">
+        <p className="border p-2 text-sm text-muted-foreground">
           条件に一致する回答はありません。
         </p>
       )}
 
-      <div className="space-y-3">
+      <div className="divide-y border-y sm:border-x">
         {items.map((item) => (
           <AnswerCard
             key={item.answer.answer_uid}
@@ -259,9 +245,9 @@ function AnswerCard({
   }
 
   return (
-    <Card>
-      <CardHeader className="space-y-2">
-        <CardDescription className="flex flex-wrap items-center gap-2">
+    <Card className="gap-0 py-0 shadow-none">
+      <CardHeader className="space-y-1 px-2 py-2">
+        <CardDescription className="flex flex-wrap items-center gap-1.5 text-xs">
           <Badge variant={answer.is_correct ? "default" : "destructive"}>
             {answer.is_correct ? "正解" : "不正解"}
           </Badge>
@@ -276,11 +262,11 @@ function AnswerCard({
           )}
           <time>{new Date(answer.created).toLocaleString("ja-JP")}</time>
         </CardDescription>
-        <CardTitle className="whitespace-pre-line text-base leading-relaxed">
+        <CardTitle className="whitespace-pre-line text-sm leading-snug">
           {quiz.statement}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 px-2 pb-2">
         <div className="grid gap-1 text-sm sm:grid-cols-2">
           <p>
             <span className="text-muted-foreground">あなたの回答: </span>

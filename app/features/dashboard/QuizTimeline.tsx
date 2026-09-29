@@ -1,10 +1,8 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
 import { type ManagedQuiz, searchCreatedQuizzes } from "~/features/quiz/api";
 import { Badge } from "~/shared/components/ui/badge";
-import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
 import {
   Collapsible,
@@ -56,39 +54,38 @@ export default function QuizTimeline() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-3">
-      <div className="flex justify-end">
-        <Button asChild size="sm">
-          <Link to="/quiz">クイズを解く</Link>
-        </Button>
-      </div>
+    <div className="mx-auto w-full max-w-3xl space-y-2">
       {error && (
         <p
           role="alert"
-          className="rounded-md border border-destructive/50 p-3 text-sm text-destructive"
+          className="border border-destructive/50 p-2 text-sm text-destructive"
         >
           {error}
         </p>
       )}
       {sorted.length === 0 && !error && (
-        <p className="rounded-md border p-4 text-sm text-muted-foreground">
+        <p className="border p-2 text-sm text-muted-foreground">
           学習計画でクイズを準備すると、ここに表示されます。
         </p>
       )}
-      {sorted.map((item) => (
-        <QuizTimelineCard
-          key={item.quiz.quiz_id}
-          item={item}
-          sessionResult={sessionResults[item.quiz.quiz_id]}
-          hasSessionResult={item.quiz.quiz_id in sessionResults}
-          onAnswered={(isCorrect) =>
-            setSessionResults((current) => ({
-              ...current,
-              [item.quiz.quiz_id]: isCorrect,
-            }))
-          }
-        />
-      ))}
+      {sorted.length > 0 && (
+        <div className="divide-y border-y sm:border-x">
+          {sorted.map((item) => (
+            <QuizTimelineCard
+              key={item.quiz.quiz_id}
+              item={item}
+              sessionResult={sessionResults[item.quiz.quiz_id]}
+              hasSessionResult={item.quiz.quiz_id in sessionResults}
+              onAnswered={(isCorrect) =>
+                setSessionResults((current) => ({
+                  ...current,
+                  [item.quiz.quiz_id]: isCorrect,
+                }))
+              }
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -108,11 +105,11 @@ function QuizTimelineCard({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card>
+      <Card className="gap-0 py-0 shadow-none">
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/40"
+            className="flex w-full items-center gap-2 p-2 text-left hover:bg-muted/40"
           >
             <span className="min-w-0 flex-1 whitespace-pre-wrap text-sm font-medium leading-relaxed">
               {item.quiz.statement}
@@ -146,7 +143,7 @@ function QuizTimelineCard({
               onAnswered={onAnswered}
             />
             {item.accuracy !== null && (
-              <p className="border-t px-4 py-3 text-xs text-muted-foreground">
+              <p className="border-t px-2 py-2 text-xs text-muted-foreground">
                 これまでの正答率 {Math.round(item.accuracy * 100)}%
               </p>
             )}

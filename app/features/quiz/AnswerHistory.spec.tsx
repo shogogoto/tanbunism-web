@@ -68,6 +68,15 @@ describe("AnswerHistory", () => {
       "/resource/resource-1",
     );
     expect(screen.getByText("必ず逆元が存在する")).toBeInTheDocument();
+    expect(
+      screen.queryByText("最近の回答を確認し、間違えたクイズを復習します。"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "作成したクイズ" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "クイズを解く" }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "クイズ詳細を見る" }));
     await waitFor(() => expect(getQuizChain).toHaveBeenCalledWith("quiz-1"));

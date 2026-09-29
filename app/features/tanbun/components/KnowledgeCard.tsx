@@ -12,6 +12,7 @@ type Props = {
   query?: string;
   state?: unknown;
   metadata?: ReactNode;
+  compact?: boolean;
 };
 
 export default function KnowledgeCard({
@@ -22,14 +23,23 @@ export default function KnowledgeCard({
   query = "",
   state,
   metadata,
+  compact = false,
 }: Props) {
   return (
-    <Card className="w-full max-w-3xl border-l-4 border-l-blue-500 transition-colors hover:bg-muted/40">
-      <CardContent className="space-y-3 p-4">
-        <Link to={`/tanbun/${uid}`} state={state} className="block space-y-2">
+    <Card
+      className={`w-full max-w-3xl border-l-blue-500 transition-colors hover:bg-muted/40 ${
+        compact ? "gap-1 border-l-2 py-0 shadow-none" : "border-l-4"
+      }`}
+    >
+      <CardContent className={compact ? "space-y-1.5 p-2" : "space-y-3 p-4"}>
+        <Link
+          to={`/tanbun/${uid}`}
+          state={state}
+          className={`block ${compact ? "space-y-1" : "space-y-2"}`}
+        >
           <span className="sr-only">知識:</span>
           {termNames?.length ? (
-            <p className="font-semibold">
+            <p className={compact ? "text-sm font-semibold" : "font-semibold"}>
               {termNames.map((name) => (
                 <span key={name} className="mr-2">
                   <Highlight text={name} query={query} />
@@ -38,13 +48,25 @@ export default function KnowledgeCard({
             </p>
           ) : null}
           {sentence !== "<<<not defined>>>" && (
-            <p className="whitespace-pre-wrap break-words leading-relaxed">
+            <p
+              className={`whitespace-pre-wrap break-words ${
+                compact ? "text-sm leading-snug" : "leading-relaxed"
+              }`}
+            >
               <Highlight text={sentence} query={query} />
             </p>
           )}
         </Link>
-        <div className="flex min-w-0 items-center gap-3 text-xs text-muted-foreground">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div
+          className={`flex min-w-0 items-center text-xs text-muted-foreground ${
+            compact ? "gap-2" : "gap-3"
+          }`}
+        >
+          <div
+            className={`flex min-w-0 flex-1 items-center ${
+              compact ? "gap-2" : "gap-3"
+            }`}
+          >
             {metadata}
           </div>
           <KnowledgeScore score={score} />

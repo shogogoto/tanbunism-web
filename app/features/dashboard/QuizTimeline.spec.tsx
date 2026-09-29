@@ -61,6 +61,9 @@ it("未回答のクイズを回答済みのクイズより先に表示する", a
   expect(
     screen.queryByRole("button", { name: "回答候補" }),
   ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "クイズを解く" }),
+  ).not.toBeInTheDocument();
 });
 
 it("クイズTL上で回答して結果を確認できる", async () => {
