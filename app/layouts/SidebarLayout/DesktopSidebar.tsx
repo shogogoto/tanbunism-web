@@ -128,7 +128,7 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
         }`}
       >
         <div className={collapsed ? "contents" : "flex items-center gap-1"}>
-          <HistoryPanel showLabel={!collapsed} />
+          <HistoryPanel />
           <ThemeToggle
             buttonClassName="inline-flex size-9 items-center justify-center hover:bg-accent"
             iconClassName="size-4"

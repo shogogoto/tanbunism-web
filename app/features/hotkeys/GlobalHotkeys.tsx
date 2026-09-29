@@ -50,13 +50,14 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
               <>
                 <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
                 <HotkeyRow keys={["g", "p"]} label="プロフィールへ移動" />
+                <HotkeyRow keys={["g", "n"]} label="通知へ移動" />
               </>
             )}
             <HotkeyRow keys={["g", "s"]} label="検索へ移動" />
             <HotkeyRow keys={["g", "q"]} label="クイズへ移動" />
-            <HotkeyRow keys={["[", "]"]} label="前後のタブへ移動" />
-            <HotkeyRow keys={["↑", "↓"]} label="履歴の項目を移動" />
-            <HotkeyRow keys={["Enter"]} label="選択した履歴を開く" />
+            <HotkeyRow keys={["h", "l"]} label="前後のタブへ移動" />
+            <HotkeyRow keys={["j", "k"]} label="項目を移動" />
+            <HotkeyRow keys={["Enter"]} label="選択した項目を開く" />
             <HotkeyRow keys={["/"]} label="検索入力へフォーカス" />
             <HotkeyRow keys={["?"]} label="この一覧を開く" />
           </dl>
@@ -138,11 +139,6 @@ export default function GlobalHotkeys() {
         return;
       }
 
-      if (dialogOpen) {
-        resetChord();
-        return;
-      }
-
       if (key === "/") {
         event.preventDefault();
         resetChord();
@@ -155,8 +151,21 @@ export default function GlobalHotkeys() {
         return;
       }
 
-      if (key === "[" || key === "]") {
-        if (moveActiveTab(key === "]" ? 1 : -1)) event.preventDefault();
+      if (!waitingForDestination.current && (key === "j" || key === "k")) {
+        if (moveActiveItem(key === "j" ? 1 : -1, dialogOpen)) {
+          event.preventDefault();
+        }
+        resetChord();
+        return;
+      }
+
+      if (dialogOpen) {
+        resetChord();
+        return;
+      }
+
+      if (!waitingForDestination.current && (key === "h" || key === "l")) {
+        if (moveActiveTab(key === "l" ? 1 : -1)) event.preventDefault();
         resetChord();
         return;
       }
@@ -175,6 +184,7 @@ export default function GlobalHotkeys() {
         p: user
           ? () => navigate(`/user/${user.username || user.uid}`)
           : undefined,
+        n: isAuthenticated ? () => navigate("/notifications") : undefined,
         s: () => navigate("/search"),
         q: () => navigate("/quiz"),
       };
@@ -247,6 +257,25 @@ function moveActiveTab(offset: -1 | 1): boolean {
   nextTab?.focus();
   nextTab?.click();
   return Boolean(nextTab);
+}
+
+function moveActiveItem(offset: -1 | 1, dialog: Element | null): boolean {
+  const scope = dialog ?? document;
+  const items = Array.from(
+    scope.querySelectorAll<HTMLElement>("[data-hotkey-item]"),
+  ).filter((item) => !item.closest("[hidden]"));
+  if (items.length === 0) return false;
+
+  const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+  const nextIndex =
+    currentIndex < 0
+      ? offset === 1
+        ? 0
+        : items.length - 1
+      : (currentIndex + offset + items.length) % items.length;
+  items[nextIndex]?.focus();
+  items[nextIndex]?.scrollIntoView({ block: "nearest" });
+  return true;
 }
 
 function focusSearchInput() {

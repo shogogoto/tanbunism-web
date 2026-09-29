@@ -29,7 +29,7 @@ export default function AppHeader() {
         </h1>
 
         <div className="ml-auto flex items-center gap-1 md:hidden">
-          <HistoryPanel showLabel />
+          <HistoryPanel />
           <ThemeToggle
             buttonClassName="inline-flex size-9 items-center justify-center hover:bg-accent"
             iconClassName="size-4"

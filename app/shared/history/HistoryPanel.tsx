@@ -73,19 +73,19 @@ export function useHistoryPanel() {
   return context;
 }
 
-export function HistoryPanel({ showLabel = false }: { showLabel?: boolean }) {
+export function HistoryPanel() {
   const { openHistory } = useHistoryPanel();
 
   return (
     <Button
       type="button"
       variant="ghost"
-      size={showLabel ? "sm" : "icon"}
+      size="icon"
       onClick={openHistory}
       aria-label="履歴を開く"
+      title="履歴"
     >
       <HistoryIcon />
-      {showLabel && <span className="hidden sm:inline">履歴</span>}
     </Button>
   );
 }

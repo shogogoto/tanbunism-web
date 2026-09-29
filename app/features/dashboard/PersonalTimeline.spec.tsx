@@ -1,9 +1,13 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router";
 import { expect, it, vi } from "vitest";
 import PersonalTimeline from "./PersonalTimeline";
 import { listPersonalTanbuns, markTanbunSeen } from "./api";
+
+function Location() {
+  const location = useLocation();
+  return <output aria-label="現在地">{location.pathname}</output>;
+}
 
 vi.mock("./api", () => ({
   listPersonalTanbuns: vi.fn(),
@@ -30,24 +34,29 @@ it("単文を見た日を一日一回だけ記録する", async () => {
     exposure_count: 3,
     recorded: true,
   });
-  const user = userEvent.setup();
-
   render(
     <MemoryRouter>
       <PersonalTimeline />
+      <Location />
     </MemoryRouter>,
   );
 
-  await user.click(
-    await screen.findByRole("button", {
-      name: "今日見たことを記録、累計2日",
-    }),
-  );
+  await screen.findByRole("button", {
+    name: "今日見たことを記録、累計2日",
+  });
+  const item = document.querySelector<HTMLElement>("[data-hotkey-item]");
+  expect(item).not.toBeNull();
+  fireEvent.keyDown(item as HTMLElement, { key: " " });
 
-  expect(markTanbunSeen).toHaveBeenCalledWith("sentence-1");
   expect(
-    screen.getByRole("button", { name: "今日は記録済み、累計3日" }),
+    await screen.findByRole("button", { name: "今日は記録済み、累計3日" }),
   ).toBeDisabled();
+  expect(markTanbunSeen).toHaveBeenCalledWith("sentence-1");
   expect(screen.getByLabelText("スコア: 7")).toBeInTheDocument();
   expect(screen.getByText("新しい知識")).toBeInTheDocument();
+
+  fireEvent.keyDown(item as HTMLElement, { key: "Enter" });
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
+    "/tanbun/sentence-1",
+  );
 });

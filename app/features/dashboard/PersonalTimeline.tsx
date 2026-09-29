@@ -88,51 +88,71 @@ export default function PersonalTimeline() {
       {items.length > 0 && (
         <div className="divide-y border-y sm:border-x">
           {items.map((item) => (
-            <KnowledgeCard
-              compact
+            <div
               key={item.uid}
-              uid={item.uid}
-              sentence={item.sentence}
-              termNames={item.term_names ?? []}
-              score={item.score ?? 0}
-              metadata={
-                <>
-                  <Link
-                    to={`/resource/${item.resource_uid}#${item.uid}`}
-                    className="min-w-0 truncate hover:text-foreground hover:underline"
-                  >
-                    {item.resource_name}
-                  </Link>
-                  <time
-                    className="shrink-0"
-                    dateTime={item.updated_at ?? undefined}
-                  >
-                    {formatDate(item.updated_at)}
-                  </time>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className={`h-6 shrink-0 gap-1 px-1.5 tabular-nums disabled:opacity-100 ${
-                      item.seen_today
-                        ? "text-muted-foreground"
-                        : "text-foreground"
-                    }`}
-                    aria-label={
-                      item.seen_today
-                        ? `今日は記録済み、累計${item.exposure_count}日`
-                        : `今日見たことを記録、累計${item.exposure_count}日`
-                    }
-                    title={item.seen_today ? "今日は記録済み" : "今日見た"}
-                    disabled={item.seen_today || markingId === item.uid}
-                    onClick={() => void markSeen(item)}
-                  >
-                    <Eye className="size-3.5" />
-                    {item.exposure_count}
-                  </Button>
-                </>
-              }
-            />
+              data-hotkey-item
+              className="outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              onKeyDown={(event) => {
+                if (event.target !== event.currentTarget) return;
+                if (event.key === " ") {
+                  event.preventDefault();
+                  void markSeen(item);
+                }
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  event.currentTarget
+                    .querySelector<HTMLAnchorElement>(
+                      `a[href="/tanbun/${item.uid}"]`,
+                    )
+                    ?.click();
+                }
+              }}
+            >
+              <KnowledgeCard
+                compact
+                uid={item.uid}
+                sentence={item.sentence}
+                termNames={item.term_names ?? []}
+                score={item.score ?? 0}
+                metadata={
+                  <>
+                    <Link
+                      to={`/resource/${item.resource_uid}#${item.uid}`}
+                      className="min-w-0 truncate hover:text-foreground hover:underline"
+                    >
+                      {item.resource_name}
+                    </Link>
+                    <time
+                      className="shrink-0"
+                      dateTime={item.updated_at ?? undefined}
+                    >
+                      {formatDate(item.updated_at)}
+                    </time>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className={`h-6 shrink-0 gap-1 px-1.5 tabular-nums disabled:opacity-100 ${
+                        item.seen_today
+                          ? "text-muted-foreground"
+                          : "text-foreground"
+                      }`}
+                      aria-label={
+                        item.seen_today
+                          ? `今日は記録済み、累計${item.exposure_count}日`
+                          : `今日見たことを記録、累計${item.exposure_count}日`
+                      }
+                      title={item.seen_today ? "今日は記録済み" : "今日見た"}
+                      disabled={item.seen_today || markingId === item.uid}
+                      onClick={() => void markSeen(item)}
+                    >
+                      <Eye className="size-3.5" />
+                      {item.exposure_count}
+                    </Button>
+                  </>
+                }
+              />
+            </div>
           ))}
         </div>
       )}

@@ -17,6 +17,7 @@ function HistoryItem({
         to={history.url}
         onClick={onSelect}
         data-history-item
+        data-hotkey-item
         className="flex-1 truncate py-2"
       >
         {history.title}
@@ -37,24 +38,7 @@ export function HistoryList({ histories, onSelect }: Props) {
     );
   }
   return (
-    <ul
-      onKeyDown={(event) => {
-        if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-        const links = Array.from(
-          event.currentTarget.querySelectorAll<HTMLAnchorElement>(
-            "[data-history-item]",
-          ),
-        );
-        const currentIndex = links.indexOf(
-          document.activeElement as HTMLAnchorElement,
-        );
-        if (currentIndex < 0) return;
-        event.preventDefault();
-        const offset = event.key === "ArrowDown" ? 1 : -1;
-        const nextIndex = (currentIndex + offset + links.length) % links.length;
-        links[nextIndex]?.focus();
-      }}
-    >
+    <ul>
       {histories.map((history) => (
         <HistoryItem key={history.id} history={history} onSelect={onSelect} />
       ))}

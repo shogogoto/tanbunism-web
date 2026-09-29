@@ -32,7 +32,7 @@ export default function Dashboard() {
   const [mountedSections, setMountedSections] = useState<Set<DashboardSection>>(
     () => new Set([activeSection]),
   );
-  const touchStartX = useRef<number | undefined>(undefined);
+  const touchStart = useRef<{ x: number; y: number } | undefined>(undefined);
   const namespace = useGetNamaspaceNamespaceGet({
     fetch: { credentials: "include" },
     swr: { enabled: mountedSections.has("notes") },
@@ -60,23 +60,33 @@ export default function Dashboard() {
         <section
           className="min-h-[65vh] pb-8"
           onTouchStart={(event) => {
-            touchStartX.current = event.touches[0]?.clientX;
+            const touch = event.touches[0];
+            touchStart.current = touch
+              ? { x: touch.clientX, y: touch.clientY }
+              : undefined;
           }}
           onTouchEnd={(event) => {
-            const start = touchStartX.current;
-            const end = event.changedTouches[0]?.clientX;
-            if (start === undefined || end === undefined) return;
-            touchStartX.current = undefined;
+            const start = touchStart.current;
+            const end = event.changedTouches[0];
+            touchStart.current = undefined;
+            if (!start || !end) return;
+            const deltaX = end.clientX - start.x;
+            const deltaY = end.clientY - start.y;
             const index = dashboardSections.findIndex(
               (section) => section.id === activeSection,
             );
-            if (Math.abs(end - start) < 40) return;
-            const nextIndex = end < start ? index + 1 : index - 1;
+            if (
+              Math.abs(deltaX) < 80 ||
+              Math.abs(deltaX) < Math.abs(deltaY) * 1.5
+            ) {
+              return;
+            }
+            const nextIndex = deltaX < 0 ? index + 1 : index - 1;
             const next = dashboardSections[nextIndex];
             if (next) setActiveSection(next.id);
           }}
           onTouchCancel={() => {
-            touchStartX.current = undefined;
+            touchStart.current = undefined;
           }}
         >
           <div className="relative">

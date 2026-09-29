@@ -67,6 +67,17 @@ it("g pで自分のプロフィールへ移動する", async () => {
   );
 });
 
+it("g nで通知へ移動する", async () => {
+  const user = userEvent.setup();
+  renderHotkeys();
+
+  await user.keyboard("gn");
+
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
+    "/notifications",
+  );
+});
+
 it("入力中はショートカットが干渉しない", async () => {
   const user = userEvent.setup();
   renderHotkeys();
@@ -79,7 +90,7 @@ it("入力中はショートカットが干渉しない", async () => {
   expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent("/");
 });
 
-it("履歴を開いて上下キーとEnterで移動する", async () => {
+it("履歴を開いてjとkとEnterで移動する", async () => {
   const user = userEvent.setup();
   renderHotkeys();
 
@@ -89,8 +100,13 @@ it("履歴を開いて上下キーとEnterで移動する", async () => {
   const second = screen.getByRole("link", { name: "次の履歴" });
   expect(first).toHaveFocus();
 
-  await user.keyboard("{ArrowDown}");
+  await user.keyboard("j");
   expect(second).toHaveFocus();
+
+  await user.keyboard("k");
+  expect(first).toHaveFocus();
+
+  await user.keyboard("j");
 
   await user.keyboard("{Enter}");
   expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
@@ -149,7 +165,7 @@ it("スラッシュで検索へ移動して入力欄へフォーカスする", a
   });
 });
 
-it("角括弧で前後のタブへ移動する", async () => {
+it("hとlで前後のタブへ移動する", async () => {
   const user = userEvent.setup();
   const selectNext = vi.fn();
   render(
@@ -175,7 +191,7 @@ it("角括弧で前後のタブへ移動する", async () => {
     </MemoryRouter>,
   );
 
-  await user.keyboard("]");
+  await user.keyboard("l");
 
   expect(selectNext).toHaveBeenCalledOnce();
   expect(screen.getByRole("tab", { name: "次のタブ" })).toHaveFocus();
