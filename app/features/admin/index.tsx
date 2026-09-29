@@ -1,5 +1,12 @@
 import { useAuth } from "~/features/auth/AuthProvider";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "~/shared/components/ui/tabs";
 import OrphanedTanbunManager from "./orphanedTanbuns";
+import AdminUserManager from "./users";
 
 export default function Admin() {
   const { user, isLoading } = useAuth();
@@ -16,5 +23,20 @@ export default function Admin() {
       </div>
     );
   }
-  return <OrphanedTanbunManager />;
+  return (
+    <Tabs defaultValue="orphans" className="gap-0">
+      <div className="border-b px-4 py-2 sm:px-6">
+        <TabsList>
+          <TabsTrigger value="orphans">孤立Tanbun</TabsTrigger>
+          <TabsTrigger value="users">ユーザー</TabsTrigger>
+        </TabsList>
+      </div>
+      <TabsContent value="orphans" className="mt-0">
+        <OrphanedTanbunManager />
+      </TabsContent>
+      <TabsContent value="users" className="mt-0">
+        <AdminUserManager />
+      </TabsContent>
+    </Tabs>
+  );
 }
