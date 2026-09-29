@@ -22,6 +22,12 @@ import {
   dashboardSections,
   isDashboardSection,
 } from "./sections";
+import {
+  type SwipeGesture,
+  finishSwipeGesture,
+  lockSwipeAxis,
+  startSwipeGesture,
+} from "./swipe";
 
 export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -32,7 +38,7 @@ export default function Dashboard() {
   const [mountedSections, setMountedSections] = useState<Set<DashboardSection>>(
     () => new Set([activeSection]),
   );
-  const touchStart = useRef<{ x: number; y: number } | undefined>(undefined);
+  const touchGesture = useRef<SwipeGesture | undefined>(undefined);
   const namespace = useGetNamaspaceNamespaceGet({
     fetch: { credentials: "include" },
     swr: { enabled: mountedSections.has("notes") },
@@ -64,36 +70,44 @@ export default function Dashboard() {
               event.target instanceof Element &&
               event.target.closest("[data-dashboard-swipe-ignore]")
             ) {
-              touchStart.current = undefined;
+              touchGesture.current = undefined;
               return;
             }
             const touch = event.touches[0];
-            touchStart.current = touch
-              ? { x: touch.clientX, y: touch.clientY }
+            touchGesture.current = touch
+              ? startSwipeGesture(touch.clientX, touch.clientY)
               : undefined;
           }}
+          onTouchMove={(event) => {
+            const gesture = touchGesture.current;
+            const touch = event.touches[0];
+            if (!gesture || !touch) return;
+            touchGesture.current = lockSwipeAxis(
+              gesture,
+              touch.clientX,
+              touch.clientY,
+            );
+          }}
           onTouchEnd={(event) => {
-            const start = touchStart.current;
+            const gesture = touchGesture.current;
             const end = event.changedTouches[0];
-            touchStart.current = undefined;
-            if (!start || !end) return;
-            const deltaX = end.clientX - start.x;
-            const deltaY = end.clientY - start.y;
+            touchGesture.current = undefined;
+            if (!gesture || !end) return;
+            const direction = finishSwipeGesture(
+              gesture,
+              end.clientX,
+              end.clientY,
+            );
+            if (!direction) return;
             const index = dashboardSections.findIndex(
               (section) => section.id === activeSection,
             );
-            if (
-              Math.abs(deltaX) < 80 ||
-              Math.abs(deltaX) < Math.abs(deltaY) * 1.5
-            ) {
-              return;
-            }
-            const nextIndex = deltaX < 0 ? index + 1 : index - 1;
+            const nextIndex = direction === "left" ? index + 1 : index - 1;
             const next = dashboardSections[nextIndex];
             if (next) setActiveSection(next.id);
           }}
           onTouchCancel={() => {
-            touchStart.current = undefined;
+            touchGesture.current = undefined;
           }}
         >
           <div className="relative">
