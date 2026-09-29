@@ -355,10 +355,12 @@ function ResourceDisclosure({
   resource,
   status,
   learning,
+  embedded,
 }: {
   resource: StudyResource;
   status?: QuizResourceStatus;
   learning?: ResourceLearningStatus;
+  embedded: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [quizzes, setQuizzes] = useState<ManagedQuiz[]>();
@@ -437,7 +439,11 @@ function ResourceDisclosure({
               </Link>
               <Link
                 className="underline underline-offset-4"
-                to={`?resource=${resource.uid}`}
+                to={
+                  embedded
+                    ? `?view=quiz-management&resource=${resource.uid}`
+                    : `?resource=${resource.uid}`
+                }
               >
                 絞り込む
               </Link>
@@ -561,7 +567,7 @@ function QuizCard({
   );
 }
 
-export default function QuizList() {
+export default function QuizList({ embedded = false }: { embedded?: boolean }) {
   const [searchParams] = useSearchParams();
   const resourceId = searchParams.get("resource") ?? undefined;
   const sentenceId = searchParams.get("sentence") ?? undefined;
@@ -655,24 +661,34 @@ export default function QuizList() {
       : undefined;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          {selectedResource && (
-            <h1 className="text-2xl font-semibold">{selectedResource.name}</h1>
-          )}
-          <p className="text-sm text-muted-foreground">
-            {resourceId
-              ? sentenceId
-                ? "この単文から作成した問題・選択肢・正解を確認できます。"
-                : "このResourceから作成した問題・選択肢・正解を確認できます。"
-              : "Resourceを開いて、学習状況と作成したクイズを確認します。"}
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link to="/quiz">クイズを解く</Link>
-        </Button>
-      </header>
+    <div
+      className={
+        embedded
+          ? "mx-auto max-w-3xl space-y-6"
+          : "mx-auto max-w-3xl space-y-6 p-4 sm:p-6"
+      }
+    >
+      {!embedded && (
+        <header className="flex items-start justify-between gap-4">
+          <div>
+            {selectedResource && (
+              <h1 className="text-2xl font-semibold">
+                {selectedResource.name}
+              </h1>
+            )}
+            <p className="text-sm text-muted-foreground">
+              {resourceId
+                ? sentenceId
+                  ? "この単文から作成した問題・選択肢・正解を確認できます。"
+                  : "このResourceから作成した問題・選択肢・正解を確認できます。"
+                : "Resourceを開いて、学習状況と作成したクイズを確認します。"}
+            </p>
+          </div>
+          <Button asChild variant="outline">
+            <Link to="/quiz">クイズを解く</Link>
+          </Button>
+        </header>
+      )}
 
       {loadState.status === "loading" && <p>読み込み中…</p>}
       {loadState.status === "error" && (
@@ -682,7 +698,7 @@ export default function QuizList() {
       )}
       {loadState.status === "loaded" && !resourceId && (
         <section className="space-y-3">
-          <BrokenQuizManager />
+          {embedded && <BrokenQuizManager />}
           <h2 className="text-lg font-semibold">Resource別の学習状況</h2>
           {loadState.resources.length === 0 ? (
             <p className="border p-4 text-sm text-muted-foreground">
@@ -695,6 +711,7 @@ export default function QuizList() {
                 resource={resource}
                 status={loadState.createdByResource.get(resource.uid)}
                 learning={loadState.learningByResource.get(resource.uid)}
+                embedded={embedded}
               />
             ))
           )}
@@ -704,7 +721,11 @@ export default function QuizList() {
         <section className="space-y-3">
           {resourceId && (
             <Button asChild variant="ghost" size="sm">
-              <Link to="/quiz/list">← Resource一覧へ</Link>
+              <Link
+                to={embedded ? "/dashboard?view=quiz-management" : "/quiz/list"}
+              >
+                ← Resource一覧へ
+              </Link>
             </Button>
           )}
           <h2 className="text-lg font-semibold">

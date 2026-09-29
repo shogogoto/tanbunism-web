@@ -83,12 +83,19 @@ export default function BrokenQuizManager() {
       <p className="text-sm text-muted-foreground">参照切れクイズを確認中…</p>
     );
   if (error) return <p className="text-sm text-destructive">{error}</p>;
-  if (groups.length === 0) return null;
+  if (groups.length === 0)
+    return (
+      <div className="rounded-lg border border-dashed p-8 text-center">
+        <p className="font-medium">参照切れクイズはありません</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          退役したTanbunを参照しているQuizは見つかりませんでした。
+        </p>
+      </div>
+    );
 
   return (
     <section className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
       <div>
-        <h2 className="font-semibold">参照切れクイズ</h2>
         <p className="text-sm text-muted-foreground">
           元の単文が退役しています。RELクイズは意味を推測して自動修復せず、再作成または削除してください。
         </p>

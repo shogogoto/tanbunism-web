@@ -103,9 +103,7 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
                 isActive ||
                 (
                   to === "/quiz" &&
-                    ["/quiz/list", "/study-plans", "/answers"].includes(
-                      pathname,
-                    )
+                    ["/study-plans", "/answers"].includes(pathname)
                 )
                   ? "bg-accent font-medium text-accent-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"

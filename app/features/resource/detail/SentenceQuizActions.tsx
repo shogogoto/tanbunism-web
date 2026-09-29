@@ -321,7 +321,9 @@ export default function SentenceQuizActions({
           )}
           {rootId && (
             <Button asChild variant="link" size="sm" className="h-auto p-0">
-              <Link to={`/quiz/list?resource=${rootId}&sentence=${sentenceId}`}>
+              <Link
+                to={`/dashboard?view=quiz-management&resource=${rootId}&sentence=${sentenceId}`}
+              >
                 一覧で管理
               </Link>
             </Button>

@@ -21,7 +21,7 @@ export default function ResourceStats({ resourceId, stats }: Props) {
       </div>
       <Button asChild variant="outline" size="sm">
         <Link
-          to={`/quiz/list?resource=${resourceId}`}
+          to={`/dashboard?view=quiz-management&resource=${resourceId}`}
           className="!text-foreground !no-underline"
         >
           <ListChecks className="size-4" />

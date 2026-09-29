@@ -5,6 +5,7 @@ import AuthGuard from "~/features/auth/AuthGuard";
 import NamespaceExplorer from "~/features/namespace/components/NamespaceExplorer";
 import Uploader from "~/features/namespace/uploader/Uploader";
 import AnswerHistory from "~/features/quiz/AnswerHistory";
+import QuizList from "~/features/quiz/QuizList";
 import StudyPlanManager from "~/features/quiz/StudyPlanManager";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
@@ -121,6 +122,11 @@ export default function Dashboard() {
             {mountedSections.has("study-plans") && (
               <div hidden={activeSection !== "study-plans"}>
                 <StudyPlanManager />
+              </div>
+            )}
+            {mountedSections.has("quiz-management") && (
+              <div hidden={activeSection !== "quiz-management"}>
+                <QuizList embedded />
               </div>
             )}
           </div>

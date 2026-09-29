@@ -46,14 +46,10 @@ it("主要機能をヘッダーに表示しない", () => {
   expect(
     screen.queryByRole("link", { name: "学習記録" }),
   ).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "解く" })).toHaveAttribute(
-    "href",
-    "/quiz",
-  );
-  expect(screen.getByRole("link", { name: "作成済み" })).toHaveAttribute(
-    "href",
-    "/quiz/list",
-  );
+  expect(screen.queryByRole("link", { name: "解く" })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "作成済み" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "履歴" })).toBeVisible();
 });
 

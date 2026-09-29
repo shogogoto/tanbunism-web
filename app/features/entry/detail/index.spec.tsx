@@ -71,6 +71,9 @@ describe("EntryDetailView", () => {
     expect(screen.getByTitle("関係数")).toHaveTextContent("210");
     expect(
       screen.getByRole("link", { name: "国家のクイズ一覧" }),
-    ).toHaveAttribute("href", `/quiz/list?resource=${resourceId}`);
+    ).toHaveAttribute(
+      "href",
+      `/dashboard?view=quiz-management&resource=${resourceId}`,
+    );
   });
 });

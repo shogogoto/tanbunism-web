@@ -354,7 +354,7 @@ export default function QuizSession() {
           </p>
         </div>
         <Button asChild variant="outline">
-          <Link to="/quiz/list">一覧</Link>
+          <Link to="/dashboard?view=quiz-management">管理</Link>
         </Button>
       </header>
 

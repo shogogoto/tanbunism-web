@@ -135,7 +135,7 @@ it("単文のQuizを確認し、その場から新しく作成する", async () 
   );
   expect(screen.getByRole("link", { name: "一覧で管理" })).toHaveAttribute(
     "href",
-    "/quiz/list?resource=resource-1&sentence=sentence-1",
+    "/dashboard?view=quiz-management&resource=resource-1&sentence=sentence-1",
   );
 
   await user.click(screen.getByRole("button", { name: "＋ クイズ" }));
@@ -190,7 +190,7 @@ it("Resource画面の外からも単文のQuizを確認・作成する", async (
   expect(await screen.findByText("既存のクイズ")).toBeVisible();
   expect(screen.getByRole("link", { name: "一覧で管理" })).toHaveAttribute(
     "href",
-    "/quiz/list?resource=resource-1&sentence=sentence-1",
+    "/dashboard?view=quiz-management&resource=resource-1&sentence=sentence-1",
   );
 
   await user.click(screen.getByRole("button", { name: "＋ クイズ" }));

@@ -1,10 +1,8 @@
-import AuthGuard from "~/features/auth/AuthGuard";
-import QuizList from "./QuizList";
+import { Navigate, useSearchParams } from "react-router";
 
 export default function QuizListPage() {
-  return (
-    <AuthGuard>
-      <QuizList />
-    </AuthGuard>
-  );
+  const [searchParams] = useSearchParams();
+  const next = new URLSearchParams(searchParams);
+  next.set("view", "quiz-management");
+  return <Navigate replace to={`/dashboard?${next.toString()}`} />;
 }

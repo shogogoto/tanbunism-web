@@ -145,7 +145,7 @@ function ResourceRow({
         </div>
       </Link>
       <Link
-        to={`/quiz/list?resource=${resource.uid}`}
+        to={`/dashboard?view=quiz-management&resource=${resource.uid}`}
         className="flex shrink-0 items-center gap-1 rounded-sm px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={`${resource.name}のクイズ一覧`}
       >

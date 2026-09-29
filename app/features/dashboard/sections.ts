@@ -3,6 +3,7 @@ export const dashboardSections = [
   { id: "quiz-timeline", label: "クイズTL" },
   { id: "answers", label: "回答履歴" },
   { id: "study-plans", label: "学習計画" },
+  { id: "quiz-management", label: "クイズ管理" },
   { id: "notes", label: "読書メモ" },
 ] as const;
 

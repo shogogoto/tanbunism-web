@@ -1,7 +1,6 @@
 import { Link, useLocation } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import DashboardHeaderTabs from "~/features/dashboard/DashboardHeaderTabs";
-import QuizHeaderTabs from "~/features/quiz/QuizHeaderTabs";
 import SearchHeaderControls from "~/features/search/SearchHeaderControls";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
 import { Button } from "~/shared/components/ui/button";
@@ -50,7 +49,6 @@ export default function AppHeader() {
         </div>
       </div>
       {pathname === "/dashboard" && <DashboardHeaderTabs />}
-      {quizSection && <QuizHeaderTabs />}
       {pathname.startsWith("/search") && <SearchHeaderControls />}
     </header>
   );
@@ -75,5 +73,5 @@ function pageTitle(pathname: string): string {
 }
 
 function isQuizSection(pathname: string): boolean {
-  return ["/quiz", "/quiz/list"].includes(pathname);
+  return pathname === "/quiz";
 }

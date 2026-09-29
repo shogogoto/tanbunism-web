@@ -19,6 +19,6 @@ it("Resourceの主要統計とクイズ一覧への導線を表示する", () =>
   expect(within(statistics).getByText(String(stats.n_edge))).toBeVisible();
   expect(screen.getByRole("link", { name: "クイズ一覧" })).toHaveAttribute(
     "href",
-    `/quiz/list?resource=${resource.uid}`,
+    `/dashboard?view=quiz-management&resource=${resource.uid}`,
   );
 });

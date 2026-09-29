@@ -99,7 +99,10 @@ describe("NamespaceExplorer", () => {
     expect(screen.getByText("210関係")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "国家のクイズ一覧" }),
-    ).toHaveAttribute("href", `/quiz/list?resource=${resourceId}`);
+    ).toHaveAttribute(
+      "href",
+      `/dashboard?view=quiz-management&resource=${resourceId}`,
+    );
     expect(
       screen.queryByRole("button", { name: /グリッド/ }),
     ).not.toBeInTheDocument();
