@@ -4,9 +4,11 @@ import { beforeEach, expect, it, vi } from "vitest";
 import AdminUserManager from ".";
 import {
   deleteAdminResource,
+  deleteAdminUser,
   getAdminResourceDeletionImpact,
   listAdminUserResources,
   listAdminUsers,
+  resetAdminUserPassword,
   updateAdminUserStatus,
 } from "./api";
 
@@ -16,6 +18,8 @@ vi.mock("./api", () => ({
   listAdminUserResources: vi.fn(),
   getAdminResourceDeletionImpact: vi.fn(),
   deleteAdminResource: vi.fn(),
+  resetAdminUserPassword: vi.fn(),
+  deleteAdminUser: vi.fn(),
 }));
 
 const targetUser = {
@@ -60,6 +64,13 @@ beforeEach(() => {
     deleted_sentence_count: 10,
     retired_sentence_count: 2,
   });
+  vi.mocked(resetAdminUserPassword).mockResolvedValue(undefined);
+  vi.mocked(deleteAdminUser).mockResolvedValue({
+    user_id: targetUser.uid,
+    deleted_resource_count: 1,
+    deleted_quiz_count: 2,
+    deleted_answer_count: 3,
+  });
 });
 
 it("通常ユーザーを確認して停止できる", async () => {
@@ -102,4 +113,50 @@ it("Resourceの影響を確認し、名前入力後に削除できる", async ()
     ),
   );
   expect(screen.queryByText("# 古い読書メモ")).not.toBeInTheDocument();
+});
+
+it("通常ユーザーのパスワードを再設定できる", async () => {
+  const user = userEvent.setup();
+  render(<AdminUserManager />);
+
+  await user.click(await screen.findByRole("button", { name: "パスワード" }));
+  const passwordInputs = screen.getAllByLabelText(/新しいパスワード/);
+  await user.type(passwordInputs[0], "new-password");
+  await user.type(passwordInputs[1], "new-password");
+  await user.click(screen.getByRole("button", { name: "変更する" }));
+
+  await waitFor(() =>
+    expect(resetAdminUserPassword).toHaveBeenCalledWith(
+      targetUser.uid,
+      "new-password",
+    ),
+  );
+});
+
+it("メールアドレス確認後に通常ユーザーを削除できる", async () => {
+  const user = userEvent.setup();
+  render(<AdminUserManager />);
+
+  await user.click(
+    await screen.findByRole("button", {
+      name: `${targetUser.email}を削除`,
+    }),
+  );
+  const deleteButton = screen.getByRole("button", {
+    name: "ユーザーを削除する",
+  });
+  expect(deleteButton).toBeDisabled();
+  await user.type(
+    screen.getByLabelText("削除するユーザーのメールアドレス"),
+    targetUser.email,
+  );
+  await user.click(deleteButton);
+
+  await waitFor(() =>
+    expect(deleteAdminUser).toHaveBeenCalledWith(
+      targetUser.uid,
+      targetUser.email,
+    ),
+  );
+  expect(screen.queryByText("読書ユーザー")).not.toBeInTheDocument();
 });

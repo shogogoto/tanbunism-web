@@ -1,4 +1,4 @@
-import { Ban, Database, RotateCcw, Trash2 } from "lucide-react";
+import { Ban, Database, KeyRound, RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -34,9 +34,11 @@ import {
   type AdminUserItem,
   type ResourceDeletionImpact,
   deleteAdminResource,
+  deleteAdminUser,
   getAdminResourceDeletionImpact,
   listAdminUserResources,
   listAdminUsers,
+  resetAdminUserPassword,
   updateAdminUserStatus,
 } from "./api";
 
@@ -47,6 +49,11 @@ export default function AdminUserManager() {
   const [error, setError] = useState<string>();
   const [statusTarget, setStatusTarget] = useState<AdminUserItem>();
   const [resourceOwner, setResourceOwner] = useState<AdminUserItem>();
+  const [passwordTarget, setPasswordTarget] = useState<AdminUserItem>();
+  const [deleteTarget, setDeleteTarget] = useState<AdminUserItem>();
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [userDeleteConfirmation, setUserDeleteConfirmation] = useState("");
   const [resources, setResources] = useState<AdminResourceItem[]>([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [deletionImpact, setDeletionImpact] =
@@ -115,6 +122,47 @@ export default function AdminUserManager() {
     }
   }
 
+  async function changePassword() {
+    if (!passwordTarget || newPassword !== passwordConfirmation) return;
+    setIsMutating(true);
+    setError(undefined);
+    try {
+      await resetAdminUserPassword(passwordTarget.uid, newPassword);
+      toast.success(`${passwordTarget.email} のパスワードを変更しました`);
+      setPasswordTarget(undefined);
+      setNewPassword("");
+      setPasswordConfirmation("");
+    } catch (mutationError) {
+      setError(errorMessage(mutationError));
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
+  async function removeUser() {
+    if (!deleteTarget) return;
+    setIsMutating(true);
+    setError(undefined);
+    try {
+      const result = await deleteAdminUser(
+        deleteTarget.uid,
+        userDeleteConfirmation,
+      );
+      setUsers((current) =>
+        current.filter((user) => user.uid !== result.user_id),
+      );
+      toast.success(
+        `${deleteTarget.email} と Resource ${result.deleted_resource_count}件を削除しました`,
+      );
+      setDeleteTarget(undefined);
+      setUserDeleteConfirmation("");
+    } catch (mutationError) {
+      setError(errorMessage(mutationError));
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
   async function inspectDeletion(resource: AdminResourceItem) {
     setConfirmation("");
     setIsMutating(true);
@@ -164,7 +212,7 @@ export default function AdminUserManager() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">ユーザー管理</h2>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          アカウントを停止・再開し、所有Resourceを影響範囲の確認後に削除できます。ユーザー自体は削除しません。
+          アカウントの停止・再開、パスワード再設定、所有データを含む削除を行います。
         </p>
       </section>
 
@@ -235,6 +283,16 @@ export default function AdminUserManager() {
                       </Button>
                       <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={user.is_superuser}
+                        onClick={() => setPasswordTarget(user)}
+                      >
+                        <KeyRound />
+                        パスワード
+                      </Button>
+                      <Button
+                        type="button"
                         variant={user.is_active ? "outline" : "secondary"}
                         size="sm"
                         disabled={user.is_superuser}
@@ -242,6 +300,18 @@ export default function AdminUserManager() {
                       >
                         {user.is_active ? <Ban /> : <RotateCcw />}
                         {user.is_active ? "停止" : "再開"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        title="ユーザーを削除"
+                        aria-label={`${user.email}を削除`}
+                        disabled={user.is_superuser}
+                        onClick={() => setDeleteTarget(user)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 />
                       </Button>
                     </div>
                   </TableCell>
@@ -279,6 +349,142 @@ export default function AdminUserManager() {
               }}
             >
               {statusTarget?.is_active ? "停止する" : "再開する"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog
+        open={Boolean(passwordTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPasswordTarget(undefined);
+            setNewPassword("");
+            setPasswordConfirmation("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>パスワードを再設定</DialogTitle>
+            <DialogDescription>
+              {passwordTarget?.email} に新しいパスワードを設定します。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <label htmlFor="admin-new-password" className="block space-y-2">
+              <span className="text-sm font-medium">新しいパスワード</span>
+              <Input
+                id="admin-new-password"
+                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                minLength={3}
+                maxLength={100}
+                autoComplete="new-password"
+              />
+            </label>
+            <label
+              htmlFor="admin-new-password-confirmation"
+              className="block space-y-2"
+            >
+              <span className="text-sm font-medium">
+                新しいパスワード（確認）
+              </span>
+              <Input
+                id="admin-new-password-confirmation"
+                type="password"
+                value={passwordConfirmation}
+                onChange={(event) =>
+                  setPasswordConfirmation(event.target.value)
+                }
+                minLength={3}
+                maxLength={100}
+                autoComplete="new-password"
+              />
+            </label>
+            {passwordConfirmation && newPassword !== passwordConfirmation && (
+              <p className="text-sm text-destructive">
+                パスワードが一致しません。
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isMutating}
+                onClick={() => setPasswordTarget(undefined)}
+              >
+                キャンセル
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  isMutating ||
+                  newPassword.length < 3 ||
+                  newPassword !== passwordConfirmation
+                }
+                onClick={() => void changePassword()}
+              >
+                変更する
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(undefined);
+            setUserDeleteConfirmation("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ユーザーを完全に削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <p>
+                  Resource、作成Quiz、回答履歴、学習計画、通知も削除されます。この操作は元に戻せません。
+                </p>
+                <label
+                  htmlFor="admin-user-delete-confirmation"
+                  className="block space-y-2 text-foreground"
+                >
+                  <span className="text-sm">
+                    確認のため「{deleteTarget?.email}」を入力
+                  </span>
+                  <Input
+                    id="admin-user-delete-confirmation"
+                    aria-label="削除するユーザーのメールアドレス"
+                    value={userDeleteConfirmation}
+                    onChange={(event) =>
+                      setUserDeleteConfirmation(event.target.value)
+                    }
+                    autoComplete="off"
+                  />
+                </label>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isMutating}>
+              キャンセル
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={
+                isMutating || userDeleteConfirmation !== deleteTarget?.email
+              }
+              onClick={(event) => {
+                event.preventDefault();
+                void removeUser();
+              }}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              ユーザーを削除する
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -38,6 +38,13 @@ export type DeleteAdminResourceResult = {
   retired_sentence_count: number;
 };
 
+export type DeleteAdminUserResult = {
+  user_id: string;
+  deleted_resource_count: number;
+  deleted_quiz_count: number;
+  deleted_answer_count: number;
+};
+
 export function listAdminUsers(): Promise<AdminUserItem[]> {
   return request("/admin/users");
 }
@@ -50,6 +57,28 @@ export function updateAdminUserStatus(
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ is_active: isActive }),
+  });
+}
+
+export function resetAdminUserPassword(
+  userId: string,
+  password: string,
+): Promise<void> {
+  return request(`/admin/users/${encodeURIComponent(userId)}/password`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+}
+
+export function deleteAdminUser(
+  userId: string,
+  confirmation: string,
+): Promise<DeleteAdminUserResult> {
+  return request(`/admin/users/${encodeURIComponent(userId)}/delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ confirmation }),
   });
 }
 
@@ -83,7 +112,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     credentials: "include",
   });
-  if (response.ok) return (await response.json()) as T;
+  if (response.ok) {
+    if (response.status === 204) return undefined as T;
+    return (await response.json()) as T;
+  }
 
   const body = (await response.json().catch(() => undefined)) as
     | { detail?: string }
