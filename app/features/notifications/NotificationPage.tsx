@@ -132,7 +132,7 @@ function PushControl({
   if (state === "available") {
     return (
       <Button type="button" variant="outline" size="sm" onClick={onEnable}>
-        プッシュ通知を有効にする
+        端末でプッシュ通知を許可する
       </Button>
     );
   }
@@ -166,9 +166,16 @@ function PushControl({
       </p>
     );
   }
+  if (state === "unconfigured") {
+    return (
+      <p className="text-xs text-muted-foreground">
+        プッシュ通知はサーバー側でまだ有効化されていません
+      </p>
+    );
+  }
   return (
     <p className="text-xs text-muted-foreground">
-      プッシュ通知は現在利用できません
+      プッシュ通知の設定を読み込めませんでした。時間を置いて再度お試しください
     </p>
   );
 }

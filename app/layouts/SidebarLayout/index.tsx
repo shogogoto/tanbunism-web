@@ -5,6 +5,7 @@ import GlobalHotkeys, {
   HotkeyProvider,
 } from "~/features/hotkeys/GlobalHotkeys";
 import { NotificationProvider } from "~/features/notifications/NotificationProvider";
+import { PushPermissionPrompt } from "~/features/notifications/PushPermissionPrompt";
 import { Toaster } from "~/shared/components/ui/sonner";
 import { HistoryPanelProvider } from "~/shared/history/HistoryPanel";
 import { useIsMobile } from "~/shared/hooks/use-mobile";
@@ -42,6 +43,7 @@ export default function SidebarLayout() {
               </footer>
             </div>
             <GlobalHotkeys />
+            {isMobile && user && <PushPermissionPrompt />}
             <Toaster
               richColors
               expand

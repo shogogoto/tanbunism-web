@@ -23,7 +23,8 @@ export type PushState =
   | "subscribed"
   | "denied"
   | "unsupported"
-  | "unavailable";
+  | "unconfigured"
+  | "error";
 
 type NotificationContextValue = {
   notifications: AppNotification[];
@@ -112,7 +113,7 @@ export function NotificationProvider({
     try {
       const configuration = await getPushConfiguration();
       if (!configuration.enabled || !configuration.public_key) {
-        setPushState("unavailable");
+        setPushState("unconfigured");
         return;
       }
       const registration = await navigator.serviceWorker.register("/sw.js");
@@ -125,7 +126,7 @@ export function NotificationProvider({
       }
     } catch (error) {
       console.error("Failed to inspect Web Push", error);
-      setPushState("unavailable");
+      setPushState("error");
     }
   }
 
@@ -136,7 +137,7 @@ export function NotificationProvider({
     }
     const configuration = await getPushConfiguration();
     if (!configuration.enabled || !configuration.public_key) {
-      setPushState("unavailable");
+      setPushState("unconfigured");
       return false;
     }
     const permission = await Notification.requestPermission();
