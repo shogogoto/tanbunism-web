@@ -45,20 +45,24 @@ export default function UserDetail({
     <main className="mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
       {children}
       <Card>
-        <CardContent className="relative pt-6">
-          <UserProfile user={user} />
-          {isOwnProfile && (
-            <Button
-              asChild
-              variant="ghost"
-              size="icon"
-              className="absolute right-4 top-4"
-            >
-              <Link to="/user/edit" aria-label="プロフィールを編集">
-                <Settings className="size-4" />
-              </Link>
-            </Button>
-          )}
+        <CardContent className="pt-6">
+          <UserProfile
+            user={user}
+            avatarAction={
+              isOwnProfile ? (
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 rounded-full border bg-background shadow-sm"
+                >
+                  <Link to="/user/edit" aria-label="プロフィールを編集">
+                    <Settings className="size-4" />
+                  </Link>
+                </Button>
+              ) : undefined
+            }
+          />
         </CardContent>
       </Card>
 

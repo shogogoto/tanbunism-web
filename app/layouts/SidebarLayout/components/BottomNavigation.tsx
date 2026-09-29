@@ -1,10 +1,16 @@
-import { LayoutDashboard, Search, SquareCheckBig } from "lucide-react";
+import {
+  CircleUserRound,
+  LayoutDashboard,
+  Search,
+  SquareCheckBig,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 
 export default function BottomNavigation() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const profilePath = user ? `/user/${user.username || user.uid}` : undefined;
 
   return (
     <>
@@ -17,6 +23,13 @@ export default function BottomNavigation() {
       )}
       <NavigationItem to="/search" label="検索" icon={<Search />} />
       <NavigationItem to="/quiz" label="クイズ" icon={<SquareCheckBig />} />
+      {isAuthenticated && profilePath && (
+        <NavigationItem
+          to={profilePath}
+          label="プロフィール"
+          icon={<CircleUserRound />}
+        />
+      )}
     </>
   );
 }

@@ -67,6 +67,8 @@ function pageTitle(pathname: string): string {
   if (pathname.startsWith("/entry/")) return "Entry";
   if (pathname.startsWith("/resource/")) return "Resource";
   if (pathname.startsWith("/tanbun/")) return "Tanbun";
+  if (pathname === "/user/edit") return "アカウント設定";
+  if (pathname.startsWith("/user/")) return "プロフィール";
   return "Tanbunism";
 }
 

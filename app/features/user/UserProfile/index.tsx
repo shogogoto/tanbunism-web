@@ -1,11 +1,14 @@
 import { CalendarDays } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import { useHistory } from "~/shared/history/hooks";
 import type { UserProps } from "../types";
 import ProfileImage from "./ProfileImage";
 
-export default function UserProfile({ user }: UserProps) {
+export default function UserProfile({
+  user,
+  avatarAction,
+}: UserProps & { avatarAction?: ReactNode }) {
   const addedRootIdRef = useRef<UserReadPublic | null>(null);
 
   const { addHistory, getUserTitle } = useHistory();
@@ -19,7 +22,12 @@ export default function UserProfile({ user }: UserProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <ProfileImage user={user} />
+        <div className="relative shrink-0">
+          <ProfileImage user={user} />
+          {avatarAction && (
+            <div className="absolute -right-2 -top-2">{avatarAction}</div>
+          )}
+        </div>
         <div className="min-w-0">
           <h1 className="break-words text-2xl font-bold tracking-tight">
             {user?.display_name || "名無しさん"}

@@ -3,7 +3,10 @@ import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
 import BottomNavigation from "./BottomNavigation";
 
-const auth = vi.hoisted(() => ({ isAuthenticated: true }));
+const auth = vi.hoisted(() => ({
+  isAuthenticated: true,
+  user: { uid: "user-1", username: "reader" },
+}));
 
 vi.mock("~/features/auth/AuthProvider", () => ({
   useAuth: () => auth,
@@ -32,6 +35,10 @@ it("ログイン中は個人用画面を含む主要導線を表示する", () =
     "href",
     "/quiz",
   );
+  expect(screen.getByRole("link", { name: "プロフィール" })).toHaveAttribute(
+    "href",
+    "/user/reader",
+  );
   expect(
     screen.queryByRole("link", { name: "ガイド" }),
   ).not.toBeInTheDocument();
@@ -54,4 +61,7 @@ it("未ログインではダッシュボードを表示しない", () => {
   ).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "検索" })).toBeVisible();
   expect(screen.getByRole("link", { name: "クイズ" })).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: "プロフィール" }),
+  ).not.toBeInTheDocument();
 });

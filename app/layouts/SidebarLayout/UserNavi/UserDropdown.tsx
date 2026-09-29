@@ -1,5 +1,5 @@
 import { DialogTrigger } from "@radix-ui/react-dialog";
-import { LogOut, Settings, UserRound } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 
 import { Link } from "react-router";
 import {
@@ -11,10 +11,9 @@ import {
 
 type Props = {
   side?: "left" | "right" | "top" | "bottom";
-  userId?: string;
 };
 
-export default function UserDropdown({ side, userId }: Props) {
+export default function UserDropdown({ side }: Props) {
   return (
     <DropdownMenuContent
       side={side}
@@ -22,16 +21,7 @@ export default function UserDropdown({ side, userId }: Props) {
       align="end"
       sideOffset={4}
     >
-      <DropdownMenuSeparator />
       <DropdownMenuGroup>
-        {userId && (
-          <DropdownMenuItem asChild>
-            <Link to={`/user/${userId}`}>
-              <UserRound />
-              プロフィール
-            </Link>
-          </DropdownMenuItem>
-        )}
         <DropdownMenuItem asChild>
           <Link to="/user/edit">
             <Settings />

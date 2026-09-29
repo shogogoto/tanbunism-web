@@ -1,6 +1,7 @@
 import {
   ChevronLeft,
   ChevronRight,
+  CircleUserRound,
   FileQuestion,
   LayoutDashboard,
   Search,
@@ -27,6 +28,7 @@ type Props = {
 export default function DesktopSidebar({ collapsed, onToggle }: Props) {
   const { user, isAuthenticated } = useAuth();
   const { pathname } = useLocation();
+  const profilePath = user ? `/user/${user.username || user.uid}` : undefined;
   const links = isAuthenticated
     ? [
         {
@@ -35,6 +37,15 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
           icon: LayoutDashboard,
         },
         ...publicLinks,
+        ...(profilePath
+          ? [
+              {
+                to: profilePath,
+                label: "プロフィール",
+                icon: CircleUserRound,
+              },
+            ]
+          : []),
       ]
     : publicLinks;
 
@@ -78,7 +89,7 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
           <NavLink
             key={to}
             to={to}
-            end={to === "/dashboard" || to === "/quiz"}
+            end={to === "/dashboard" || to === "/quiz" || to === profilePath}
             title={collapsed ? label : undefined}
             className={({ isActive }) =>
               `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${

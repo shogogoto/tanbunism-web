@@ -29,7 +29,7 @@ export default function UserNavi({ user, side = "bottom" }: Props) {
             <UserAvatar user={user} />
           </Button>
         </DropdownMenuTrigger>
-        <UserDropdown side={side} userId={user?.username || user?.uid} />
+        <UserDropdown side={side} />
       </DropdownMenu>
       <LogoutDialogContent />
     </Dialog>
