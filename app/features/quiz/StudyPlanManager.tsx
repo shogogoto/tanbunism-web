@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { toast } from "sonner";
+import { useNotifications } from "~/features/notifications/NotificationProvider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,9 +36,10 @@ import {
   type StudyPlan,
   type StudyResource,
   deleteStudyPlan,
+  listStudyPlanPreparations,
   listStudyPlans,
   listStudyResources,
-  prepareStudyPlanQuizzes,
+  prepareAdditionalStudyPlanQuizzes,
 } from "./api";
 
 const quizTypeLabels: Record<QuizType, string> = {
@@ -47,6 +50,7 @@ const quizTypeLabels: Record<QuizType, string> = {
 };
 
 export default function StudyPlanManager() {
+  const { refreshNotifications } = useNotifications();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [resources, setResources] = useState<StudyResource[]>([]);
   const [editingPlan, setEditingPlan] = useState<StudyPlan>();
@@ -57,15 +61,35 @@ export default function StudyPlanManager() {
   const [preparedCounts, setPreparedCounts] = useState<Record<string, number>>(
     {},
   );
+  const [additionalCounts, setAdditionalCounts] = useState<
+    Record<string, number>
+  >({});
   const [error, setError] = useState<string>();
 
   useEffect(() => {
     let active = true;
-    Promise.all([listStudyPlans(), listStudyResources()])
-      .then(([loadedPlans, loadedResources]) => {
+    Promise.all([
+      listStudyPlans(),
+      listStudyResources(),
+      listStudyPlanPreparations(),
+    ])
+      .then(([loadedPlans, loadedResources, preparations]) => {
         if (!active) return;
         setPlans(loadedPlans);
         setResources(loadedResources);
+        setPreparedCounts(
+          Object.fromEntries(
+            preparations.map((status) => [
+              status.plan_id,
+              status.prepared_quiz_count,
+            ]),
+          ),
+        );
+        setAdditionalCounts(
+          Object.fromEntries(
+            loadedPlans.map((plan) => [plan.uid, Math.max(1, plan.n_quiz)]),
+          ),
+        );
       })
       .catch((loadError) => {
         if (!active) return;
@@ -118,11 +142,27 @@ export default function StudyPlanManager() {
     setPreparingId(plan.uid);
     setError(undefined);
     try {
-      const prepared = await prepareStudyPlanQuizzes(plan);
+      const requested = Math.min(
+        20,
+        Math.max(1, additionalCounts[plan.uid] ?? plan.n_quiz),
+      );
+      const prepared = await prepareAdditionalStudyPlanQuizzes(
+        plan.uid,
+        requested,
+      );
       setPreparedCounts((current) => ({
         ...current,
-        [plan.uid]: prepared.length,
+        [plan.uid]: prepared.prepared_quiz_count,
       }));
+      if (prepared.added_count > 0) {
+        const description = `「${plan.name}」に${prepared.added_count}問追加しました。準備済みは合計${prepared.prepared_quiz_count}問です。`;
+        toast.success("クイズの準備が完了しました", { description });
+        await refreshNotifications();
+      } else {
+        toast.info("追加できる新しい問題がありませんでした", {
+          description: `「${plan.name}」の対象範囲は準備済みです。`,
+        });
+      }
     } catch (prepareError) {
       setError(
         prepareError instanceof Error
@@ -179,16 +219,30 @@ export default function StudyPlanManager() {
             createLabel="学習計画を作成"
             onCreated={(plan) => {
               setPlans((current) => [...current, plan]);
+              setPreparedCounts((current) => ({ ...current, [plan.uid]: 0 }));
+              setAdditionalCounts((current) => ({
+                ...current,
+                [plan.uid]: Math.max(1, plan.n_quiz),
+              }));
               setIsCreating(false);
             }}
             onUpdated={(plan) => {
               setPlans((current) =>
                 current.map((item) => (item.uid === plan.uid ? plan : item)),
               );
-              setPreparedCounts((current) => {
-                const next = { ...current };
-                delete next[plan.uid];
-                return next;
+              setAdditionalCounts((current) => ({
+                ...current,
+                [plan.uid]: Math.max(1, plan.n_quiz),
+              }));
+              void listStudyPlanPreparations().then((preparations) => {
+                setPreparedCounts(
+                  Object.fromEntries(
+                    preparations.map((status) => [
+                      status.plan_id,
+                      status.prepared_quiz_count,
+                    ]),
+                  ),
+                );
               });
               setEditingPlan(undefined);
             }}
@@ -209,14 +263,15 @@ export default function StudyPlanManager() {
           学習計画がありません。Resourceとクイズ形式を選び、最初の計画を作成してください。
         </p>
       ) : (
-        <div className="rounded-md border">
+        <div className="overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Plan</TableHead>
                 <TableHead>Resource</TableHead>
                 <TableHead>クイズ形式</TableHead>
-                <TableHead>問題数</TableHead>
+                <TableHead>準備済み</TableHead>
+                <TableHead>1回の問題数</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -225,11 +280,6 @@ export default function StudyPlanManager() {
                 <TableRow key={plan.uid}>
                   <TableCell>
                     <div className="font-medium">{plan.name}</div>
-                    {preparedCounts[plan.uid] !== undefined && (
-                      <div className="text-xs text-muted-foreground">
-                        準備完了 · {preparedCounts[plan.uid]}問
-                      </div>
-                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex max-w-56 flex-wrap gap-1">
@@ -250,21 +300,56 @@ export default function StudyPlanManager() {
                     </div>
                   </TableCell>
                   <TableCell>
+                    <span className="text-base font-semibold tabular-nums">
+                      {preparedCounts[plan.uid] ?? 0}
+                    </span>
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      問
+                    </span>
+                  </TableCell>
+                  <TableCell>
                     {plan.n_quiz}問・{plan.n_option}択
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end gap-1">
+                    <div className="flex min-w-max items-center justify-end gap-1">
+                      <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <span>追加</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={20}
+                          className="h-8 w-16 rounded-md border bg-background px-2 text-right text-sm text-foreground"
+                          aria-label={`${plan.name}に追加する問題数`}
+                          value={
+                            additionalCounts[plan.uid] ??
+                            Math.max(1, plan.n_quiz)
+                          }
+                          onChange={(event) => {
+                            const count = Number(event.target.value);
+                            setAdditionalCounts((current) => ({
+                              ...current,
+                              [plan.uid]: count,
+                            }));
+                          }}
+                          onBlur={() => {
+                            setAdditionalCounts((current) => ({
+                              ...current,
+                              [plan.uid]: Math.min(
+                                20,
+                                Math.max(1, current[plan.uid] || 1),
+                              ),
+                            }));
+                          }}
+                        />
+                        <span>問</span>
+                      </label>
                       <Button
                         type="button"
                         size="sm"
                         disabled={Boolean(preparingId)}
                         onClick={() => void preparePlan(plan)}
                       >
-                        {preparingId === plan.uid
-                          ? "準備中…"
-                          : preparedCounts[plan.uid] === undefined
-                            ? "準備する"
-                            : "再準備"}
+                        {preparingId === plan.uid ? "準備中…" : "追加"}
                       </Button>
                       <Button asChild size="sm" variant="outline">
                         <Link to={`/quiz?plan=${encodeURIComponent(plan.uid)}`}>

@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
+import { NotificationProvider } from "~/features/notifications/NotificationProvider";
 import AppHeader from "./AppHeader";
 
 const auth = vi.hoisted(() => ({ isAuthenticated: false }));
@@ -61,7 +62,9 @@ it("ログイン中はロゴからトップを明示的に開ける", () => {
   auth.isAuthenticated = true;
   render(
     <MemoryRouter initialEntries={["/dashboard"]}>
-      <AppHeader />
+      <NotificationProvider>
+        <AppHeader />
+      </NotificationProvider>
     </MemoryRouter>,
   );
 

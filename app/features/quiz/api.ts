@@ -59,6 +59,17 @@ export type StudyResource = {
   uid: string;
   name: string;
 };
+export type StudyPlanPreparationStatus = {
+  plan_id: string;
+  prepared_quiz_count: number;
+};
+export type PrepareStudyPlanResult = StudyPlanPreparationStatus & {
+  requested_count: number;
+  added_count: number;
+};
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
 
 export class QuizApiError extends Error {
   constructor(
@@ -184,6 +195,71 @@ export async function deleteStudyPlan(planId: string): Promise<void> {
     throw new QuizApiError("学習計画を削除できませんでした。", response.status);
   }
   await invalidateQuizCache("study-plans");
+}
+
+export async function listStudyPlanPreparations(): Promise<
+  StudyPlanPreparationStatus[]
+> {
+  return requestStudyPlanPreparation<StudyPlanPreparationStatus[]>(
+    "/quiz/study-plans/preparations",
+  );
+}
+
+export async function prepareAdditionalStudyPlanQuizzes(
+  planId: string,
+  additionalCount: number,
+): Promise<PrepareStudyPlanResult> {
+  const result = await requestStudyPlanPreparation<PrepareStudyPlanResult>(
+    `/quiz/study-plans/${encodeURIComponent(planId)}/prepare`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ additional_count: additionalCount }),
+    },
+  );
+  await invalidateQuizCache(
+    "created-list",
+    "created-resources",
+    "created-search",
+    "created-sentences",
+    "learning-progress",
+  );
+  return result;
+}
+
+async function requestStudyPlanPreparation<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    credentials: "include",
+  });
+  const body = await response.text();
+  let data: unknown;
+  try {
+    data = body ? JSON.parse(body) : undefined;
+  } catch {
+    throw new QuizApiError(
+      "クイズAPIからJSONではない応答が返されました。",
+      response.status,
+    );
+  }
+  if (!response.ok) {
+    const detail =
+      typeof data === "object" && data !== null && "detail" in data
+        ? data.detail
+        : undefined;
+    const message =
+      typeof detail === "object" &&
+      detail !== null &&
+      "message" in detail &&
+      typeof detail.message === "string"
+        ? detail.message
+        : "クイズを準備できませんでした。";
+    throw new QuizApiError(message, response.status);
+  }
+  return data as T;
 }
 
 export async function recommendQuizzes(

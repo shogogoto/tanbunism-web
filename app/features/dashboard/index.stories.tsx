@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AuthProvider } from "~/features/auth/AuthProvider";
+import { NotificationProvider } from "~/features/notifications/NotificationProvider";
 import Dashboard from ".";
 
 const meta = {
@@ -7,7 +8,9 @@ const meta = {
   decorators: [
     (Story) => (
       <AuthProvider>
-        <Story />
+        <NotificationProvider>
+          <Story />
+        </NotificationProvider>
       </AuthProvider>
     ),
   ],

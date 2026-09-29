@@ -9,6 +9,7 @@ import {
 import { Link, NavLink, useLocation } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import { HotkeyHelpButton } from "~/features/hotkeys/GlobalHotkeys";
+import NotificationCenter from "~/features/notifications/NotificationCenter";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
 import { Button } from "~/shared/components/ui/button";
 import { HistoryPanel } from "~/shared/history/HistoryPanel";
@@ -117,6 +118,7 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
         }`}
       >
         <div className={collapsed ? "contents" : "flex items-center gap-1"}>
+          {isAuthenticated && <NotificationCenter />}
           <HistoryPanel showLabel={!collapsed} />
           <ThemeToggle
             buttonClassName="inline-flex size-9 items-center justify-center hover:bg-accent"

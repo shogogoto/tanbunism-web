@@ -1,6 +1,7 @@
 {
   "short_name": "Tanbunism",
   "name": "Tanbunism",
+  "id": "/",
   "icons": [
     {
       "src": "favicon.svg",
