@@ -80,6 +80,22 @@ describe("StudyPlanManager", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
+  it("小型タブレットでも横長の表をカード表示に切り替える", async () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 820,
+    });
+
+    render(
+      <MemoryRouter>
+        <StudyPlanManager />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("article")).toHaveTextContent("数学の復習");
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
   it("計画の内容を確認し、その計画でクイズを始められる", async () => {
     render(
       <MemoryRouter>

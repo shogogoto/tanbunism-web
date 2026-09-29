@@ -52,7 +52,7 @@ const quizTypeLabels: Record<QuizType, string> = {
 };
 
 export default function StudyPlanManager() {
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile(1024);
   const { refreshNotifications } = useNotifications();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [resources, setResources] = useState<StudyResource[]>([]);
@@ -375,7 +375,10 @@ export default function StudyPlanManager() {
               ))}
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div
+              data-dashboard-swipe-ignore
+              className="overflow-x-auto rounded-md border"
+            >
               <Table>
                 <TableHeader>
                   <TableRow>

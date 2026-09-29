@@ -60,6 +60,13 @@ export default function Dashboard() {
         <section
           className="min-h-[65vh] pb-8"
           onTouchStart={(event) => {
+            if (
+              event.target instanceof Element &&
+              event.target.closest("[data-dashboard-swipe-ignore]")
+            ) {
+              touchStart.current = undefined;
+              return;
+            }
             const touch = event.touches[0];
             touchStart.current = touch
               ? { x: touch.clientX, y: touch.clientY }
