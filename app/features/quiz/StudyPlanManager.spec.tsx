@@ -42,6 +42,10 @@ const plan: StudyPlan = {
 
 describe("StudyPlanManager", () => {
   beforeEach(() => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 1024,
+    });
     vi.mocked(listStudyPlans).mockResolvedValue([plan]);
     vi.mocked(listStudyResources).mockResolvedValue([
       { uid: "resource-1", name: "数学の本" },
@@ -58,6 +62,22 @@ describe("StudyPlanManager", () => {
     });
     refreshNotifications.mockReset();
     refreshNotifications.mockResolvedValue(undefined);
+  });
+
+  it("スマホでは横長の表をカード表示に切り替える", async () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 390,
+    });
+
+    render(
+      <MemoryRouter>
+        <StudyPlanManager />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("article")).toHaveTextContent("数学の復習");
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
   it("計画の内容を確認し、その計画でクイズを始められる", async () => {

@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
@@ -30,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/shared/components/ui/table";
+import { useIsMobile } from "~/shared/hooks/use-mobile";
 import StudyPlanForm from "./StudyPlanForm";
 import {
   type QuizType,
@@ -50,6 +52,7 @@ const quizTypeLabels: Record<QuizType, string> = {
 };
 
 export default function StudyPlanManager() {
+  const isMobile = useIsMobile();
   const { refreshNotifications } = useNotifications();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [resources, setResources] = useState<StudyResource[]>([]);
@@ -174,22 +177,90 @@ export default function StudyPlanManager() {
     }
   }
 
-  return (
-    <div className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          学習するResourceとクイズ形式をあらかじめ準備します。
-        </p>
+  function planActions(plan: StudyPlan, mobile = false) {
+    return (
+      <div
+        className={`flex items-center gap-1 ${mobile ? "flex-wrap" : "min-w-max justify-end"}`}
+      >
+        <label className="flex items-center gap-1 text-xs text-muted-foreground">
+          <span>追加</span>
+          <input
+            type="number"
+            min={1}
+            max={20}
+            className="h-8 w-16 rounded-md border bg-background px-2 text-right text-sm text-foreground"
+            aria-label={`${plan.name}に追加する問題数`}
+            value={additionalCounts[plan.uid] ?? Math.max(1, plan.n_quiz)}
+            onChange={(event) => {
+              const count = Number(event.target.value);
+              setAdditionalCounts((current) => ({
+                ...current,
+                [plan.uid]: count,
+              }));
+            }}
+            onBlur={() => {
+              setAdditionalCounts((current) => ({
+                ...current,
+                [plan.uid]: Math.min(20, Math.max(1, current[plan.uid] || 1)),
+              }));
+            }}
+          />
+          <span>問</span>
+        </label>
         <Button
+          type="button"
+          size="sm"
+          disabled={Boolean(preparingId)}
+          onClick={() => void preparePlan(plan)}
+        >
+          {preparingId === plan.uid ? "準備中…" : "追加"}
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link to={`/quiz?plan=${encodeURIComponent(plan.uid)}`}>解く</Link>
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => {
-            setEditingPlan(undefined);
-            setIsCreating(true);
+            setIsCreating(false);
+            setEditingPlan(plan);
           }}
         >
-          新しい計画
+          編集
         </Button>
-      </header>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={deletingId === plan.uid}
+            >
+              削除
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                「{plan.name}」を削除しますか？
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                クイズや回答履歴は削除されません。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void removePlan(plan)}>
+                削除する
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
+  }
 
+  return (
+    <div className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">
       {error && (
         <p className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           {error}
@@ -263,144 +334,118 @@ export default function StudyPlanManager() {
           学習計画がありません。Resourceとクイズ形式を選び、最初の計画を作成してください。
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Plan</TableHead>
-                <TableHead>Resource</TableHead>
-                <TableHead>クイズ形式</TableHead>
-                <TableHead>準備済み</TableHead>
-                <TableHead>1回の問題数</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        <>
+          {isMobile ? (
+            <div className="space-y-2">
               {plans.map((plan) => (
-                <TableRow key={plan.uid}>
-                  <TableCell>
+                <article
+                  key={plan.uid}
+                  className="space-y-3 rounded-md border p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
                     <div className="font-medium">{plan.name}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex max-w-56 flex-wrap gap-1">
-                      {plan.resource_ids.map((resourceId) => (
-                        <Badge key={resourceId} variant="secondary">
-                          {resourceName(resourceId)}
-                        </Badge>
-                      ))}
+                    <div className="shrink-0 text-sm">
+                      <strong className="tabular-nums">
+                        {preparedCounts[plan.uid] ?? 0}
+                      </strong>
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        問準備済み
+                      </span>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex max-w-72 flex-wrap gap-1">
-                      {plan.quiz_types.map((quizType) => (
-                        <Badge key={quizType} variant="outline">
-                          {quizTypeLabels[quizType]}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-base font-semibold tabular-nums">
-                      {preparedCounts[plan.uid] ?? 0}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {plan.resource_ids.map((resourceId) => (
+                      <Badge key={resourceId} variant="secondary">
+                        {resourceName(resourceId)}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {plan.quiz_types.map((quizType) => (
+                      <Badge key={quizType} variant="outline">
+                        {quizTypeLabels[quizType]}
+                      </Badge>
+                    ))}
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {plan.n_quiz}問・{plan.n_option}択
                     </span>
-                    <span className="ml-1 text-xs text-muted-foreground">
-                      問
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {plan.n_quiz}問・{plan.n_option}択
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex min-w-max items-center justify-end gap-1">
-                      <label className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <span>追加</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={20}
-                          className="h-8 w-16 rounded-md border bg-background px-2 text-right text-sm text-foreground"
-                          aria-label={`${plan.name}に追加する問題数`}
-                          value={
-                            additionalCounts[plan.uid] ??
-                            Math.max(1, plan.n_quiz)
-                          }
-                          onChange={(event) => {
-                            const count = Number(event.target.value);
-                            setAdditionalCounts((current) => ({
-                              ...current,
-                              [plan.uid]: count,
-                            }));
-                          }}
-                          onBlur={() => {
-                            setAdditionalCounts((current) => ({
-                              ...current,
-                              [plan.uid]: Math.min(
-                                20,
-                                Math.max(1, current[plan.uid] || 1),
-                              ),
-                            }));
-                          }}
-                        />
-                        <span>問</span>
-                      </label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={Boolean(preparingId)}
-                        onClick={() => void preparePlan(plan)}
-                      >
-                        {preparingId === plan.uid ? "準備中…" : "追加"}
-                      </Button>
-                      <Button asChild size="sm" variant="outline">
-                        <Link to={`/quiz?plan=${encodeURIComponent(plan.uid)}`}>
-                          解く
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setIsCreating(false);
-                          setEditingPlan(plan);
-                        }}
-                      >
-                        編集
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={deletingId === plan.uid}
-                          >
-                            削除
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              「{plan.name}」を削除しますか？
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              クイズや回答履歴は削除されません。
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => void removePlan(plan)}
-                            >
-                              削除する
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                  </div>
+                  {planActions(plan, true)}
+                </article>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Resource</TableHead>
+                    <TableHead>クイズ形式</TableHead>
+                    <TableHead>準備済み</TableHead>
+                    <TableHead>1回の問題数</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {plans.map((plan) => (
+                    <TableRow key={plan.uid}>
+                      <TableCell>
+                        <div className="font-medium">{plan.name}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex max-w-56 flex-wrap gap-1">
+                          {plan.resource_ids.map((resourceId) => (
+                            <Badge key={resourceId} variant="secondary">
+                              {resourceName(resourceId)}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex max-w-72 flex-wrap gap-1">
+                          {plan.quiz_types.map((quizType) => (
+                            <Badge key={quizType} variant="outline">
+                              {quizTypeLabels[quizType]}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-base font-semibold tabular-nums">
+                          {preparedCounts[plan.uid] ?? 0}
+                        </span>
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          問
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {plan.n_quiz}問・{plan.n_option}択
+                      </TableCell>
+                      <TableCell>{planActions(plan)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </>
+      )}
+      {!isLoading && (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            size="icon"
+            className="size-11 rounded-full shadow-md"
+            aria-label="学習計画を作成"
+            title="学習計画を作成"
+            onClick={() => {
+              setEditingPlan(undefined);
+              setIsCreating(true);
+            }}
+          >
+            <Plus className="size-5" />
+          </Button>
         </div>
       )}
     </div>
