@@ -27,6 +27,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/shared/components/ui/collapsible";
+import BrokenQuizManager from "./BrokenQuizManager";
 import {
   type ManagedQuiz,
   type QuizResourceStatus,
@@ -681,6 +682,7 @@ export default function QuizList() {
       )}
       {loadState.status === "loaded" && !resourceId && (
         <section className="space-y-3">
+          <BrokenQuizManager />
           <h2 className="text-lg font-semibold">Resource別の学習状況</h2>
           {loadState.resources.length === 0 ? (
             <p className="border p-4 text-sm text-muted-foreground">

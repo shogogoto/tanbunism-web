@@ -68,6 +68,16 @@ export type PrepareStudyPlanResult = StudyPlanPreparationStatus & {
   added_count: number;
 };
 
+export type BrokenQuizReference = {
+  quiz_id: string;
+  quiz_type: QuizType;
+  retired_sentence_id: string;
+  retired_value: string;
+  resource_id: string;
+  roles: string[];
+  retired_at: string;
+};
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
 
@@ -523,4 +533,19 @@ export async function deleteQuiz(quizId: string): Promise<void> {
     "learning-progress",
     "quiz-chain",
   );
+}
+
+export async function listBrokenQuizReferences(): Promise<
+  BrokenQuizReference[]
+> {
+  const response = await fetch(`${API_BASE_URL}/quiz/created/broken`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new QuizApiError(
+      "参照切れクイズを取得できませんでした。",
+      response.status,
+    );
+  }
+  return (await response.json()) as BrokenQuizReference[];
 }

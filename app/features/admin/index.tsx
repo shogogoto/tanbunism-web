@@ -5,6 +5,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "~/shared/components/ui/tabs";
+import BrokenQuizManager from "./brokenQuizzes";
 import OrphanedTanbunManager from "./orphanedTanbuns";
 import AdminUserManager from "./users";
 
@@ -28,11 +29,15 @@ export default function Admin() {
       <div className="border-b px-4 py-2 sm:px-6">
         <TabsList>
           <TabsTrigger value="orphans">孤立Tanbun</TabsTrigger>
+          <TabsTrigger value="broken-quizzes">参照切れQuiz</TabsTrigger>
           <TabsTrigger value="users">ユーザー</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="orphans" className="mt-0">
         <OrphanedTanbunManager />
+      </TabsContent>
+      <TabsContent value="broken-quizzes" className="mt-0">
+        <BrokenQuizManager />
       </TabsContent>
       <TabsContent value="users" className="mt-0">
         <AdminUserManager />
