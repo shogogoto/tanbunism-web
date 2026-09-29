@@ -23,6 +23,7 @@ export default [
     route("quiz/list", "routes/quiz-list.tsx"),
     route("answers", "routes/answers.tsx"),
     route("achievement", "routes/achievement.tsx"),
+    route("notifications", "routes/notifications.tsx"),
 
     route("dashboard", "routes/dashboard.tsx"),
     route("admin", "routes/admin.tsx"),

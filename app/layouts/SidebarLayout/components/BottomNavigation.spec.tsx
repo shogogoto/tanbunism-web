@@ -12,6 +12,10 @@ vi.mock("~/features/auth/AuthProvider", () => ({
   useAuth: () => auth,
 }));
 
+vi.mock("~/features/notifications/NotificationProvider", () => ({
+  useNotifications: () => ({ unreadCount: 3 }),
+}));
+
 beforeEach(() => {
   auth.isAuthenticated = true;
 });
@@ -35,6 +39,11 @@ it("ログイン中は個人用画面を含む主要導線を表示する", () =
     "href",
     "/quiz",
   );
+  expect(screen.getByRole("link", { name: "通知" })).toHaveAttribute(
+    "href",
+    "/notifications",
+  );
+  expect(screen.getByLabelText("未読3件")).toBeVisible();
   expect(screen.getByRole("link", { name: "プロフィール" })).toHaveAttribute(
     "href",
     "/user/reader",
@@ -64,4 +73,5 @@ it("未ログインではダッシュボードを表示しない", () => {
   expect(
     screen.queryByRole("link", { name: "プロフィール" }),
   ).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "通知" })).not.toBeInTheDocument();
 });

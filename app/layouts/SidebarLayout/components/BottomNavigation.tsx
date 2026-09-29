@@ -1,4 +1,5 @@
 import {
+  Bell,
   CircleUserRound,
   LayoutDashboard,
   Search,
@@ -7,6 +8,7 @@ import {
 import type { ReactNode } from "react";
 import { NavLink } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
+import { NotificationBadge } from "~/features/notifications/NotificationBadge";
 
 export default function BottomNavigation() {
   const { isAuthenticated, user } = useAuth();
@@ -23,6 +25,14 @@ export default function BottomNavigation() {
       )}
       <NavigationItem to="/search" label="検索" icon={<Search />} />
       <NavigationItem to="/quiz" label="クイズ" icon={<SquareCheckBig />} />
+      {isAuthenticated && (
+        <NavigationItem
+          to="/notifications"
+          label="通知"
+          icon={<Bell />}
+          badge={<NotificationBadge compact />}
+        />
+      )}
       {isAuthenticated && profilePath && (
         <NavigationItem
           to={profilePath}
@@ -38,10 +48,12 @@ function NavigationItem({
   to,
   label,
   icon,
+  badge,
 }: {
   to: string;
   label: string;
   icon: ReactNode;
+  badge?: ReactNode;
 }) {
   return (
     <NavLink
@@ -53,7 +65,10 @@ function NavigationItem({
         }`
       }
     >
-      <span className="[&>svg]:size-[22px]">{icon}</span>
+      <span className="relative [&>svg]:size-[22px]">
+        {icon}
+        {badge}
+      </span>
       <span>{label}</span>
     </NavLink>
   );

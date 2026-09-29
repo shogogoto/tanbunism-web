@@ -1,4 +1,5 @@
 import {
+  Bell,
   ChevronLeft,
   ChevronRight,
   CircleUserRound,
@@ -9,7 +10,7 @@ import {
 import { Link, NavLink, useLocation } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import { HotkeyHelpButton } from "~/features/hotkeys/GlobalHotkeys";
-import NotificationCenter from "~/features/notifications/NotificationCenter";
+import { NotificationBadge } from "~/features/notifications/NotificationBadge";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
 import { Button } from "~/shared/components/ui/button";
 import { HistoryPanel } from "~/shared/history/HistoryPanel";
@@ -36,6 +37,11 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
           to: "/dashboard",
           label: "ダッシュボード",
           icon: LayoutDashboard,
+        },
+        {
+          to: "/notifications",
+          label: "通知",
+          icon: Bell,
         },
         ...publicLinks,
         ...(profilePath
@@ -106,8 +112,14 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
               } ${collapsed ? "justify-center px-2" : ""}`
             }
           >
-            <Icon className="size-5 shrink-0" />
+            <span className="relative shrink-0">
+              <Icon className="size-5" />
+              {to === "/notifications" && collapsed && (
+                <NotificationBadge compact />
+              )}
+            </span>
             {!collapsed && <span className="truncate">{label}</span>}
+            {to === "/notifications" && !collapsed && <NotificationBadge />}
           </NavLink>
         ))}
       </nav>
@@ -118,7 +130,6 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
         }`}
       >
         <div className={collapsed ? "contents" : "flex items-center gap-1"}>
-          {isAuthenticated && <NotificationCenter />}
           <HistoryPanel showLabel={!collapsed} />
           <ThemeToggle
             buttonClassName="inline-flex size-9 items-center justify-center hover:bg-accent"

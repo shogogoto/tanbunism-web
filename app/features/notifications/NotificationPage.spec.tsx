@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import NotificationCenter from "./NotificationCenter";
+import NotificationPage from "./NotificationPage";
 import { NotificationProvider } from "./NotificationProvider";
 import {
   getPushConfiguration,
@@ -29,7 +29,7 @@ const notification = {
   read_at: null,
 };
 
-describe("NotificationCenter", () => {
+describe("NotificationPage", () => {
   beforeEach(() => {
     vi.mocked(listNotifications).mockResolvedValue({
       notifications: [notification],
@@ -45,22 +45,17 @@ describe("NotificationCenter", () => {
     });
   });
 
-  it("DBの完了通知を表示し、通知先を開くと既読にする", async () => {
+  it("DB通知を一覧表示し、通知先を開くと既読にする", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
         <NotificationProvider userId="user-1">
-          <NotificationCenter />
+          <NotificationPage />
         </NotificationProvider>
       </MemoryRouter>,
     );
 
-    const trigger = await screen.findByRole("button", {
-      name: "通知（未読1件）",
-    });
-    await user.click(trigger);
-
-    expect(screen.getByText("クイズの準備完了")).toBeVisible();
+    expect(await screen.findByText("クイズの準備完了")).toBeVisible();
     expect(screen.getByText("3問追加しました。")).toBeVisible();
     const link = screen.getByRole("link", { name: /クイズの準備完了/ });
     expect(link).toHaveAttribute("href", "/dashboard?view=study-plans");

@@ -1,7 +1,6 @@
 import { Link, useLocation } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import DashboardHeaderTabs from "~/features/dashboard/DashboardHeaderTabs";
-import NotificationCenter from "~/features/notifications/NotificationCenter";
 import QuizHeaderTabs from "~/features/quiz/QuizHeaderTabs";
 import SearchHeaderControls from "~/features/search/SearchHeaderControls";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
@@ -31,7 +30,6 @@ export default function AppHeader() {
         </h1>
 
         <div className="ml-auto flex items-center gap-1 md:hidden">
-          {isAuthenticated && <NotificationCenter />}
           <HistoryPanel showLabel />
           <ThemeToggle
             buttonClassName="inline-flex size-9 items-center justify-center hover:bg-accent"
@@ -64,6 +62,7 @@ function pageTitle(pathname: string): string {
   if (isQuizSection(pathname)) return "クイズ";
   if (pathname === "/answers") return "回答履歴";
   if (pathname === "/achievement") return "学習記録";
+  if (pathname === "/notifications") return "通知";
   if (pathname === "/study-plans") return "学習計画";
   if (pathname.startsWith("/docs")) return "ドキュメント";
   if (pathname.startsWith("/search")) return "検索";
