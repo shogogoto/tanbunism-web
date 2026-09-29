@@ -7,6 +7,7 @@ export type PersonalTanbunItem = {
   resource_uid: string;
   resource_name: string;
   updated_at: string | null;
+  score: number;
   exposure_count: number;
   seen_today: boolean;
 };

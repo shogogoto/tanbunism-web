@@ -118,14 +118,14 @@ function renderSearch(initialEntry = "/search?q=数学") {
 }
 
 describe("統合検索", () => {
-  it("知識・リソース・ユーザーを混ぜ、知識は重要度だけを表示する", async () => {
+  it("知識・リソース・ユーザーを混ぜ、知識はスコアだけを表示する", async () => {
     renderSearch();
 
     expect(await screen.findByText("3件の検索結果")).toBeVisible();
     expect(screen.getByRole("link", { name: /数学の知識/ })).toBeVisible();
     expect(screen.getByText("数学ノート")).toBeVisible();
     expect(screen.getAllByText("読書家")).toHaveLength(2);
-    expect(screen.getByLabelText("重要度: 12")).toHaveClass("rounded-full");
+    expect(screen.getByLabelText("スコア: 12")).toBeVisible();
     expect(screen.getByLabelText("文字数: 100")).toBeVisible();
     expect(screen.getByLabelText("単文数: 1")).toBeVisible();
     expect(screen.getByLabelText("用語数: 1")).toBeVisible();

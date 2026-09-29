@@ -1,8 +1,8 @@
-import { Eye, EyeIcon } from "lucide-react";
+import { Eye } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import KnowledgeCard from "~/features/tanbun/components/KnowledgeCard";
 import { Button } from "~/shared/components/ui/button";
-import { Card, CardContent } from "~/shared/components/ui/card";
 import {
   type PersonalTanbunItem,
   listPersonalTanbuns,
@@ -86,12 +86,16 @@ export default function PersonalTimeline() {
         </p>
       )}
       {items.map((item) => (
-        <Card key={item.uid}>
-          <CardContent className="space-y-3 p-4">
-            <div className="flex items-start justify-between gap-4 text-xs text-muted-foreground">
+        <KnowledgeCard
+          key={item.uid}
+          uid={item.uid}
+          sentence={item.sentence}
+          score={item.score}
+          metadata={
+            <>
               <Link
-                to={`/resource/${item.resource_uid}`}
-                className="truncate hover:text-foreground hover:underline"
+                to={`/resource/${item.resource_uid}#${item.uid}`}
+                className="min-w-0 truncate hover:text-foreground hover:underline"
               >
                 {item.resource_name}
               </Link>
@@ -101,35 +105,28 @@ export default function PersonalTimeline() {
               >
                 {formatDate(item.updated_at)}
               </time>
-            </div>
-            <Link
-              to={`/tanbun/${item.uid}`}
-              className="block whitespace-pre-wrap leading-relaxed hover:underline"
-            >
-              {item.sentence}
-            </Link>
-            <div className="flex items-center justify-between gap-3">
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <EyeIcon className="size-3.5" />
-                {item.exposure_count}日
-              </span>
               <Button
                 type="button"
-                variant={item.seen_today ? "ghost" : "outline"}
+                variant="ghost"
                 size="sm"
+                className={`h-7 shrink-0 gap-1 px-2 tabular-nums disabled:opacity-100 ${
+                  item.seen_today ? "text-muted-foreground" : "text-foreground"
+                }`}
+                aria-label={
+                  item.seen_today
+                    ? `今日は記録済み、累計${item.exposure_count}日`
+                    : `今日見たことを記録、累計${item.exposure_count}日`
+                }
+                title={item.seen_today ? "今日は記録済み" : "今日見た"}
                 disabled={item.seen_today || markingId === item.uid}
                 onClick={() => void markSeen(item)}
               >
-                <Eye className="size-4" />
-                {item.seen_today
-                  ? "今日は見た"
-                  : markingId === item.uid
-                    ? "記録中…"
-                    : "見たよ"}
+                <Eye className="size-3.5" />
+                {item.exposure_count}
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </>
+          }
+        />
       ))}
     </div>
   );

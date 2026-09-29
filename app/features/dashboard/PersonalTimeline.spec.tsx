@@ -18,6 +18,7 @@ it("単文を見た日を一日一回だけ記録する", async () => {
       resource_uid: "resource-1",
       resource_name: "読書メモ",
       updated_at: "2026-09-28T00:00:00Z",
+      score: 7,
       exposure_count: 2,
       seen_today: false,
     },
@@ -36,9 +37,15 @@ it("単文を見た日を一日一回だけ記録する", async () => {
     </MemoryRouter>,
   );
 
-  await user.click(await screen.findByRole("button", { name: "見たよ" }));
+  await user.click(
+    await screen.findByRole("button", {
+      name: "今日見たことを記録、累計2日",
+    }),
+  );
 
   expect(markTanbunSeen).toHaveBeenCalledWith("sentence-1");
-  expect(screen.getByRole("button", { name: "今日は見た" })).toBeDisabled();
-  expect(screen.getByText("3日")).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "今日は記録済み、累計3日" }),
+  ).toBeDisabled();
+  expect(screen.getByLabelText("スコア: 7")).toBeInTheDocument();
 });

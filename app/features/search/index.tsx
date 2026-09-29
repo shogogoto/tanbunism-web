@@ -1,5 +1,4 @@
 import {
-  Award,
   Baseline,
   GitFork,
   List,
@@ -10,6 +9,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Highlight } from "~/features/tanbun/components/Highlight";
+import KnowledgeCard from "~/features/tanbun/components/KnowledgeCard";
 import UserAvatar from "~/features/user/UserAvatar";
 import { Card, CardContent, CardFooter } from "~/shared/components/ui/card";
 import { searchResourcePostResourceSearchPost } from "~/shared/generated/entry/entry";
@@ -424,40 +424,24 @@ function KnowledgeResult({
   query: string;
 }) {
   return (
-    <Link to={`/tanbun/${value.uid}`} state={{ tanbun: value, ...info }}>
-      <Card className="border-l-4 border-l-blue-500 hover:bg-muted/40">
-        <CardContent className="space-y-2">
-          <span className="sr-only">知識:</span>
-          {value.term?.names?.length ? (
-            <p className="font-semibold">
-              {value.term.names.map((name) => (
-                <span key={name} className="mr-2">
-                  <Highlight text={name} query={query} />
-                </span>
-              ))}
-            </p>
-          ) : null}
-          {value.sentence !== "<<<not defined>>>" && (
-            <p className="break-words">
-              <Highlight text={value.sentence} query={query} />
-            </p>
-          )}
-          {info?.resource && (
-            <p className="text-sm text-muted-foreground">
-              {info.resource.name}
-            </p>
-          )}
-        </CardContent>
-        <CardFooter>
-          <SearchMetric
-            Icon={Award}
-            label="重要度"
-            value={Math.round(value.stats.score ?? 0)}
-            tone="blue"
-          />
-        </CardFooter>
-      </Card>
-    </Link>
+    <KnowledgeCard
+      uid={value.uid}
+      sentence={value.sentence}
+      termNames={value.term?.names}
+      score={Math.round(value.stats.score ?? 0)}
+      query={query}
+      state={{ tanbun: value, ...info }}
+      metadata={
+        info?.resource ? (
+          <Link
+            to={`/resource/${info.resource.uid}#${value.uid}`}
+            className="truncate hover:text-foreground hover:underline"
+          >
+            {info.resource.name}
+          </Link>
+        ) : undefined
+      }
+    />
   );
 }
 
