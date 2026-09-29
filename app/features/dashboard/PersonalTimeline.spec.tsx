@@ -15,6 +15,7 @@ it("単文を見た日を一日一回だけ記録する", async () => {
     {
       uid: "sentence-1",
       sentence: "新しく取り込んだ単文",
+      term_names: ["新しい知識"],
       resource_uid: "resource-1",
       resource_name: "読書メモ",
       updated_at: "2026-09-28T00:00:00Z",
@@ -48,4 +49,5 @@ it("単文を見た日を一日一回だけ記録する", async () => {
     screen.getByRole("button", { name: "今日は記録済み、累計3日" }),
   ).toBeDisabled();
   expect(screen.getByLabelText("スコア: 7")).toBeInTheDocument();
+  expect(screen.getByText("新しい知識")).toBeInTheDocument();
 });

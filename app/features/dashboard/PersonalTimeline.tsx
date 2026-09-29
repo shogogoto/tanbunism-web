@@ -90,7 +90,8 @@ export default function PersonalTimeline() {
           key={item.uid}
           uid={item.uid}
           sentence={item.sentence}
-          score={item.score}
+          termNames={item.term_names ?? []}
+          score={item.score ?? 0}
           metadata={
             <>
               <Link

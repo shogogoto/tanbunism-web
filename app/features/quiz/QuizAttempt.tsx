@@ -17,10 +17,16 @@ import { type QuizChain, type ReadableQuiz, answerQuiz } from "./api";
 type Props = {
   quiz: ReadableQuiz;
   className?: string;
+  showStatement?: boolean;
   onAnswered?: (isCorrect: boolean) => void;
 };
 
-export default function QuizAttempt({ quiz, className, onAnswered }: Props) {
+export default function QuizAttempt({
+  quiz,
+  className,
+  showStatement = true,
+  onAnswered,
+}: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [chain, setChain] = useState<QuizChain>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,14 +62,16 @@ export default function QuizAttempt({ quiz, className, onAnswered }: Props) {
 
   return (
     <div className={cn("space-y-3 border p-3", className)}>
-      <p className="whitespace-pre-line text-sm font-medium">
-        <ChainSentenceLink
-          chain={chain}
-          sentenceId={chain && findTargetSentenceId(chain)}
-        >
-          {quiz.statement}
-        </ChainSentenceLink>
-      </p>
+      {showStatement && (
+        <p className="whitespace-pre-line text-sm font-medium">
+          <ChainSentenceLink
+            chain={chain}
+            sentenceId={chain && findTargetSentenceId(chain)}
+          >
+            {quiz.statement}
+          </ChainSentenceLink>
+        </p>
+      )}
       <div className="space-y-1">
         {Object.entries(quiz.options).map(([optionId, option]) => {
           const isSelected = selected.includes(optionId);

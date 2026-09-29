@@ -4,10 +4,11 @@ const API_BASE_URL =
 export type PersonalTanbunItem = {
   uid: string;
   sentence: string;
+  term_names: string[];
   resource_uid: string;
   resource_name: string;
   updated_at: string | null;
-  score: number;
+  score?: number;
   exposure_count: number;
   seen_today: boolean;
 };

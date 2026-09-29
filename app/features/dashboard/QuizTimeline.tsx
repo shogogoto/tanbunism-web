@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
@@ -5,6 +6,12 @@ import { type ManagedQuiz, searchCreatedQuizzes } from "~/features/quiz/api";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/shared/components/ui/collapsible";
+import { cn } from "~/shared/lib/utils";
 
 export default function QuizTimeline() {
   const [quizzes, setQuizzes] = useState<ManagedQuiz[]>([]);
@@ -69,44 +76,84 @@ export default function QuizTimeline() {
         </p>
       )}
       {sorted.map((item) => (
-        <Card key={item.quiz.quiz_id}>
-          <CardContent className="space-y-2 p-0">
-            <QuizAttempt
-              quiz={item.quiz}
-              className="border-0"
-              onAnswered={(isCorrect) =>
-                setSessionResults((current) => ({
-                  ...current,
-                  [item.quiz.quiz_id]: isCorrect,
-                }))
-              }
-            />
-            <div className="flex flex-wrap items-center gap-2 border-t px-4 py-3">
-              {item.quiz.quiz_id in sessionResults ? (
-                <Badge
-                  variant={
-                    sessionResults[item.quiz.quiz_id]
-                      ? "secondary"
-                      : "destructive"
-                  }
-                >
-                  今回 {sessionResults[item.quiz.quiz_id] ? "正解" : "不正解"}
+        <QuizTimelineCard
+          key={item.quiz.quiz_id}
+          item={item}
+          sessionResult={sessionResults[item.quiz.quiz_id]}
+          hasSessionResult={item.quiz.quiz_id in sessionResults}
+          onAnswered={(isCorrect) =>
+            setSessionResults((current) => ({
+              ...current,
+              [item.quiz.quiz_id]: isCorrect,
+            }))
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+function QuizTimelineCard({
+  item,
+  sessionResult,
+  hasSessionResult,
+  onAnswered,
+}: {
+  item: ManagedQuiz;
+  sessionResult?: boolean;
+  hasSessionResult: boolean;
+  onAnswered: (isCorrect: boolean) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/40"
+          >
+            <span className="min-w-0 flex-1 whitespace-pre-wrap text-sm font-medium leading-relaxed">
+              {item.quiz.statement}
+            </span>
+            <span className="flex shrink-0 items-center gap-2">
+              {hasSessionResult ? (
+                <Badge variant={sessionResult ? "secondary" : "destructive"}>
+                  今回 {sessionResult ? "正解" : "不正解"}
                 </Badge>
               ) : (
                 <Badge variant={item.attempts === 0 ? "default" : "secondary"}>
                   {item.attempts === 0 ? "未回答" : `${item.attempts}回答`}
                 </Badge>
               )}
-              {item.accuracy !== null && (
-                <span className="text-xs text-muted-foreground">
-                  これまでの正答率 {Math.round(item.accuracy * 100)}%
-                </span>
-              )}
-            </div>
+              <ChevronDown
+                className={cn(
+                  "size-4 text-muted-foreground transition-transform",
+                  isOpen && "rotate-180",
+                )}
+                aria-hidden="true"
+              />
+            </span>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="space-y-2 border-t p-0">
+            <QuizAttempt
+              quiz={item.quiz}
+              showStatement={false}
+              className="border-0"
+              onAnswered={onAnswered}
+            />
+            {item.accuracy !== null && (
+              <p className="border-t px-4 py-3 text-xs text-muted-foreground">
+                これまでの正答率 {Math.round(item.accuracy * 100)}%
+              </p>
+            )}
           </CardContent>
-        </Card>
-      ))}
-    </div>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
 

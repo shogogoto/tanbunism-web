@@ -58,6 +58,9 @@ it("未回答のクイズを回答済みのクイズより先に表示する", a
       Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   expect(screen.getByText("未回答")).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "回答候補" }),
+  ).not.toBeInTheDocument();
 });
 
 it("クイズTL上で回答して結果を確認できる", async () => {
@@ -105,7 +108,13 @@ it("クイズTL上で回答して結果を確認できる", async () => {
       <QuizTimeline />
     </MemoryRouter>,
   );
-  await user.click(await screen.findByRole("button", { name: "正しい選択肢" }));
+  expect(
+    screen.queryByRole("button", { name: "正しい選択肢" }),
+  ).not.toBeInTheDocument();
+  await user.click(
+    await screen.findByRole("button", { name: /その場で解く問題/ }),
+  );
+  await user.click(screen.getByRole("button", { name: "正しい選択肢" }));
   await user.click(screen.getByRole("button", { name: "回答する" }));
 
   expect(answerQuiz).toHaveBeenCalledWith("quiz-1", ["option-1"]);
