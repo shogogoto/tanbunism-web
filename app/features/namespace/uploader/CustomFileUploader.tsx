@@ -1,4 +1,16 @@
-import { type ChangeEvent, useCallback, useState } from "react";
+import { FolderOpen, RefreshCw } from "lucide-react";
+import { type ChangeEvent, useCallback, useEffect, useState } from "react";
+import { Button } from "~/shared/components/ui/button";
+import {
+  type StoredDirectoryHandle,
+  filesFromDirectory,
+  loadDirectoryHandle,
+  saveDirectoryHandle,
+} from "./directoryHandleStore";
+
+type DirectoryPickerWindow = Window & {
+  showDirectoryPicker?: () => Promise<StoredDirectoryHandle>;
+};
 
 type Props = {
   acceptExt?: string[];
@@ -18,6 +30,12 @@ export default function CustomFileUploader({
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [originalFiles, setOriginalFiles] = useState<File[] | null>(null);
+  const [directoryHandle, setDirectoryHandle] =
+    useState<StoredDirectoryHandle>();
+  const [isReading, setIsReading] = useState(false);
+  const supportsDirectoryHandle =
+    typeof window !== "undefined" &&
+    typeof (window as DirectoryPickerWindow).showDirectoryPicker === "function";
 
   const applyFilters = useCallback(
     (files: File[] | null, term: string) => {
@@ -66,6 +84,59 @@ export default function CustomFileUploader({
     [searchTerm, applyFilters],
   );
 
+  const readDirectory = useCallback(
+    async (handle: StoredDirectoryHandle, requestPermission: boolean) => {
+      setIsReading(true);
+      try {
+        let permission = await handle.queryPermission?.({ mode: "read" });
+        if (permission !== "granted" && requestPermission) {
+          permission = await handle.requestPermission?.({ mode: "read" });
+        }
+        if (permission !== undefined && permission !== "granted") return;
+        const files = await filesFromDirectory(handle);
+        setDirectoryHandle(handle);
+        setDirectoryName(handle.name);
+        setOriginalFiles(files);
+        setSearchTerm("");
+        applyFilters(files, "");
+      } finally {
+        setIsReading(false);
+      }
+    },
+    [applyFilters],
+  );
+
+  useEffect(() => {
+    if (!supportsDirectoryHandle) return;
+    let active = true;
+    loadDirectoryHandle()
+      .then(async (handle) => {
+        if (!active || !handle) return;
+        setDirectoryHandle(handle);
+        setDirectoryName(handle.name);
+        if ((await handle.queryPermission?.({ mode: "read" })) === "granted") {
+          await readDirectory(handle, false);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [readDirectory, supportsDirectoryHandle]);
+
+  async function chooseDirectory() {
+    const picker = (window as DirectoryPickerWindow).showDirectoryPicker;
+    if (!picker) return;
+    try {
+      const handle = await picker();
+      await saveDirectoryHandle(handle);
+      await readDirectory(handle, false);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      throw error;
+    }
+  }
+
   const handleSearchChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       const term = e.target.value;
@@ -83,21 +154,55 @@ export default function CustomFileUploader({
 
   return (
     <div className="flex flex-col gap-2 w-full max-w-md">
-      <div className="relative w-full h-10 border rounded-md overflow-hidden">
-        <input
-          id="directory-upload"
-          type="file"
-          // @ts-ignore
-          webkitdirectory=""
-          onChange={handleFileChange}
-          // 🚨 スタイルで input を完全に透明にし、上の要素をクリック可能にする
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-          accept={acceptExt?.join(",")}
-        />
-        <div className="absolute inset-0 flex items-center bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground transition duration-150 z-10 px-3">
-          <span className="truncate text-sm">{displayLabel}</span>
+      {supportsDirectoryHandle ? (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="min-w-0 flex-1 justify-start"
+            disabled={isReading}
+            onClick={() =>
+              directoryHandle
+                ? void readDirectory(directoryHandle, true)
+                : void chooseDirectory()
+            }
+          >
+            {directoryHandle ? (
+              <RefreshCw className="size-4 shrink-0" />
+            ) : (
+              <FolderOpen className="size-4 shrink-0" />
+            )}
+            <span className="truncate">
+              {isReading ? "フォルダを読み込み中…" : displayLabel}
+            </span>
+          </Button>
+          {directoryHandle && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={isReading}
+              onClick={() => void chooseDirectory()}
+            >
+              変更
+            </Button>
+          )}
         </div>
-      </div>
+      ) : (
+        <div className="relative h-10 w-full overflow-hidden rounded-md border">
+          <input
+            id="directory-upload"
+            type="file"
+            // @ts-ignore: webkitdirectory is not included in React's input types.
+            webkitdirectory=""
+            onChange={handleFileChange}
+            className="absolute inset-0 z-20 h-full w-full cursor-pointer opacity-0"
+            accept={acceptExt?.join(",")}
+          />
+          <div className="absolute inset-0 z-10 flex items-center bg-background px-3 text-muted-foreground transition duration-150 hover:bg-accent hover:text-accent-foreground">
+            <span className="truncate text-sm">{displayLabel}</span>
+          </div>
+        </div>
+      )}
       <input
         type="text"
         placeholder="ファイルパスを絞り込む文字列"
@@ -109,9 +214,11 @@ export default function CustomFileUploader({
       {recentPaths.length > 0 && (
         <p className="text-xs text-muted-foreground" aria-live="polite">
           最近の取り込み先: {recentPaths.slice(0, 3).join(" / ")}
-          <span className="ml-1">
-            （同じフォルダを選ぶと前回の履歴を利用できます）
-          </span>
+          {!supportsDirectoryHandle && (
+            <span className="ml-1">
+              （同じフォルダを選ぶと前回の履歴を利用できます）
+            </span>
+          )}
         </p>
       )}
     </div>
