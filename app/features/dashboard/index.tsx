@@ -11,7 +11,6 @@ import { Card, CardContent } from "~/shared/components/ui/card";
 import { useGetNamaspaceNamespaceGet } from "~/shared/generated/entry/entry";
 import PersonalTimeline from "./PersonalTimeline";
 import QuizTimeline from "./QuizTimeline";
-import ResourceLearningOverview from "./ResourceLearningOverview";
 import {
   type DashboardSection,
   dashboardSections,
@@ -130,7 +129,6 @@ export default function Dashboard() {
                 <Card>
                   <CardContent className="p-4 sm:p-6">
                     <NamespaceExplorer nsprops={namespace} />
-                    <ResourceLearningOverview />
                   </CardContent>
                 </Card>
                 <Button

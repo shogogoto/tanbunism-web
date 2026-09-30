@@ -4,8 +4,8 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
-import ResourceLearningOverview from "~/features/dashboard/ResourceLearningOverview";
 import QuizList, { formatCompactQuizDate } from "./QuizList";
+import ResourceLearningOverview from "./ResourceLearningOverview";
 
 vi.mock("~/shared/hooks/use-mobile", () => ({
   useIsMobile: () => false,
@@ -209,6 +209,7 @@ it("Resourceを指定した画面ではクイズを絞り込める", async () =>
 });
 
 it("Resourceごとの学習指標を表示する", async () => {
+  const user = userEvent.setup();
   render(
     <MemoryRouter>
       <ResourceLearningOverview />
@@ -222,4 +223,6 @@ it("Resourceごとの学習指標を表示する", async () => {
   expect(screen.getAllByText("50%")).toHaveLength(2);
   expect(screen.getAllByText("100%")).toHaveLength(1);
   expect(screen.getByText("0問")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: /代数学ノート/ }));
+  expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
 });

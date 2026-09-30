@@ -22,6 +22,7 @@ import {
 } from "~/shared/components/ui/card";
 import BrokenQuizManager from "./BrokenQuizManager";
 import QuizPrompt from "./QuizPrompt";
+import ResourceLearningOverview from "./ResourceLearningOverview";
 import {
   type ManagedQuiz,
   type StudyResource,
@@ -461,6 +462,7 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
       {loadState.status === "loaded" && (
         <section className="space-y-3">
           {embedded && !resourceId && <BrokenQuizManager />}
+          {!resourceId && <ResourceLearningOverview />}
           {resourceId && (
             <Button asChild variant="ghost" size="sm">
               <Link
