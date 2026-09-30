@@ -354,7 +354,8 @@ describe("QuizSession", () => {
     expect(answeredQuizIds).toEqual(["quiz-1", "quiz-2"]);
   });
 
-  it("StudyPlanがなければ管理画面への導線を表示する", async () => {
+  it("StudyPlanがなければおまかせ計画を一度だけ作って開始する", async () => {
+    const user = userEvent.setup();
     const resourceId = "11111111-1111-1111-1111-111111111111";
     server.use(
       http.get("*/quiz/study-plans", () => HttpResponse.json([])),
@@ -380,13 +381,44 @@ describe("QuizSession", () => {
           stats: { "11111111111111111111111111111111": { n_sentence: 10 } },
         }),
       ),
+      http.post("*/quiz/study-plans", async ({ request }) => {
+        const draft = (await request.json()) as Record<string, unknown>;
+        expect(draft).toMatchObject({
+          name: "おまかせ",
+          resource_ids: [resourceId],
+          quiz_types: ["term2sent", "sent2term"],
+          n_quiz: 5,
+          n_option: 4,
+        });
+        return HttpResponse.json({
+          ...draft,
+          uid: "quick-plan",
+          created: "2026-09-30T00:00:00Z",
+        });
+      }),
+      http.post("*/quiz/study-plans/quick-plan/prepare", () =>
+        HttpResponse.json({
+          plan_id: "quick-plan",
+          prepared_quiz_count: 1,
+          requested_count: 5,
+          added_count: 1,
+        }),
+      ),
+      http.post("*/quiz/study-plans/quick-plan/recommendations", () =>
+        HttpResponse.json([recommendation]),
+      ),
     );
 
     renderQuizSession();
 
     expect(
-      await screen.findByRole("link", { name: "学習計画を作る" }),
+      await screen.findByRole("link", { name: "自分で計画を作る" }),
     ).toHaveAttribute("href", "/dashboard?view=study-plans");
+    await user.click(screen.getByRole("button", { name: "おまかせで始める" }));
+    expect(
+      await screen.findByText("「可換」とはどのような性質ですか？"),
+    ).toBeVisible();
+    expect(screen.getByLabelText("StudyPlan")).toHaveValue("quick-plan");
   });
 
   it("回答画面からはStudyPlanを管理画面で管理する", async () => {

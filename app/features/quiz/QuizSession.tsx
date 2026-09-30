@@ -26,7 +26,10 @@ import {
   type QuizType,
   type StudyPlan,
   answerQuiz,
+  createStudyPlan,
   listStudyPlans,
+  listStudyResources,
+  prepareAdditionalStudyPlanQuizzes,
   recommendQuizzes,
 } from "./api";
 
@@ -58,6 +61,8 @@ export default function QuizSession() {
   const [preparationError, setPreparationError] = useState<string>();
   const [submitError, setSubmitError] = useState<string>();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isQuickStarting, setIsQuickStarting] = useState(false);
+  const [quickStartError, setQuickStartError] = useState<string>();
   const sessionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -285,6 +290,35 @@ export default function QuizSession() {
     if (allAnswered && !isSubmitting && !isComplete) void submitAnswers();
   }
 
+  async function quickStart() {
+    setIsQuickStarting(true);
+    setQuickStartError(undefined);
+    try {
+      const resources = await listStudyResources();
+      if (resources.length === 0) {
+        throw new Error("学習対象にできるResourceがありません。");
+      }
+      const plan = await createStudyPlan({
+        name: "おまかせ",
+        resource_ids: resources.slice(0, 20).map(({ uid }) => uid),
+        quiz_types: ["term2sent", "sent2term"],
+        n_quiz: 5,
+        n_option: 4,
+      });
+      await prepareAdditionalStudyPlanQuizzes(plan.uid, plan.n_quiz);
+      setPlans([plan]);
+      setPlanId(plan.uid);
+    } catch (caught) {
+      setQuickStartError(
+        caught instanceof Error
+          ? caught.message
+          : "おまかせ学習を開始できませんでした。",
+      );
+    } finally {
+      setIsQuickStarting(false);
+    }
+  }
+
   if (loadState.status === "loading") {
     return <p className="p-6">クイズを読み込んでいます…</p>;
   }
@@ -302,19 +336,31 @@ export default function QuizSession() {
     return (
       <div className="mx-auto max-w-2xl p-4 sm:p-6 space-y-4">
         <header>
-          <h1 className="text-2xl font-semibold">学習計画を作る</h1>
+          <h1 className="text-2xl font-semibold">クイズを始める</h1>
           <p className="text-sm text-muted-foreground">
-            クイズを解く前に、学習計画を作成してください。
+            細かく設定せず、手元のResourceからすぐに始められます。
           </p>
         </header>
         <Card className="border">
           <CardContent className="pt-4">
             <p className="mb-4 text-sm text-muted-foreground">
-              学習計画の作成・編集は、ダッシュボードでまとめて行えます。
+              初回だけ再利用できる「おまかせ」計画を作り、5問を準備します。
             </p>
-            <Button asChild>
-              <Link to="/dashboard?view=study-plans">学習計画を作る</Link>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                disabled={isQuickStarting}
+                onClick={() => void quickStart()}
+              >
+                {isQuickStarting ? "準備中…" : "おまかせで始める"}
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/dashboard?view=study-plans">自分で計画を作る</Link>
+              </Button>
+            </div>
+            {quickStartError && (
+              <p className="mt-3 text-sm text-destructive">{quickStartError}</p>
+            )}
           </CardContent>
         </Card>
       </div>
