@@ -26,6 +26,7 @@ import {
   useOnUploadSuccess,
 } from "../ImageUploader/hooks";
 import ProfileImage from "../UserProfile/ProfileImage";
+import PasswordChangeForm from "./PasswordChangeForm";
 import { InputFormControl, TextareaFormControl } from "./controls";
 
 const MAX_DN = userProfileUserProfileUsernameGetResponseDisplayNameOneMax;
@@ -205,6 +206,9 @@ export default function UserProfileForm() {
           <div className="text-sm text-red-500">{form.errors?.[0]}</div>
         </div>
       </fetcher.Form>
+      <div className="mx-auto mt-3 w-full max-w-sm">
+        <PasswordChangeForm />
+      </div>
     </div>
   );
 }

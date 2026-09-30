@@ -134,6 +134,35 @@ describe("UserProfileForm (Integration Test)", () => {
     });
   });
 
+  it("自分のパスワードを変更できる", async () => {
+    let changedPassword: string | undefined;
+    server.use(
+      http.patch("*/user/me", async ({ request }) => {
+        const updates = (await request.json()) as { password?: string };
+        changedPassword = updates.password;
+        return HttpResponse.json(muser);
+      }),
+    );
+    const user = userEvent.setup();
+    const router = mkrouter();
+    render(<RouterProvider router={router} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "パスワードを変更" }),
+    );
+    await user.type(screen.getByLabelText("新しいパスワード"), "new-password");
+    await user.type(
+      screen.getByLabelText("新しいパスワード（確認）"),
+      "new-password",
+    );
+    await user.click(screen.getByRole("button", { name: "変更する" }));
+
+    await waitFor(() => expect(changedPassword).toBe("new-password"));
+    expect(
+      await screen.findByText("パスワードを変更しました。"),
+    ).toBeInTheDocument();
+  });
+
   describe("フォームバリデーション", () => {
     beforeEach(() => {
       _setmock();
