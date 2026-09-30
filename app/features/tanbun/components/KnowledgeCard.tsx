@@ -13,6 +13,7 @@ type Props = {
   state?: unknown;
   metadata?: ReactNode;
   compact?: boolean;
+  scorePosition?: "start" | "end";
 };
 
 export default function KnowledgeCard({
@@ -24,6 +25,7 @@ export default function KnowledgeCard({
   state,
   metadata,
   compact = false,
+  scorePosition = "end",
 }: Props) {
   return (
     <Card
@@ -62,6 +64,7 @@ export default function KnowledgeCard({
             compact ? "gap-2" : "gap-3"
           }`}
         >
+          {scorePosition === "start" && <KnowledgeScore score={score} />}
           <div
             className={`flex min-w-0 flex-1 items-center ${
               compact ? "gap-2" : "gap-3"
@@ -69,7 +72,7 @@ export default function KnowledgeCard({
           >
             {metadata}
           </div>
-          <KnowledgeScore score={score} />
+          {scorePosition === "end" && <KnowledgeScore score={score} />}
         </div>
       </CardContent>
     </Card>

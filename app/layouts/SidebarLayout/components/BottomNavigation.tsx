@@ -60,8 +60,10 @@ function NavigationItem({
       to={to}
       aria-label={label}
       className={({ isActive }) =>
-        `flex flex-col items-center gap-1 text-xs ${
-          isActive ? "font-semibold text-primary" : "text-muted-foreground"
+        `flex size-10 items-center justify-center rounded-md transition-colors ${
+          isActive
+            ? "bg-accent font-semibold text-primary"
+            : "text-muted-foreground"
         }`
       }
     >
@@ -69,7 +71,6 @@ function NavigationItem({
         {icon}
         {badge}
       </span>
-      <span>{label}</span>
     </NavLink>
   );
 }

@@ -115,6 +115,7 @@ export default function PersonalTimeline() {
                 sentence={item.sentence}
                 termNames={item.term_names ?? []}
                 score={item.score ?? 0}
+                scorePosition="start"
                 metadata={
                   <>
                     <Link
