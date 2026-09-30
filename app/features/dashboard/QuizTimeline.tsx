@@ -109,7 +109,8 @@ function QuizTimelineCard({
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="flex w-full items-center gap-2 p-2 text-left hover:bg-muted/40"
+            data-hotkey-item
+            className="flex w-full items-center gap-2 p-2 text-left outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           >
             <span className="min-w-0 flex-1 whitespace-pre-wrap text-sm font-medium leading-relaxed">
               {item.quiz.statement}

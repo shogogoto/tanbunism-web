@@ -46,6 +46,8 @@ it("単文を見た日を一日一回だけ記録する", async () => {
   });
   const item = document.querySelector<HTMLElement>("[data-hotkey-item]");
   expect(item).not.toBeNull();
+  item?.focus();
+  expect(item).toHaveFocus();
   fireEvent.keyDown(item as HTMLElement, { key: " " });
 
   expect(

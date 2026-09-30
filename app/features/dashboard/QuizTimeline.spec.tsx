@@ -58,6 +58,10 @@ it("未回答のクイズを回答済みのクイズより先に表示する", a
       Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   expect(screen.getByText("未回答")).toBeInTheDocument();
+  const timelineItems = document.querySelectorAll("[data-hotkey-item]");
+  expect(timelineItems).toHaveLength(2);
+  expect(timelineItems[0]).toHaveTextContent("未回答の問題");
+  expect(timelineItems[1]).toHaveTextContent("回答済みの問題");
   expect(
     screen.queryByRole("button", { name: "回答候補" }),
   ).not.toBeInTheDocument();

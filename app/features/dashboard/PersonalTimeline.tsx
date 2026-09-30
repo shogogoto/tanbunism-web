@@ -91,6 +91,7 @@ export default function PersonalTimeline() {
             <div
               key={item.uid}
               data-hotkey-item
+              tabIndex={-1}
               className="outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               onKeyDown={(event) => {
                 if (event.target !== event.currentTarget) return;
