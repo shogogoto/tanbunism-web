@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "~/shared/components/ui/card";
 import { ChainSentenceLink, RelationAnnotation } from "./QuizKnowledge";
+import QuizPrompt from "./QuizPrompt";
 import {
   type AnswerHistoryItem,
   type QuizChain,
@@ -262,8 +263,8 @@ function AnswerCard({
           )}
           <time>{new Date(answer.created).toLocaleString("ja-JP")}</time>
         </CardDescription>
-        <CardTitle className="whitespace-pre-line text-sm leading-snug">
-          {quiz.statement}
+        <CardTitle className="text-sm leading-snug">
+          <QuizPrompt quiz={quiz} compact />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 px-2 pb-2">

@@ -23,6 +23,11 @@ it("ダッシュボードに最近の回答と回答履歴への導線を表示�
         resource_id: "resource-1",
         quiz: {
           quiz_id: "quiz-1",
+          quiz_type: "term2sent",
+          prompt: {
+            subject: "復習する問題",
+            answer_kind: "sentence",
+          },
           statement: "復習する問題",
           options: {},
           correct: [],

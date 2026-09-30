@@ -24,6 +24,11 @@ const historyItem = {
   resource_id: "resource-1",
   quiz: {
     quiz_id: "quiz-1",
+    quiz_type: "term2sent" as const,
+    prompt: {
+      subject: "用語「可換」に合う文はどれ？",
+      answer_kind: "sentence" as const,
+    },
     statement: "用語「可換」に合う文はどれ？",
     options: {
       correct: "演算順序を交換できる",

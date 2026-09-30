@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
+import QuizPrompt from "~/features/quiz/QuizPrompt";
 import { type ManagedQuiz, searchCreatedQuizzes } from "~/features/quiz/api";
 import { Badge } from "~/shared/components/ui/badge";
 import { Card, CardContent } from "~/shared/components/ui/card";
@@ -112,9 +113,7 @@ function QuizTimelineCard({
             data-hotkey-item
             className="flex w-full items-center gap-2 p-2 text-left outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/60 data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary"
           >
-            <span className="min-w-0 flex-1 whitespace-pre-wrap text-sm font-medium leading-relaxed">
-              {item.quiz.statement}
-            </span>
+            <QuizPrompt quiz={item.quiz} compact className="min-w-0 flex-1" />
             <span className="flex shrink-0 items-center gap-2">
               {hasSessionResult ? (
                 <Badge variant={sessionResult ? "secondary" : "destructive"}>

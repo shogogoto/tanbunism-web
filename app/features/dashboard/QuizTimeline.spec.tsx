@@ -17,6 +17,11 @@ it("未回答のクイズを回答済みのクイズより先に表示する", a
       {
         quiz: {
           quiz_id: "answered",
+          quiz_type: "term2sent",
+          prompt: {
+            subject: "回答済みの問題",
+            answer_kind: "sentence",
+          },
           statement: "回答済みの問題",
           options: { "option-1": "回答候補" },
           correct: ["option-1"],
@@ -31,6 +36,11 @@ it("未回答のクイズを回答済みのクイズより先に表示する", a
       {
         quiz: {
           quiz_id: "unanswered",
+          quiz_type: "term2sent",
+          prompt: {
+            subject: "未回答の問題",
+            answer_kind: "sentence",
+          },
           statement: "未回答の問題",
           options: {},
           correct: [],
@@ -73,6 +83,11 @@ it("未回答のクイズを回答済みのクイズより先に表示する", a
 it("クイズTL上で回答して結果を確認できる", async () => {
   const quiz = {
     quiz_id: "quiz-1",
+    quiz_type: "term2sent" as const,
+    prompt: {
+      subject: "その場で解く問題",
+      answer_kind: "sentence" as const,
+    },
     statement: "その場で解く問題",
     options: { "option-1": "正しい選択肢" },
     correct: ["option-1"],

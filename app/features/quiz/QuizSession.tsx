@@ -19,6 +19,7 @@ import {
   RelationAnnotation,
   findTargetSentenceId,
 } from "./QuizKnowledge";
+import QuizPrompt from "./QuizPrompt";
 import {
   type QuizChain,
   type QuizRecommendation,
@@ -483,13 +484,18 @@ function QuizQuestion({
               )}
             </span>
           </CardDescription>
-          <CardTitle className="whitespace-pre-line text-lg leading-relaxed">
-            <ChainSentenceLink
-              chain={result?.chain}
-              sentenceId={result && findTargetSentenceId(result.chain)}
-            >
-              {quiz.statement}
-            </ChainSentenceLink>
+          <CardTitle className="text-lg leading-relaxed">
+            <QuizPrompt
+              quiz={quiz}
+              renderSubject={(subject) => (
+                <ChainSentenceLink
+                  chain={result?.chain}
+                  sentenceId={result && findTargetSentenceId(result.chain)}
+                >
+                  {subject}
+                </ChainSentenceLink>
+              )}
+            />
           </CardTitle>
         </CardHeader>
         <CardContent>

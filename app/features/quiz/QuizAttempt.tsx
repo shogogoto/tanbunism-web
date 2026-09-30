@@ -12,6 +12,7 @@ import {
   RelationAnnotation,
   findTargetSentenceId,
 } from "./QuizKnowledge";
+import QuizPrompt from "./QuizPrompt";
 import { type QuizChain, type ReadableQuiz, answerQuiz } from "./api";
 
 type Props = {
@@ -63,14 +64,17 @@ export default function QuizAttempt({
   return (
     <div className={cn("space-y-3 border p-3", className)}>
       {showStatement && (
-        <p className="whitespace-pre-line text-sm font-medium">
-          <ChainSentenceLink
-            chain={chain}
-            sentenceId={chain && findTargetSentenceId(chain)}
-          >
-            {quiz.statement}
-          </ChainSentenceLink>
-        </p>
+        <QuizPrompt
+          quiz={quiz}
+          renderSubject={(subject) => (
+            <ChainSentenceLink
+              chain={chain}
+              sentenceId={chain && findTargetSentenceId(chain)}
+            >
+              {subject}
+            </ChainSentenceLink>
+          )}
+        />
       )}
       <div className="space-y-1">
         {Object.entries(quiz.options).map(([optionId, option], index) => {

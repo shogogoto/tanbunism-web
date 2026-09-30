@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import QuizPrompt from "~/features/quiz/QuizPrompt";
 import { type AnswerHistoryItem, listAnswerHistory } from "~/features/quiz/api";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
@@ -74,9 +75,7 @@ export default function RecentAnswers() {
                 {answer.is_correct ? "正解" : "不正解"}
               </Badge>
               <span className="min-w-0 flex-1">
-                <span className="line-clamp-2 block text-sm">
-                  {quiz.statement}
-                </span>
+                <QuizPrompt quiz={quiz} compact />
                 <time className="text-xs text-muted-foreground">
                   {new Date(answer.created).toLocaleString("ja-JP")}
                 </time>

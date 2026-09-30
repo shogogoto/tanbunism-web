@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "~/shared/components/ui/card";
 import BrokenQuizManager from "./BrokenQuizManager";
+import QuizPrompt from "./QuizPrompt";
 import {
   type ManagedQuiz,
   type StudyResource,
@@ -240,8 +241,8 @@ function QuizCard({
             onChange={(event) => onSelectedChange(event.target.checked)}
             aria-label={`クイズを選択: ${quiz.statement}`}
           />
-          <CardTitle className="whitespace-pre-line text-base leading-relaxed">
-            {quiz.statement}
+          <CardTitle className="min-w-0 flex-1 text-base leading-relaxed">
+            <QuizPrompt quiz={quiz} />
           </CardTitle>
         </div>
       </CardHeader>
