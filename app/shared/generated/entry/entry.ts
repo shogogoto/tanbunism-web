@@ -16,6 +16,7 @@ import type {
   HTTPValidationError,
   IdentityConflictResponse,
   NameSpace,
+  PostFilesResourcePost200,
   PostTextResourceTextPost200,
   ResourceDetail,
   ResourceDiffPreview,
@@ -513,7 +514,7 @@ export const usePreviewTextUpdateResourceTextPreviewPost = <
   };
 };
 export type postFilesResourcePostResponse200 = {
-  data: null;
+  data: PostFilesResourcePost200;
   status: 200;
 };
 

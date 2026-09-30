@@ -13,6 +13,7 @@ import { EdgeType } from "../fastAPI.schemas";
 import type {
   EntryDetail,
   NameSpace,
+  PostFilesResourcePost200,
   PostTextResourceTextPost200,
   ResourceDetail,
   ResourceDiffPreview,
@@ -220,6 +221,14 @@ export const getPreviewTextUpdateResourceTextPreviewPostResponseMock = (
   terms_updated: faker.number.int(),
   ...overrideResponse,
 });
+
+export const getPostFilesResourcePostResponseMock =
+  (): PostFilesResourcePost200 => ({
+    [faker.string.alphanumeric(5)]: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  });
 
 export const getGetResourceDetailResourceResourceIdGetResponseMock = (
   overrideResponse: Partial<Extract<ResourceDetail, object>> = {},
@@ -928,21 +937,25 @@ export const getPreviewTextUpdateResourceTextPreviewPostMockHandler = (
 
 export const getPostFilesResourcePostMockHandler = (
   overrideResponse?:
-    | null
+    | PostFilesResourcePost200
     | ((
         info: Parameters<Parameters<typeof http.post>[1]>[0],
-      ) => Promise<null> | null),
+      ) => Promise<PostFilesResourcePost200> | PostFilesResourcePost200),
   options?: RequestHandlerOptions,
 ) => {
   return http.post(
     "*/resource",
     async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
       await delay(200);
-      if (typeof overrideResponse === "function") {
-        await overrideResponse(info);
-      }
 
-      return new HttpResponse(null, { status: 200 });
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPostFilesResourcePostResponseMock(),
+        { status: 200 },
+      );
     },
     options,
   );

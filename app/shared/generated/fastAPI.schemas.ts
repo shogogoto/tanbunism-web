@@ -1633,6 +1633,8 @@ export type SaveUserAchievementUserAchievementBatchPostParams = {
 
 export type PostTextResourceTextPost200 = { [key: string]: string };
 
+export type PostFilesResourcePost200 = { [key: string]: string[] };
+
 export type GetPersonalTanbunsDashboardTanbunsGetParams = {
   /**
    * @minimum 1

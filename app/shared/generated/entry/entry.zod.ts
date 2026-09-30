@@ -347,7 +347,10 @@ export const PostFilesResourcePostBody = zod.object({
   files: zod.array(zod.instanceof(File)),
 });
 
-export const PostFilesResourcePostResponse = zod.null();
+export const PostFilesResourcePostResponse = zod.record(
+  zod.string(),
+  zod.array(zod.string()),
+);
 
 /**
  * リソース詳細.

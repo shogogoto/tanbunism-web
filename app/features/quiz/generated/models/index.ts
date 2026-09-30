@@ -45,6 +45,7 @@ export * from "./nameSpaceRoots";
 export * from "./nameSpaceStats";
 export * from "./neo4jDateTime";
 export * from "./paging";
+export * from "./postFilesResourcePost200";
 export * from "./postTextResourceTextPost200";
 export * from "./prepareStudyPlanRequest";
 export * from "./prepareStudyPlanResult";

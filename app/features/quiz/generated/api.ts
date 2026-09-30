@@ -21,6 +21,7 @@ import type {
   ListQuizQuizGetParams,
   ManagedQuizResult,
   NameSpace,
+  PostFilesResourcePost200,
   PostTextResourceTextPost200,
   PrepareStudyPlanRequest,
   PrepareStudyPlanResult,
@@ -321,7 +322,7 @@ export const previewTextUpdateResourceTextPreviewPost = async (
 };
 
 export type postFilesResourcePostResponse200 = {
-  data: null;
+  data: PostFilesResourcePost200;
   status: 200;
 };
 
