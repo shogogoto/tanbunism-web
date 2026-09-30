@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
+import ResourceLearningOverview from "~/features/dashboard/ResourceLearningOverview";
 import QuizList, { formatCompactQuizDate } from "./QuizList";
 
 vi.mock("~/shared/hooks/use-mobile", () => ({
@@ -121,6 +122,13 @@ const server = setupServer(
     return HttpResponse.json({ data: [managedQuiz], total: 1 });
   }),
   http.delete("*/quiz/quiz-1", () => new HttpResponse(null, { status: 204 })),
+  http.post("*/quiz/created/delete", () =>
+    HttpResponse.json({
+      deleted_count: 1,
+      deleted_answer_count: 0,
+      skipped_count: 0,
+    }),
+  ),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -150,25 +158,11 @@ it("作成日時を現在日からの距離に応じて短く表示する", () =
   );
 });
 
-it("Resourceを開いて作成したQuizを確認して削除する", async () => {
+it("作成したQuizを確認して削除する", async () => {
   const user = userEvent.setup();
   renderQuizList();
 
-  expect(await screen.findByText("代数学ノート")).toBeInTheDocument();
-  expect(screen.queryByText(quiz.statement)).not.toBeInTheDocument();
-  expect(searchRequests).toHaveLength(0);
-
-  await user.click(screen.getByRole("button", { name: /代数学ノート/ }));
-
-  expect(await screen.findByText("用語→単文 1")).toBeInTheDocument();
   expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
-  expect(searchRequests.at(-1)).toContain("resource_id=resource-1");
-  expect(screen.getByText("7月28日")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /作成日時/ })).toHaveAttribute(
-    "aria-label",
-    expect.stringContaining("2026"),
-  );
-  await user.click(screen.getByText(quiz.statement));
   expect(screen.getByText("正解")).toBeInTheDocument();
 
   await user.click(screen.getByRole("button", { name: "削除" }));
@@ -178,9 +172,26 @@ it("Resourceを開いて作成したQuizを確認して削除する", async () =
   await user.click(screen.getByRole("button", { name: "削除する" }));
 
   expect(
-    await screen.findByText("このResourceから作成したクイズはありません。"),
+    await screen.findByText("条件に合う作成済みクイズはありません。"),
   ).toBeInTheDocument();
   expect(screen.queryByText(quiz.statement)).not.toBeInTheDocument();
+});
+
+it("選択したQuizを一括削除する", async () => {
+  const user = userEvent.setup();
+  renderQuizList();
+
+  await user.click(
+    await screen.findByRole("checkbox", {
+      name: `クイズを選択: ${quiz.statement}`,
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "1件を削除" }));
+  await user.click(screen.getByRole("button", { name: "まとめて削除する" }));
+
+  expect(
+    await screen.findByText("条件に合う作成済みクイズはありません。"),
+  ).toBeInTheDocument();
 });
 
 it("Resourceを指定した画面ではクイズを絞り込める", async () => {
@@ -198,7 +209,11 @@ it("Resourceを指定した画面ではクイズを絞り込める", async () =>
 });
 
 it("Resourceごとの学習指標を表示する", async () => {
-  renderQuizList();
+  render(
+    <MemoryRouter>
+      <ResourceLearningOverview />
+    </MemoryRouter>,
+  );
 
   expect(await screen.findAllByText("Coverage")).toHaveLength(2);
   expect(screen.getByText("未着手ノート")).toBeInTheDocument();
@@ -206,5 +221,5 @@ it("Resourceごとの学習指標を表示する", async () => {
   expect(screen.getAllByText("Accuracy")).toHaveLength(2);
   expect(screen.getAllByText("50%")).toHaveLength(2);
   expect(screen.getAllByText("100%")).toHaveLength(1);
-  expect(screen.getByText("0問作成済み")).toBeInTheDocument();
+  expect(screen.getByText("0問")).toBeInTheDocument();
 });

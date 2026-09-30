@@ -17,6 +17,7 @@ import {
 import { useGetNamaspaceNamespaceGet } from "~/shared/generated/entry/entry";
 import PersonalTimeline from "./PersonalTimeline";
 import QuizTimeline from "./QuizTimeline";
+import ResourceLearningOverview from "./ResourceLearningOverview";
 import {
   type DashboardSection,
   dashboardSections,
@@ -38,10 +39,11 @@ export default function Dashboard() {
   const [mountedSections, setMountedSections] = useState<Set<DashboardSection>>(
     () => new Set([activeSection]),
   );
+  const renderedSections = new Set(mountedSections).add(activeSection);
   const touchGesture = useRef<SwipeGesture | undefined>(undefined);
   const namespace = useGetNamaspaceNamespaceGet({
     fetch: { credentials: "include" },
-    swr: { enabled: mountedSections.has("notes") },
+    swr: { enabled: renderedSections.has("notes") },
   });
 
   useEffect(() => {
@@ -52,6 +54,9 @@ export default function Dashboard() {
   }, [activeSection]);
 
   function setActiveSection(section: DashboardSection) {
+    setMountedSections((current) =>
+      current.has(section) ? current : new Set([...current, section]),
+    );
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       if (section === "timeline") next.delete("view");
@@ -111,27 +116,28 @@ export default function Dashboard() {
           }}
         >
           <div className="relative">
-            {mountedSections.has("timeline") && (
+            {renderedSections.has("timeline") && (
               <div hidden={activeSection !== "timeline"}>
                 <PersonalTimeline />
               </div>
             )}
-            {mountedSections.has("quiz-timeline") && (
+            {renderedSections.has("quiz-timeline") && (
               <div hidden={activeSection !== "quiz-timeline"}>
                 <QuizTimeline />
               </div>
             )}
-            {mountedSections.has("answers") && (
+            {renderedSections.has("answers") && (
               <div hidden={activeSection !== "answers"}>
                 <AnswerHistory />
               </div>
             )}
-            {mountedSections.has("notes") && (
+            {renderedSections.has("notes") && (
               <div hidden={activeSection !== "notes"}>
                 <Dialog>
                   <Card>
                     <CardContent className="p-4 sm:p-6">
                       <NamespaceExplorer nsprops={namespace} />
+                      <ResourceLearningOverview />
                     </CardContent>
                   </Card>
                   <DialogTrigger asChild>
@@ -150,12 +156,12 @@ export default function Dashboard() {
                 </Dialog>
               </div>
             )}
-            {mountedSections.has("study-plans") && (
+            {renderedSections.has("study-plans") && (
               <div hidden={activeSection !== "study-plans"}>
                 <StudyPlanManager />
               </div>
             )}
-            {mountedSections.has("quiz-management") && (
+            {renderedSections.has("quiz-management") && (
               <div hidden={activeSection !== "quiz-management"}>
                 <QuizList embedded />
               </div>

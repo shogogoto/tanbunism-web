@@ -1,7 +1,5 @@
-import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import HybridTooltip from "~/shared/components/HybridTooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,20 +20,12 @@ import {
   CardHeader,
   CardTitle,
 } from "~/shared/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "~/shared/components/ui/collapsible";
 import BrokenQuizManager from "./BrokenQuizManager";
 import {
   type ManagedQuiz,
-  type QuizResourceStatus,
-  type ResourceLearningStatus,
   type StudyResource,
   deleteQuiz,
-  getLearningProgress,
-  listCreatedQuizResources,
+  deleteQuizzes,
   listStudyResources,
   searchCreatedQuizzes,
 } from "./api";
@@ -45,9 +35,8 @@ type LoadState =
   | {
       status: "loaded";
       resources: StudyResource[];
-      createdByResource: Map<string, QuizResourceStatus>;
-      learningByResource: Map<string, ResourceLearningStatus>;
-      quizzes?: ManagedQuiz[];
+      quizzes: ManagedQuiz[];
+      total: number;
     }
   | { status: "error"; message: string };
 
@@ -209,282 +198,16 @@ export function formatCompactQuizDate(value: string, now = new Date()): string {
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
-function FullCreatedAt({ value }: { value: string }) {
-  const date = new Date(value);
-  const full = new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).format(date);
-
-  return (
-    <HybridTooltip content={`作成日時 ${full}`}>
-      <button
-        type="button"
-        className="shrink-0 rounded-sm px-1 tabular-nums hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={`作成日時 ${full}`}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <time dateTime={value}>{formatCompactQuizDate(value)}</time>
-      </button>
-    </HybridTooltip>
-  );
-}
-
-function CompactLearningProgress({
-  status,
-}: {
-  status: ResourceLearningStatus;
-}) {
-  const attempts = Object.values(status.by_quiz_type).reduce(
-    (total, learning) => total + learning.performance.attempts,
-    0,
-  );
-
-  return (
-    <div className="grid shrink-0 grid-cols-3 gap-3 text-right text-xs sm:gap-5">
-      <div title="対象単文にクイズを用意した割合">
-        <div className="font-semibold tabular-nums">
-          <Percentage value={status.overall_coverage} />
-        </div>
-        <div className="text-muted-foreground">Coverage</div>
-      </div>
-      <div title="用意したクイズに回答した割合">
-        <div className="font-semibold tabular-nums">
-          <Percentage value={status.overall_attempt_rate} />
-        </div>
-        <div className="text-muted-foreground">Attempt</div>
-      </div>
-      <div title="回答の正答率">
-        <div className="font-semibold tabular-nums">
-          {attempts === 0 ? (
-            "—"
-          ) : (
-            <Percentage value={status.overall_accuracy} />
-          )}
-        </div>
-        <div className="text-muted-foreground">Accuracy</div>
-      </div>
-    </div>
-  );
-}
-
-function CompactQuiz({
-  managed,
-  onDelete,
-}: {
-  managed: ManagedQuiz;
-  onDelete: (quizId: string) => Promise<void>;
-}) {
-  const { quiz } = managed;
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  async function handleDelete() {
-    setIsDeleting(true);
-    try {
-      await onDelete(quiz.quiz_id);
-    } finally {
-      setIsDeleting(false);
-    }
-  }
-
-  return (
-    <details className="group border-t first:border-t-0">
-      <summary className="cursor-pointer list-none px-3 py-3 hover:bg-muted/40">
-        <div className="flex items-start gap-2">
-          <ChevronRight className="mt-0.5 size-4 shrink-0 transition-transform group-open:rotate-90" />
-          <div className="min-w-0 flex-1">
-            <p className="whitespace-pre-line text-sm leading-relaxed">
-              {quiz.statement}
-            </p>
-            <div className="mt-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-              <span>
-                {managed.attempts === 0
-                  ? "未回答"
-                  : `${managed.attempts}回答 · 正答率 ${Math.round(
-                      (managed.accuracy ?? 0) * 100,
-                    )}%`}
-              </span>
-              <FullCreatedAt value={quiz.created} />
-            </div>
-          </div>
-        </div>
-      </summary>
-      <div className="space-y-2 bg-muted/20 px-4 pb-4 pt-2">
-        {Object.entries(quiz.options).map(([optionId, option]) => (
-          <div key={optionId} className="flex items-start gap-2 text-sm">
-            {quiz.correct.includes(optionId) && (
-              <Badge className="shrink-0">正解</Badge>
-            )}
-            <span>{option}</span>
-          </div>
-        ))}
-        <div className="flex justify-end pt-1">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button type="button" variant="ghost" size="sm">
-                削除
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>クイズを削除しますか？</AlertDialogTitle>
-                <AlertDialogDescription>
-                  このクイズに対する回答履歴も削除されます。元の単文や知識関係は削除されません。
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                <AlertDialogAction disabled={isDeleting} onClick={handleDelete}>
-                  {isDeleting ? "削除中…" : "削除する"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </div>
-    </details>
-  );
-}
-
-function ResourceDisclosure({
-  resource,
-  status,
-  learning,
-  embedded,
-}: {
-  resource: StudyResource;
-  status?: QuizResourceStatus;
-  learning?: ResourceLearningStatus;
-  embedded: boolean;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [quizzes, setQuizzes] = useState<ManagedQuiz[]>();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>();
-  const [quizCount, setQuizCount] = useState(status?.total_quizzes ?? 0);
-  const counts = Object.entries(status?.quiz_counts ?? {});
-
-  async function handleOpenChange(open: boolean) {
-    setIsOpen(open);
-    if (!open || quizzes || quizCount === 0) return;
-    setIsLoading(true);
-    setError(undefined);
-    try {
-      const result = await searchCreatedQuizzes({
-        resource_id: resource.uid,
-        page: 1,
-        size: 100,
-      });
-      setQuizzes(result.data);
-    } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "クイズを取得できませんでした。",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function handleDelete(quizId: string) {
-    await deleteQuiz(quizId);
-    setQuizzes((current) =>
-      current?.filter(({ quiz }) => quiz.quiz_id !== quizId),
-    );
-    setQuizCount((current) => Math.max(0, current - 1));
-  }
-
-  return (
-    <Collapsible
-      open={isOpen}
-      onOpenChange={handleOpenChange}
-      className="rounded-md border bg-card"
-    >
-      <CollapsibleTrigger asChild>
-        <button
-          type="button"
-          className="group flex w-full items-center gap-3 p-3 text-left hover:bg-muted/40 sm:p-4"
-        >
-          <ChevronRight className="size-5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-medium">{resource.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {quizCount}問作成済み
-            </p>
-          </div>
-          {learning && <CompactLearningProgress status={learning} />}
-        </button>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="border-t">
-          <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-            {counts.map(([type, count]) => (
-              <Badge key={type} variant="secondary">
-                {quizTypeLabels[type as keyof typeof quizTypeLabels] ?? type}{" "}
-                {count}
-              </Badge>
-            ))}
-            <div className="ml-auto flex gap-3 text-xs">
-              <Link
-                className="underline underline-offset-4"
-                to={`/resource/${resource.uid}`}
-              >
-                単文を見る
-              </Link>
-              <Link
-                className="underline underline-offset-4"
-                to={
-                  embedded
-                    ? `?view=quiz-management&resource=${resource.uid}`
-                    : `?resource=${resource.uid}`
-                }
-              >
-                絞り込む
-              </Link>
-            </div>
-          </div>
-          {isLoading && (
-            <p className="border-t p-4 text-sm text-muted-foreground">
-              クイズを読み込み中…
-            </p>
-          )}
-          {error && (
-            <p role="alert" className="border-t p-4 text-sm text-destructive">
-              {error}
-            </p>
-          )}
-          {!isLoading && !error && quizCount === 0 && (
-            <p className="border-t p-4 text-sm text-muted-foreground">
-              このResourceから作成したクイズはありません。
-            </p>
-          )}
-          {!isLoading &&
-            !error &&
-            quizzes?.map((managed) => (
-              <CompactQuiz
-                key={managed.quiz.quiz_id}
-                managed={managed}
-                onDelete={handleDelete}
-              />
-            ))}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
 function QuizCard({
   managed,
   onDelete,
+  selected,
+  onSelectedChange,
 }: {
   managed: ManagedQuiz;
   onDelete: (quizId: string) => Promise<void>;
+  selected: boolean;
+  onSelectedChange: (selected: boolean) => void;
 }) {
   const { quiz } = managed;
   const [isDeleting, setIsDeleting] = useState(false);
@@ -509,9 +232,18 @@ function QuizCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="whitespace-pre-line text-base leading-relaxed">
-          {quiz.statement}
-        </CardTitle>
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-1 size-4 shrink-0"
+            checked={selected}
+            onChange={(event) => onSelectedChange(event.target.checked)}
+            aria-label={`クイズを選択: ${quiz.statement}`}
+          />
+          <CardTitle className="whitespace-pre-line text-base leading-relaxed">
+            {quiz.statement}
+          </CardTitle>
+        </div>
       </CardHeader>
       <CardContent className="space-y-2">
         {Object.entries(quiz.options).map(([optionId, option]) => (
@@ -524,7 +256,7 @@ function QuizCard({
           </div>
         ))}
         <p className="text-xs text-muted-foreground">
-          作成日時: {new Date(quiz.created).toLocaleString("ja-JP")}
+          作成日時: {formatCompactQuizDate(quiz.created)}
         </p>
         <p className="text-xs text-muted-foreground">
           回答: {managed.attempts}回 · 正答率:{" "}
@@ -573,55 +305,49 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
   const sentenceId = searchParams.get("sentence") ?? undefined;
   const [filters, setFilters] = useState<QuizFilters>(emptyFilters);
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
+  const [selectedQuizIds, setSelectedQuizIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState<string>();
 
   useEffect(() => {
     let active = true;
 
     Promise.all([
       listStudyResources(),
-      listCreatedQuizResources(),
-      resourceId
-        ? searchCreatedQuizzes({
-            resource_id: resourceId,
-            sentence_id: sentenceId,
-            quiz_types:
-              filters.quizTypes.length > 0 ? filters.quizTypes : undefined,
-            answered:
-              filters.answered === "" ? undefined : filters.answered === "true",
-            created_from: filters.createdFrom
-              ? `${filters.createdFrom}T00:00:00+09:00`
-              : undefined,
-            created_to: filters.createdTo
-              ? `${filters.createdTo}T23:59:59+09:00`
-              : undefined,
-            min_accuracy: filters.minAccuracy
-              ? Number(filters.minAccuracy) / 100
-              : undefined,
-            max_accuracy: filters.maxAccuracy
-              ? Number(filters.maxAccuracy) / 100
-              : undefined,
-            page: 1,
-            size: 100,
-          }).then(({ data }) => data)
-        : Promise.resolve(undefined),
+      searchCreatedQuizzes({
+        resource_id: resourceId,
+        sentence_id: sentenceId,
+        quiz_types:
+          filters.quizTypes.length > 0 ? filters.quizTypes : undefined,
+        answered:
+          filters.answered === "" ? undefined : filters.answered === "true",
+        created_from: filters.createdFrom
+          ? `${filters.createdFrom}T00:00:00+09:00`
+          : undefined,
+        created_to: filters.createdTo
+          ? `${filters.createdTo}T23:59:59+09:00`
+          : undefined,
+        min_accuracy: filters.minAccuracy
+          ? Number(filters.minAccuracy) / 100
+          : undefined,
+        max_accuracy: filters.maxAccuracy
+          ? Number(filters.maxAccuracy) / 100
+          : undefined,
+        page: 1,
+        size: 100,
+      }),
     ])
-      .then(async ([resources, createdStatuses, quizzes]) => {
-        const learning = await Promise.all(
-          resources.map(
-            async (resource) =>
-              [resource.uid, await getLearningProgress(resource.uid)] as const,
-          ),
-        );
+      .then(([resources, result]) => {
         if (active) {
           setLoadState({
             status: "loaded",
             resources,
-            createdByResource: new Map(
-              createdStatuses.map((status) => [status.resource.uid, status]),
-            ),
-            learningByResource: new Map(learning),
-            quizzes,
+            quizzes: result.data,
+            total: result.total,
           });
+          setSelectedQuizIds(new Set());
         }
       })
       .catch((error: unknown) => {
@@ -647,12 +373,47 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
       current.status === "loaded"
         ? {
             ...current,
-            quizzes: current.quizzes?.filter(
+            quizzes: current.quizzes.filter(
               ({ quiz }) => quiz.quiz_id !== quizId,
             ),
+            total: Math.max(0, current.total - 1),
           }
         : current,
     );
+    setSelectedQuizIds((current) => {
+      if (!current.has(quizId)) return current;
+      const next = new Set(current);
+      next.delete(quizId);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    setIsBulkDeleting(true);
+    setBulkDeleteError(undefined);
+    try {
+      await deleteQuizzes([...selectedQuizIds]);
+      setLoadState((current) =>
+        current.status === "loaded"
+          ? {
+              ...current,
+              quizzes: current.quizzes.filter(
+                ({ quiz }) => !selectedQuizIds.has(quiz.quiz_id),
+              ),
+              total: Math.max(0, current.total - selectedQuizIds.size),
+            }
+          : current,
+      );
+      setSelectedQuizIds(new Set());
+    } catch (error) {
+      setBulkDeleteError(
+        error instanceof Error
+          ? error.message
+          : "選択したクイズを削除できませんでした。",
+      );
+    } finally {
+      setIsBulkDeleting(false);
+    }
   }
 
   const selectedResource =
@@ -696,29 +457,9 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
           {loadState.message}
         </p>
       )}
-      {loadState.status === "loaded" && !resourceId && (
+      {loadState.status === "loaded" && (
         <section className="space-y-3">
-          {embedded && <BrokenQuizManager />}
-          <h2 className="text-lg font-semibold">Resource別の学習状況</h2>
-          {loadState.resources.length === 0 ? (
-            <p className="border p-4 text-sm text-muted-foreground">
-              学習対象のResourceはありません。
-            </p>
-          ) : (
-            loadState.resources.map((resource) => (
-              <ResourceDisclosure
-                key={resource.uid}
-                resource={resource}
-                status={loadState.createdByResource.get(resource.uid)}
-                learning={loadState.learningByResource.get(resource.uid)}
-                embedded={embedded}
-              />
-            ))
-          )}
-        </section>
-      )}
-      {loadState.status === "loaded" && resourceId && (
-        <section className="space-y-3">
+          {embedded && !resourceId && <BrokenQuizManager />}
           {resourceId && (
             <Button asChild variant="ghost" size="sm">
               <Link
@@ -732,18 +473,86 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
             {resourceId ? "このResourceのクイズ" : "作成済みクイズ"}
           </h2>
           <QuizSearchFilters filters={filters} onChange={setFilters} />
-          {loadState.quizzes?.length === 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={
+                  loadState.quizzes.length > 0 &&
+                  loadState.quizzes.every(({ quiz }) =>
+                    selectedQuizIds.has(quiz.quiz_id),
+                  )
+                }
+                onChange={(event) =>
+                  setSelectedQuizIds(
+                    event.target.checked
+                      ? new Set(
+                          loadState.quizzes.map(({ quiz }) => quiz.quiz_id),
+                        )
+                      : new Set(),
+                  )
+                }
+              />
+              表示中をすべて選択
+            </label>
+            <span className="text-xs text-muted-foreground">
+              {loadState.total}件
+            </span>
+            {selectedQuizIds.size > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button className="ml-auto" variant="destructive" size="sm">
+                    {selectedQuizIds.size}件を削除
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      選択した{selectedQuizIds.size}件を削除しますか？
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      対象クイズの回答履歴も削除されます。元の単文や知識関係は削除されません。
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={isBulkDeleting}
+                      onClick={handleBulkDelete}
+                    >
+                      {isBulkDeleting ? "削除中…" : "まとめて削除する"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+          {bulkDeleteError && (
+            <p role="alert" className="text-sm text-destructive">
+              {bulkDeleteError}
+            </p>
+          )}
+          {loadState.quizzes.length === 0 ? (
             <p className="border p-4 text-sm text-muted-foreground">
               {resourceId
                 ? "このResourceから作成したクイズはありません。"
                 : "条件に合う作成済みクイズはありません。"}
             </p>
           ) : (
-            loadState.quizzes?.map((managed) => (
+            loadState.quizzes.map((managed) => (
               <QuizCard
                 key={managed.quiz.quiz_id}
                 managed={managed}
                 onDelete={handleDelete}
+                selected={selectedQuizIds.has(managed.quiz.quiz_id)}
+                onSelectedChange={(selected) =>
+                  setSelectedQuizIds((current) => {
+                    const next = new Set(current);
+                    if (selected) next.add(managed.quiz.quiz_id);
+                    else next.delete(managed.quiz.quiz_id);
+                    return next;
+                  })
+                }
               />
             ))
           )}

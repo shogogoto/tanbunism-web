@@ -67,6 +67,11 @@ export type PrepareStudyPlanResult = StudyPlanPreparationStatus & {
   requested_count: number;
   added_count: number;
 };
+export type DeleteQuizzesResult = {
+  deleted_count: number;
+  deleted_answer_count: number;
+  skipped_count: number;
+};
 
 export type BrokenQuizReference = {
   quiz_id: string;
@@ -533,6 +538,34 @@ export async function deleteQuiz(quizId: string): Promise<void> {
     "learning-progress",
     "quiz-chain",
   );
+}
+
+export async function deleteQuizzes(
+  quizIds: string[],
+): Promise<DeleteQuizzesResult> {
+  const response = await fetch(`${API_BASE_URL}/quiz/created/delete`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ quiz_ids: quizIds }),
+  });
+  if (!response.ok) {
+    throw new QuizApiError(
+      "選択したクイズを削除できませんでした。",
+      response.status,
+    );
+  }
+  const result = (await response.json()) as DeleteQuizzesResult;
+  await invalidateQuizCache(
+    "answer-history",
+    "created-list",
+    "created-resources",
+    "created-search",
+    "created-sentences",
+    "learning-progress",
+    "quiz-chain",
+  );
+  return result;
 }
 
 export async function listBrokenQuizReferences(): Promise<
