@@ -151,6 +151,7 @@ export default function QuizAttempt({
           <Button
             type="button"
             size="sm"
+            data-quiz-submit
             disabled={
               isSubmitting || (!quiz.no_correct_option && selected.length === 0)
             }

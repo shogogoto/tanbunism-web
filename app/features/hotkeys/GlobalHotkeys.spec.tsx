@@ -99,11 +99,11 @@ it("g nで通知へ移動する", async () => {
   );
 });
 
-it("g +で読書メモ取り込みへ移動する", async () => {
+it("g iで読書メモ取り込みへ移動する", async () => {
   const user = userEvent.setup();
   renderHotkeys();
 
-  await user.keyboard("g+");
+  await user.keyboard("gi");
 
   expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
     "/import",
@@ -231,4 +231,59 @@ it("hとlで前後のタブへ移動する", async () => {
 
   expect(selectNext).toHaveBeenCalledOnce();
   expect(screen.getByRole("tab", { name: "次のタブ" })).toHaveFocus();
+});
+
+it("Ctrlと数字で指定位置のタブへ移動する", async () => {
+  const user = userEvent.setup();
+  const selectThird = vi.fn();
+  renderHotkeys(
+    <div role="tablist">
+      <button type="button" role="tab" aria-selected="true">
+        1番目
+      </button>
+      <button type="button" role="tab" aria-selected="false">
+        2番目
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected="false"
+        onClick={selectThird}
+      >
+        3番目
+      </button>
+    </div>,
+  );
+
+  await user.keyboard("{Control>}3{/Control}");
+
+  expect(selectThird).toHaveBeenCalledOnce();
+});
+
+it("クイズTLではSpaceで開きEnterで回答する", async () => {
+  const user = userEvent.setup();
+  const toggle = vi.fn();
+  const submit = vi.fn();
+  renderHotkeys(
+    <div data-quiz-timeline-card data-quiz-open="true">
+      <button
+        type="button"
+        data-hotkey-item
+        data-hotkey-active="true"
+        onClick={toggle}
+      >
+        current quiz
+      </button>
+      <button type="button" data-quiz-submit onClick={submit}>
+        回答する
+      </button>
+    </div>,
+  );
+
+  await user.keyboard(" ");
+  expect(toggle).toHaveBeenCalledOnce();
+
+  await user.keyboard("{Enter}");
+  expect(submit).toHaveBeenCalledOnce();
+  expect(toggle).toHaveBeenCalledOnce();
 });

@@ -30,6 +30,7 @@ const HotkeyContext = createContext<HotkeyContextValue | null>(null);
 
 export function HotkeyProvider({ children }: PropsWithChildren) {
   const { isAuthenticated } = useAuth();
+  const { pathname, search } = useLocation();
   const [helpOpen, setHelpOpen] = useState(false);
   const openHelp = useCallback(() => setHelpOpen(true), []);
 
@@ -51,20 +52,16 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
                 <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
                 <HotkeyRow keys={["g", "p"]} label="プロフィールへ移動" />
                 <HotkeyRow keys={["g", "n"]} label="通知へ移動" />
-                <HotkeyRow keys={["g", "+"]} label="読書メモを取り込む" />
+                <HotkeyRow keys={["g", "i"]} label="読書メモを取り込む" />
               </>
             )}
             <HotkeyRow keys={["g", "s"]} label="検索へ移動" />
             <HotkeyRow keys={["g", "q"]} label="クイズへ移動" />
             <HotkeyRow keys={["h", "l"]} label="前後のタブへ移動" />
-            <HotkeyRow keys={["j", "k"]} label="項目を移動" />
-            <HotkeyRow
-              keys={["1", "2", "3", "4"]}
-              label="クイズの選択肢を切替"
-            />
-            <HotkeyRow keys={["Enter"]} label="選択した項目を開く" />
+            <HotkeyRow keys={["Ctrl", "1–9"]} label="番号のタブへ移動" />
             <HotkeyRow keys={["/"]} label="検索入力へフォーカス" />
             <HotkeyRow keys={["?"]} label="この一覧を開く" />
+            <ContextHotkeyRows pathname={pathname} search={search} />
           </dl>
         </DialogContent>
       </Dialog>
@@ -125,7 +122,6 @@ export default function GlobalHotkeys() {
       if (
         event.defaultPrevented ||
         event.isComposing ||
-        event.ctrlKey ||
         event.metaKey ||
         event.altKey ||
         isEditableTarget(event.target)
@@ -136,6 +132,14 @@ export default function GlobalHotkeys() {
 
       const key = event.key.toLowerCase();
       const dialogOpen = document.querySelector('[role="dialog"]');
+
+      if (event.ctrlKey) {
+        if (/^[1-9]$/.test(key) && activateTabByIndex(Number(key) - 1)) {
+          event.preventDefault();
+        }
+        resetChord();
+        return;
+      }
 
       if (key === "?" && !dialogOpen) {
         event.preventDefault();
@@ -160,6 +164,18 @@ export default function GlobalHotkeys() {
         if (moveActiveItem(key === "j" ? 1 : -1, dialogOpen)) {
           event.preventDefault();
         }
+        resetChord();
+        return;
+      }
+
+      if (!waitingForDestination.current && key === " ") {
+        if (toggleActiveQuizCard()) event.preventDefault();
+        resetChord();
+        return;
+      }
+
+      if (!waitingForDestination.current && key === "enter") {
+        if (submitActiveQuiz()) event.preventDefault();
         resetChord();
         return;
       }
@@ -196,7 +212,7 @@ export default function GlobalHotkeys() {
           ? () => navigate(`/user/${user.username || user.uid}`)
           : undefined,
         n: isAuthenticated ? () => navigate("/notifications") : undefined,
-        "+": isAuthenticated ? () => navigate("/import") : undefined,
+        i: isAuthenticated ? () => navigate("/import") : undefined,
         s: () => navigate("/search"),
         q: () => navigate("/quiz"),
       };
@@ -214,6 +230,67 @@ export default function GlobalHotkeys() {
   }, [isAuthenticated, navigate, openHelp, openHistory, pathname, user]);
 
   return null;
+}
+
+function ContextHotkeyRows({
+  pathname,
+  search,
+}: {
+  pathname: string;
+  search: string;
+}) {
+  if (pathname.startsWith("/search")) {
+    return (
+      <>
+        <HotkeyRow keys={["j", "k"]} label="検索結果を移動" />
+        <HotkeyRow keys={["Enter"]} label="検索結果を開く" />
+      </>
+    );
+  }
+  if (pathname !== "/dashboard") return null;
+  const view = new URLSearchParams(search).get("view") ?? "timeline";
+  if (view === "quiz-timeline") {
+    return (
+      <>
+        <HotkeyRow keys={["j", "k"]} label="クイズを移動" />
+        <HotkeyRow keys={["Space"]} label="選択中のクイズを開閉" />
+        <HotkeyRow keys={["1–9"]} label="選択肢を切替" />
+        <HotkeyRow keys={["Enter"]} label="回答する" />
+      </>
+    );
+  }
+  if (view === "timeline") {
+    return (
+      <>
+        <HotkeyRow keys={["j", "k"]} label="単文を移動" />
+        <HotkeyRow keys={["Space"]} label="見たよを記録" />
+        <HotkeyRow keys={["Enter"]} label="単文を開く" />
+      </>
+    );
+  }
+  return null;
+}
+
+function toggleActiveQuizCard(): boolean {
+  const active = document.querySelector<HTMLElement>(
+    '[data-quiz-timeline-card] [data-hotkey-item][data-hotkey-active="true"]',
+  );
+  if (!active) return false;
+  active.click();
+  return true;
+}
+
+function submitActiveQuiz(): boolean {
+  const active = document.querySelector<HTMLElement>(
+    '[data-quiz-timeline-card] [data-hotkey-item][data-hotkey-active="true"]',
+  );
+  const card = active?.closest<HTMLElement>("[data-quiz-timeline-card]");
+  if (!card) return false;
+  if (card.dataset.quizOpen === "true") {
+    const submit = card.querySelector<HTMLButtonElement>("[data-quiz-submit]");
+    if (submit && !submit.disabled) submit.click();
+  }
+  return true;
 }
 
 function toggleActiveQuizOption(index: string): boolean {
@@ -282,6 +359,20 @@ function moveActiveTab(offset: -1 | 1): boolean {
   nextTab?.focus();
   nextTab?.click();
   return Boolean(nextTab);
+}
+
+function activateTabByIndex(index: number): boolean {
+  const tabLists = Array.from(document.querySelectorAll('[role="tablist"]'));
+  const visibleTabList = tabLists.find(
+    (element) => !element.closest("[hidden]"),
+  );
+  const tab = visibleTabList?.querySelectorAll<HTMLElement>(
+    '[role="tab"]:not([disabled])',
+  )[index];
+  if (!tab) return false;
+  tab.focus();
+  tab.click();
+  return true;
 }
 
 function moveActiveItem(offset: -1 | 1, dialog: Element | null): boolean {
