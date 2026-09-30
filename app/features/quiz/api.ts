@@ -73,6 +73,18 @@ export type DeleteQuizzesResult = {
   skipped_count: number;
 };
 
+export type ResourceSentenceCandidate = {
+  uid: string;
+  sentence: string;
+};
+
+export type QuizReattachmentResult = {
+  quiz_targets: number;
+  quiz_options: number;
+  quiz_corrects: number;
+  retained: boolean;
+};
+
 export type BrokenQuizReference = {
   quiz_id: string;
   quiz_type: QuizType;
@@ -581,4 +593,58 @@ export async function listBrokenQuizReferences(): Promise<
     );
   }
   return (await response.json()) as BrokenQuizReference[];
+}
+
+export async function listResourceSentenceCandidates(
+  resourceId: string,
+): Promise<ResourceSentenceCandidate[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/resource/${encodeURIComponent(resourceId)}`,
+    { credentials: "include" },
+  );
+  if (!response.ok) {
+    throw new QuizApiError(
+      "Resourceの現行単文を取得できませんでした。",
+      response.status,
+    );
+  }
+  const detail = (await response.json()) as {
+    uids?: Record<string, unknown>;
+  };
+  return Object.entries(detail.uids ?? {}).flatMap(([uid, value]) =>
+    typeof value === "string" ? [{ uid, sentence: value }] : [],
+  );
+}
+
+export async function repairBrokenQuizReference(
+  quizId: string,
+  retiredSentenceId: string,
+  replacementSentenceId: string,
+): Promise<QuizReattachmentResult> {
+  const response = await fetch(
+    `${API_BASE_URL}/quiz/${encodeURIComponent(quizId)}/broken/${encodeURIComponent(retiredSentenceId)}/reattach`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ replacement_sentence_id: replacementSentenceId }),
+    },
+  );
+  if (!response.ok) {
+    throw new QuizApiError(
+      "クイズの参照を修復できませんでした。",
+      response.status,
+    );
+  }
+  const result = (await response.json()) as QuizReattachmentResult;
+  await invalidateQuizCache(
+    "answer-history",
+    "created-list",
+    "created-resources",
+    "created-search",
+    "created-sentences",
+    "learning-progress",
+    "quiz-chain",
+  );
+  return result;
 }

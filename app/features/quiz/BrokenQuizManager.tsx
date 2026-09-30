@@ -15,6 +15,7 @@ import {
 } from "~/shared/components/ui/alert-dialog";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
+import BrokenQuizRepairDialog from "./BrokenQuizRepairDialog";
 import {
   type BrokenQuizReference,
   deleteQuiz,
@@ -222,12 +223,19 @@ export default function BrokenQuizManager() {
                 {resourceNames.get(first.resource_id) ?? "元Resourceを開く"}
               </Link>
               {references.map((reference) => (
-                <p
+                <div
                   key={reference.retired_sentence_id}
-                  className="truncate text-muted-foreground"
+                  className="flex items-center gap-2"
                 >
-                  {reference.roles.join(" / ")}: {reference.retired_value}
-                </p>
+                  <p className="min-w-0 flex-1 truncate text-muted-foreground">
+                    {reference.roles.join(" / ")}: {reference.retired_value}
+                  </p>
+                  <BrokenQuizRepairDialog
+                    reference={reference}
+                    resourceName={resourceNames.get(reference.resource_id)}
+                    onRepaired={load}
+                  />
+                </div>
               ))}
             </div>
             <AlertDialog>
