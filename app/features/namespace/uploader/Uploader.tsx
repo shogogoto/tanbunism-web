@@ -188,6 +188,7 @@ export default function Uploader({ refresh }: Props) {
       return;
     }
     let firstConflict: number | null = null;
+    const readyPreviews: Record<number, PreviewState> = {};
     for (const [position, index] of targetIndices.entries()) {
       const resolutions = previews[index]?.resolutions ?? [];
       setPreviewingIndex(index);
@@ -197,12 +198,17 @@ export default function Uploader({ refresh }: Props) {
       }));
       const next = await previewFile(index, resolutions);
       setPreviews((previous) => ({ ...previous, [index]: next }));
+      if (next.status === "ready") readyPreviews[index] = next;
       if (next.status === "conflict" && firstConflict === null) {
         firstConflict = index;
       }
       setProgress(((position + 1) / targetIndices.length) * 100);
     }
     setPreviewingIndex(null);
+    const readyIndices = Object.keys(readyPreviews).map(Number);
+    if (readyIndices.length > 0) {
+      await runImports(readyIndices, readyPreviews);
+    }
     if (firstConflict !== null) setConflictOpenIndex(firstConflict);
   }
 
@@ -220,6 +226,8 @@ export default function Uploader({ refresh }: Props) {
     const next = await previewFile(index, resolutions);
     setPreviews((previous) => ({ ...previous, [index]: next }));
     if (next.status === "ready") {
+      setConflictOpenIndex(null);
+      await runImports([index], { [index]: next });
       const nextConflict = sendableIndices.find(
         (candidate) =>
           candidate !== index && previews[candidate]?.status === "conflict",
@@ -228,9 +236,12 @@ export default function Uploader({ refresh }: Props) {
     }
   }
 
-  async function importFile(index: number): Promise<UploadResult> {
+  async function importFile(
+    index: number,
+    preparedPreview?: PreviewState,
+  ): Promise<UploadResult> {
     const source = files?.[index];
-    const preview = previews[index];
+    const preview = preparedPreview ?? previews[index];
     if (!source || preview?.status !== "ready") {
       return {
         ok: false,
@@ -278,13 +289,16 @@ export default function Uploader({ refresh }: Props) {
     }
   }
 
-  async function runImports(indices: number[]) {
+  async function runImports(
+    indices: number[],
+    preparedPreviews: Record<number, PreviewState> = {},
+  ) {
     if (indices.length === 0) return;
     setError(null);
     setProgress(0);
     for (const [position, index] of indices.entries()) {
       setUploadingIndex(index);
-      const result = await importFile(index);
+      const result = await importFile(index, preparedPreviews[index]);
       handleResult(index, result);
       setProgress(((position + 1) / indices.length) * 100);
     }
@@ -344,7 +358,7 @@ export default function Uploader({ refresh }: Props) {
       <div>
         <h2 className="text-lg font-semibold">読書メモを取り込む</h2>
         <p className="text-sm text-muted-foreground">
-          変更内容を確認してから、必要なファイルだけ更新します。
+          解析に成功したファイルは、そのまま取り込みます。競合だけ確認が必要です。
         </p>
       </div>
       <details className="group rounded-md border px-4 py-3 text-sm">
@@ -434,7 +448,7 @@ export default function Uploader({ refresh }: Props) {
                   ? `${previewErrorCount}件のエラーを再確認`
                   : conflictCount > 0
                     ? `${conflictCount}件の競合を確認してください`
-                    : `${sendableCount}件の変更を確認`
+                    : `${sendableCount}件を解析して取り込む`
                 : "送信対象はありません"}
       </Button>
       {error && <p className="text-sm text-destructive">{error}</p>}

@@ -81,7 +81,7 @@ describe("Uploader", () => {
     });
   });
 
-  it("保存前に変更内容を確認してから取り込める", async () => {
+  it("解析に成功したファイルをそのまま取り込む", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -92,13 +92,10 @@ describe("Uploader", () => {
     await user.click(
       screen.getByRole("button", { name: "テスト用フォルダを選択" }),
     );
-    await user.click(screen.getByRole("button", { name: "1件の変更を確認" }));
+    await user.click(
+      screen.getByRole("button", { name: "1件を解析して取り込む" }),
+    );
 
-    expect(await screen.findByText("単文追加 3")).toBeInTheDocument();
-    expect(screen.getByText("変更あり")).toBeInTheDocument();
-    expect(screen.getByText("単文更新 2")).toBeInTheDocument();
-    expect(screen.getByText("単文退役 1")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "1件を取り込む" })).toBeEnabled();
     expect(preview).toHaveBeenCalledWith(
       {
         txt: "# title\n  sentence",
@@ -107,8 +104,6 @@ describe("Uploader", () => {
       },
       { credentials: "include" },
     );
-
-    await user.click(screen.getByRole("button", { name: "1件を取り込む" }));
 
     await waitFor(() => expect(postText).toHaveBeenCalledOnce());
     expect(postText).toHaveBeenCalledWith(
@@ -148,9 +143,11 @@ describe("Uploader", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "1件の変更を確認" }),
+      screen.getByRole("button", { name: "1件を解析して取り込む" }),
     ).toBeEnabled();
-    await user.click(screen.getByRole("button", { name: "1件の変更を確認" }));
+    await user.click(
+      screen.getByRole("button", { name: "1件を解析して取り込む" }),
+    );
     await waitFor(() => expect(preview).toHaveBeenCalledOnce());
   });
 
@@ -181,12 +178,9 @@ describe("Uploader", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "2ファイルを選択" }));
-    await user.click(screen.getByRole("button", { name: "2件の変更を確認" }));
-
-    expect(
-      await screen.findByRole("button", { name: "1件を取り込む" }),
-    ).toBeEnabled();
-    await user.click(screen.getByRole("button", { name: "1件を取り込む" }));
+    await user.click(
+      screen.getByRole("button", { name: "2件を解析して取り込む" }),
+    );
 
     await waitFor(() => expect(postText).toHaveBeenCalledOnce());
     expect(postText.mock.calls[0]?.[0].path).toEqual(["humanities", "memo.tb"]);
