@@ -92,7 +92,7 @@ export default function PersonalTimeline() {
               key={item.uid}
               data-hotkey-item
               tabIndex={-1}
-              className="outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/60 data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary"
+              className="relative outline-none transition-colors after:pointer-events-none after:absolute after:inset-y-0 after:left-0 after:z-10 after:w-1.5 after:bg-transparent after:transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary data-[hotkey-active=true]:after:bg-primary data-[hotkey-active=true]:[&>[data-slot=card]]:bg-accent/70"
               onKeyDown={(event) => {
                 if (event.target !== event.currentTarget) return;
                 if (event.key === " ") {
