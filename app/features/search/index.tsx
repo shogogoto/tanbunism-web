@@ -183,8 +183,8 @@ export default function UnifiedSearch() {
   const total = enabledTypes.reduce((sum, type) => sum + state.totals[type], 0);
 
   return (
-    <div className="mx-auto min-h-full w-full max-w-3xl bg-background px-4 sm:px-6">
-      <div className="py-4">
+    <div className="mx-auto min-h-full w-full max-w-3xl bg-background px-2 sm:px-3">
+      <div className="py-2">
         <p className="text-sm text-muted-foreground">
           {isLoading && mixedResults.length === 0
             ? "検索しています…"
@@ -198,7 +198,7 @@ export default function UnifiedSearch() {
         </p>
       )}
 
-      <div className="space-y-3">
+      <div className="divide-y border-y sm:border-x">
         {mixedResults.map((result) => {
           if (result.type === "knowledge") {
             return (
@@ -441,6 +441,8 @@ function KnowledgeResult({
           </Link>
         ) : undefined
       }
+      compact
+      scorePosition="start"
     />
   );
 }
@@ -452,10 +454,10 @@ function ResourceResult({
   const { resource, resource_stats: stats, user } = value;
   return (
     <Link to={`/resource/${resource.uid}`}>
-      <Card className="border-l-4 border-l-orange-500 hover:bg-muted/40">
-        <CardContent className="space-y-2">
+      <Card className="gap-0 rounded-none border-0 border-l-2 border-l-orange-500 py-0 shadow-none hover:bg-muted/40">
+        <CardContent className="space-y-1 p-2">
           <span className="sr-only">リソース:</span>
-          <p className="font-semibold text-lg">
+          <p className="text-sm font-semibold">
             <Highlight text={resource.name} query={query} />
           </p>
           {resource.authors?.length ? (
@@ -468,7 +470,7 @@ function ResourceResult({
             <span>{user.display_name || user.username}</span>
           </div>
         </CardContent>
-        <CardFooter className="flex flex-wrap gap-2">
+        <CardFooter className="flex flex-wrap gap-1 px-2 pb-2">
           <ResourceStat Icon={Baseline} label="文字数" value={stats.n_char} />
           <ResourceStat Icon={List} label="単文数" value={stats.n_sentence} />
           <ResourceStat
@@ -512,12 +514,12 @@ function SearchMetric({
       : "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300";
   return (
     <span
-      className={`flex items-center gap-1 rounded-full border px-2 py-1 ${color}`}
+      className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 ${color}`}
       aria-label={`${label}: ${value}`}
       title={`${label}: ${value}`}
     >
-      <Icon className="size-4" aria-hidden="true" />
-      <span className="font-mono text-sm">{value}</span>
+      <Icon className="size-3.5" aria-hidden="true" />
+      <span className="font-mono text-xs">{value}</span>
     </span>
   );
 }
@@ -526,8 +528,8 @@ function UserResult({ value, query }: { value: UserSearchRow; query: string }) {
   const { user } = value;
   return (
     <Link to={`/user/${user.username || user.uid}`}>
-      <Card className="border-l-4 border-l-purple-500 hover:bg-muted/40">
-        <CardContent className="flex gap-3">
+      <Card className="gap-0 rounded-none border-0 border-l-2 border-l-purple-500 py-0 shadow-none hover:bg-muted/40">
+        <CardContent className="flex gap-2 p-2">
           <span className="sr-only">ユーザー:</span>
           <UserAvatar user={user} />
           <div className="min-w-0 space-y-1">

@@ -73,7 +73,7 @@ export default function QuizAttempt({
         </p>
       )}
       <div className="space-y-1">
-        {Object.entries(quiz.options).map(([optionId, option]) => {
+        {Object.entries(quiz.options).map(([optionId, option], index) => {
           const isSelected = selected.includes(optionId);
           const isCorrect = Boolean(answer) && quiz.correct.includes(optionId);
           const isSelectedWrong = Boolean(answer) && isSelected && !isCorrect;
@@ -93,6 +93,9 @@ export default function QuizAttempt({
                 <Badge variant="destructive">あなたの回答</Badge>
               )}
               <span className="flex min-w-0 items-baseline gap-2">
+                <kbd className="shrink-0 font-mono text-muted-foreground">
+                  {index + 1}
+                </kbd>
                 <ChainSentenceLink chain={chain} sentenceId={optionId}>
                   {option}
                 </ChainSentenceLink>
@@ -113,6 +116,8 @@ export default function QuizAttempt({
             <button
               key={optionId}
               type="button"
+              data-quiz-option-index={index + 1}
+              aria-label={option}
               aria-pressed={isSelected}
               onClick={() => toggle(optionId)}
               className={className}

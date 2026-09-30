@@ -354,7 +354,7 @@ export default function QuizSession() {
           </p>
         </div>
         <Button asChild variant="outline">
-          <Link to="/dashboard?view=quiz-management">管理</Link>
+          <Link to="/dashboard?view=quiz-management">クイズ管理</Link>
         </Button>
       </header>
 
@@ -672,7 +672,7 @@ function PlanToolbar({ ...selectorProps }: Parameters<typeof PlanSelector>[0]) {
         <PlanSelector {...selectorProps} />
       </div>
       <Button asChild type="button" variant="ghost">
-        <Link to="/dashboard?view=study-plans">管理</Link>
+        <Link to="/dashboard?view=study-plans">学習計画管理</Link>
       </Button>
     </div>
   );

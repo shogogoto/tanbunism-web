@@ -1,19 +1,13 @@
 import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
 import NamespaceExplorer from "~/features/namespace/components/NamespaceExplorer";
-import Uploader from "~/features/namespace/uploader/Uploader";
 import AnswerHistory from "~/features/quiz/AnswerHistory";
 import QuizList from "~/features/quiz/QuizList";
 import StudyPlanManager from "~/features/quiz/StudyPlanManager";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-} from "~/shared/components/ui/dialog";
 import { useGetNamaspaceNamespaceGet } from "~/shared/generated/entry/entry";
 import PersonalTimeline from "./PersonalTimeline";
 import QuizTimeline from "./QuizTimeline";
@@ -133,27 +127,25 @@ export default function Dashboard() {
             )}
             {renderedSections.has("notes") && (
               <div hidden={activeSection !== "notes"}>
-                <Dialog>
-                  <Card>
-                    <CardContent className="p-4 sm:p-6">
-                      <NamespaceExplorer nsprops={namespace} />
-                      <ResourceLearningOverview />
-                    </CardContent>
-                  </Card>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="icon"
-                      className="fixed bottom-20 right-4 z-30 size-12 rounded-full shadow-xl ring-4 ring-background transition-transform hover:scale-105 md:bottom-6 md:right-6"
-                      aria-label="読書メモを取り込む"
-                      title="読書メモを取り込む"
-                    >
-                      <Plus className="size-6" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="h-[90vh] w-[calc(100vw-2rem)] max-w-none overflow-hidden p-0 sm:max-w-5xl">
-                    <Uploader refresh={() => void namespace.mutate()} />
-                  </DialogContent>
-                </Dialog>
+                <Card>
+                  <CardContent className="p-4 sm:p-6">
+                    <NamespaceExplorer nsprops={namespace} />
+                    <ResourceLearningOverview />
+                  </CardContent>
+                </Card>
+                <Button
+                  asChild
+                  size="icon"
+                  className="fixed bottom-20 right-4 z-30 size-12 rounded-full shadow-xl ring-4 ring-background transition-transform hover:scale-105 md:bottom-6 md:right-6"
+                >
+                  <Link
+                    to="/import"
+                    aria-label="読書メモを取り込む"
+                    title="読書メモを取り込む"
+                  >
+                    <Plus className="size-6" />
+                  </Link>
+                </Button>
               </div>
             )}
             {renderedSections.has("study-plans") && (

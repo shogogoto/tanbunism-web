@@ -395,7 +395,7 @@ describe("QuizSession", () => {
     expect(
       await screen.findByText(recommendation.quiz.statement),
     ).toBeVisible();
-    expect(screen.getByRole("link", { name: "管理" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "学習計画管理" })).toHaveAttribute(
       "href",
       "/dashboard?view=study-plans",
     );

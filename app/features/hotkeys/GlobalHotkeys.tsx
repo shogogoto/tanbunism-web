@@ -51,12 +51,17 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
                 <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
                 <HotkeyRow keys={["g", "p"]} label="プロフィールへ移動" />
                 <HotkeyRow keys={["g", "n"]} label="通知へ移動" />
+                <HotkeyRow keys={["g", "+"]} label="読書メモを取り込む" />
               </>
             )}
             <HotkeyRow keys={["g", "s"]} label="検索へ移動" />
             <HotkeyRow keys={["g", "q"]} label="クイズへ移動" />
             <HotkeyRow keys={["h", "l"]} label="前後のタブへ移動" />
             <HotkeyRow keys={["j", "k"]} label="項目を移動" />
+            <HotkeyRow
+              keys={["1", "2", "3", "4"]}
+              label="クイズの選択肢を切替"
+            />
             <HotkeyRow keys={["Enter"]} label="選択した項目を開く" />
             <HotkeyRow keys={["/"]} label="検索入力へフォーカス" />
             <HotkeyRow keys={["?"]} label="この一覧を開く" />
@@ -159,6 +164,12 @@ export default function GlobalHotkeys() {
         return;
       }
 
+      if (!waitingForDestination.current && /^[1-9]$/.test(key)) {
+        if (toggleActiveQuizOption(key)) event.preventDefault();
+        resetChord();
+        return;
+      }
+
       if (dialogOpen) {
         resetChord();
         return;
@@ -185,6 +196,7 @@ export default function GlobalHotkeys() {
           ? () => navigate(`/user/${user.username || user.uid}`)
           : undefined,
         n: isAuthenticated ? () => navigate("/notifications") : undefined,
+        "+": isAuthenticated ? () => navigate("/import") : undefined,
         s: () => navigate("/search"),
         q: () => navigate("/quiz"),
       };
@@ -202,6 +214,19 @@ export default function GlobalHotkeys() {
   }, [isAuthenticated, navigate, openHelp, openHistory, pathname, user]);
 
   return null;
+}
+
+function toggleActiveQuizOption(index: string): boolean {
+  const active = document.querySelector<HTMLElement>(
+    '[data-hotkey-item][data-hotkey-active="true"]',
+  );
+  const card = active?.closest<HTMLElement>("[data-quiz-timeline-card]");
+  const option = card?.querySelector<HTMLButtonElement>(
+    `[data-quiz-option-index="${index}"]`,
+  );
+  if (!option || option.disabled) return false;
+  option.click();
+  return true;
 }
 
 function useHotkeys() {

@@ -104,7 +104,7 @@ function QuizTimelineCard({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} data-quiz-timeline-card>
       <Card className="gap-0 py-0 shadow-none">
         <CollapsibleTrigger asChild>
           <button

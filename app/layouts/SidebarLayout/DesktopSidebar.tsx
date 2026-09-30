@@ -4,6 +4,7 @@ import {
   ChevronRight,
   CircleUserRound,
   FileQuestion,
+  FileUp,
   LayoutDashboard,
   Search,
 } from "lucide-react";
@@ -42,6 +43,11 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
           to: "/notifications",
           label: "通知",
           icon: Bell,
+        },
+        {
+          to: "/import",
+          label: "読書メモを取り込む",
+          icon: FileUp,
         },
         ...publicLinks,
         ...(profilePath

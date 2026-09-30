@@ -24,7 +24,7 @@ export default function AppHeader() {
           <SiteLogo />
         </Link>
 
-        <h1 className="absolute left-1/2 max-w-[42vw] -translate-x-1/2 truncate text-sm font-medium text-muted-foreground">
+        <h1 className="absolute left-1/2 max-w-[42vw] -translate-x-1/2 truncate text-sm font-semibold text-foreground">
           {pageTitle(pathname)}
         </h1>
 
@@ -61,6 +61,7 @@ function pageTitle(pathname: string): string {
   if (pathname === "/answers") return "回答履歴";
   if (pathname === "/achievement") return "学習記録";
   if (pathname === "/notifications") return "通知";
+  if (pathname === "/import") return "読書メモを取り込む";
   if (pathname === "/study-plans") return "学習計画";
   if (pathname.startsWith("/docs")) return "ドキュメント";
   if (pathname.startsWith("/search")) return "検索";

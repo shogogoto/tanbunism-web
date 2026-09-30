@@ -100,7 +100,7 @@ export default function AnswerHistory() {
     <div className="mx-auto w-full max-w-4xl space-y-3 p-2 sm:p-3">
       <Card className="py-0 shadow-none">
         <CardContent className="grid gap-2 p-2 sm:grid-cols-3">
-          <label className="grid gap-1 text-sm">
+          <label className="grid min-w-0 gap-1 text-sm">
             正誤
             <select
               value={correct}
@@ -109,14 +109,14 @@ export default function AnswerHistory() {
                   setCorrect(event.target.value as CorrectFilter),
                 )
               }
-              className="h-10 rounded-md border bg-background px-3"
+              className="h-10 min-w-0 max-w-full rounded-md border bg-background px-3"
             >
               <option value="">すべて</option>
               <option value="false">不正解</option>
               <option value="true">正解</option>
             </select>
           </label>
-          <label className="grid gap-1 text-sm">
+          <label className="grid min-w-0 gap-1 text-sm">
             QuizType
             <select
               value={quizType}
@@ -125,7 +125,7 @@ export default function AnswerHistory() {
                   setQuizType(event.target.value as QuizType | ""),
                 )
               }
-              className="h-10 rounded-md border bg-background px-3"
+              className="h-10 min-w-0 max-w-full rounded-md border bg-background px-3"
             >
               <option value="">すべて</option>
               {Object.entries(quizTypeLabels).map(([value, label]) => (
@@ -135,14 +135,14 @@ export default function AnswerHistory() {
               ))}
             </select>
           </label>
-          <label className="grid gap-1 text-sm">
+          <label className="grid min-w-0 gap-1 text-sm">
             Resource
             <select
               value={resourceId}
               onChange={(event) =>
                 updateFilter(() => setResourceId(event.target.value))
               }
-              className="h-10 rounded-md border bg-background px-3"
+              className="h-10 min-w-0 max-w-full rounded-md border bg-background px-3"
             >
               <option value="">すべて</option>
               {resources.map((resource) => (

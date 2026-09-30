@@ -109,7 +109,7 @@ function PreviewStatus({
     return (
       <Badge variant={state.preview.is_new ? "default" : "secondary"}>
         {state.preview.is_new ? <FilePlus2 /> : <Check />}
-        {state.preview.is_new ? "新規" : "更新可能"}
+        {state.preview.is_new ? "新規Resource" : "既存Resourceを更新"}
       </Badge>
     );
   if (state.status === "conflict")

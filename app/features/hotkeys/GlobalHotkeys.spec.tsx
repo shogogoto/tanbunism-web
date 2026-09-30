@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { MemoryRouter, useLocation } from "react-router";
 import { vi } from "vitest";
 import { HistoryPanelProvider } from "~/shared/history/HistoryPanel";
@@ -29,7 +30,7 @@ function Location() {
   return <output aria-label="現在地">{location.pathname}</output>;
 }
 
-function renderHotkeys() {
+function renderHotkeys(children?: ReactNode) {
   return render(
     <MemoryRouter>
       <HistoryPanelProvider>
@@ -37,6 +38,7 @@ function renderHotkeys() {
           <input aria-label="入力欄" />
           <input aria-label="検索入力" data-global-search-input />
           <button type="button">入力を終了</button>
+          {children}
           <GlobalHotkeys />
           <Location />
         </HotkeyProvider>
@@ -54,6 +56,25 @@ it("gから始まるショートカットで主要画面へ移動する", async 
   expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
     "/search",
   );
+});
+
+it("数字キーでcurrentなクイズの選択肢を切り替える", async () => {
+  const user = userEvent.setup();
+  const toggle = vi.fn();
+  renderHotkeys(
+    <div data-quiz-timeline-card>
+      <button type="button" data-hotkey-item data-hotkey-active="true">
+        current quiz
+      </button>
+      <button type="button" data-quiz-option-index="1" onClick={toggle}>
+        option 1
+      </button>
+    </div>,
+  );
+
+  await user.keyboard("1");
+
+  expect(toggle).toHaveBeenCalledOnce();
 });
 
 it("g pで自分のプロフィールへ移動する", async () => {
@@ -75,6 +96,17 @@ it("g nで通知へ移動する", async () => {
 
   expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
     "/notifications",
+  );
+});
+
+it("g +で読書メモ取り込みへ移動する", async () => {
+  const user = userEvent.setup();
+  renderHotkeys();
+
+  await user.keyboard("g+");
+
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
+    "/import",
   );
 });
 

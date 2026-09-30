@@ -24,6 +24,7 @@ export default [
     route("answers", "routes/answers.tsx"),
     route("achievement", "routes/achievement.tsx"),
     route("notifications", "routes/notifications.tsx"),
+    route("import", "routes/import.tsx"),
 
     route("dashboard", "routes/dashboard.tsx"),
     route("admin", "routes/admin.tsx"),
