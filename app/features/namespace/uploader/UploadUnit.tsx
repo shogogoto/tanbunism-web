@@ -45,7 +45,7 @@ export function readIdentityConflict(
   return null;
 }
 
-function uploadedResourceId(value: unknown): string | undefined {
+export function uploadedResourceId(value: unknown): string | undefined {
   if (!value || typeof value !== "object") return undefined;
   if (
     "resource_id" in value &&

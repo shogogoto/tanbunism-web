@@ -79,6 +79,19 @@ export function ImportPreviewRow({
           )}
         </div>
       )}
+      {result && !result.ok && (
+        <div className="rounded-md bg-destructive/10 px-3 py-2 text-destructive">
+          <p>{result.message ?? "取り込みに失敗しました。"}</p>
+          {result.details && (
+            <details className="mt-1 text-xs text-muted-foreground">
+              <summary className="cursor-pointer">エラー詳細</summary>
+              <pre className="mt-1 whitespace-pre-wrap break-words">
+                {result.details}
+              </pre>
+            </details>
+          )}
+        </div>
+      )}
     </div>
   );
 }

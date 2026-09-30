@@ -2,21 +2,24 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/shared/components/ui/button";
 import { Progress } from "~/shared/components/ui/progress";
-import { previewTextUpdateResourceTextPreviewPost } from "~/shared/generated/entry/entry";
+import {
+  postTextResourceTextPost,
+  previewTextUpdateResourceTextPreviewPost,
+} from "~/shared/generated/entry/entry";
 import type { IdentityResolutionBody } from "~/shared/generated/fastAPI.schemas";
 import AcceptExtensions from "./AcceptExtensions";
 import CustomFileUploader from "./CustomFileUploader";
 import { IdentityConflictDialog } from "./IdentityConflictDialog";
 import { ImportPreviewRow, type PreviewState } from "./ImportPreviewRow";
-import UploadUnit, {
+import {
   describeUploadError,
   readIdentityConflict,
+  uploadedResourceId,
 } from "./UploadUnit";
 import {
   type UploadHistoryRecord,
   type UploadResult,
   loadUploadHistory,
-  previousResult,
   saveUploadResult,
 } from "./history";
 import { fileWithoutTopDirectory } from "./utils";
@@ -69,7 +72,6 @@ export default function Uploader({ refresh }: Props) {
   const [progress, setProgress] = useState(0);
   const [successCount, setSuccessCount] = useState(0);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
-  const [queue, setQueue] = useState<number[]>([]);
   const [results, setResults] = useState<Record<number, UploadResult>>({});
   const [history, setHistory] = useState<UploadHistoryRecord[]>([]);
   const [previews, setPreviews] = useState<Record<number, PreviewState>>({});
@@ -96,22 +98,6 @@ export default function Uploader({ refresh }: Props) {
   useEffect(() => {
     setHistory(loadUploadHistory());
   }, []);
-
-  const handleComplete = useCallback(() => {
-    if (!files) return;
-    const position = queue.findIndex((index) => index === uploadingIndex);
-    const nextPosition = position + 1;
-    setProgress(
-      ((files.length - queue.length + nextPosition) / files.length) * 100,
-    );
-    if (nextPosition < queue.length) {
-      setUploadingIndex(queue[nextPosition]);
-    } else {
-      setUploadingIndex(null); // 全て完了
-      refresh?.();
-      void notifyImportComplete(queue.length);
-    }
-  }, [files, queue, refresh, uploadingIndex]);
 
   const handleResult = useCallback(
     (index: number, result: UploadResult) => {
@@ -242,13 +228,76 @@ export default function Uploader({ refresh }: Props) {
     }
   }
 
-  function handleSubmit() {
+  async function importFile(index: number): Promise<UploadResult> {
+    const source = files?.[index];
+    const preview = previews[index];
+    if (!source || preview?.status !== "ready") {
+      return {
+        ok: false,
+        message: "取り込み前の確認結果がありません。",
+        retryable: false,
+      };
+    }
+    const file = fileWithoutTopDirectory(source);
+    try {
+      const response = await postTextResourceTextPost(
+        {
+          txt: await file.text(),
+          path: file.name.split("/"),
+          identity_resolutions: preview.resolutions,
+        },
+        { credentials: "include" },
+      );
+      if (response.status >= 200 && response.status < 300) {
+        return {
+          ok: true,
+          retryable: false,
+          resourceId: uploadedResourceId(response.data),
+        };
+      }
+      const conflict = readIdentityConflict(response.data);
+      if (conflict) {
+        return {
+          ok: false,
+          message:
+            "取り込み直前に内容が変わりました。もう一度確認してください。",
+          details: conflict.message,
+          retryable: true,
+        };
+      }
+      const detail = responseDetail(response.data);
+      return { ok: false, ...describeUploadError(response.status, detail) };
+    } catch (cause) {
+      return {
+        ok: false,
+        ...describeUploadError(
+          undefined,
+          cause instanceof Error ? cause.message : undefined,
+        ),
+      };
+    }
+  }
+
+  async function runImports(indices: number[]) {
+    if (indices.length === 0) return;
+    setError(null);
+    setProgress(0);
+    for (const [position, index] of indices.entries()) {
+      setUploadingIndex(index);
+      const result = await importFile(index);
+      handleResult(index, result);
+      setProgress(((position + 1) / indices.length) * 100);
+    }
+    setUploadingIndex(null);
+    refresh?.();
+    void notifyImportComplete(indices.length);
+  }
+
+  async function handleSubmit() {
     if (!files || sendableIndices.length === 0) return;
-    const nextQueue = sendableIndices.filter(
-      (index) => previews[index]?.status === "ready",
+    await runImports(
+      sendableIndices.filter((index) => previews[index]?.status === "ready"),
     );
-    setQueue(nextQueue);
-    setUploadingIndex(nextQueue[0] ?? null);
   }
 
   function retryFailed() {
@@ -257,20 +306,15 @@ export default function Uploader({ refresh }: Props) {
         ?.map((_, index) => index)
         .filter((index) => results[index]?.retryable) ?? [];
     if (failed.length === 0) return;
-    setProgress(0);
-    setQueue(failed);
-    setUploadingIndex(failed[0]);
+    void runImports(failed);
   }
 
   const isUploading = uploadingIndex !== null;
   const isPreviewing = previewingIndex !== null;
-  const skippedCount = Object.values(results).filter(
-    (result) => result.skipped,
-  ).length;
   const sendableCount = sendableIndices.length;
-  const readyToUpload =
-    sendableCount > 0 &&
-    sendableIndices.every((index) => previews[index]?.status === "ready");
+  const readyCount = sendableIndices.filter(
+    (index) => previews[index]?.status === "ready",
+  ).length;
   const conflictCount = sendableIndices.filter(
     (index) => previews[index]?.status === "conflict",
   ).length;
@@ -281,8 +325,8 @@ export default function Uploader({ refresh }: Props) {
     conflictOpenIndex === null ? undefined : previews[conflictOpenIndex];
 
   function handlePrimaryAction() {
-    if (readyToUpload) {
-      handleSubmit();
+    if (readyCount > 0) {
+      void handleSubmit();
       return;
     }
     const firstConflict = sendableIndices.find(
@@ -319,20 +363,12 @@ export default function Uploader({ refresh }: Props) {
           setError(null);
           setProgress(0);
           setUploadingIndex(null);
-          setQueue([]);
           setPreviews({});
           setPreviewingIndex(null);
           setConflictOpenIndex(null);
-          const previousResults: Record<number, UploadResult> = {};
-          selectedFiles?.forEach((file, index) => {
-            const path = file.webkitRelativePath || file.name;
-            const result = previousResult(history, file, path);
-            if (result) previousResults[index] = result;
-          });
-          setResults(previousResults);
-          setSuccessCount(
-            Object.values(previousResults).filter((result) => result.ok).length,
-          );
+          // DBの状態を正とし、ブラウザの過去履歴だけで送信を省略しない。
+          setResults({});
+          setSuccessCount(0);
         }}
       />
       {files && files.length > 0 && (
@@ -346,20 +382,6 @@ export default function Uploader({ refresh }: Props) {
                   result={results[index]}
                   onOpenConflict={() => setConflictOpenIndex(index)}
                 />
-                {(uploadingIndex === index ||
-                  (results[index] && !results[index].skipped)) && (
-                  <UploadUnit
-                    file={fileWithoutTopDirectory(file)}
-                    path={paths[index]}
-                    hidePath
-                    isUploading={uploadingIndex === index}
-                    result={results[index]}
-                    identityResolutions={previews[index]?.resolutions}
-                    onResult={(result) => handleResult(index, result)}
-                    onComplete={handleComplete}
-                    onResolved={refresh}
-                  />
-                )}
               </li>
             ))}
           </ul>
@@ -370,8 +392,7 @@ export default function Uploader({ refresh }: Props) {
       )}
       {files && !isUploading && successCount > 0 && (
         <p>
-          処理済み {successCount} / {files.length}
-          {skippedCount > 0 && `（変更なし ${skippedCount}件）`}
+          取り込み済み {successCount} / {files.length}
         </p>
       )}
       {files &&
@@ -406,8 +427,8 @@ export default function Uploader({ refresh }: Props) {
           ? `アップロード中… (${successCount}/${files?.length})`
           : isPreviewing
             ? `変更を確認中… (${sendableIndices.indexOf(previewingIndex ?? -1) + 1}/${sendableCount})`
-            : readyToUpload
-              ? `${sendableCount}件を取り込む`
+            : readyCount > 0
+              ? `${readyCount}件を取り込む`
               : sendableCount > 0
                 ? previewErrorCount > 0
                   ? `${previewErrorCount}件のエラーを再確認`

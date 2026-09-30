@@ -17,18 +17,6 @@ export type UploadHistoryRecord = UploadResult & {
 const STORAGE_KEY = "tanbunism.upload-history";
 const MAX_RECORDS = 200;
 
-export function matchesFile(
-  record: UploadHistoryRecord,
-  file: File,
-  path: string,
-): boolean {
-  return (
-    record.path === path &&
-    record.size === file.size &&
-    record.lastModified === file.lastModified
-  );
-}
-
 export function loadUploadHistory(): UploadHistoryRecord[] {
   try {
     const saved: unknown = JSON.parse(
@@ -58,7 +46,6 @@ export function saveUploadResult(
 ): UploadHistoryRecord[] {
   const record: UploadHistoryRecord = {
     ...result,
-    skipped: false,
     path,
     size: file.size,
     lastModified: file.lastModified,
@@ -74,14 +61,4 @@ export function saveUploadResult(
     // Storage can be unavailable in private browsing. Uploading still works.
   }
   return next;
-}
-
-export function previousResult(
-  history: UploadHistoryRecord[],
-  file: File,
-  path: string,
-): UploadResult | undefined {
-  const record = history.find((item) => matchesFile(item, file, path));
-  if (!record?.ok) return undefined;
-  return { ...record, skipped: true };
 }

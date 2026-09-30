@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { loadUploadHistory, previousResult, saveUploadResult } from "./history";
+import { loadUploadHistory, saveUploadResult } from "./history";
 
 function makeFile(lastModified = 100) {
   return new File(["memo"], "memo.kn", { lastModified });
@@ -8,7 +8,7 @@ function makeFile(lastModified = 100) {
 describe("upload history", () => {
   beforeEach(() => localStorage.clear());
 
-  it("同じパス・サイズ・更新日時の成功ファイルは送信を省略する", () => {
+  it("取り込み結果を次回のフォルダ表示用に保存する", () => {
     const file = makeFile();
     const history = saveUploadResult([], file, "notes/memo.kn", {
       ok: true,
@@ -16,45 +16,27 @@ describe("upload history", () => {
       resourceId: "resource-1",
     });
 
-    expect(previousResult(history, file, "notes/memo.kn")).toMatchObject({
+    expect(history[0]).toMatchObject({
       ok: true,
-      skipped: true,
       resourceId: "resource-1",
+      path: "notes/memo.kn",
     });
     expect(loadUploadHistory()).toHaveLength(1);
   });
 
-  it("内容を変更したファイルは再送対象にする", () => {
-    const oldFile = makeFile(100);
-    const newFile = makeFile(200);
-    const history = saveUploadResult([], oldFile, "notes/memo.kn", {
-      ok: false,
-      retryable: false,
-      message: "修正してください",
-    });
-
-    expect(previousResult(history, newFile, "notes/memo.kn")).toBeUndefined();
-  });
-
-  it("通信エラーはファイルが同じでも再送対象にする", () => {
+  it("同じパスの履歴は最新結果で置き換える", () => {
     const file = makeFile();
-    const history = saveUploadResult([], file, "notes/memo.kn", {
+    const failed = saveUploadResult([], file, "notes/memo.kn", {
       ok: false,
       retryable: true,
       message: "通信エラー",
     });
-
-    expect(previousResult(history, file, "notes/memo.kn")).toBeUndefined();
-  });
-
-  it("内容エラーも事前確認からやり直せる", () => {
-    const file = makeFile();
-    const history = saveUploadResult([], file, "notes/memo.kn", {
-      ok: false,
+    const recovered = saveUploadResult(failed, file, "notes/memo.kn", {
+      ok: true,
       retryable: false,
-      message: "修正してください",
     });
 
-    expect(previousResult(history, file, "notes/memo.kn")).toBeUndefined();
+    expect(recovered).toHaveLength(1);
+    expect(recovered[0]?.ok).toBe(true);
   });
 });
