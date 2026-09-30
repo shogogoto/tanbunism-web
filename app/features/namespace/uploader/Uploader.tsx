@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "~/shared/components/ui/button";
 import { Progress } from "~/shared/components/ui/progress";
 import { previewTextUpdateResourceTextPreviewPost } from "~/shared/generated/entry/entry";
@@ -108,6 +109,7 @@ export default function Uploader({ refresh }: Props) {
     } else {
       setUploadingIndex(null); // 全て完了
       refresh?.();
+      void notifyImportComplete(queue.length);
     }
   }, [files, queue, refresh, uploadingIndex]);
 
@@ -433,4 +435,31 @@ export default function Uploader({ refresh }: Props) {
       )}
     </div>
   );
+}
+
+export async function notifyImportComplete(count: number) {
+  const body = `${count}件の読書メモの処理が完了しました。`;
+  toast.success(body);
+  if (
+    typeof window === "undefined" ||
+    typeof document === "undefined" ||
+    document.visibilityState === "visible" ||
+    !("Notification" in window) ||
+    Notification.permission !== "granted" ||
+    !("serviceWorker" in navigator)
+  ) {
+    return;
+  }
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    await registration?.showNotification("読書メモの取り込みが完了しました", {
+      body,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: "tanbunism-resource-import",
+      data: { url: "/import" },
+    });
+  } catch {
+    // トーストは表示済みなので、OS通知の失敗は取り込み結果に影響させない。
+  }
 }

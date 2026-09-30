@@ -105,6 +105,7 @@ export function describeUploadError(
     return {
       message:
         "一時的な通信・サーバーエラーです。時間を置いて、このファイルだけ再送してください。",
+      details: raw || undefined,
       retryable: true,
     };
   }

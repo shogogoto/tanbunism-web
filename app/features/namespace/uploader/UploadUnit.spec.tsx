@@ -107,6 +107,7 @@ describe("UploadUnit", () => {
     const result = describeUploadError(undefined, "NetworkError");
     expect(result.retryable).toBe(true);
     expect(result.message).toContain("再送");
+    expect(result.details).toBe("NetworkError");
   });
 
   it("FastAPIのdetailに包まれた同一性競合を読み取る", () => {
