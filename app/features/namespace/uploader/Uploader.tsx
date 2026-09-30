@@ -341,7 +341,7 @@ export default function Uploader({ refresh }: Props) {
                 <ImportPreviewRow
                   path={paths[index] ?? file.name}
                   state={previews[index]}
-                  skipped={results[index]?.skipped}
+                  result={results[index]}
                   onOpenConflict={() => setConflictOpenIndex(index)}
                 />
                 {(uploadingIndex === index ||

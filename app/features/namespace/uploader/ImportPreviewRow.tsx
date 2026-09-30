@@ -1,18 +1,21 @@
 import {
   AlertTriangle,
   Check,
-  FilePlus2,
+  ExternalLink,
   GitCompareArrows,
   LoaderCircle,
   RefreshCw,
 } from "lucide-react";
-import { Badge } from "~/shared/components/ui/badge";
-import { Button } from "~/shared/components/ui/button";
+import type { ReactNode } from "react";
+import { Link } from "react-router";
+import { Badge, badgeVariants } from "~/shared/components/ui/badge";
 import type {
   IdentityConflictResponse,
   IdentityResolutionBody,
   ResourceDiffPreview,
 } from "~/shared/generated/fastAPI.schemas";
+import { cn } from "~/shared/lib/utils";
+import type { UploadResult } from "./history";
 
 export type PreviewState =
   | { status: "checking"; resolutions: IdentityResolutionBody[] }
@@ -38,14 +41,14 @@ export type PreviewState =
 type Props = {
   path: string;
   state?: PreviewState;
-  skipped?: boolean;
+  result?: UploadResult;
   onOpenConflict?: () => void;
 };
 
 export function ImportPreviewRow({
   path,
   state,
-  skipped,
+  result,
   onOpenConflict,
 }: Props) {
   return (
@@ -54,19 +57,14 @@ export function ImportPreviewRow({
         <p className="min-w-0 truncate font-medium" title={path}>
           {path}
         </p>
-        <PreviewStatus state={state} skipped={skipped} />
+        <PreviewStatus
+          state={state}
+          result={result}
+          onOpenConflict={onOpenConflict}
+        />
       </div>
-      {state?.status === "ready" && <DiffBadges preview={state.preview} />}
-      {state?.status === "conflict" && (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={onOpenConflict}
-        >
-          <GitCompareArrows />
-          競合を確認
-        </Button>
+      {!result?.ok && state?.status === "ready" && (
+        <DiffBadges preview={state.preview} />
       )}
       {state?.status === "error" && (
         <div className="rounded-md bg-destructive/10 px-3 py-2 text-destructive">
@@ -87,17 +85,27 @@ export function ImportPreviewRow({
 
 function PreviewStatus({
   state,
-  skipped,
+  result,
+  onOpenConflict,
 }: {
   state?: PreviewState;
-  skipped?: boolean;
+  result?: UploadResult;
+  onOpenConflict?: () => void;
 }) {
-  if (skipped)
+  if (result?.ok) {
     return (
-      <Badge variant="secondary">
+      <ResourceStatusLink resourceId={result.resourceId}>
         <Check /> 変更なし
+      </ResourceStatusLink>
+    );
+  }
+  if (result && !result.ok) {
+    return (
+      <Badge variant="destructive">
+        <AlertTriangle /> エラー
       </Badge>
     );
+  }
   if (!state) return <Badge variant="outline">未確認</Badge>;
   if (state.status === "checking")
     return (
@@ -105,22 +113,60 @@ function PreviewStatus({
         <LoaderCircle className="animate-spin" /> 確認中
       </Badge>
     );
-  if (state.status === "ready")
+  if (state.status === "ready") {
+    const hasChanges = diffCount(state.preview) > 0;
     return (
-      <Badge variant={state.preview.is_new ? "default" : "secondary"}>
-        {state.preview.is_new ? <FilePlus2 /> : <Check />}
-        {state.preview.is_new ? "新規Resource" : "既存Resourceを更新"}
-      </Badge>
+      <ResourceStatusLink resourceId={state.preview.resource_id}>
+        {hasChanges ? <RefreshCw /> : <Check />}
+        {hasChanges ? "変更あり" : "変更なし"}
+      </ResourceStatusLink>
     );
+  }
   if (state.status === "conflict")
     return (
-      <Badge variant="outline" className="border-amber-500 text-amber-600">
-        <GitCompareArrows /> 要確認
-      </Badge>
+      <button
+        type="button"
+        onClick={onOpenConflict}
+        className={cn(
+          badgeVariants({ variant: "outline" }),
+          "cursor-pointer border-amber-500 text-amber-600 hover:bg-amber-500/10",
+        )}
+      >
+        <GitCompareArrows /> コンフリクト
+      </button>
     );
   return (
     <Badge variant="destructive">
       <AlertTriangle /> エラー
+    </Badge>
+  );
+}
+
+function diffCount(preview: ResourceDiffPreview): number {
+  return (
+    preview.sentences_added +
+    preview.sentences_removed +
+    preview.sentences_updated +
+    preview.terms_added +
+    preview.terms_removed +
+    preview.terms_updated
+  );
+}
+
+function ResourceStatusLink({
+  resourceId,
+  children,
+}: {
+  resourceId?: string | null;
+  children: ReactNode;
+}) {
+  if (!resourceId) return <Badge variant="secondary">{children}</Badge>;
+  return (
+    <Badge variant="secondary" asChild>
+      <Link to={`/resource/${resourceId}`} title="Resourceを開く">
+        {children}
+        <ExternalLink />
+      </Link>
     </Badge>
   );
 }

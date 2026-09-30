@@ -13,11 +13,13 @@ describe("upload history", () => {
     const history = saveUploadResult([], file, "notes/memo.kn", {
       ok: true,
       retryable: false,
+      resourceId: "resource-1",
     });
 
     expect(previousResult(history, file, "notes/memo.kn")).toMatchObject({
       ok: true,
       skipped: true,
+      resourceId: "resource-1",
     });
     expect(loadUploadHistory()).toHaveLength(1);
   });

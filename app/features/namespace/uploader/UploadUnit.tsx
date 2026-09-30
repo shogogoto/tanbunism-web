@@ -45,6 +45,23 @@ export function readIdentityConflict(
   return null;
 }
 
+function uploadedResourceId(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  if (
+    "resource_id" in value &&
+    typeof (value as { resource_id?: unknown }).resource_id === "string"
+  ) {
+    return (value as { resource_id: string }).resource_id;
+  }
+  if ("resource_ids" in value) {
+    const resourceIds = (value as { resource_ids?: unknown }).resource_ids;
+    if (Array.isArray(resourceIds) && typeof resourceIds[0] === "string") {
+      return resourceIds[0];
+    }
+  }
+  return undefined;
+}
+
 export function describeUploadError(
   status: number | undefined,
   detail: unknown,
@@ -141,7 +158,11 @@ export default function UploadUnit({
           )
         : await trigger({ files: [file] });
       if (result && result.status >= 200 && result.status < 300) {
-        onResult({ ok: true, retryable: false });
+        onResult({
+          ok: true,
+          retryable: false,
+          resourceId: uploadedResourceId(result.data),
+        });
       } else if (result && result.status >= 400) {
         const conflict = readIdentityConflict(result.data);
         if (conflict) {
@@ -212,7 +233,11 @@ export default function UploadUnit({
           setIsConflictOpen(false);
           setUploadError(null);
           accumulatedResolutions.current = [];
-          onResult({ ok: true, retryable: false });
+          onResult({
+            ok: true,
+            retryable: false,
+            resourceId: uploadedResourceId(response.data),
+          });
           onResolved?.();
           return;
         }

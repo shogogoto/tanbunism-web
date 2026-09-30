@@ -4,6 +4,7 @@ export type UploadResult = {
   details?: string;
   retryable: boolean;
   skipped?: boolean;
+  resourceId?: string;
 };
 
 export type UploadHistoryRecord = UploadResult & {

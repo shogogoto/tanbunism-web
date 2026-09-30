@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { MemoryRouter } from "react-router";
 import { fn } from "storybook/test";
 import { ImportPreviewRow } from "./ImportPreviewRow";
 
@@ -7,9 +8,11 @@ const meta = {
   component: ImportPreviewRow,
   decorators: [
     (Story) => (
-      <div className="mx-auto max-w-3xl divide-y rounded-lg border bg-background text-sm">
-        <Story />
-      </div>
+      <MemoryRouter>
+        <div className="mx-auto max-w-3xl divide-y rounded-lg border bg-background text-sm">
+          <Story />
+        </div>
+      </MemoryRouter>
     ),
   ],
   args: {
@@ -21,7 +24,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const 更新可能: Story = {
+export const 変更あり: Story = {
   args: {
     state: {
       status: "ready",
@@ -40,7 +43,7 @@ export const 更新可能: Story = {
   },
 };
 
-export const 新規Resource: Story = {
+export const 初回取込も変更あり: Story = {
   args: {
     path: "notes/business/新しい読書メモ.tb",
     state: {
@@ -95,12 +98,17 @@ export const Parseエラー: Story = {
 
 export const 変更なし: Story = {
   args: {
-    skipped: true,
+    result: {
+      ok: true,
+      retryable: false,
+      skipped: true,
+      resourceId: "resource-id",
+    },
   },
 };
 
 export const モバイル表示: Story = {
-  ...更新可能,
+  ...変更あり,
   globals: {
     viewport: { value: "mobile1" },
   },

@@ -25,21 +25,30 @@ describe("UploadUnit", () => {
   beforeEach(() => {
     trigger.mockReset();
     postText.mockReset();
-    trigger.mockResolvedValue({ status: 200 });
+    trigger.mockResolvedValue({
+      status: 200,
+      data: { resource_ids: ["resource-1"] },
+    });
   });
 
   it("親が再描画されても同じアップロードを二重送信しない", async () => {
     const file = new File(["# title"], "memo.kn");
+    const onResult = vi.fn();
     const { rerender } = render(
       <UploadUnit
         file={file}
         isUploading
-        onResult={vi.fn()}
+        onResult={onResult}
         onComplete={vi.fn()}
       />,
     );
 
     await waitFor(() => expect(trigger).toHaveBeenCalledTimes(1));
+    expect(onResult).toHaveBeenCalledWith({
+      ok: true,
+      retryable: false,
+      resourceId: "resource-1",
+    });
 
     rerender(
       <UploadUnit
