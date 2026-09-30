@@ -54,6 +54,26 @@ export const CreateQuizApiQuizPostBody = zod
 export const CreateQuizApiQuizPostResponse = zod
   .object({
     quiz_id: zod.string().uuid(),
+    quiz_type: zod
+      .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+      .describe("問題文の種類."),
+    prompt: zod
+      .object({
+        subject: zod.string(),
+        object: zod.union([zod.string(), zod.null()]).optional(),
+        relations: zod
+          .array(
+            zod
+              .object({
+                name: zod.union([zod.string(), zod.null()]),
+                is_forward: zod.boolean(),
+              })
+              .describe("問題の対象から見た1辺の向きと、表示可能な関係名."),
+          )
+          .optional(),
+        answer_kind: zod.enum(["term", "sentence", "relation"]),
+      })
+      .describe("UIが問題文を組み立てるための表示非依存データ."),
     statement: zod.string(),
     options: zod.record(zod.string(), zod.string()),
     correct: zod.array(zod.string()),
@@ -92,6 +112,28 @@ export const ListQuizQuizGetResponse = zod
         zod
           .object({
             quiz_id: zod.string().uuid(),
+            quiz_type: zod
+              .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+              .describe("問題文の種類."),
+            prompt: zod
+              .object({
+                subject: zod.string(),
+                object: zod.union([zod.string(), zod.null()]).optional(),
+                relations: zod
+                  .array(
+                    zod
+                      .object({
+                        name: zod.union([zod.string(), zod.null()]),
+                        is_forward: zod.boolean(),
+                      })
+                      .describe(
+                        "問題の対象から見た1辺の向きと、表示可能な関係名.",
+                      ),
+                  )
+                  .optional(),
+                answer_kind: zod.enum(["term", "sentence", "relation"]),
+              })
+              .describe("UIが問題文を組み立てるための表示非依存データ."),
             statement: zod.string(),
             options: zod.record(zod.string(), zod.string()),
             correct: zod.array(zod.string()),
@@ -137,6 +179,28 @@ export const ListCreatedQuizzesQuizCreatedGetResponse = zod
         zod
           .object({
             quiz_id: zod.string().uuid(),
+            quiz_type: zod
+              .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+              .describe("問題文の種類."),
+            prompt: zod
+              .object({
+                subject: zod.string(),
+                object: zod.union([zod.string(), zod.null()]).optional(),
+                relations: zod
+                  .array(
+                    zod
+                      .object({
+                        name: zod.union([zod.string(), zod.null()]),
+                        is_forward: zod.boolean(),
+                      })
+                      .describe(
+                        "問題の対象から見た1辺の向きと、表示可能な関係名.",
+                      ),
+                  )
+                  .optional(),
+                answer_kind: zod.enum(["term", "sentence", "relation"]),
+              })
+              .describe("UIが問題文を組み立てるための表示非依存データ."),
             statement: zod.string(),
             options: zod.record(zod.string(), zod.string()),
             correct: zod.array(zod.string()),
@@ -265,6 +329,28 @@ export const SearchCreatedQuizzesApiQuizCreatedSearchGetResponse = zod
           quiz: zod
             .object({
               quiz_id: zod.string().uuid(),
+              quiz_type: zod
+                .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+                .describe("問題文の種類."),
+              prompt: zod
+                .object({
+                  subject: zod.string(),
+                  object: zod.union([zod.string(), zod.null()]).optional(),
+                  relations: zod
+                    .array(
+                      zod
+                        .object({
+                          name: zod.union([zod.string(), zod.null()]),
+                          is_forward: zod.boolean(),
+                        })
+                        .describe(
+                          "問題の対象から見た1辺の向きと、表示可能な関係名.",
+                        ),
+                    )
+                    .optional(),
+                  answer_kind: zod.enum(["term", "sentence", "relation"]),
+                })
+                .describe("UIが問題文を組み立てるための表示非依存データ."),
               statement: zod.string(),
               options: zod.record(zod.string(), zod.string()),
               correct: zod.array(zod.string()),
@@ -315,6 +401,9 @@ export const ListCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetR
 export const ListBrokenCreatedQuizzesQuizCreatedBrokenGetResponseItem = zod
   .object({
     quiz_id: zod.string().uuid(),
+    quiz_type: zod
+      .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+      .describe("問題文の種類."),
     retired_sentence_id: zod.string().uuid(),
     retired_value: zod.string(),
     resource_id: zod.string().uuid(),
@@ -325,6 +414,29 @@ export const ListBrokenCreatedQuizzesQuizCreatedBrokenGetResponseItem = zod
 export const ListBrokenCreatedQuizzesQuizCreatedBrokenGetResponse = zod.array(
   ListBrokenCreatedQuizzesQuizCreatedBrokenGetResponseItem,
 );
+
+/**
+ * 認証ユーザー自身が作成したQuizを一括削除.
+ * @summary Delete Created Quizzes Api
+ */
+export const deleteCreatedQuizzesApiQuizCreatedDeletePostBodyQuizIdsMax = 100;
+
+export const DeleteCreatedQuizzesApiQuizCreatedDeletePostBody = zod
+  .object({
+    quiz_ids: zod
+      .array(zod.string())
+      .min(1)
+      .max(deleteCreatedQuizzesApiQuizCreatedDeletePostBodyQuizIdsMax),
+  })
+  .describe("作成済みQuizの一括削除対象.");
+
+export const DeleteCreatedQuizzesApiQuizCreatedDeletePostResponse = zod
+  .object({
+    deleted_count: zod.number().int(),
+    deleted_answer_count: zod.number().int(),
+    skipped_count: zod.number().int(),
+  })
+  .describe("作成済みQuizの一括削除結果.");
 
 /**
  * 退役単文へのQuiz参照を選択した現行単文へ付け替える.
@@ -511,6 +623,28 @@ export const AnswerQuizApiQuizAnswerQuizIdPostResponse = zod
           readable: zod
             .object({
               quiz_id: zod.string().uuid(),
+              quiz_type: zod
+                .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+                .describe("問題文の種類."),
+              prompt: zod
+                .object({
+                  subject: zod.string(),
+                  object: zod.union([zod.string(), zod.null()]).optional(),
+                  relations: zod
+                    .array(
+                      zod
+                        .object({
+                          name: zod.union([zod.string(), zod.null()]),
+                          is_forward: zod.boolean(),
+                        })
+                        .describe(
+                          "問題の対象から見た1辺の向きと、表示可能な関係名.",
+                        ),
+                    )
+                    .optional(),
+                  answer_kind: zod.enum(["term", "sentence", "relation"]),
+                })
+                .describe("UIが問題文を組み立てるための表示非依存データ."),
               statement: zod.string(),
               options: zod.record(zod.string(), zod.string()),
               correct: zod.array(zod.string()),
@@ -645,6 +779,28 @@ export const ListAnswerHistoryApiQuizAnswersGetResponse = zod
           quiz: zod
             .object({
               quiz_id: zod.string().uuid(),
+              quiz_type: zod
+                .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+                .describe("問題文の種類."),
+              prompt: zod
+                .object({
+                  subject: zod.string(),
+                  object: zod.union([zod.string(), zod.null()]).optional(),
+                  relations: zod
+                    .array(
+                      zod
+                        .object({
+                          name: zod.union([zod.string(), zod.null()]),
+                          is_forward: zod.boolean(),
+                        })
+                        .describe(
+                          "問題の対象から見た1辺の向きと、表示可能な関係名.",
+                        ),
+                    )
+                    .optional(),
+                  answer_kind: zod.enum(["term", "sentence", "relation"]),
+                })
+                .describe("UIが問題文を組み立てるための表示非依存データ."),
               statement: zod.string(),
               options: zod.record(zod.string(), zod.string()),
               correct: zod.array(zod.string()),
@@ -855,6 +1011,22 @@ export const CreateStudyPlanApiQuizStudyPlansPostResponse = zod
   .describe("永続化された学習計画.");
 
 /**
+ * 所有するStudyPlanの準備済み問題数を一括取得.
+ * @summary List Study Plan Preparations Api
+ */
+export const ListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponseItem =
+  zod
+    .object({
+      plan_id: zod.string().uuid(),
+      prepared_quiz_count: zod.number().int(),
+    })
+    .describe("StudyPlanで現在回答可能な準備済みクイズ数.");
+export const ListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponse =
+  zod.array(
+    ListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponseItem,
+  );
+
+/**
  * 所有するStudyPlanを取得.
  * @summary Get Study Plan Api
  */
@@ -987,6 +1159,55 @@ export const DeleteStudyPlanApiQuizStudyPlansPlanIdDeleteParams = zod.object({
 export const DeleteStudyPlanApiQuizStudyPlansPlanIdDeleteResponse = zod.void();
 
 /**
+ * StudyPlanの準備済み問題数を取得.
+ * @summary Get Study Plan Preparation Api
+ */
+export const GetStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetParams =
+  zod.object({
+    plan_id: zod.string().uuid(),
+  });
+
+export const GetStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponse =
+  zod
+    .object({
+      plan_id: zod.string().uuid(),
+      prepared_quiz_count: zod.number().int(),
+    })
+    .describe("StudyPlanで現在回答可能な準備済みクイズ数.");
+
+/**
+ * StudyPlanへ指定数の新しい問題を追加.
+ * @summary Prepare Study Plan Api
+ */
+export const PrepareStudyPlanApiQuizStudyPlansPlanIdPreparePostParams =
+  zod.object({
+    plan_id: zod.string().uuid(),
+  });
+
+export const prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostBodyAdditionalCountMax = 20;
+
+export const PrepareStudyPlanApiQuizStudyPlansPlanIdPreparePostBody = zod
+  .object({
+    additional_count: zod
+      .number()
+      .int()
+      .min(1)
+      .max(
+        prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostBodyAdditionalCountMax,
+      ),
+  })
+  .describe("StudyPlanへ追加するクイズ数.");
+
+export const PrepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponse = zod
+  .object({
+    plan_id: zod.string().uuid(),
+    prepared_quiz_count: zod.number().int(),
+    requested_count: zod.number().int(),
+    added_count: zod.number().int(),
+  })
+  .describe("StudyPlanのクイズ補充結果.");
+
+/**
  * StudyPlanの設定で回答可能なクイズを推薦.
  * @summary Recommend Study Plan Quizzes Api
  */
@@ -1024,6 +1245,28 @@ export const RecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPost
       quiz: zod
         .object({
           quiz_id: zod.string().uuid(),
+          quiz_type: zod
+            .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+            .describe("問題文の種類."),
+          prompt: zod
+            .object({
+              subject: zod.string(),
+              object: zod.union([zod.string(), zod.null()]).optional(),
+              relations: zod
+                .array(
+                  zod
+                    .object({
+                      name: zod.union([zod.string(), zod.null()]),
+                      is_forward: zod.boolean(),
+                    })
+                    .describe(
+                      "問題の対象から見た1辺の向きと、表示可能な関係名.",
+                    ),
+                )
+                .optional(),
+              answer_kind: zod.enum(["term", "sentence", "relation"]),
+            })
+            .describe("UIが問題文を組み立てるための表示非依存データ."),
           statement: zod.string(),
           options: zod.record(zod.string(), zod.string()),
           correct: zod.array(zod.string()),
@@ -1183,6 +1426,28 @@ export const ExpandQuizChainApiQuizChainQuizzesQuizIdGetResponse = zod
           readable: zod
             .object({
               quiz_id: zod.string().uuid(),
+              quiz_type: zod
+                .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+                .describe("問題文の種類."),
+              prompt: zod
+                .object({
+                  subject: zod.string(),
+                  object: zod.union([zod.string(), zod.null()]).optional(),
+                  relations: zod
+                    .array(
+                      zod
+                        .object({
+                          name: zod.union([zod.string(), zod.null()]),
+                          is_forward: zod.boolean(),
+                        })
+                        .describe(
+                          "問題の対象から見た1辺の向きと、表示可能な関係名.",
+                        ),
+                    )
+                    .optional(),
+                  answer_kind: zod.enum(["term", "sentence", "relation"]),
+                })
+                .describe("UIが問題文を組み立てるための表示非依存データ."),
               statement: zod.string(),
               options: zod.record(zod.string(), zod.string()),
               correct: zod.array(zod.string()),
@@ -1381,6 +1646,28 @@ export const ExpandSentenceChainApiQuizChainSentencesSentenceIdGetResponse = zod
           readable: zod
             .object({
               quiz_id: zod.string().uuid(),
+              quiz_type: zod
+                .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+                .describe("問題文の種類."),
+              prompt: zod
+                .object({
+                  subject: zod.string(),
+                  object: zod.union([zod.string(), zod.null()]).optional(),
+                  relations: zod
+                    .array(
+                      zod
+                        .object({
+                          name: zod.union([zod.string(), zod.null()]),
+                          is_forward: zod.boolean(),
+                        })
+                        .describe(
+                          "問題の対象から見た1辺の向きと、表示可能な関係名.",
+                        ),
+                    )
+                    .optional(),
+                  answer_kind: zod.enum(["term", "sentence", "relation"]),
+                })
+                .describe("UIが問題文を組み立てるための表示非依存データ."),
               statement: zod.string(),
               options: zod.record(zod.string(), zod.string()),
               correct: zod.array(zod.string()),

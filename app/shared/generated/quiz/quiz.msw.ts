@@ -19,7 +19,9 @@ import type {
   AnswerHistoryResult,
   Answers,
   BrokenQuizReference,
+  DeleteQuizzesResult,
   ManagedQuizResult,
+  PrepareStudyPlanResult,
   QuizChain,
   QuizReattachmentResult,
   QuizRecommendationResponse,
@@ -29,12 +31,42 @@ import type {
   ResourceLearningStatus,
   SentenceQuizStatus,
   StudyPlan,
+  StudyPlanPreparationStatus,
 } from "../fastAPI.schemas";
 
 export const getCreateQuizApiQuizPostResponseMock = (
   overrideResponse: Partial<Extract<ReadableQuiz, object>> = {},
 ): ReadableQuiz => ({
   quiz_id: faker.string.uuid(),
+  quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
+  prompt: {
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    object: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      undefined,
+    ]),
+    relations: faker.helpers.arrayElement([
+      Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        is_forward: faker.datatype.boolean(),
+      })),
+      undefined,
+    ]),
+    answer_kind: faker.helpers.arrayElement([
+      "term",
+      "sentence",
+      "relation",
+    ] as const),
+  },
   statement: faker.string.alpha({ length: { min: 10, max: 20 } }),
   options: {
     [faker.string.alphanumeric(5)]: faker.string.alpha({
@@ -58,6 +90,35 @@ export const getListQuizQuizGetResponseMock = (
     (_, i) => i + 1,
   ).map(() => ({
     quiz_id: faker.string.uuid(),
+    quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
+    prompt: {
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      object: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        undefined,
+      ]),
+      relations: faker.helpers.arrayElement([
+        Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => ({
+          name: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          is_forward: faker.datatype.boolean(),
+        })),
+        undefined,
+      ]),
+      answer_kind: faker.helpers.arrayElement([
+        "term",
+        "sentence",
+        "relation",
+      ] as const),
+    },
     statement: faker.string.alpha({ length: { min: 10, max: 20 } }),
     options: {
       [faker.string.alphanumeric(5)]: faker.string.alpha({
@@ -83,6 +144,35 @@ export const getListCreatedQuizzesQuizCreatedGetResponseMock = (
     (_, i) => i + 1,
   ).map(() => ({
     quiz_id: faker.string.uuid(),
+    quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
+    prompt: {
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      object: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        undefined,
+      ]),
+      relations: faker.helpers.arrayElement([
+        Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => ({
+          name: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          is_forward: faker.datatype.boolean(),
+        })),
+        undefined,
+      ]),
+      answer_kind: faker.helpers.arrayElement([
+        "term",
+        "sentence",
+        "relation",
+      ] as const),
+    },
     statement: faker.string.alpha({ length: { min: 10, max: 20 } }),
     options: {
       [faker.string.alphanumeric(5)]: faker.string.alpha({
@@ -184,6 +274,35 @@ export const getSearchCreatedQuizzesApiQuizCreatedSearchGetResponseMock = (
   ).map(() => ({
     quiz: {
       quiz_id: faker.string.uuid(),
+      quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
+      prompt: {
+        subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        object: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          undefined,
+        ]),
+        relations: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => ({
+            name: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            is_forward: faker.datatype.boolean(),
+          })),
+          undefined,
+        ]),
+        answer_kind: faker.helpers.arrayElement([
+          "term",
+          "sentence",
+          "relation",
+        ] as const),
+      },
       statement: faker.string.alpha({ length: { min: 10, max: 20 } }),
       options: {
         [faker.string.alphanumeric(5)]: faker.string.alpha({
@@ -235,6 +354,7 @@ export const getListBrokenCreatedQuizzesQuizCreatedBrokenGetResponseMock =
       (_, i) => i + 1,
     ).map(() => ({
       quiz_id: faker.string.uuid(),
+      quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
       retired_sentence_id: faker.string.uuid(),
       retired_value: faker.string.alpha({ length: { min: 10, max: 20 } }),
       resource_id: faker.string.uuid(),
@@ -244,6 +364,15 @@ export const getListBrokenCreatedQuizzesQuizCreatedBrokenGetResponseMock =
       ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
       retired_at: `${faker.date.past().toISOString().slice(0, 19)}Z`,
     }));
+
+export const getDeleteCreatedQuizzesApiQuizCreatedDeletePostResponseMock = (
+  overrideResponse: Partial<Extract<DeleteQuizzesResult, object>> = {},
+): DeleteQuizzesResult => ({
+  deleted_count: faker.number.int(),
+  deleted_answer_count: faker.number.int(),
+  skipped_count: faker.number.int(),
+  ...overrideResponse,
+});
 
 export const getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponseMock =
   (
@@ -340,6 +469,35 @@ export const getAnswerQuizApiQuizAnswerQuizIdPostResponseMock = (
     quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
     readable: {
       quiz_id: faker.string.uuid(),
+      quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
+      prompt: {
+        subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        object: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          undefined,
+        ]),
+        relations: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => ({
+            name: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            is_forward: faker.datatype.boolean(),
+          })),
+          undefined,
+        ]),
+        answer_kind: faker.helpers.arrayElement([
+          "term",
+          "sentence",
+          "relation",
+        ] as const),
+      },
       statement: faker.string.alpha({ length: { min: 10, max: 20 } }),
       options: {
         [faker.string.alphanumeric(5)]: faker.string.alpha({
@@ -424,6 +582,35 @@ export const getListAnswerHistoryApiQuizAnswersGetResponseMock = (
     resource_id: faker.string.uuid(),
     quiz: {
       quiz_id: faker.string.uuid(),
+      quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
+      prompt: {
+        subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        object: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          undefined,
+        ]),
+        relations: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => ({
+            name: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            is_forward: faker.datatype.boolean(),
+          })),
+          undefined,
+        ]),
+        answer_kind: faker.helpers.arrayElement([
+          "term",
+          "sentence",
+          "relation",
+        ] as const),
+      },
       statement: faker.string.alpha({ length: { min: 10, max: 20 } }),
       options: {
         [faker.string.alphanumeric(5)]: faker.string.alpha({
@@ -524,6 +711,16 @@ export const getCreateStudyPlanApiQuizStudyPlansPostResponseMock = (
   ...overrideResponse,
 });
 
+export const getListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponseMock =
+  (): StudyPlanPreparationStatus[] =>
+    Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      plan_id: faker.string.uuid(),
+      prepared_quiz_count: faker.number.int(),
+    }));
+
 export const getGetStudyPlanApiQuizStudyPlansPlanIdGetResponseMock = (
   overrideResponse: Partial<Extract<StudyPlan, object>> = {},
 ): StudyPlan => ({
@@ -556,6 +753,26 @@ export const getUpdateStudyPlanApiQuizStudyPlansPlanIdPutResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponseMock =
+  (
+    overrideResponse: Partial<Extract<StudyPlanPreparationStatus, object>> = {},
+  ): StudyPlanPreparationStatus => ({
+    plan_id: faker.string.uuid(),
+    prepared_quiz_count: faker.number.int(),
+    ...overrideResponse,
+  });
+
+export const getPrepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponseMock =
+  (
+    overrideResponse: Partial<Extract<PrepareStudyPlanResult, object>> = {},
+  ): PrepareStudyPlanResult => ({
+    plan_id: faker.string.uuid(),
+    prepared_quiz_count: faker.number.int(),
+    requested_count: faker.number.int(),
+    added_count: faker.number.int(),
+    ...overrideResponse,
+  });
+
 export const getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostResponseMock =
   (): QuizRecommendationResponse[] =>
     Array.from(
@@ -566,6 +783,35 @@ export const getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsP
       quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
       quiz: {
         quiz_id: faker.string.uuid(),
+        quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
+        prompt: {
+          subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          object: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            undefined,
+          ]),
+          relations: faker.helpers.arrayElement([
+            Array.from(
+              { length: faker.number.int({ min: 1, max: 10 }) },
+              (_, i) => i + 1,
+            ).map(() => ({
+              name: faker.helpers.arrayElement([
+                faker.string.alpha({ length: { min: 10, max: 20 } }),
+                null,
+              ]),
+              is_forward: faker.datatype.boolean(),
+            })),
+            undefined,
+          ]),
+          answer_kind: faker.helpers.arrayElement([
+            "term",
+            "sentence",
+            "relation",
+          ] as const),
+        },
         statement: faker.string.alpha({ length: { min: 10, max: 20 } }),
         options: {
           [faker.string.alphanumeric(5)]: faker.string.alpha({
@@ -668,6 +914,35 @@ export const getExpandQuizChainApiQuizChainQuizzesQuizIdGetResponseMock = (
     quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
     readable: {
       quiz_id: faker.string.uuid(),
+      quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
+      prompt: {
+        subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        object: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          undefined,
+        ]),
+        relations: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => ({
+            name: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            is_forward: faker.datatype.boolean(),
+          })),
+          undefined,
+        ]),
+        answer_kind: faker.helpers.arrayElement([
+          "term",
+          "sentence",
+          "relation",
+        ] as const),
+      },
       statement: faker.string.alpha({ length: { min: 10, max: 20 } }),
       options: {
         [faker.string.alphanumeric(5)]: faker.string.alpha({
@@ -797,6 +1072,35 @@ export const getExpandSentenceChainApiQuizChainSentencesSentenceIdGetResponseMoc
       quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
       readable: {
         quiz_id: faker.string.uuid(),
+        quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
+        prompt: {
+          subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          object: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            undefined,
+          ]),
+          relations: faker.helpers.arrayElement([
+            Array.from(
+              { length: faker.number.int({ min: 1, max: 10 }) },
+              (_, i) => i + 1,
+            ).map(() => ({
+              name: faker.helpers.arrayElement([
+                faker.string.alpha({ length: { min: 10, max: 20 } }),
+                null,
+              ]),
+              is_forward: faker.datatype.boolean(),
+            })),
+            undefined,
+          ]),
+          answer_kind: faker.helpers.arrayElement([
+            "term",
+            "sentence",
+            "relation",
+          ] as const),
+        },
         statement: faker.string.alpha({ length: { min: 10, max: 20 } }),
         options: {
           [faker.string.alphanumeric(5)]: faker.string.alpha({
@@ -1026,6 +1330,32 @@ export const getListBrokenCreatedQuizzesQuizCreatedBrokenGetMockHandler = (
   );
 };
 
+export const getDeleteCreatedQuizzesApiQuizCreatedDeletePostMockHandler = (
+  overrideResponse?:
+    | DeleteQuizzesResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DeleteQuizzesResult> | DeleteQuizzesResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/quiz/created/delete",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      await delay(200);
+
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDeleteCreatedQuizzesApiQuizCreatedDeletePostResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostMockHandler =
   (
     overrideResponse?:
@@ -1232,6 +1562,35 @@ export const getCreateStudyPlanApiQuizStudyPlansPostMockHandler = (
   );
 };
 
+export const getListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetMockHandler =
+  (
+    overrideResponse?:
+      | StudyPlanPreparationStatus[]
+      | ((
+          info: Parameters<Parameters<typeof http.get>[1]>[0],
+        ) =>
+          | Promise<StudyPlanPreparationStatus[]>
+          | StudyPlanPreparationStatus[]),
+    options?: RequestHandlerOptions,
+  ) => {
+    return http.get(
+      "*/quiz/study-plans/preparations",
+      async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+        await delay(200);
+
+        return HttpResponse.json(
+          overrideResponse !== undefined
+            ? typeof overrideResponse === "function"
+              ? await overrideResponse(info)
+              : overrideResponse
+            : getListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponseMock(),
+          { status: 200 },
+        );
+      },
+      options,
+    );
+  };
+
 export const getGetStudyPlanApiQuizStudyPlansPlanIdGetMockHandler = (
   overrideResponse?:
     | StudyPlan
@@ -1305,6 +1664,60 @@ export const getDeleteStudyPlanApiQuizStudyPlansPlanIdDeleteMockHandler = (
     options,
   );
 };
+
+export const getGetStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetMockHandler =
+  (
+    overrideResponse?:
+      | StudyPlanPreparationStatus
+      | ((
+          info: Parameters<Parameters<typeof http.get>[1]>[0],
+        ) => Promise<StudyPlanPreparationStatus> | StudyPlanPreparationStatus),
+    options?: RequestHandlerOptions,
+  ) => {
+    return http.get(
+      "*/quiz/study-plans/:planId/preparation",
+      async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+        await delay(200);
+
+        return HttpResponse.json(
+          overrideResponse !== undefined
+            ? typeof overrideResponse === "function"
+              ? await overrideResponse(info)
+              : overrideResponse
+            : getGetStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponseMock(),
+          { status: 200 },
+        );
+      },
+      options,
+    );
+  };
+
+export const getPrepareStudyPlanApiQuizStudyPlansPlanIdPreparePostMockHandler =
+  (
+    overrideResponse?:
+      | PrepareStudyPlanResult
+      | ((
+          info: Parameters<Parameters<typeof http.post>[1]>[0],
+        ) => Promise<PrepareStudyPlanResult> | PrepareStudyPlanResult),
+    options?: RequestHandlerOptions,
+  ) => {
+    return http.post(
+      "*/quiz/study-plans/:planId/prepare",
+      async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+        await delay(200);
+
+        return HttpResponse.json(
+          overrideResponse !== undefined
+            ? typeof overrideResponse === "function"
+              ? await overrideResponse(info)
+              : overrideResponse
+            : getPrepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponseMock(),
+          { status: 200 },
+        );
+      },
+      options,
+    );
+  };
 
 export const getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostMockHandler =
   (
@@ -1395,6 +1808,7 @@ export const getQuizMock = () => [
   getSearchCreatedQuizzesApiQuizCreatedSearchGetMockHandler(),
   getListCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetMockHandler(),
   getListBrokenCreatedQuizzesQuizCreatedBrokenGetMockHandler(),
+  getDeleteCreatedQuizzesApiQuizCreatedDeletePostMockHandler(),
   getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostMockHandler(),
   getDeleteQuizApiQuizQuizIdDeleteMockHandler(),
   getAnswerQuizApiQuizAnswerQuizIdPostMockHandler(),
@@ -1403,9 +1817,12 @@ export const getQuizMock = () => [
   getGetLearningProgressApiQuizLearningProgressResourceIdGetMockHandler(),
   getListStudyPlansApiQuizStudyPlansGetMockHandler(),
   getCreateStudyPlanApiQuizStudyPlansPostMockHandler(),
+  getListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetMockHandler(),
   getGetStudyPlanApiQuizStudyPlansPlanIdGetMockHandler(),
   getUpdateStudyPlanApiQuizStudyPlansPlanIdPutMockHandler(),
   getDeleteStudyPlanApiQuizStudyPlansPlanIdDeleteMockHandler(),
+  getGetStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetMockHandler(),
+  getPrepareStudyPlanApiQuizStudyPlansPlanIdPreparePostMockHandler(),
   getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostMockHandler(),
   getExpandQuizChainApiQuizChainQuizzesQuizIdGetMockHandler(),
   getExpandSentenceChainApiQuizChainSentencesSentenceIdGetMockHandler(),

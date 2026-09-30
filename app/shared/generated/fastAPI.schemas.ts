@@ -61,6 +61,54 @@ export interface Additional {
 }
 
 /**
+ * 問題文の種類.
+ */
+export type QuizType = (typeof QuizType)[keyof typeof QuizType];
+
+export const QuizType = {
+  sent2term: "sent2term",
+  term2sent: "term2sent",
+  pair2rel: "pair2rel",
+  rel2pair: "rel2pair",
+} as const;
+
+/**
+ * 管理者が監査する参照切れQuiz.
+ */
+export interface AdminBrokenQuiz {
+  quiz_id: string;
+  quiz_type: QuizType;
+  owner_email: string | null;
+  broken_reference_count: number;
+  answer_count: number;
+  created: Neo4jDateTime;
+}
+
+/**
+ * 管理対象ユーザーが所有するResource.
+ */
+export interface AdminResourceItem {
+  uid: string;
+  name: string;
+  updated_at: Neo4jDateTime | null;
+  sentence_count: number;
+}
+
+/**
+ * 管理画面に表示するユーザー.
+ */
+export interface AdminUserItem {
+  uid: string;
+  email: string;
+  display_name: string | null;
+  username: string | null;
+  is_active: boolean;
+  is_superuser: boolean;
+  created: Neo4jDateTime;
+  resource_count: number;
+}
+
+/**
  * APIで返すソース範囲.
  */
 export interface SourceRangeResult {
@@ -112,16 +160,31 @@ export interface Answer {
 }
 
 /**
- * 問題文の種類.
+ * 問題の対象から見た1辺の向きと、表示可能な関係名.
  */
-export type QuizType = (typeof QuizType)[keyof typeof QuizType];
+export interface QuizPromptRelation {
+  name: string | null;
+  is_forward: boolean;
+}
 
-export const QuizType = {
-  sent2term: "sent2term",
-  term2sent: "term2sent",
-  pair2rel: "pair2rel",
-  rel2pair: "rel2pair",
+export type QuizPromptAnswerKind =
+  (typeof QuizPromptAnswerKind)[keyof typeof QuizPromptAnswerKind];
+
+export const QuizPromptAnswerKind = {
+  term: "term",
+  sentence: "sentence",
+  relation: "relation",
 } as const;
+
+/**
+ * UIが問題文を組み立てるための表示非依存データ.
+ */
+export interface QuizPrompt {
+  subject: string;
+  object?: string | null;
+  relations?: QuizPromptRelation[];
+  answer_kind: QuizPromptAnswerKind;
+}
 
 export type ReadableQuizOptions = { [key: string]: string };
 
@@ -130,6 +193,8 @@ export type ReadableQuizOptions = { [key: string]: string };
  */
 export interface ReadableQuiz {
   quiz_id: string;
+  quiz_type: QuizType;
+  prompt: QuizPrompt;
   statement: string;
   options: ReadableQuizOptions;
   correct: string[];
@@ -216,6 +281,7 @@ export interface BodyVerifyVerifyAuthVerifyPost {
  */
 export interface BrokenQuizReference {
   quiz_id: string;
+  quiz_type: QuizType;
   retired_sentence_id: string;
   retired_value: string;
   resource_id: string;
@@ -282,6 +348,100 @@ export interface DailyQuizAchievement {
   date: string;
   /** 作成と回答をそれぞれ一作業として数える. */
   readonly n_work: number;
+}
+
+/**
+ * Resource名による削除確認.
+ */
+export interface DeleteAdminResourceRequest {
+  /** @minLength 1 */
+  confirmation: string;
+}
+
+/**
+ * 管理者によるResource削除結果.
+ */
+export interface DeleteAdminResourceResult {
+  resource_uid: string;
+  deleted_sentence_count: number;
+  retired_sentence_count: number;
+}
+
+/**
+ * 強制削除する参照切れQuiz.
+ */
+export interface DeleteBrokenQuizzesRequest {
+  /**
+   * @minItems 1
+   * @maxItems 500
+   */
+  quiz_ids: string[];
+}
+
+/**
+ * 参照切れQuizの強制削除結果.
+ */
+export interface DeleteBrokenQuizzesResult {
+  deleted_count: number;
+  deleted_answer_count: number;
+}
+
+/**
+ * 削除対象の孤立単文.
+ */
+export interface DeleteOrphanedTanbunsRequest {
+  /**
+   * @minItems 1
+   * @maxItems 500
+   */
+  sentence_ids: string[];
+}
+
+/**
+ * 孤立単文の掃除結果.
+ */
+export interface DeleteOrphanedTanbunsResult {
+  deleted_count: number;
+  retired_count: number;
+  skipped_count: number;
+}
+
+/**
+ * 作成済みQuizの一括削除対象.
+ */
+export interface DeleteQuizzesParam {
+  /**
+   * @minItems 1
+   * @maxItems 100
+   */
+  quiz_ids: string[];
+}
+
+/**
+ * 作成済みQuizの一括削除結果.
+ */
+export interface DeleteQuizzesResult {
+  deleted_count: number;
+  deleted_answer_count: number;
+  skipped_count: number;
+}
+
+/**
+ * メールアドレスによるユーザー削除確認.
+ */
+export interface DeleteUserRequest {
+  /** @minLength 1 */
+  confirmation: string;
+}
+
+/**
+ * ユーザーと所有データの削除結果.
+ */
+export interface DeleteUserResult {
+  user_id: string;
+  deleted_resource_count: number;
+  deleted_quiz_count: number;
+  deleted_answer_count: number;
 }
 
 /**
@@ -554,6 +714,13 @@ export interface ManagedQuizResult {
 }
 
 /**
+ * 一括既読の結果.
+ */
+export interface MarkAllNotificationsReadResult {
+  updated_count: number;
+}
+
+/**
  * クイズに関する作業数.
  */
 export interface QuizAchievementCounts {
@@ -613,8 +780,69 @@ export interface NameSpace {
   stats?: NameSpaceStats;
 }
 
+/**
+ * 通知の種類.
+ */
+export type NotificationKind =
+  (typeof NotificationKind)[keyof typeof NotificationKind];
+
+export const NotificationKind = {
+  quiz_preparation_complete: "quiz_preparation_complete",
+} as const;
+
+/**
+ * 保存された通知.
+ */
+export interface Notification {
+  kind: NotificationKind;
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  title: string;
+  description?: string | null;
+  href?: string | null;
+  uid: string;
+  created: Neo4jDateTime;
+  read_at: Neo4jDateTime | null;
+}
+
+/**
+ * 通知一覧と全体の未読数.
+ */
+export interface NotificationFeed {
+  notifications: Notification[];
+  unread_count: number;
+}
+
 export interface OAuth2AuthorizeResponse {
   authorization_url: string;
+}
+
+/**
+ * 単文から本来の配置を解決できない理由.
+ */
+export type OrphanReason = (typeof OrphanReason)[keyof typeof OrphanReason];
+
+export const OrphanReason = {
+  missing_resource: "missing_resource",
+  missing_owner: "missing_owner",
+  missing_location: "missing_location",
+} as const;
+
+/**
+ * Resource内の配置を失った現行単文.
+ */
+export interface OrphanedTanbun {
+  uid: string;
+  sentence: string;
+  resource_uid: string | null;
+  resource_name: string | null;
+  owner_email: string | null;
+  reason: OrphanReason;
+  quiz_reference_count: number;
+  answer_reference_count: number;
+  relationship_count: number;
 }
 
 /**
@@ -625,6 +853,21 @@ export interface Paging {
   page?: number;
   /** @exclusiveMinimum 0 */
   size?: number;
+}
+
+/**
+ * 個人TLへ表示する単文.
+ */
+export interface PersonalTanbunItem {
+  uid: string;
+  sentence: string;
+  term_names: string[];
+  resource_uid: string;
+  resource_name: string;
+  updated_at: Neo4jDateTime | null;
+  score: number;
+  exposure_count: number;
+  seen_today: boolean;
 }
 
 /**
@@ -644,6 +887,75 @@ export interface PositionedDocumentBody {
   /** @maxLength 1000000 */
   text: string;
   position: PositionBody;
+}
+
+/**
+ * StudyPlanへ追加するクイズ数.
+ */
+export interface PrepareStudyPlanRequest {
+  /**
+   * @minimum 1
+   * @maximum 20
+   */
+  additional_count: number;
+}
+
+/**
+ * StudyPlanのクイズ補充結果.
+ */
+export interface PrepareStudyPlanResult {
+  plan_id: string;
+  prepared_quiz_count: number;
+  requested_count: number;
+  added_count: number;
+}
+
+/**
+ * ブラウザが購読に使う公開設定.
+ */
+export interface PushConfiguration {
+  enabled: boolean;
+  public_key: string | null;
+}
+
+/**
+ * Push APIが発行した暗号鍵.
+ */
+export interface PushSubscriptionKeys {
+  /**
+   * @minLength 1
+   * @maxLength 512
+   */
+  p256dh: string;
+  /**
+   * @minLength 1
+   * @maxLength 512
+   */
+  auth: string;
+}
+
+/**
+ * ブラウザから受け取るWeb Push購読情報.
+ */
+export interface PushSubscriptionDraft {
+  /**
+   * @minLength 1
+   * @maxLength 4096
+   */
+  endpoint: string;
+  expirationTime?: number | null;
+  keys: PushSubscriptionKeys;
+}
+
+/**
+ * 解除するWeb Push購読の識別情報.
+ */
+export interface PushSubscriptionEndpoint {
+  /**
+   * @minLength 1
+   * @maxLength 4096
+   */
+  endpoint: string;
 }
 
 /**
@@ -870,6 +1182,33 @@ export interface RepairQuizReferenceParam {
   replacement_sentence_id: string;
 }
 
+/**
+ * 管理者が設定する新しいパスワード.
+ */
+export interface ResetUserPasswordRequest {
+  /**
+   * @minLength 3
+   * @maxLength 100
+   */
+  password: string;
+}
+
+/**
+ * Resource削除で影響を受けるデータ数.
+ */
+export interface ResourceDeletionImpact {
+  resource_uid: string;
+  resource_name: string;
+  owner_uid: string;
+  owner_email: string;
+  sentence_count: number;
+  term_count: number;
+  quiz_count: number;
+  answer_count: number;
+  retiring_sentence_count: number;
+  deleting_sentence_count: number;
+}
+
 export type ResourceDetailUids = { [key: string]: KNode };
 
 export type ResourceDetailTerms = { [key: string]: Term };
@@ -1050,6 +1389,14 @@ export interface StudyPlanDraft {
   n_option: number;
 }
 
+/**
+ * StudyPlanで現在回答可能な準備済みクイズ数.
+ */
+export interface StudyPlanPreparationStatus {
+  plan_id: string;
+  prepared_quiz_count: number;
+}
+
 export type TanbunChainKnowdes = { [key: string]: Tanbun };
 
 /**
@@ -1098,6 +1445,16 @@ export interface TanbunChain {
  */
 export type TanbunChains = TanbunChain[];
 
+/**
+ * 1日1回の単文閲覧記録結果.
+ */
+export interface TanbunExposureResult {
+  sentence_id: string;
+  seen_on: string;
+  exposure_count: number;
+  recorded: boolean;
+}
+
 export type TanbunSearchResultResourceInfos = { [key: string]: ResourceInfo };
 
 /**
@@ -1107,6 +1464,13 @@ export interface TanbunSearchResult {
   total: number;
   data: Tanbun[];
   resource_infos: TanbunSearchResultResourceInfos;
+}
+
+/**
+ * ユーザーの利用可否変更.
+ */
+export interface UpdateUserStatusRequest {
+  is_active: boolean;
 }
 
 /**
@@ -1227,6 +1591,22 @@ export type OauthGoogleCookieCallbackGoogleCookieCallbackGetParams = {
   error?: string | null;
 };
 
+export type GetOrphanedTanbunsAdminOrphanedTanbunsGetParams = {
+  /**
+   * @minimum 1
+   * @maximum 500
+   */
+  limit?: number;
+};
+
+export type GetBrokenQuizzesAdminBrokenQuizzesGetParams = {
+  /**
+   * @minimum 1
+   * @maximum 500
+   */
+  limit?: number;
+};
+
 export type GetMonthlyQuizAchievementUserAchievementQuizMonthlyGetParams = {
   /**
    * @minimum 2000
@@ -1252,6 +1632,22 @@ export type SaveUserAchievementUserAchievementBatchPostParams = {
 };
 
 export type PostTextResourceTextPost200 = { [key: string]: string };
+
+export type GetPersonalTanbunsDashboardTanbunsGetParams = {
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+};
+
+export type GetNotificationsNotificationsGetParams = {
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+};
 
 export type SearchByTextTanbunGetParams = {
   q?: string;

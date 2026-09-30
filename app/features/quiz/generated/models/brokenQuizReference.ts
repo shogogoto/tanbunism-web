@@ -5,12 +5,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Neo4jDateTime } from "./neo4jDateTime";
+import type { QuizType } from "./quizType";
 
 /**
  * 作成Quizから退役単文へ残された、修復可能な参照.
  */
 export interface BrokenQuizReference {
   quiz_id: string;
+  quiz_type: QuizType;
   retired_sentence_id: string;
   retired_value: string;
   resource_id: string;

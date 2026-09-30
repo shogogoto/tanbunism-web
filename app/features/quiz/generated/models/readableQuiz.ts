@@ -5,6 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Neo4jDateTime } from "./neo4jDateTime";
+import type { QuizPrompt } from "./quizPrompt";
+import type { QuizType } from "./quizType";
 import type { ReadableQuizOptions } from "./readableQuizOptions";
 
 /**
@@ -12,6 +14,8 @@ import type { ReadableQuizOptions } from "./readableQuizOptions";
  */
 export interface ReadableQuiz {
   quiz_id: string;
+  quiz_type: QuizType;
+  prompt: QuizPrompt;
   statement: string;
   options: ReadableQuizOptions;
   correct: string[];

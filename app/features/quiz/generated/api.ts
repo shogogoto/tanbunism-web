@@ -11,6 +11,8 @@ import type {
   BodyPostFilesResourcePost,
   BrokenQuizReference,
   CreateQuizParam,
+  DeleteQuizzesParam,
+  DeleteQuizzesResult,
   EntryDetail,
   HTTPValidationError,
   IdentityConflictResponse,
@@ -20,6 +22,8 @@ import type {
   ManagedQuizResult,
   NameSpace,
   PostTextResourceTextPost200,
+  PrepareStudyPlanRequest,
+  PrepareStudyPlanResult,
   QuizChain,
   QuizReattachmentResult,
   QuizRecommendationResponse,
@@ -39,6 +43,7 @@ import type {
   SentenceQuizStatus,
   StudyPlan,
   StudyPlanDraft,
+  StudyPlanPreparationStatus,
 } from "./models";
 
 export type getNamaspaceNamespaceGetResponse200 = {
@@ -994,6 +999,62 @@ export const listBrokenCreatedQuizzesQuizCreatedBrokenGet = async (
   } as listBrokenCreatedQuizzesQuizCreatedBrokenGetResponse;
 };
 
+export type deleteCreatedQuizzesApiQuizCreatedDeletePostResponse200 = {
+  data: DeleteQuizzesResult;
+  status: 200;
+};
+
+export type deleteCreatedQuizzesApiQuizCreatedDeletePostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type deleteCreatedQuizzesApiQuizCreatedDeletePostResponseSuccess =
+  deleteCreatedQuizzesApiQuizCreatedDeletePostResponse200 & {
+    headers: Headers;
+  };
+export type deleteCreatedQuizzesApiQuizCreatedDeletePostResponseError =
+  deleteCreatedQuizzesApiQuizCreatedDeletePostResponse422 & {
+    headers: Headers;
+  };
+
+export type deleteCreatedQuizzesApiQuizCreatedDeletePostResponse =
+  | deleteCreatedQuizzesApiQuizCreatedDeletePostResponseSuccess
+  | deleteCreatedQuizzesApiQuizCreatedDeletePostResponseError;
+
+export const getDeleteCreatedQuizzesApiQuizCreatedDeletePostUrl = () => {
+  return "https://knowde.onrender.com/quiz/created/delete";
+};
+
+/**
+ * 認証ユーザー自身が作成したQuizを一括削除.
+ * @summary Delete Created Quizzes Api
+ */
+export const deleteCreatedQuizzesApiQuizCreatedDeletePost = async (
+  deleteQuizzesParam: DeleteQuizzesParam,
+  options?: RequestInit,
+): Promise<deleteCreatedQuizzesApiQuizCreatedDeletePostResponse> => {
+  const res = await fetch(
+    getDeleteCreatedQuizzesApiQuizCreatedDeletePostUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(deleteQuizzesParam),
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: deleteCreatedQuizzesApiQuizCreatedDeletePostResponse["data"] =
+    body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as deleteCreatedQuizzesApiQuizCreatedDeletePostResponse;
+};
+
 export type repairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostResponse200 =
   {
     data: QuizReattachmentResult;
@@ -1437,6 +1498,51 @@ export const createStudyPlanApiQuizStudyPlansPost = async (
   } as createStudyPlanApiQuizStudyPlansPostResponse;
 };
 
+export type listStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponse200 =
+  {
+    data: StudyPlanPreparationStatus[];
+    status: 200;
+  };
+
+export type listStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponseSuccess =
+  listStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponse200 & {
+    headers: Headers;
+  };
+
+export type listStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponse =
+  listStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponseSuccess;
+
+export const getListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetUrl =
+  () => {
+    return "https://knowde.onrender.com/quiz/study-plans/preparations";
+  };
+
+/**
+ * 所有するStudyPlanの準備済み問題数を一括取得.
+ * @summary List Study Plan Preparations Api
+ */
+export const listStudyPlanPreparationsApiQuizStudyPlansPreparationsGet = async (
+  options?: RequestInit,
+): Promise<listStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponse> => {
+  const res = await fetch(
+    getListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponse["data"] =
+    body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as listStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponse;
+};
+
 export type getStudyPlanApiQuizStudyPlansPlanIdGetResponse200 = {
   data: StudyPlan;
   status: 200;
@@ -1608,6 +1714,125 @@ export const deleteStudyPlanApiQuizStudyPlansPlanIdDelete = async (
     status: res.status,
     headers: res.headers,
   } as deleteStudyPlanApiQuizStudyPlansPlanIdDeleteResponse;
+};
+
+export type getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponse200 =
+  {
+    data: StudyPlanPreparationStatus;
+    status: 200;
+  };
+
+export type getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponse422 =
+  {
+    data: HTTPValidationError;
+    status: 422;
+  };
+
+export type getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponseSuccess =
+  getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponse200 & {
+    headers: Headers;
+  };
+export type getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponseError =
+  getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponse422 & {
+    headers: Headers;
+  };
+
+export type getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponse =
+  | getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponseSuccess
+  | getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponseError;
+
+export const getGetStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetUrl =
+  (planId: string) => {
+    return `https://knowde.onrender.com/quiz/study-plans/${planId}/preparation`;
+  };
+
+/**
+ * StudyPlanの準備済み問題数を取得.
+ * @summary Get Study Plan Preparation Api
+ */
+export const getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGet =
+  async (
+    planId: string,
+    options?: RequestInit,
+  ): Promise<getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponse> => {
+    const res = await fetch(
+      getGetStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetUrl(
+        planId,
+      ),
+      {
+        ...options,
+        method: "GET",
+      },
+    );
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponse["data"] =
+      body ? JSON.parse(body) : {};
+    return {
+      data,
+      status: res.status,
+      headers: res.headers,
+    } as getStudyPlanPreparationApiQuizStudyPlansPlanIdPreparationGetResponse;
+  };
+
+export type prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponse200 = {
+  data: PrepareStudyPlanResult;
+  status: 200;
+};
+
+export type prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponseSuccess =
+  prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponse200 & {
+    headers: Headers;
+  };
+export type prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponseError =
+  prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponse422 & {
+    headers: Headers;
+  };
+
+export type prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponse =
+  | prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponseSuccess
+  | prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponseError;
+
+export const getPrepareStudyPlanApiQuizStudyPlansPlanIdPreparePostUrl = (
+  planId: string,
+) => {
+  return `https://knowde.onrender.com/quiz/study-plans/${planId}/prepare`;
+};
+
+/**
+ * StudyPlanへ指定数の新しい問題を追加.
+ * @summary Prepare Study Plan Api
+ */
+export const prepareStudyPlanApiQuizStudyPlansPlanIdPreparePost = async (
+  planId: string,
+  prepareStudyPlanRequest: PrepareStudyPlanRequest,
+  options?: RequestInit,
+): Promise<prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponse> => {
+  const res = await fetch(
+    getPrepareStudyPlanApiQuizStudyPlansPlanIdPreparePostUrl(planId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(prepareStudyPlanRequest),
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponse["data"] =
+    body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as prepareStudyPlanApiQuizStudyPlansPlanIdPreparePostResponse;
 };
 
 export type recommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPostResponse200 =
