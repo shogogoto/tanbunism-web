@@ -273,8 +273,12 @@ function moveActiveItem(offset: -1 | 1, dialog: Element | null): boolean {
         ? 0
         : items.length - 1
       : (currentIndex + offset + items.length) % items.length;
-  items[nextIndex]?.focus();
-  items[nextIndex]?.scrollIntoView({ block: "nearest" });
+  const nextItem = items[nextIndex];
+  if (!nextItem) return false;
+  for (const item of items) item.removeAttribute("data-hotkey-active");
+  nextItem.dataset.hotkeyActive = "true";
+  nextItem.focus();
+  nextItem.scrollIntoView({ block: "nearest" });
   return true;
 }
 

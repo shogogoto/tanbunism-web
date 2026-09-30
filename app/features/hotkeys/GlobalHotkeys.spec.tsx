@@ -102,9 +102,13 @@ it("履歴を開いてjとkとEnterで移動する", async () => {
 
   await user.keyboard("j");
   expect(second).toHaveFocus();
+  expect(second).toHaveAttribute("data-hotkey-active", "true");
+  expect(first).not.toHaveAttribute("data-hotkey-active");
 
   await user.keyboard("k");
   expect(first).toHaveFocus();
+  expect(first).toHaveAttribute("data-hotkey-active", "true");
+  expect(second).not.toHaveAttribute("data-hotkey-active");
 
   await user.keyboard("j");
 
