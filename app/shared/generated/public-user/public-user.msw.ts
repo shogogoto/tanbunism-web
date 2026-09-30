@@ -125,6 +125,7 @@ export const getSearchUserUserSearchPostResponseMock = (
       n_resource: faker.number.int(),
       created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
     },
+    level: faker.number.int(),
   })),
   ...overrideResponse,
 });

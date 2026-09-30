@@ -1542,6 +1542,7 @@ export interface UserSearchBody {
 export interface UserSearchRow {
   user: UserReadPublic;
   archivement: UserAchievement;
+  level: number;
 }
 
 /**

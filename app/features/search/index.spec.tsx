@@ -86,6 +86,7 @@ const server = setupServer(
             n_resource: 1,
             created: "2026-08-01T00:00:00Z",
           },
+          level: 7,
         },
       ],
     });
@@ -125,6 +126,7 @@ describe("統合検索", () => {
     expect(screen.getByRole("link", { name: /数学の知識/ })).toBeVisible();
     expect(screen.getByText("数学ノート")).toBeVisible();
     expect(screen.getAllByText("読書家")).toHaveLength(2);
+    expect(screen.getByText("Lv. 7")).toBeVisible();
     expect(screen.getByLabelText("スコア: 12")).toBeVisible();
     expect(screen.getByLabelText("文字数: 100")).toBeVisible();
     expect(screen.getByLabelText("単文数: 1")).toBeVisible();
@@ -145,6 +147,7 @@ describe("統合検索", () => {
       "true",
     );
     expect(requestedTypes.sort()).toEqual(["knowledge", "resource", "user"]);
+    expect(document.querySelectorAll("[data-hotkey-item]")).toHaveLength(3);
     await waitFor(async () => expect(await genericCache.count()).toBe(3));
   });
 

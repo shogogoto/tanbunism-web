@@ -265,6 +265,7 @@ export const SearchUserUserSearchPostResponse = zod
               created: zod.string().datetime({ offset: true }),
             })
             .describe("ユーザーの作業量計."),
+          level: zod.number().int(),
         })
         .describe("検索結果行."),
     ),

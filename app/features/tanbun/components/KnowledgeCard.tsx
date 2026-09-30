@@ -14,6 +14,7 @@ type Props = {
   metadata?: ReactNode;
   compact?: boolean;
   scorePosition?: "start" | "end";
+  hotkeyItem?: boolean;
 };
 
 export default function KnowledgeCard({
@@ -26,6 +27,7 @@ export default function KnowledgeCard({
   metadata,
   compact = false,
   scorePosition = "end",
+  hotkeyItem = false,
 }: Props) {
   return (
     <Card
@@ -37,13 +39,17 @@ export default function KnowledgeCard({
         <Link
           to={`/tanbun/${uid}`}
           state={state}
-          className={`block ${compact ? "space-y-1" : "space-y-2"}`}
+          data-hotkey-item={hotkeyItem || undefined}
+          className={`block outline-none data-[hotkey-active=true]:rounded-sm data-[hotkey-active=true]:bg-accent/70 data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-primary ${compact ? "space-y-1" : "space-y-2"}`}
         >
           <span className="sr-only">知識:</span>
           {termNames?.length ? (
             <p className={compact ? "text-sm font-semibold" : "font-semibold"}>
               {termNames.map((name) => (
-                <span key={name} className="mr-2">
+                <span
+                  key={name}
+                  className="mr-1.5 inline-block rounded-sm bg-blue-500/12 px-1.5 py-0.5 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300"
+                >
                   <Highlight text={name} query={query} />
                 </span>
               ))}

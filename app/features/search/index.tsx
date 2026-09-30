@@ -11,7 +11,7 @@ import { Link, useSearchParams } from "react-router";
 import { Highlight } from "~/features/tanbun/components/Highlight";
 import KnowledgeCard from "~/features/tanbun/components/KnowledgeCard";
 import UserAvatar from "~/features/user/UserAvatar";
-import { Card, CardContent, CardFooter } from "~/shared/components/ui/card";
+import { Card, CardContent } from "~/shared/components/ui/card";
 import { searchResourcePostResourceSearchPost } from "~/shared/generated/entry/entry";
 import type {
   ResourceInfo,
@@ -443,6 +443,7 @@ function KnowledgeResult({
       }
       compact
       scorePosition="start"
+      hotkeyItem
     />
   );
 }
@@ -453,33 +454,41 @@ function ResourceResult({
 }: { value: ResourceInfo; query: string }) {
   const { resource, resource_stats: stats, user } = value;
   return (
-    <Link to={`/resource/${resource.uid}`}>
+    <Link
+      to={`/resource/${resource.uid}`}
+      data-hotkey-item
+      className="block outline-none data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary"
+    >
       <Card className="gap-0 rounded-none border-0 border-l-2 border-l-orange-500 py-0 shadow-none hover:bg-muted/40">
-        <CardContent className="space-y-1 p-2">
+        <CardContent className="space-y-1.5 p-2">
           <span className="sr-only">リソース:</span>
-          <p className="text-sm font-semibold">
-            <Highlight text={resource.name} query={query} />
-          </p>
-          {resource.authors?.length ? (
-            <p className="text-sm text-muted-foreground">
-              {resource.authors.join(", ")}
+          <div className="flex min-w-0 items-baseline gap-2 text-sm">
+            <p className="min-w-0 truncate font-semibold">
+              <Highlight text={resource.name} query={query} />
             </p>
-          ) : null}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <UserAvatar user={user} className="size-5" />
-            <span>{user.display_name || user.username}</span>
+            {resource.authors?.length ? (
+              <p className="shrink truncate text-muted-foreground">
+                {resource.authors.join(", ")}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+            <ResourceStat Icon={Baseline} label="文字数" value={stats.n_char} />
+            <ResourceStat Icon={List} label="単文数" value={stats.n_sentence} />
+            <ResourceStat
+              Icon={TextInitial}
+              label="用語数"
+              value={stats.n_term}
+            />
+            <ResourceStat Icon={GitFork} label="関係数" value={stats.n_edge} />
+            <span className="ml-auto flex min-w-0 items-center gap-1.5 text-xs">
+              <UserAvatar user={user} className="size-5" />
+              <span className="max-w-28 truncate">
+                {user.display_name || user.username}
+              </span>
+            </span>
           </div>
         </CardContent>
-        <CardFooter className="flex flex-wrap gap-1 px-2 pb-2">
-          <ResourceStat Icon={Baseline} label="文字数" value={stats.n_char} />
-          <ResourceStat Icon={List} label="単文数" value={stats.n_sentence} />
-          <ResourceStat
-            Icon={TextInitial}
-            label="用語数"
-            value={stats.n_term}
-          />
-          <ResourceStat Icon={GitFork} label="関係数" value={stats.n_edge} />
-        </CardFooter>
       </Card>
     </Link>
   );
@@ -527,23 +536,34 @@ function SearchMetric({
 function UserResult({ value, query }: { value: UserSearchRow; query: string }) {
   const { user } = value;
   return (
-    <Link to={`/user/${user.username || user.uid}`}>
+    <Link
+      to={`/user/${user.username || user.uid}`}
+      data-hotkey-item
+      className="block outline-none data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary"
+    >
       <Card className="gap-0 rounded-none border-0 border-l-2 border-l-purple-500 py-0 shadow-none hover:bg-muted/40">
-        <CardContent className="flex gap-2 p-2">
+        <CardContent className="flex min-w-0 items-center gap-2 p-2">
           <span className="sr-only">ユーザー:</span>
-          <UserAvatar user={user} />
-          <div className="min-w-0 space-y-1">
-            <p className="font-semibold">
+          <UserAvatar user={user} className="size-8 shrink-0" />
+          <div className="flex min-w-0 flex-1 items-baseline gap-2">
+            <p className="shrink-0 font-semibold">
               <Highlight
                 text={user.display_name || user.username || "名前未設定"}
                 query={query}
               />
             </p>
             {user.username && (
-              <p className="text-sm text-muted-foreground">@{user.username}</p>
+              <span className="shrink-0 text-sm text-muted-foreground">
+                @{user.username}
+              </span>
             )}
+            <span className="shrink-0 text-xs font-medium text-purple-700 dark:text-purple-300">
+              Lv. {value.level}
+            </span>
             {user.profile && (
-              <p className="line-clamp-2 text-sm">{user.profile}</p>
+              <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                {user.profile}
+              </p>
             )}
           </div>
         </CardContent>
