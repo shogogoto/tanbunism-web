@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router";
 import { expect, it, vi } from "vitest";
 import PersonalTimeline from "./PersonalTimeline";
@@ -28,12 +28,15 @@ it("単文を見た日を一日一回だけ記録する", async () => {
       seen_today: false,
     },
   ]);
-  vi.mocked(markTanbunSeen).mockResolvedValue({
-    sentence_id: "sentence-1",
-    seen_on: "2026-09-28",
-    exposure_count: 3,
-    recorded: true,
-  });
+  let completeRequest:
+    | ((result: Awaited<ReturnType<typeof markTanbunSeen>>) => void)
+    | undefined;
+  vi.mocked(markTanbunSeen).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        completeRequest = resolve;
+      }),
+  );
   render(
     <MemoryRouter>
       <PersonalTimeline />
@@ -50,10 +53,24 @@ it("単文を見た日を一日一回だけ記録する", async () => {
   expect(item).toHaveFocus();
   fireEvent.keyDown(item as HTMLElement, { key: " " });
 
+  // APIの応答を待たず、押した瞬間に表示する。
   expect(
-    await screen.findByRole("button", { name: "今日は記録済み、累計3日" }),
+    screen.getByRole("button", { name: "今日は記録済み、累計3日" }),
   ).toBeDisabled();
   expect(markTanbunSeen).toHaveBeenCalledWith("sentence-1");
+
+  await act(async () => {
+    completeRequest?.({
+      sentence_id: "sentence-1",
+      seen_on: "2026-09-28",
+      exposure_count: 3,
+      recorded: true,
+    });
+  });
+
+  expect(
+    screen.getByRole("button", { name: "今日は記録済み、累計3日" }),
+  ).toBeDisabled();
   expect(screen.getByLabelText("スコア: 7")).toBeInTheDocument();
   expect(screen.getByText("新しい知識")).toBeInTheDocument();
 
@@ -61,4 +78,50 @@ it("単文を見た日を一日一回だけ記録する", async () => {
   expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
     "/tanbun/sentence-1",
   );
+});
+
+it("記録に失敗したら表示を元に戻す", async () => {
+  vi.mocked(listPersonalTanbuns).mockResolvedValue([
+    {
+      uid: "sentence-1",
+      sentence: "新しく取り込んだ単文",
+      term_names: [],
+      resource_uid: "resource-1",
+      resource_name: "読書メモ",
+      updated_at: null,
+      exposure_count: 2,
+      seen_today: false,
+    },
+  ]);
+  let failRequest: ((reason: Error) => void) | undefined;
+  vi.mocked(markTanbunSeen).mockImplementation(
+    () =>
+      new Promise((_resolve, reject) => {
+        failRequest = reject;
+      }),
+  );
+  render(
+    <MemoryRouter>
+      <PersonalTimeline />
+    </MemoryRouter>,
+  );
+
+  const button = await screen.findByRole("button", {
+    name: "今日見たことを記録、累計2日",
+  });
+  fireEvent.click(button);
+  expect(
+    screen.getByRole("button", { name: "今日は記録済み、累計3日" }),
+  ).toBeDisabled();
+
+  await act(async () => {
+    failRequest?.(new Error("記録に失敗しました"));
+  });
+
+  expect(
+    screen.getByRole("button", {
+      name: "今日見たことを記録、累計2日",
+    }),
+  ).toBeEnabled();
+  expect(screen.getByRole("alert")).toHaveTextContent("記録に失敗しました");
 });

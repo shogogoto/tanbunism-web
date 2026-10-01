@@ -1,5 +1,5 @@
 import { Eye } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import KnowledgeCard from "~/features/tanbun/components/KnowledgeCard";
 import { Button } from "~/shared/components/ui/button";
@@ -12,8 +12,8 @@ import {
 export default function PersonalTimeline() {
   const [items, setItems] = useState<PersonalTanbunItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [markingId, setMarkingId] = useState<string>();
   const [error, setError] = useState<string>();
+  const pendingExposureIds = useRef(new Set<string>());
 
   useEffect(() => {
     let active = true;
@@ -39,9 +39,20 @@ export default function PersonalTimeline() {
   }, []);
 
   async function markSeen(item: PersonalTanbunItem) {
-    if (item.seen_today || markingId) return;
-    setMarkingId(item.uid);
+    if (item.seen_today || pendingExposureIds.current.has(item.uid)) return;
+    pendingExposureIds.current.add(item.uid);
     setError(undefined);
+    setItems((current) =>
+      current.map((candidate) =>
+        candidate.uid === item.uid
+          ? {
+              ...candidate,
+              seen_today: true,
+              exposure_count: candidate.exposure_count + 1,
+            }
+          : candidate,
+      ),
+    );
     try {
       const result = await markTanbunSeen(item.uid);
       setItems((current) =>
@@ -56,13 +67,24 @@ export default function PersonalTimeline() {
         ),
       );
     } catch (reason) {
+      setItems((current) =>
+        current.map((candidate) =>
+          candidate.uid === item.uid
+            ? {
+                ...candidate,
+                seen_today: false,
+                exposure_count: item.exposure_count,
+              }
+            : candidate,
+        ),
+      );
       setError(
         reason instanceof Error
           ? reason.message
           : "閲覧を記録できませんでした。",
       );
     } finally {
-      setMarkingId(undefined);
+      pendingExposureIds.current.delete(item.uid);
     }
   }
 
@@ -134,9 +156,9 @@ export default function PersonalTimeline() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className={`h-6 shrink-0 gap-1 px-1.5 tabular-nums disabled:opacity-100 ${
+                      className={`h-6 shrink-0 gap-1 px-1.5 tabular-nums transition-transform disabled:opacity-100 ${
                         item.seen_today
-                          ? "text-muted-foreground"
+                          ? "scale-105 text-primary"
                           : "text-foreground"
                       }`}
                       aria-label={
@@ -145,10 +167,14 @@ export default function PersonalTimeline() {
                           : `今日見たことを記録、累計${item.exposure_count}日`
                       }
                       title={item.seen_today ? "今日は記録済み" : "今日見た"}
-                      disabled={item.seen_today || markingId === item.uid}
+                      disabled={item.seen_today}
                       onClick={() => void markSeen(item)}
                     >
-                      <Eye className="size-3.5" />
+                      <Eye
+                        className={`size-3.5 transition-all ${
+                          item.seen_today ? "fill-current" : ""
+                        }`}
+                      />
                       {item.exposure_count}
                     </Button>
                   </>

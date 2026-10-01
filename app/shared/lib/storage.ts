@@ -14,7 +14,14 @@ export function getItem(key: string) {
     return null;
   }
   const item = window.localStorage.getItem(key);
-  return item ? JSON.parse(item) : null;
+  if (!item) return null;
+
+  try {
+    return JSON.parse(item);
+  } catch {
+    // Themeなど、文字列をそのまま保存している既存データも扱う。
+    return item;
+  }
 }
 
 export function setItem(key: string, value: unknown): boolean {
