@@ -161,3 +161,16 @@ export const resourceSearchCache = createTTLStore<ResourceSearchResult>(
 );
 
 export const historyCache = createHistoryStore(db.history);
+
+/**
+ * APIレスポンス由来のキャッシュだけを破棄する。
+ * 閲覧履歴や認証情報、ファイルハンドルなどのユーザーデータは保持する。
+ */
+export async function clearApplicationCaches(): Promise<void> {
+  await Promise.all([
+    genericCache.clear(),
+    tanbunSearchCache.clear(),
+    tanbunDetailCache.clear(),
+    resourceSearchCache.clear(),
+  ]);
+}

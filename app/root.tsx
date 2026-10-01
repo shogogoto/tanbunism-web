@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Links,
   Meta,
@@ -11,6 +12,7 @@ import "./app.css";
 import "katex/dist/katex.min.css";
 import { ThemeProvider } from "~/shared/components/theme/ThemeProvider";
 import ThemeScript from "~/shared/components/theme/ThemeScript";
+import { Button } from "~/shared/components/ui/button";
 import {
   Card,
   CardContent,
@@ -18,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/shared/components/ui/card";
+import { clearApplicationCaches } from "~/shared/lib/indexed";
 import GATracker from "./GATracker";
 import { AuthProvider } from "./features/auth/AuthProvider";
 import { ClientOnly } from "./shared/components/ClientOnly";
@@ -120,21 +123,47 @@ export default function App({ loaderData }: Route.ComponentProps) {
     </ThemeProvider>
   );
 }
+
+export function isStaleBundleError(error: Error): boolean {
+  return /ChunkLoadError|Loading chunk|dynamically imported module|module script failed/i.test(
+    error.message,
+  );
+}
+
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const [clearingCache, setClearingCache] = useState(false);
   let message = "Oops!";
-  let details = "An unexpected error occurred.";
+  let details = "予期しないエラーが発生しました。";
   let stack: string | undefined;
+  let technicalDetails: string | undefined;
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? "404" : "Error";
     details =
       error.status === 404
-        ? "The requested page could not be found."
+        ? "ページが見つかりませんでした。"
         : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
+    technicalDetails = `${error.status} ${error.statusText}`.trim();
+  } else if (error instanceof Error) {
+    technicalDetails = error.message;
+    if (isStaleBundleError(error)) {
+      details =
+        "更新前のアプリが端末に残っている可能性があります。再読み込みしてください。";
+    }
+    if (import.meta.env.DEV) {
+      details = error.message;
+      stack = error.stack;
+    }
   }
+
+  const clearCacheAndReload = async () => {
+    setClearingCache(true);
+    try {
+      await clearApplicationCaches();
+    } finally {
+      window.location.reload();
+    }
+  };
 
   return (
     <main className="flex items-center justify-center min-h-screen p-4">
@@ -143,13 +172,36 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
           <CardTitle>{message}</CardTitle>
           <CardDescription>{details}</CardDescription>
         </CardHeader>
-        {stack && (
-          <CardContent>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={() => window.location.reload()}>
+              再読み込み
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={clearingCache}
+              onClick={clearCacheAndReload}
+            >
+              {clearingCache
+                ? "キャッシュを削除中…"
+                : "データキャッシュを消して再読み込み"}
+            </Button>
+          </div>
+          {technicalDetails && (
+            <details className="text-sm text-muted-foreground">
+              <summary className="cursor-pointer select-none">技術情報</summary>
+              <pre className="w-full p-3 mt-2 overflow-x-auto whitespace-pre-wrap break-all bg-muted rounded-md">
+                <code>{technicalDetails}</code>
+              </pre>
+            </details>
+          )}
+          {stack && (
             <pre className="w-full p-4 overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-md">
               <code>{stack}</code>
             </pre>
-          </CardContent>
-        )}
+          )}
+        </CardContent>
       </Card>
     </main>
   );

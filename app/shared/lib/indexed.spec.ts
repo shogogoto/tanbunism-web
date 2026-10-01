@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { db, genericCache } from "./indexed";
+import {
+  clearApplicationCaches,
+  db,
+  genericCache,
+  historyCache,
+  resourceSearchCache,
+  tanbunSearchCache,
+} from "./indexed";
 
 describe("genericCache", () => {
   beforeEach(async () => {
@@ -46,5 +53,34 @@ describe("genericCache", () => {
     expect(await genericCache.get("quiz:answers:1")).toBeUndefined();
     expect(await genericCache.get("quiz:chains:1")).toBeUndefined();
     expect(await genericCache.get("search:knowledge")).toBe("result");
+  });
+});
+
+describe("clearApplicationCaches", () => {
+  beforeEach(async () => {
+    await Promise.all([
+      genericCache.clear(),
+      tanbunSearchCache.clear(),
+      resourceSearchCache.clear(),
+      historyCache.clear(),
+    ]);
+  });
+
+  it("APIキャッシュだけを削除し閲覧履歴を保持する", async () => {
+    await genericCache.set("private:dashboard", { count: 1 });
+    await tanbunSearchCache.set("query", {
+      data: [],
+      resource_infos: {},
+      total: 0,
+    });
+    await resourceSearchCache.set("resources", { data: [], total: 0 });
+    await historyCache.add({ title: "検索", url: "/search" });
+
+    await clearApplicationCaches();
+
+    expect(await genericCache.count()).toBe(0);
+    expect(await tanbunSearchCache.count()).toBe(0);
+    expect(await resourceSearchCache.count()).toBe(0);
+    expect(await historyCache.getAll()).toHaveLength(1);
   });
 });
