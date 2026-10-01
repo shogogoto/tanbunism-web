@@ -24,7 +24,6 @@ import type {
 import { searchUserUserSearchPost } from "~/shared/generated/public-user/public-user";
 import { searchByTextTanbunGet } from "~/shared/generated/tanbun/tanbun";
 import { createCacheKey } from "~/shared/hooks/swr/useCache";
-import { useDebounce } from "~/shared/hooks/useDebounce";
 import { genericCache } from "~/shared/lib/indexed";
 import {
   type SearchSettings,
@@ -75,7 +74,6 @@ export default function UnifiedSearch() {
   );
   const enabledKey = enabledTypes.join(",");
   const settingsKey = JSON.stringify(settings);
-  const debouncedQuery = useDebounce(queryParam, 400);
   const [page, setPage] = useState(1);
   const [state, setState] = useState<SearchState>(emptyState);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,7 +82,7 @@ export default function UnifiedSearch() {
   const previousSearchRef = useRef("");
   const lastRequestRef = useRef("");
 
-  const searchKey = `${debouncedQuery}:${enabledKey}:${settingsKey}`;
+  const searchKey = `${queryParam}:${enabledKey}:${settingsKey}`;
 
   useEffect(() => {
     const reset = previousSearchRef.current !== searchKey;
@@ -108,7 +106,7 @@ export default function UnifiedSearch() {
         enabledTypes.map(async (type) => {
           const cacheKey = searchCacheKey(
             type,
-            debouncedQuery,
+            queryParam,
             requestedPage,
             settings,
           );
@@ -123,7 +121,7 @@ export default function UnifiedSearch() {
           try {
             const fresh = await searchType(
               type,
-              debouncedQuery,
+              queryParam,
               requestedPage,
               settings,
               controller.signal,
@@ -151,7 +149,7 @@ export default function UnifiedSearch() {
     void load();
 
     return () => controller.abort();
-  }, [debouncedQuery, enabledTypes, page, searchKey, settings]);
+  }, [queryParam, enabledTypes, page, searchKey, settings]);
 
   const hasMore = enabledTypes.some((type) => {
     const count =
@@ -206,7 +204,7 @@ export default function UnifiedSearch() {
                 key={`knowledge:${result.value.uid}`}
                 value={result.value}
                 info={state.resourceInfos[result.value.resource_uid]}
-                query={debouncedQuery}
+                query={queryParam}
               />
             );
           }
@@ -215,7 +213,7 @@ export default function UnifiedSearch() {
               <ResourceResult
                 key={`resource:${result.value.resource.uid}`}
                 value={result.value}
-                query={debouncedQuery}
+                query={queryParam}
               />
             );
           }
@@ -223,7 +221,7 @@ export default function UnifiedSearch() {
             <UserResult
               key={`user:${result.value.user.uid}`}
               value={result.value}
-              query={debouncedQuery}
+              query={queryParam}
             />
           );
         })}

@@ -1,8 +1,9 @@
 import { Search } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import { useDebounce } from "~/shared/hooks/useDebounce";
 import SearchSettingsPanel from "./SearchSettings";
 import {
   type SearchType,
@@ -29,6 +30,8 @@ const activeTypeStyles: Record<SearchType, string> = {
 export default function SearchHeaderControls() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";
+  const [draftQuery, setDraftQuery] = useState(query);
+  const debouncedQuery = useDebounce(draftQuery, 250);
   const enabledTypes = useMemo(
     () => parseSearchTypes(searchParams.get("types")),
     [searchParams],
@@ -37,6 +40,23 @@ export default function SearchHeaderControls() {
     () => readSearchSettings(searchParams),
     [searchParams],
   );
+
+  useEffect(() => {
+    setDraftQuery(query);
+  }, [query]);
+
+  useEffect(() => {
+    if (debouncedQuery === query) return;
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (debouncedQuery) next.set("q", debouncedQuery);
+        else next.delete("q");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [debouncedQuery, query, setSearchParams]);
 
   function updateParams(update: (next: URLSearchParams) => void) {
     setSearchParams(
@@ -68,13 +88,8 @@ export default function SearchHeaderControls() {
           <Input
             type="search"
             data-global-search-input
-            value={query}
-            onChange={(event) =>
-              updateParams((next) => {
-                if (event.target.value) next.set("q", event.target.value);
-                else next.delete("q");
-              })
-            }
+            value={draftQuery}
+            onChange={(event) => setDraftQuery(event.target.value)}
             placeholder="知識、リソース、ユーザーを検索"
             aria-label="検索"
             className="pl-10 pr-12"
