@@ -1,3 +1,4 @@
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge } from "~/shared/components/ui/badge";
 import { cn } from "~/shared/lib/utils";
@@ -76,11 +77,21 @@ function RelationPath({ quiz }: { quiz: PromptQuiz }) {
           key={`${relation.name ?? "unknown"}-${index}`}
           className="contents"
         >
-          <span className="text-muted-foreground">
-            {relation.is_forward ? "—[" : "←["}
-            <span className="text-foreground">{relation.name ?? "?"}</span>
-            {relation.is_forward ? "]→" : "]—"}
+          {!relation.is_forward && (
+            <ArrowLeft
+              className="size-5 shrink-0 text-foreground"
+              aria-label="左向き"
+            />
+          )}
+          <span className="rounded-md border bg-background px-2 py-0.5 text-foreground shadow-sm">
+            {relation.name ?? "?"}
           </span>
+          {relation.is_forward && (
+            <ArrowRight
+              className="size-5 shrink-0 text-foreground"
+              aria-label="右向き"
+            />
+          )}
           {index < relations.length - 1 && (
             <span className="rounded bg-muted px-1.5 py-0.5">…</span>
           )}

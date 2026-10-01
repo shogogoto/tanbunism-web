@@ -1,4 +1,11 @@
-import { ChevronRight, FileText, Folder, ListChecks } from "lucide-react";
+import {
+  ChevronRight,
+  FileText,
+  Folder,
+  ListChecks,
+  Search,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import Loading from "~/shared/components/Loading";
 import {
@@ -6,6 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/shared/components/ui/collapsible";
+import { Input } from "~/shared/components/ui/input";
 import type { useGetNamaspaceNamespaceGet } from "~/shared/generated/entry/entry";
 import type {
   Entry,
@@ -21,8 +29,13 @@ type Props = {
 };
 
 export default function NamespaceExplorer({ updater, nsprops }: Props) {
+  const [query, setQuery] = useState("");
   const { data: fetchedData, error, isLoading, mutate } = nsprops;
   const data = fetchedData?.data;
+  const tree = useMemo(
+    () => (data ? filterTreeItems(transformToTreeData(data), query) : []),
+    [data, query],
+  );
 
   if (isLoading) return <Loading type="center-x" />;
   if (error) return <div>読書メモを取得できませんでした。</div>;
@@ -33,7 +46,27 @@ export default function NamespaceExplorer({ updater, nsprops }: Props) {
     updater?.();
   }
 
-  return <NamespaceTree data={data} refresh={refresh} />;
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="読書メモを絞り込む"
+          aria-label="読書メモを絞り込む"
+          className="h-9 pl-8"
+        />
+      </div>
+      {tree.length > 0 ? (
+        <NamespaceTreeItems items={tree} refresh={refresh} />
+      ) : (
+        <p className="px-2 py-4 text-sm text-muted-foreground">
+          一致する読書メモはありません。
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function NamespaceTree({
@@ -46,8 +79,26 @@ export function NamespaceTree({
   readOnly?: boolean;
 }) {
   return (
+    <NamespaceTreeItems
+      items={transformToTreeData(data)}
+      refresh={refresh}
+      readOnly={readOnly}
+    />
+  );
+}
+
+function NamespaceTreeItems({
+  items,
+  refresh,
+  readOnly = false,
+}: {
+  items: ExplorerTreeDataItem[];
+  refresh?: () => void;
+  readOnly?: boolean;
+}) {
+  return (
     <div className="divide-y divide-border/60 border-y border-border/60">
-      {transformToTreeData(data).map((item) => (
+      {items.map((item) => (
         <NamespaceItem
           item={item}
           key={item.id}
@@ -57,6 +108,28 @@ export function NamespaceTree({
       ))}
     </div>
   );
+}
+
+export function filterTreeItems(
+  items: ExplorerTreeDataItem[],
+  query: string,
+): ExplorerTreeDataItem[] {
+  const normalized = query.trim().toLocaleLowerCase();
+  if (!normalized) return items;
+
+  return items.flatMap((item) => {
+    const searchable = [item.name, ...(item.authors ?? [])]
+      .join(" ")
+      .toLocaleLowerCase();
+    if (searchable.includes(normalized)) return [item];
+    if (item.isResource) return [];
+
+    const children = filterTreeItems(item.children ?? [], normalized);
+    if (children.length === 0) return [];
+    const filtered = { ...item, children, resourceCount: 0 };
+    countResources(filtered);
+    return [filtered];
+  });
 }
 
 function NamespaceItem({

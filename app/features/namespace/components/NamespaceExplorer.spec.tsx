@@ -116,4 +116,18 @@ describe("NamespaceExplorer", () => {
 
     expect(screen.getByText(`/resource/${resourceId}`)).toBeInTheDocument();
   });
+
+  it("タイトルまたは著者で読書メモを絞り込む", async () => {
+    const user = userEvent.setup();
+    renderExplorer();
+
+    await user.type(
+      screen.getByRole("textbox", { name: "読書メモを絞り込む" }),
+      "アリストテレス",
+    );
+
+    expect(screen.getByText("ニコマコス倫理学")).toBeInTheDocument();
+    expect(screen.queryByText("国家")).not.toBeInTheDocument();
+    expect(screen.getAllByText("1 Resources")).toHaveLength(2);
+  });
 });

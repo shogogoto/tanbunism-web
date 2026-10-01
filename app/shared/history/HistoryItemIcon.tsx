@@ -1,8 +1,8 @@
-import { File, Lightbulb, Search, User } from "lucide-react";
+import { File, Folder, Lightbulb, Search, User } from "lucide-react";
 import type { ComponentType } from "react";
 import { cn } from "../lib/utils";
 
-const historyTypes = ["user", "tanbun", "resource", "search"] as const;
+const historyTypes = ["user", "tanbun", "resource", "entry", "search"] as const;
 type HistoryType = (typeof historyTypes)[number];
 
 type Style = {
@@ -24,6 +24,10 @@ const historyTypeStyles: Record<HistoryType, Style> = {
   resource: {
     Icon: File,
     color: "text-amber-700", // brownに近い色
+  },
+  entry: {
+    Icon: Folder,
+    color: "text-amber-500",
   },
   search: {
     Icon: Search,

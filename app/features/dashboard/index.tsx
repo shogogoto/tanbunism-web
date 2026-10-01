@@ -138,8 +138,8 @@ export default function Dashboard() {
                 >
                   <Link
                     to="/import"
-                    aria-label="読書メモを取り込む"
-                    title="読書メモを取り込む"
+                    aria-label="読書メモimport"
+                    title="読書メモimport"
                   >
                     <Plus className="size-6" />
                   </Link>

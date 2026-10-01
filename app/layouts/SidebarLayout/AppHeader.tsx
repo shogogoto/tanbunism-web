@@ -61,7 +61,7 @@ function pageTitle(pathname: string): string {
   if (pathname === "/answers") return "回答履歴";
   if (pathname === "/achievement") return "学習記録";
   if (pathname === "/notifications") return "通知";
-  if (pathname === "/import") return "読書メモを取り込む";
+  if (pathname === "/import") return "読書メモimport";
   if (pathname === "/study-plans") return "学習計画";
   if (pathname.startsWith("/docs")) return "ドキュメント";
   if (pathname.startsWith("/search")) return "検索";

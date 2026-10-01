@@ -113,12 +113,7 @@ export function LearningLevel({
   const content = (
     <div className="space-y-3">
       <div className="flex items-baseline justify-between gap-3">
-        <div>
-          <h2 className="font-semibold">学習レベル</h2>
-          <p className="text-sm text-muted-foreground">
-            学習活動から得た累計XPで決まります
-          </p>
-        </div>
+        <h2 className="font-semibold">学習レベル</h2>
         <p className="text-2xl font-semibold tabular-nums">
           Lv. {progress.level}
         </p>
@@ -236,11 +231,7 @@ export function LearningSummary({ namespace }: { namespace: NameSpace }) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>学習の蓄積</CardTitle>
-        <CardDescription>読書メモから整理した知識量</CardDescription>
-      </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <CardContent className="grid grid-cols-2 gap-2 pt-6 sm:grid-cols-4">
         {items.map(([label, value]) => (
           <div key={label} className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">{label}</p>

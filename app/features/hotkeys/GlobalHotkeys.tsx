@@ -52,7 +52,7 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
                 <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
                 <HotkeyRow keys={["g", "p"]} label="プロフィールへ移動" />
                 <HotkeyRow keys={["g", "n"]} label="通知へ移動" />
-                <HotkeyRow keys={["g", "i"]} label="読書メモを取り込む" />
+                <HotkeyRow keys={["g", "i"]} label="読書メモimport" />
               </>
             )}
             <HotkeyRow keys={["g", "s"]} label="検索へ移動" />

@@ -276,7 +276,7 @@ export default function Uploader({ refresh }: Props) {
   return (
     <div className="flex h-full w-full flex-col gap-4 overflow-hidden p-5 sm:p-6">
       <div>
-        <h2 className="text-lg font-semibold">読書メモを取り込む</h2>
+        <h2 className="text-lg font-semibold">読書メモimport</h2>
         <p className="text-sm text-muted-foreground">
           解析に成功したファイルは、そのまま取り込みます。競合だけ確認が必要です。
         </p>

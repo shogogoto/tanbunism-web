@@ -46,7 +46,7 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
         },
         {
           to: "/import",
-          label: "読書メモを取り込む",
+          label: "読書メモimport",
           icon: FileUp,
         },
         ...publicLinks,
