@@ -12,7 +12,9 @@ import type { QuizPromptRelation } from "./quizPromptRelation";
  */
 export interface QuizPrompt {
   subject: string;
+  subject_terms?: string[];
   object?: string | null;
+  object_terms?: string[];
   relations?: QuizPromptRelation[];
   answer_kind: QuizPromptAnswerKind;
 }

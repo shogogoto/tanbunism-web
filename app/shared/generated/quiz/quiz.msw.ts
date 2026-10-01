@@ -41,11 +41,25 @@ export const getCreateQuizApiQuizPostResponseMock = (
   quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
   prompt: {
     subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject_terms: faker.helpers.arrayElement([
+      Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+      undefined,
+    ]),
     object: faker.helpers.arrayElement([
       faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
+      undefined,
+    ]),
+    object_terms: faker.helpers.arrayElement([
+      Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
       undefined,
     ]),
     relations: faker.helpers.arrayElement([
@@ -93,11 +107,25 @@ export const getListQuizQuizGetResponseMock = (
     quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
     prompt: {
       subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      subject_terms: faker.helpers.arrayElement([
+        Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+        undefined,
+      ]),
       object: faker.helpers.arrayElement([
         faker.helpers.arrayElement([
           faker.string.alpha({ length: { min: 10, max: 20 } }),
           null,
         ]),
+        undefined,
+      ]),
+      object_terms: faker.helpers.arrayElement([
+        Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
         undefined,
       ]),
       relations: faker.helpers.arrayElement([
@@ -147,11 +175,25 @@ export const getListCreatedQuizzesQuizCreatedGetResponseMock = (
     quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
     prompt: {
       subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      subject_terms: faker.helpers.arrayElement([
+        Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+        undefined,
+      ]),
       object: faker.helpers.arrayElement([
         faker.helpers.arrayElement([
           faker.string.alpha({ length: { min: 10, max: 20 } }),
           null,
         ]),
+        undefined,
+      ]),
+      object_terms: faker.helpers.arrayElement([
+        Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
         undefined,
       ]),
       relations: faker.helpers.arrayElement([
@@ -277,11 +319,25 @@ export const getSearchCreatedQuizzesApiQuizCreatedSearchGetResponseMock = (
       quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
       prompt: {
         subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        subject_terms: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          undefined,
+        ]),
         object: faker.helpers.arrayElement([
           faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
             null,
           ]),
+          undefined,
+        ]),
+        object_terms: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
           undefined,
         ]),
         relations: faker.helpers.arrayElement([
@@ -472,11 +528,25 @@ export const getAnswerQuizApiQuizAnswerQuizIdPostResponseMock = (
       quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
       prompt: {
         subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        subject_terms: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          undefined,
+        ]),
         object: faker.helpers.arrayElement([
           faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
             null,
           ]),
+          undefined,
+        ]),
+        object_terms: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
           undefined,
         ]),
         relations: faker.helpers.arrayElement([
@@ -585,11 +655,25 @@ export const getListAnswerHistoryApiQuizAnswersGetResponseMock = (
       quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
       prompt: {
         subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        subject_terms: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          undefined,
+        ]),
         object: faker.helpers.arrayElement([
           faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
             null,
           ]),
+          undefined,
+        ]),
+        object_terms: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
           undefined,
         ]),
         relations: faker.helpers.arrayElement([
@@ -786,11 +870,25 @@ export const getRecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsP
         quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
         prompt: {
           subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          subject_terms: faker.helpers.arrayElement([
+            Array.from(
+              { length: faker.number.int({ min: 1, max: 10 }) },
+              (_, i) => i + 1,
+            ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+            undefined,
+          ]),
           object: faker.helpers.arrayElement([
             faker.helpers.arrayElement([
               faker.string.alpha({ length: { min: 10, max: 20 } }),
               null,
             ]),
+            undefined,
+          ]),
+          object_terms: faker.helpers.arrayElement([
+            Array.from(
+              { length: faker.number.int({ min: 1, max: 10 }) },
+              (_, i) => i + 1,
+            ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
             undefined,
           ]),
           relations: faker.helpers.arrayElement([
@@ -917,11 +1015,25 @@ export const getExpandQuizChainApiQuizChainQuizzesQuizIdGetResponseMock = (
       quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
       prompt: {
         subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        subject_terms: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          undefined,
+        ]),
         object: faker.helpers.arrayElement([
           faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
             null,
           ]),
+          undefined,
+        ]),
+        object_terms: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
           undefined,
         ]),
         relations: faker.helpers.arrayElement([
@@ -1075,11 +1187,25 @@ export const getExpandSentenceChainApiQuizChainSentencesSentenceIdGetResponseMoc
         quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
         prompt: {
           subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          subject_terms: faker.helpers.arrayElement([
+            Array.from(
+              { length: faker.number.int({ min: 1, max: 10 }) },
+              (_, i) => i + 1,
+            ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+            undefined,
+          ]),
           object: faker.helpers.arrayElement([
             faker.helpers.arrayElement([
               faker.string.alpha({ length: { min: 10, max: 20 } }),
               null,
             ]),
+            undefined,
+          ]),
+          object_terms: faker.helpers.arrayElement([
+            Array.from(
+              { length: faker.number.int({ min: 1, max: 10 }) },
+              (_, i) => i + 1,
+            ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
             undefined,
           ]),
           relations: faker.helpers.arrayElement([

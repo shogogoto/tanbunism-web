@@ -41,6 +41,23 @@ type Props = {
   renderSubject?: (subject: string) => ReactNode;
 };
 
+function TermNames({ terms = [] }: { terms?: string[] }) {
+  if (terms.length === 0) return null;
+  return (
+    <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+      {terms.map((term) => (
+        <Badge
+          key={term}
+          variant="secondary"
+          className="px-1.5 py-0 text-[11px] font-medium"
+        >
+          {term}
+        </Badge>
+      ))}
+    </span>
+  );
+}
+
 function RelationPath({ quiz }: { quiz: PromptQuiz }) {
   const prompt = quiz.prompt;
   if (!prompt) return null;
@@ -114,6 +131,7 @@ export default function QuizPrompt({
               A
             </span>
             <span className="font-medium">{renderSubject(prompt.subject)}</span>
+            <TermNames terms={prompt.subject_terms} />
           </p>
           {prompt.object && (
             <p className="whitespace-pre-wrap text-sm leading-relaxed">
@@ -121,6 +139,7 @@ export default function QuizPrompt({
                 B
               </span>
               <span className="font-medium">{prompt.object}</span>
+              <TermNames terms={prompt.object_terms} />
             </p>
           )}
           <RelationPath quiz={quiz} />

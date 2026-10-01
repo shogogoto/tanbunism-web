@@ -36,6 +36,7 @@ describe("QuizPrompt", () => {
           quiz_type: "rel2pair",
           prompt: {
             subject: "動物は分類される",
+            subject_terms: ["動物分類"],
             relations: [{ name: "BELOW", is_forward: true }],
             answer_kind: "sentence",
           },
@@ -45,6 +46,7 @@ describe("QuizPrompt", () => {
 
     expect(screen.getByText("関係 → 単文")).toBeInTheDocument();
     expect(screen.getByText("動物は分類される")).toBeInTheDocument();
+    expect(screen.getByText("動物分類")).toBeInTheDocument();
     expect(screen.getByLabelText("関係の経路")).toHaveTextContent(
       "A—[BELOW]→?",
     );
@@ -57,7 +59,9 @@ describe("QuizPrompt", () => {
           quiz_type: "pair2rel",
           prompt: {
             subject: "哺乳類は動物である",
+            subject_terms: ["哺乳類"],
             object: "犬は哺乳類である",
+            object_terms: ["犬"],
             relations: [{ name: null, is_forward: false }],
             answer_kind: "relation",
           },
@@ -67,6 +71,8 @@ describe("QuizPrompt", () => {
 
     expect(screen.getByText("哺乳類は動物である")).toBeInTheDocument();
     expect(screen.getByText("犬は哺乳類である")).toBeInTheDocument();
+    expect(screen.getByText("哺乳類")).toBeInTheDocument();
+    expect(screen.getByText("犬")).toBeInTheDocument();
     expect(screen.getByLabelText("関係の経路")).toHaveTextContent("A←[?]—B");
   });
 

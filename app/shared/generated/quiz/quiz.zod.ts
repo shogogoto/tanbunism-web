@@ -60,7 +60,9 @@ export const CreateQuizApiQuizPostResponse = zod
     prompt: zod
       .object({
         subject: zod.string(),
+        subject_terms: zod.array(zod.string()).optional(),
         object: zod.union([zod.string(), zod.null()]).optional(),
+        object_terms: zod.array(zod.string()).optional(),
         relations: zod
           .array(
             zod
@@ -118,7 +120,9 @@ export const ListQuizQuizGetResponse = zod
             prompt: zod
               .object({
                 subject: zod.string(),
+                subject_terms: zod.array(zod.string()).optional(),
                 object: zod.union([zod.string(), zod.null()]).optional(),
+                object_terms: zod.array(zod.string()).optional(),
                 relations: zod
                   .array(
                     zod
@@ -185,7 +189,9 @@ export const ListCreatedQuizzesQuizCreatedGetResponse = zod
             prompt: zod
               .object({
                 subject: zod.string(),
+                subject_terms: zod.array(zod.string()).optional(),
                 object: zod.union([zod.string(), zod.null()]).optional(),
+                object_terms: zod.array(zod.string()).optional(),
                 relations: zod
                   .array(
                     zod
@@ -335,7 +341,9 @@ export const SearchCreatedQuizzesApiQuizCreatedSearchGetResponse = zod
               prompt: zod
                 .object({
                   subject: zod.string(),
+                  subject_terms: zod.array(zod.string()).optional(),
                   object: zod.union([zod.string(), zod.null()]).optional(),
+                  object_terms: zod.array(zod.string()).optional(),
                   relations: zod
                     .array(
                       zod
@@ -629,7 +637,9 @@ export const AnswerQuizApiQuizAnswerQuizIdPostResponse = zod
               prompt: zod
                 .object({
                   subject: zod.string(),
+                  subject_terms: zod.array(zod.string()).optional(),
                   object: zod.union([zod.string(), zod.null()]).optional(),
+                  object_terms: zod.array(zod.string()).optional(),
                   relations: zod
                     .array(
                       zod
@@ -785,7 +795,9 @@ export const ListAnswerHistoryApiQuizAnswersGetResponse = zod
               prompt: zod
                 .object({
                   subject: zod.string(),
+                  subject_terms: zod.array(zod.string()).optional(),
                   object: zod.union([zod.string(), zod.null()]).optional(),
+                  object_terms: zod.array(zod.string()).optional(),
                   relations: zod
                     .array(
                       zod
@@ -1251,7 +1263,9 @@ export const RecommendStudyPlanQuizzesApiQuizStudyPlansPlanIdRecommendationsPost
           prompt: zod
             .object({
               subject: zod.string(),
+              subject_terms: zod.array(zod.string()).optional(),
               object: zod.union([zod.string(), zod.null()]).optional(),
+              object_terms: zod.array(zod.string()).optional(),
               relations: zod
                 .array(
                   zod
@@ -1432,7 +1446,9 @@ export const ExpandQuizChainApiQuizChainQuizzesQuizIdGetResponse = zod
               prompt: zod
                 .object({
                   subject: zod.string(),
+                  subject_terms: zod.array(zod.string()).optional(),
                   object: zod.union([zod.string(), zod.null()]).optional(),
+                  object_terms: zod.array(zod.string()).optional(),
                   relations: zod
                     .array(
                       zod
@@ -1652,7 +1668,9 @@ export const ExpandSentenceChainApiQuizChainSentencesSentenceIdGetResponse = zod
               prompt: zod
                 .object({
                   subject: zod.string(),
+                  subject_terms: zod.array(zod.string()).optional(),
                   object: zod.union([zod.string(), zod.null()]).optional(),
+                  object_terms: zod.array(zod.string()).optional(),
                   relations: zod
                     .array(
                       zod

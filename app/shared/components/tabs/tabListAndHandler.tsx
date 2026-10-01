@@ -41,8 +41,13 @@ export default function tabListAndHandler({
   });
 
   const nTab = items.length;
-  const tabTriggers = items.map((item) => (
+  const tabTriggers = items.map((item, index) => (
     <TabsTrigger value={item.value} key={item.value} className={item.className}>
+      {index < 9 && (
+        <kbd className="mr-1.5 hidden font-mono text-[10px] font-normal text-muted-foreground sm:inline">
+          {index + 1}
+        </kbd>
+      )}
       {item.tab}
     </TabsTrigger>
   ));
