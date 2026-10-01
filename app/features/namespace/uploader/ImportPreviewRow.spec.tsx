@@ -33,7 +33,7 @@ describe("ImportPreviewRow", () => {
     expect(screen.getByText("単文追加 2")).toBeInTheDocument();
   });
 
-  it("取込後は変更なしへ切り替えてResourceへ移動できる", () => {
+  it("取込結果の変更有無を表示してResourceへ移動できる", () => {
     render(
       <MemoryRouter>
         <ImportPreviewRow
@@ -42,6 +42,29 @@ describe("ImportPreviewRow", () => {
           result={{
             ok: true,
             retryable: false,
+            skipped: false,
+            resourceId: "resource-1",
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: "変更あり" })).toHaveAttribute(
+      "href",
+      "/resource/resource-1",
+    );
+    expect(screen.queryByText("単文追加 2")).not.toBeInTheDocument();
+  });
+
+  it("同一内容の再取込は変更なしと表示する", () => {
+    render(
+      <MemoryRouter>
+        <ImportPreviewRow
+          path="notes/memo.tb"
+          result={{
+            ok: true,
+            retryable: false,
+            skipped: true,
             resourceId: "resource-1",
           }}
         />
@@ -52,7 +75,6 @@ describe("ImportPreviewRow", () => {
       "href",
       "/resource/resource-1",
     );
-    expect(screen.queryByText("単文追加 2")).not.toBeInTheDocument();
   });
 
   it("コンフリクト表示からmerge画面を開く", async () => {

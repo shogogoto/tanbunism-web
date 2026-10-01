@@ -22,7 +22,6 @@ import type {
   ManagedQuizResult,
   NameSpace,
   PostFilesResourcePost200,
-  PostTextResourceTextPost200,
   PrepareStudyPlanRequest,
   PrepareStudyPlanResult,
   QuizChain,
@@ -40,6 +39,7 @@ import type {
   ResourceSearchBody,
   ResourceSearchResult,
   ResourceTextBody,
+  ResourceTextSaveResult,
   SearchCreatedQuizzesApiQuizCreatedSearchGetParams,
   SentenceQuizStatus,
   StudyPlan,
@@ -200,7 +200,7 @@ export const getPublicNamespaceUserUserIdNamespaceGet = async (
 };
 
 export type postTextResourceTextPostResponse200 = {
-  data: PostTextResourceTextPost200;
+  data: ResourceTextSaveResult;
   status: 200;
 };
 

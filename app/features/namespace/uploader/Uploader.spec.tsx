@@ -4,13 +4,11 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Uploader from "./Uploader";
 
-const { preview, postText } = vi.hoisted(() => ({
-  preview: vi.fn(),
+const { postText } = vi.hoisted(() => ({
   postText: vi.fn(),
 }));
 
 vi.mock("~/shared/generated/entry/entry", () => ({
-  previewTextUpdateResourceTextPreviewPost: preview,
   postTextResourceTextPost: postText,
 }));
 
@@ -60,24 +58,10 @@ vi.mock("./UploadUnit", async (importOriginal) => {
 describe("Uploader", () => {
   beforeEach(() => {
     localStorage.clear();
-    preview.mockReset();
     postText.mockReset();
-    preview.mockResolvedValue({
-      status: 200,
-      data: {
-        resource_id: "resource-id",
-        is_new: false,
-        sentences_added: 3,
-        sentences_removed: 1,
-        sentences_updated: 2,
-        terms_added: 1,
-        terms_removed: 0,
-        terms_updated: 0,
-      },
-    });
     postText.mockResolvedValue({
       status: 200,
-      data: { resource_id: "resource-id" },
+      data: { resource_id: "resource-id", changed: true },
     });
   });
 
@@ -96,15 +80,6 @@ describe("Uploader", () => {
       screen.getByRole("button", { name: "1件を解析して取り込む" }),
     );
 
-    expect(preview).toHaveBeenCalledWith(
-      {
-        txt: "# title\n  sentence",
-        path: ["humanities", "memo.tb"],
-        identity_resolutions: [],
-      },
-      { credentials: "include" },
-    );
-
     await waitFor(() => expect(postText).toHaveBeenCalledOnce());
     expect(postText).toHaveBeenCalledWith(
       {
@@ -114,10 +89,10 @@ describe("Uploader", () => {
       },
       { credentials: "include" },
     );
-    expect(await screen.findByText("変更なし")).toBeVisible();
+    expect(await screen.findByText("変更あり")).toBeVisible();
   });
 
-  it("ローカル履歴があってもDBの差分を確認し直す", async () => {
+  it("ローカル履歴があってもDBへ取り込み直す", async () => {
     localStorage.setItem(
       "tanbunism.upload-history",
       JSON.stringify([
@@ -148,22 +123,16 @@ describe("Uploader", () => {
     await user.click(
       screen.getByRole("button", { name: "1件を解析して取り込む" }),
     );
-    await waitFor(() => expect(preview).toHaveBeenCalledOnce());
+    await waitFor(() => expect(postText).toHaveBeenCalledOnce());
   });
 
   it("一部のファイルがエラーでも正常なファイルは取り込む", async () => {
-    preview
+    postText
       .mockResolvedValueOnce({
         status: 200,
         data: {
           resource_id: "resource-id",
-          is_new: true,
-          sentences_added: 1,
-          sentences_removed: 0,
-          sentences_updated: 0,
-          terms_added: 0,
-          terms_removed: 0,
-          terms_updated: 0,
+          changed: true,
         },
       })
       .mockResolvedValueOnce({
@@ -182,7 +151,45 @@ describe("Uploader", () => {
       screen.getByRole("button", { name: "2件を解析して取り込む" }),
     );
 
-    await waitFor(() => expect(postText).toHaveBeenCalledOnce());
+    await waitFor(() => expect(postText).toHaveBeenCalledTimes(2));
     expect(postText.mock.calls[0]?.[0].path).toEqual(["humanities", "memo.tb"]);
+  });
+
+  it("処理中のファイルと全体件数を表示する", async () => {
+    let complete:
+      | ((result: {
+          status: number;
+          data: { resource_id: string; changed: boolean };
+        }) => void)
+      | undefined;
+    postText.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    );
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <Uploader />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "2ファイルを選択" }));
+    await user.click(
+      screen.getByRole("button", { name: "2件を解析して取り込む" }),
+    );
+
+    expect(
+      screen.getByRole("status", {
+        name: "取り込み中: notes/humanities/memo.tb",
+      }),
+    ).toHaveTextContent("1 / 2");
+
+    complete?.({
+      status: 200,
+      data: { resource_id: "resource-id", changed: true },
+    });
+    await waitFor(() => expect(postText).toHaveBeenCalledTimes(2));
   });
 });

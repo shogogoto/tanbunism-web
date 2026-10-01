@@ -1329,6 +1329,14 @@ export interface ResourceTextBody {
 }
 
 /**
+ * Resource本文を保存した結果.
+ */
+export interface ResourceTextSaveResult {
+  resource_id: string;
+  changed: boolean;
+}
+
+/**
  * 単文を対象として作成したQuiz状況.
  */
 export interface SentenceQuizStatus {
@@ -1631,8 +1639,6 @@ export type SaveUserAchievementUserAchievementBatchPostParams = {
    */
   size?: number;
 };
-
-export type PostTextResourceTextPost200 = { [key: string]: string };
 
 export type PostFilesResourcePost200 = { [key: string]: string[] };
 

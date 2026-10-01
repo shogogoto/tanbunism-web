@@ -17,13 +17,13 @@ import type {
   IdentityConflictResponse,
   NameSpace,
   PostFilesResourcePost200,
-  PostTextResourceTextPost200,
   ResourceDetail,
   ResourceDiffPreview,
   ResourceMetas,
   ResourceSearchBody,
   ResourceSearchResult,
   ResourceTextBody,
+  ResourceTextSaveResult,
 } from "../fastAPI.schemas";
 
 export type getNamaspaceNamespaceGetResponse200 = {
@@ -306,7 +306,7 @@ export const useGetPublicNamespaceUserUserIdNamespaceGet = <
   };
 };
 export type postTextResourceTextPostResponse200 = {
-  data: PostTextResourceTextPost200;
+  data: ResourceTextSaveResult;
   status: 200;
 };
 

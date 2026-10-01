@@ -14,10 +14,10 @@ import type {
   EntryDetail,
   NameSpace,
   PostFilesResourcePost200,
-  PostTextResourceTextPost200,
   ResourceDetail,
   ResourceDiffPreview,
   ResourceSearchResult,
+  ResourceTextSaveResult,
 } from "../fastAPI.schemas";
 
 export const getGetNamaspaceNamespaceGetResponseMock = (
@@ -201,12 +201,13 @@ export const getGetPublicNamespaceUserUserIdNamespaceGetResponseMock = (
   ...overrideResponse,
 });
 
-export const getPostTextResourceTextPostResponseMock =
-  (): PostTextResourceTextPost200 => ({
-    [faker.string.alphanumeric(5)]: faker.string.alpha({
-      length: { min: 10, max: 20 },
-    }),
-  });
+export const getPostTextResourceTextPostResponseMock = (
+  overrideResponse: Partial<Extract<ResourceTextSaveResult, object>> = {},
+): ResourceTextSaveResult => ({
+  resource_id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  changed: faker.datatype.boolean(),
+  ...overrideResponse,
+});
 
 export const getPreviewTextUpdateResourceTextPreviewPostResponseMock = (
   overrideResponse: Partial<Extract<ResourceDiffPreview, object>> = {},
@@ -885,10 +886,10 @@ export const getGetPublicNamespaceUserUserIdNamespaceGetMockHandler = (
 
 export const getPostTextResourceTextPostMockHandler = (
   overrideResponse?:
-    | PostTextResourceTextPost200
+    | ResourceTextSaveResult
     | ((
         info: Parameters<Parameters<typeof http.post>[1]>[0],
-      ) => Promise<PostTextResourceTextPost200> | PostTextResourceTextPost200),
+      ) => Promise<ResourceTextSaveResult> | ResourceTextSaveResult),
   options?: RequestHandlerOptions,
 ) => {
   return http.post(

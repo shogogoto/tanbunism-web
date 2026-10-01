@@ -108,7 +108,8 @@ function PreviewStatus({
   if (result?.ok) {
     return (
       <ResourceStatusLink resourceId={result.resourceId}>
-        <Check /> 変更なし
+        {result.skipped ? <Check /> : <RefreshCw />}
+        {result.skipped ? "変更なし" : "変更あり"}
       </ResourceStatusLink>
     );
   }

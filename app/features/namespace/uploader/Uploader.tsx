@@ -2,10 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/shared/components/ui/button";
 import { Progress } from "~/shared/components/ui/progress";
-import {
-  postTextResourceTextPost,
-  previewTextUpdateResourceTextPreviewPost,
-} from "~/shared/generated/entry/entry";
+import { postTextResourceTextPost } from "~/shared/generated/entry/entry";
 import type { IdentityResolutionBody } from "~/shared/generated/fastAPI.schemas";
 import AcceptExtensions from "./AcceptExtensions";
 import CustomFileUploader from "./CustomFileUploader";
@@ -75,7 +72,10 @@ export default function Uploader({ refresh }: Props) {
   const [results, setResults] = useState<Record<number, UploadResult>>({});
   const [history, setHistory] = useState<UploadHistoryRecord[]>([]);
   const [previews, setPreviews] = useState<Record<number, PreviewState>>({});
-  const [previewingIndex, setPreviewingIndex] = useState<number | null>(null);
+  const [processing, setProcessing] = useState<{
+    position: number;
+    total: number;
+  } | null>(null);
   const [conflictOpenIndex, setConflictOpenIndex] = useState<number | null>(
     null,
   );
@@ -122,97 +122,7 @@ export default function Uploader({ refresh }: Props) {
     [files, results],
   );
 
-  async function previewFile(
-    index: number,
-    resolutions: IdentityResolutionBody[],
-  ): Promise<PreviewState> {
-    const source = files?.[index];
-    if (!source) {
-      return {
-        status: "error",
-        message: "ファイルを読み取れませんでした。",
-        resolutions,
-      };
-    }
-    const file = fileWithoutTopDirectory(source);
-    try {
-      const response = await previewTextUpdateResourceTextPreviewPost(
-        {
-          txt: await file.text(),
-          path: file.name.split("/"),
-          identity_resolutions: resolutions,
-        },
-        { credentials: "include" },
-      );
-      if (response.status === 200) {
-        return { status: "ready", preview: response.data, resolutions };
-      }
-      const conflict = readIdentityConflict(response.data);
-      if (conflict) {
-        return { status: "conflict", conflict, resolutions };
-      }
-      const described = describeUploadError(
-        response.status,
-        responseDetail(response.data),
-      );
-      return { status: "error", ...described, resolutions };
-    } catch (cause) {
-      const described = describeUploadError(
-        undefined,
-        cause instanceof Error ? cause.message : undefined,
-      );
-      return { status: "error", ...described, resolutions };
-    }
-  }
-
-  async function handlePreview() {
-    if (!files || files.length === 0) {
-      setError("フォルダを選択してください。");
-      return;
-    }
-    setError(null);
-    setProgress(0);
-    if (sendableIndices.length === 0) {
-      setError("前回から変更されたファイルはありません。");
-      return;
-    }
-    const targetIndices = sendableIndices.filter((index) => {
-      const state = previews[index];
-      return !state || state.status === "error" || state.status === "checking";
-    });
-    if (targetIndices.length === 0) {
-      const firstConflict = sendableIndices.find(
-        (index) => previews[index]?.status === "conflict",
-      );
-      if (firstConflict !== undefined) setConflictOpenIndex(firstConflict);
-      return;
-    }
-    let firstConflict: number | null = null;
-    const readyPreviews: Record<number, PreviewState> = {};
-    for (const [position, index] of targetIndices.entries()) {
-      const resolutions = previews[index]?.resolutions ?? [];
-      setPreviewingIndex(index);
-      setPreviews((previous) => ({
-        ...previous,
-        [index]: { status: "checking", resolutions },
-      }));
-      const next = await previewFile(index, resolutions);
-      setPreviews((previous) => ({ ...previous, [index]: next }));
-      if (next.status === "ready") readyPreviews[index] = next;
-      if (next.status === "conflict" && firstConflict === null) {
-        firstConflict = index;
-      }
-      setProgress(((position + 1) / targetIndices.length) * 100);
-    }
-    setPreviewingIndex(null);
-    const readyIndices = Object.keys(readyPreviews).map(Number);
-    if (readyIndices.length > 0) {
-      await runImports(readyIndices, readyPreviews);
-    }
-    if (firstConflict !== null) setConflictOpenIndex(firstConflict);
-  }
-
-  async function resolvePreviewConflict(
+  async function resolveImportConflict(
     index: number,
     incoming: IdentityResolutionBody[],
   ) {
@@ -223,29 +133,43 @@ export default function Uploader({ refresh }: Props) {
       ...previous,
       [index]: { ...current, isResolving: true, error: undefined },
     }));
-    const next = await previewFile(index, resolutions);
-    setPreviews((previous) => ({ ...previous, [index]: next }));
-    if (next.status === "ready") {
+    const result = await importFile(index, resolutions);
+    if (result.ok) {
+      handleResult(index, result);
+      setPreviews((previous) => {
+        const next = { ...previous };
+        delete next[index];
+        return next;
+      });
       setConflictOpenIndex(null);
-      await runImports([index], { [index]: next });
-      const nextConflict = sendableIndices.find(
-        (candidate) =>
-          candidate !== index && previews[candidate]?.status === "conflict",
-      );
-      setConflictOpenIndex(nextConflict ?? null);
+      refresh?.();
+      return;
     }
+    handleResult(index, result);
+    setPreviews((previous) => {
+      const next = previous[index];
+      if (next?.status === "conflict") return previous;
+      return {
+        ...previous,
+        [index]: {
+          status: "error",
+          message: result.message ?? "取り込みに失敗しました。",
+          details: result.details,
+          resolutions,
+        },
+      };
+    });
   }
 
   async function importFile(
     index: number,
-    preparedPreview?: PreviewState,
+    resolutions: IdentityResolutionBody[] = [],
   ): Promise<UploadResult> {
     const source = files?.[index];
-    const preview = preparedPreview ?? previews[index];
-    if (!source || preview?.status !== "ready") {
+    if (!source) {
       return {
         ok: false,
-        message: "取り込み前の確認結果がありません。",
+        message: "ファイルを読み取れませんでした。",
         retryable: false,
       };
     }
@@ -255,25 +179,30 @@ export default function Uploader({ refresh }: Props) {
         {
           txt: await file.text(),
           path: file.name.split("/"),
-          identity_resolutions: preview.resolutions,
+          identity_resolutions: resolutions,
         },
         { credentials: "include" },
       );
-      if (response.status >= 200 && response.status < 300) {
+      if (response.status === 200) {
         return {
           ok: true,
           retryable: false,
+          skipped: !response.data.changed,
           resourceId: uploadedResourceId(response.data),
         };
       }
       const conflict = readIdentityConflict(response.data);
       if (conflict) {
+        setPreviews((previous) => ({
+          ...previous,
+          [index]: { status: "conflict", conflict, resolutions },
+        }));
+        setConflictOpenIndex((current) => current ?? index);
         return {
           ok: false,
-          message:
-            "取り込み直前に内容が変わりました。もう一度確認してください。",
+          message: "更新内容の確認が必要です。",
           details: conflict.message,
-          retryable: true,
+          retryable: false,
         };
       }
       const detail = responseDetail(response.data);
@@ -289,29 +218,31 @@ export default function Uploader({ refresh }: Props) {
     }
   }
 
-  async function runImports(
-    indices: number[],
-    preparedPreviews: Record<number, PreviewState> = {},
-  ) {
+  async function runImports(indices: number[]) {
     if (indices.length === 0) return;
     setError(null);
     setProgress(0);
     for (const [position, index] of indices.entries()) {
       setUploadingIndex(index);
-      const result = await importFile(index, preparedPreviews[index]);
+      setProcessing({ position: position + 1, total: indices.length });
+      const resolutions = previews[index]?.resolutions ?? [];
+      setPreviews((previous) => ({
+        ...previous,
+        [index]: { status: "checking", resolutions },
+      }));
+      const result = await importFile(index, resolutions);
       handleResult(index, result);
       setProgress(((position + 1) / indices.length) * 100);
     }
     setUploadingIndex(null);
+    setProcessing(null);
     refresh?.();
     void notifyImportComplete(indices.length);
   }
 
   async function handleSubmit() {
     if (!files || sendableIndices.length === 0) return;
-    await runImports(
-      sendableIndices.filter((index) => previews[index]?.status === "ready"),
-    );
+    await runImports(sendableIndices);
   }
 
   function retryFailed() {
@@ -324,25 +255,14 @@ export default function Uploader({ refresh }: Props) {
   }
 
   const isUploading = uploadingIndex !== null;
-  const isPreviewing = previewingIndex !== null;
   const sendableCount = sendableIndices.length;
-  const readyCount = sendableIndices.filter(
-    (index) => previews[index]?.status === "ready",
-  ).length;
   const conflictCount = sendableIndices.filter(
     (index) => previews[index]?.status === "conflict",
-  ).length;
-  const previewErrorCount = sendableIndices.filter(
-    (index) => previews[index]?.status === "error",
   ).length;
   const activeConflict =
     conflictOpenIndex === null ? undefined : previews[conflictOpenIndex];
 
   function handlePrimaryAction() {
-    if (readyCount > 0) {
-      void handleSubmit();
-      return;
-    }
     const firstConflict = sendableIndices.find(
       (index) => previews[index]?.status === "conflict",
     );
@@ -350,7 +270,7 @@ export default function Uploader({ refresh }: Props) {
       setConflictOpenIndex(firstConflict);
       return;
     }
-    void handlePreview();
+    void handleSubmit();
   }
 
   return (
@@ -377,8 +297,8 @@ export default function Uploader({ refresh }: Props) {
           setError(null);
           setProgress(0);
           setUploadingIndex(null);
+          setProcessing(null);
           setPreviews({});
-          setPreviewingIndex(null);
           setConflictOpenIndex(null);
           // DBの状態を正とし、ブラウザの過去履歴だけで送信を省略しない。
           setResults({});
@@ -401,8 +321,25 @@ export default function Uploader({ refresh }: Props) {
           </ul>
         </div>
       )}
-      {(isUploading || isPreviewing) && (
-        <Progress value={progress} className="w-full" />
+      {isUploading && processing && uploadingIndex !== null && (
+        <output
+          className="space-y-2"
+          aria-live="polite"
+          aria-label={`取り込み中: ${paths[uploadingIndex]}`}
+        >
+          <div className="flex items-baseline justify-between gap-3 text-sm">
+            <p
+              className="min-w-0 truncate font-medium"
+              title={paths[uploadingIndex]}
+            >
+              {paths[uploadingIndex]}
+            </p>
+            <span className="shrink-0 tabular-nums text-muted-foreground">
+              {processing.position} / {processing.total}
+            </span>
+          </div>
+          <Progress value={progress} className="w-full" />
+        </output>
       )}
       {files && !isUploading && successCount > 0 && (
         <p>
@@ -435,21 +372,15 @@ export default function Uploader({ refresh }: Props) {
       )}
       <Button
         onClick={handlePrimaryAction}
-        disabled={isUploading || isPreviewing || !files || sendableCount === 0}
+        disabled={isUploading || !files || sendableCount === 0}
       >
         {isUploading
-          ? `アップロード中… (${successCount}/${files?.length})`
-          : isPreviewing
-            ? `変更を確認中… (${sendableIndices.indexOf(previewingIndex ?? -1) + 1}/${sendableCount})`
-            : readyCount > 0
-              ? `${readyCount}件を取り込む`
-              : sendableCount > 0
-                ? previewErrorCount > 0
-                  ? `${previewErrorCount}件のエラーを再確認`
-                  : conflictCount > 0
-                    ? `${conflictCount}件の競合を確認してください`
-                    : `${sendableCount}件を解析して取り込む`
-                : "送信対象はありません"}
+          ? "取り込み中…"
+          : sendableCount > 0
+            ? conflictCount > 0
+              ? `${conflictCount}件の競合を確認してください`
+              : `${sendableCount}件を解析して取り込む`
+            : "送信対象はありません"}
       </Button>
       {error && <p className="text-sm text-destructive">{error}</p>}
       {conflictOpenIndex !== null && activeConflict?.status === "conflict" && (
@@ -464,7 +395,7 @@ export default function Uploader({ refresh }: Props) {
             if (!open) setConflictOpenIndex(null);
           }}
           onResolve={(resolutions) =>
-            resolvePreviewConflict(conflictOpenIndex, resolutions)
+            resolveImportConflict(conflictOpenIndex, resolutions)
           }
         />
       )}

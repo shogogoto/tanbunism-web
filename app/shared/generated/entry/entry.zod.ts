@@ -292,10 +292,12 @@ export const PostTextResourceTextPostBody = zod
   })
   .describe("テキストResourceの保存と任意の競合解決.");
 
-export const PostTextResourceTextPostResponse = zod.record(
-  zod.string(),
-  zod.string(),
-);
+export const PostTextResourceTextPostResponse = zod
+  .object({
+    resource_id: zod.string(),
+    changed: zod.boolean(),
+  })
+  .describe("Resource本文を保存した結果.");
 
 /**
  * 保存せずにResourceの差分と同一性競合を検証する.
