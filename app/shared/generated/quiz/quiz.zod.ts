@@ -415,6 +415,7 @@ export const ListBrokenCreatedQuizzesQuizCreatedBrokenGetResponseItem = zod
     retired_sentence_id: zod.string().uuid(),
     retired_value: zod.string(),
     resource_id: zod.string().uuid(),
+    resource_name: zod.union([zod.string(), zod.null()]),
     roles: zod.array(zod.string()),
     retired_at: zod.string().datetime({ offset: true }),
   })

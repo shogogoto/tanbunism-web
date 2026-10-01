@@ -91,6 +91,7 @@ export type BrokenQuizReference = {
   retired_sentence_id: string;
   retired_value: string;
   resource_id: string;
+  resource_name?: string | null;
   roles: string[];
   retired_at: string;
 };

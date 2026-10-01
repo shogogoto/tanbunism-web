@@ -21,7 +21,6 @@ import {
   deleteQuiz,
   deleteQuizzes,
   listBrokenQuizReferences,
-  listStudyResources,
 } from "./api";
 
 const labels: Record<BrokenQuizReference["quiz_type"], string> = {
@@ -38,22 +37,12 @@ export default function BrokenQuizManager() {
   const [deleting, setDeleting] = useState<string>();
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [resourceNames, setResourceNames] = useState<Map<string, string>>(
-    new Map(),
-  );
-
   const load = useCallback(async () => {
     setLoading(true);
     setError(undefined);
     try {
-      const [references, resources] = await Promise.all([
-        listBrokenQuizReferences(),
-        listStudyResources(),
-      ]);
+      const references = await listBrokenQuizReferences();
       setItems(references);
-      setResourceNames(
-        new Map(resources.map((resource) => [resource.uid, resource.name])),
-      );
       setSelected(new Set());
     } catch (caught) {
       setError(
@@ -220,7 +209,8 @@ export default function BrokenQuizManager() {
                 to={`/resource/${first.resource_id}`}
                 className="block truncate text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
               >
-                {resourceNames.get(first.resource_id) ?? "元Resourceを開く"}
+                {first.resource_name ??
+                  `削除済みResource (${first.resource_id})`}
               </Link>
               {references.map((reference) => (
                 <div
@@ -232,7 +222,7 @@ export default function BrokenQuizManager() {
                   </p>
                   <BrokenQuizRepairDialog
                     reference={reference}
-                    resourceName={resourceNames.get(reference.resource_id)}
+                    resourceName={reference.resource_name ?? undefined}
                     onRepaired={load}
                   />
                 </div>

@@ -3,17 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, expect, it, vi } from "vitest";
 import BrokenQuizManager from "./BrokenQuizManager";
-import {
-  deleteQuizzes,
-  listBrokenQuizReferences,
-  listStudyResources,
-} from "./api";
+import { deleteQuizzes, listBrokenQuizReferences } from "./api";
 
 vi.mock("./api", () => ({
   deleteQuiz: vi.fn(),
   deleteQuizzes: vi.fn(),
   listBrokenQuizReferences: vi.fn(),
-  listStudyResources: vi.fn(),
 }));
 
 const references = [
@@ -23,6 +18,7 @@ const references = [
     retired_sentence_id: "retired-1",
     retired_value: "退役した単文",
     resource_id: "resource-1",
+    resource_name: "論理学ノート",
     roles: ["QUIZ_TARGET"],
     retired_at: "2026-09-30T00:00:00Z",
   },
@@ -32,6 +28,7 @@ const references = [
     retired_sentence_id: "retired-2",
     retired_value: "別の退役した単文",
     resource_id: "resource-2",
+    resource_name: "TCP/IPノート",
     roles: ["QUIZ_OPTION"],
     retired_at: "2026-09-29T00:00:00Z",
   },
@@ -39,10 +36,6 @@ const references = [
 
 beforeEach(() => {
   vi.mocked(listBrokenQuizReferences).mockResolvedValue(references);
-  vi.mocked(listStudyResources).mockResolvedValue([
-    { uid: "resource-1", name: "論理学ノート" },
-    { uid: "resource-2", name: "TCP/IPノート" },
-  ]);
   vi.mocked(deleteQuizzes).mockResolvedValue({
     deleted_count: 2,
     deleted_answer_count: 1,

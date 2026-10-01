@@ -414,6 +414,10 @@ export const getListBrokenCreatedQuizzesQuizCreatedBrokenGetResponseMock =
       retired_sentence_id: faker.string.uuid(),
       retired_value: faker.string.alpha({ length: { min: 10, max: 20 } }),
       resource_id: faker.string.uuid(),
+      resource_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
       roles: Array.from(
         { length: faker.number.int({ min: 1, max: 10 }) },
         (_, i) => i + 1,
