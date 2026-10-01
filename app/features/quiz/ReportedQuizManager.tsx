@@ -1,0 +1,122 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
+import { toast } from "sonner";
+import { Badge } from "~/shared/components/ui/badge";
+import { Button } from "~/shared/components/ui/button";
+import { type QuizReport, deleteQuizzes, listCreatedQuizReports } from "./api";
+
+const reasonLabels: Record<QuizReport["reason"], string> = {
+  undefined: "未定義",
+  incorrect: "内容が不正確",
+  other: "その他",
+};
+
+export default function ReportedQuizManager() {
+  const [items, setItems] = useState<QuizReport[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>();
+
+  useEffect(() => {
+    listCreatedQuizReports()
+      .then(setItems)
+      .catch((caught) =>
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "不備報告を取得できませんでした。",
+        ),
+      )
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function removeSelected() {
+    try {
+      await deleteQuizzes([...selected]);
+      setItems((current) =>
+        current.filter((item) => !selected.has(item.quiz_id)),
+      );
+      toast.success(`${selected.size}件の報告対象クイズを削除しました`);
+      setSelected(new Set());
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "削除できませんでした。",
+      );
+    }
+  }
+
+  if (loading || (items.length === 0 && !error)) return null;
+  if (error && items.length === 0) {
+    return <p className="text-sm text-destructive">{error}</p>;
+  }
+
+  return (
+    <section className="space-y-3 border border-destructive/40 bg-destructive/5 p-3">
+      <div className="flex items-center gap-2">
+        <h2 className="font-semibold">不備が報告されたクイズ</h2>
+        <Badge variant="destructive">{items.length}</Badge>
+        {selected.size > 0 && (
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="ml-auto"
+            onClick={() => void removeSelected()}
+          >
+            {selected.size}件を削除
+          </Button>
+        )}
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={items.every((item) => selected.has(item.quiz_id))}
+          onChange={(event) =>
+            setSelected(
+              event.target.checked
+                ? new Set(items.map((item) => item.quiz_id))
+                : new Set(),
+            )
+          }
+        />
+        すべて選択
+      </label>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <div className="divide-y">
+        {items.map((item) => (
+          <label key={item.quiz_id} className="flex gap-3 py-2 text-sm">
+            <input
+              type="checkbox"
+              checked={selected.has(item.quiz_id)}
+              onChange={(event) =>
+                setSelected((current) => {
+                  const next = new Set(current);
+                  if (event.target.checked) next.add(item.quiz_id);
+                  else next.delete(item.quiz_id);
+                  return next;
+                })
+              }
+            />
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{reasonLabels[item.reason]}</Badge>
+                <span className="text-xs text-muted-foreground">
+                  {item.report_count}件 · {item.quiz_id}
+                </span>
+              </span>
+              {item.detail && <span className="mt-1 block">{item.detail}</span>}
+              {item.resource_id && (
+                <Link
+                  to={`/resource/${item.resource_id}`}
+                  className="mt-1 block truncate text-xs text-muted-foreground underline"
+                >
+                  {item.resource_name ?? item.resource_id}
+                </Link>
+              )}
+            </span>
+          </label>
+        ))}
+      </div>
+    </section>
+  );
+}

@@ -13,6 +13,7 @@ import {
   findTargetSentenceId,
 } from "./QuizKnowledge";
 import QuizPrompt from "./QuizPrompt";
+import QuizReportButton from "./QuizReportButton";
 import { type QuizChain, type ReadableQuiz, answerQuiz } from "./api";
 
 type Props = {
@@ -146,8 +147,9 @@ export default function QuizAttempt({
           {error}
         </p>
       )}
-      {!answer && (
-        <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-2">
+        <QuizReportButton quizId={quiz.quiz_id} />
+        {!answer && (
           <Button
             type="button"
             size="sm"
@@ -159,8 +161,8 @@ export default function QuizAttempt({
           >
             {isSubmitting ? "送信中…" : "回答する"}
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

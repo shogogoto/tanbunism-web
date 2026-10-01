@@ -72,6 +72,16 @@ export type DeleteQuizzesResult = {
   deleted_answer_count: number;
   skipped_count: number;
 };
+export type QuizReportReason = "undefined" | "incorrect" | "other";
+export type QuizReport = {
+  quiz_id: string;
+  reason: QuizReportReason;
+  detail?: string | null;
+  report_count: number;
+  resource_id?: string | null;
+  resource_name?: string | null;
+  updated_at: string;
+};
 
 export type ResourceSentenceCandidate = {
   uid: string;
@@ -98,6 +108,41 @@ export type BrokenQuizReference = {
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
+
+export async function reportQuizIssue(
+  quizId: string,
+  reason: QuizReportReason,
+  detail?: string,
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/quiz/${encodeURIComponent(quizId)}/reports`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason, detail: detail || null }),
+    },
+  );
+  if (!response.ok) {
+    throw new QuizApiError(
+      "クイズの不備を報告できませんでした。",
+      response.status,
+    );
+  }
+}
+
+export async function listCreatedQuizReports(): Promise<QuizReport[]> {
+  const response = await fetch(`${API_BASE_URL}/quiz/created/reports`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new QuizApiError(
+      "クイズの不備報告を取得できませんでした。",
+      response.status,
+    );
+  }
+  return (await response.json()) as QuizReport[];
+}
 
 export class QuizApiError extends Error {
   constructor(
