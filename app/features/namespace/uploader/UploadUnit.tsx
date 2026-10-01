@@ -68,13 +68,6 @@ export function describeUploadError(
 ) {
   const raw = typeof detail === "string" ? detail : "";
   const message = raw || (status ? `HTTP ${status}` : "通信に失敗しました");
-  if (/既に登録|重複|already exists|duplicate/i.test(message)) {
-    return {
-      message: "このファイルは既に取り込まれています。再送は不要です。",
-      details: raw || undefined,
-      retryable: false,
-    };
-  }
   if (status === 409) {
     return {
       message:

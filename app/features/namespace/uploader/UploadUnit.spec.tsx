@@ -117,6 +117,16 @@ describe("UploadUnit", () => {
     expect(result.details).toBe("同時に更新されました");
   });
 
+  it("既に登録済みという409も再送不要と誤案内しない", () => {
+    const result = describeUploadError(
+      409,
+      "'# アジャイルサムライ'は既に登録済みです",
+    );
+    expect(result.retryable).toBe(true);
+    expect(result.message).toContain("競合");
+    expect(result.message).not.toContain("再送不要");
+  });
+
   it("FastAPIのdetailに包まれた同一性競合を読み取る", () => {
     const conflict = readIdentityConflict({
       detail: {
