@@ -8,8 +8,8 @@ const { postText } = vi.hoisted(() => ({
   postText: vi.fn(),
 }));
 
-vi.mock("~/shared/generated/entry/entry", () => ({
-  postTextResourceTextPost: postText,
+vi.mock("./uploadApi", () => ({
+  saveResourceText: postText,
 }));
 
 vi.mock("./CustomFileUploader", () => ({

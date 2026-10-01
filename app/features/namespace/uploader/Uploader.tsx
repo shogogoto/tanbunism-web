@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/shared/components/ui/button";
 import { Progress } from "~/shared/components/ui/progress";
-import { postTextResourceTextPost } from "~/shared/generated/entry/entry";
 import type { IdentityResolutionBody } from "~/shared/generated/fastAPI.schemas";
 import AcceptExtensions from "./AcceptExtensions";
 import CustomFileUploader from "./CustomFileUploader";
@@ -19,6 +18,7 @@ import {
   loadUploadHistory,
   saveUploadResult,
 } from "./history";
+import { saveResourceText } from "./uploadApi";
 import { fileWithoutTopDirectory } from "./utils";
 
 type Props = {
@@ -175,7 +175,7 @@ export default function Uploader({ refresh }: Props) {
     }
     const file = fileWithoutTopDirectory(source);
     try {
-      const response = await postTextResourceTextPost(
+      const response = await saveResourceText(
         {
           txt: await file.text(),
           path: file.name.split("/"),
