@@ -110,6 +110,13 @@ describe("UploadUnit", () => {
     expect(result.details).toBe("NetworkError");
   });
 
+  it("詳細不明の409を取り込み済みと決めつけない", () => {
+    const result = describeUploadError(409, "同時に更新されました");
+    expect(result.retryable).toBe(true);
+    expect(result.message).toContain("競合");
+    expect(result.details).toBe("同時に更新されました");
+  });
+
   it("FastAPIのdetailに包まれた同一性競合を読み取る", () => {
     const conflict = readIdentityConflict({
       detail: {
