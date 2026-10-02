@@ -13,7 +13,7 @@ type Props = {
   state?: unknown;
   metadata?: ReactNode;
   compact?: boolean;
-  scorePosition?: "start" | "end";
+  scorePosition?: "start" | "end" | "none";
   hotkeyItem?: boolean;
 };
 

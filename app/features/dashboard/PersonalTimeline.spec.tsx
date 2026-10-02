@@ -82,6 +82,12 @@ it("単文を見た日を一日一回だけ記録する", async () => {
   ).toBeDisabled();
   expect(screen.getByText("新しく取り込んだ単文")).toBeVisible();
   expect(screen.getByLabelText("スコア: 7")).toBeInTheDocument();
+  const seenButton = screen.getByRole("button", {
+    name: "今日は記録済み、累計3日",
+  });
+  expect(seenButton.nextElementSibling).toBe(
+    screen.getByLabelText("スコア: 7"),
+  );
   expect(screen.getByText("新しい知識")).toBeInTheDocument();
 
   fireEvent.keyDown(timelineItem as HTMLElement, { key: "Enter" });

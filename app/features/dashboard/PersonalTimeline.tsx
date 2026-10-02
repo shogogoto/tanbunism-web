@@ -1,7 +1,9 @@
 import { Eye } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import KnowledgeCard from "~/features/tanbun/components/KnowledgeCard";
+import KnowledgeCard, {
+  KnowledgeScore,
+} from "~/features/tanbun/components/KnowledgeCard";
 import { Button } from "~/shared/components/ui/button";
 import {
   type PersonalTanbunItem,
@@ -152,7 +154,7 @@ export default function PersonalTimeline() {
                   sentence={item.sentence}
                   termNames={item.term_names ?? []}
                   score={item.score ?? 0}
-                  scorePosition="end"
+                  scorePosition="none"
                   metadata={
                     <>
                       <Button
@@ -182,6 +184,7 @@ export default function PersonalTimeline() {
                           {item.exposure_count}
                         </span>
                       </Button>
+                      <KnowledgeScore score={item.score ?? 0} />
                       <Link
                         to={`/resource/${item.resource_uid}#${item.uid}`}
                         className="min-w-0 truncate hover:text-foreground hover:underline"
