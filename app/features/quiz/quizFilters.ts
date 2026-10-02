@@ -1,6 +1,7 @@
 import type { QuizSearchParams, QuizType } from "./api";
 
 export type QuizFilters = {
+  query: string;
   quizTypes: QuizType[];
   answered: "" | "true" | "false";
   createdFrom: string;
@@ -10,6 +11,7 @@ export type QuizFilters = {
 };
 
 export const emptyQuizFilters: QuizFilters = {
+  query: "",
   quizTypes: [],
   answered: "",
   createdFrom: "",
@@ -20,6 +22,7 @@ export const emptyQuizFilters: QuizFilters = {
 
 export function toQuizSearchParams(filters: QuizFilters): QuizSearchParams {
   return {
+    q: filters.query.trim() || undefined,
     quiz_types: filters.quizTypes.length > 0 ? filters.quizTypes : undefined,
     answered: filters.answered === "" ? undefined : filters.answered === "true",
     created_from: filters.createdFrom

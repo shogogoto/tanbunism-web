@@ -1,5 +1,5 @@
-import { ChevronDown, SlidersHorizontal } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
   AlertDialog,
@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/shared/components/ui/card";
+import { useDebounce } from "~/shared/hooks/useDebounce";
 import QuizPrompt from "./QuizPrompt";
 import ReportedQuizManager from "./ReportedQuizManager";
 import ResourceLearningOverview from "./ResourceLearningOverview";
@@ -66,6 +67,7 @@ function QuizSearchFilters({
 }) {
   const [open, setOpen] = useState(false);
   const activeCount =
+    Number(Boolean(filters.query.trim())) +
     filters.quizTypes.length +
     Number(Boolean(filters.answered)) +
     Number(Boolean(filters.createdFrom)) +
@@ -98,11 +100,24 @@ function QuizSearchFilters({
         />
       </button>
       {open && (
-        <CardContent className="space-y-3 border-t px-3 py-3 text-sm">
+        <CardContent className="space-y-4 border-t px-4 py-4 text-sm sm:px-6">
+          <label className="grid gap-1">
+            検索文字列
+            <span className="relative">
+              <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                className="h-9 w-full border bg-background pr-3 pl-9"
+                value={filters.query}
+                placeholder="問題文・選択肢を検索"
+                onChange={(event) =>
+                  onChange({ ...filters, query: event.target.value })
+                }
+              />
+            </span>
+          </label>
           <fieldset className="flex flex-wrap gap-3">
-            <legend className="mb-1 text-xs font-medium text-muted-foreground">
-              QuizType
-            </legend>
+            <legend className="mb-2 font-medium">QuizType</legend>
             {Object.entries(quizTypeLabels).map(([type, label]) => (
               <label key={type} className="flex items-center gap-2">
                 <input
@@ -114,31 +129,29 @@ function QuizSearchFilters({
               </label>
             ))}
           </fieldset>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <label className="grid gap-1">
+            回答状態
+            <select
+              className="h-9 border bg-background px-2"
+              value={filters.answered}
+              onChange={(event) =>
+                onChange({
+                  ...filters,
+                  answered: event.target.value as QuizFilters["answered"],
+                })
+              }
+            >
+              <option value="">すべて</option>
+              <option value="false">未回答</option>
+              <option value="true">回答済み</option>
+            </select>
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1">
-              <span className="text-xs text-muted-foreground">回答状態</span>
-              <select
-                className="h-8 min-w-0 border bg-background px-2"
-                value={filters.answered}
-                onChange={(event) =>
-                  onChange({
-                    ...filters,
-                    answered: event.target.value as QuizFilters["answered"],
-                  })
-                }
-              >
-                <option value="">すべて</option>
-                <option value="false">未回答</option>
-                <option value="true">回答済み</option>
-              </select>
-            </label>
-            <label className="grid gap-1">
-              <span className="text-xs text-muted-foreground">
-                作成日（開始）
-              </span>
+              作成日（開始）
               <input
                 type="date"
-                className="h-8 min-w-0 border bg-background px-2"
+                className="h-9 min-w-0 border bg-background px-2"
                 value={filters.createdFrom}
                 onChange={(event) =>
                   onChange({ ...filters, createdFrom: event.target.value })
@@ -146,12 +159,10 @@ function QuizSearchFilters({
               />
             </label>
             <label className="grid gap-1">
-              <span className="text-xs text-muted-foreground">
-                作成日（終了）
-              </span>
+              作成日（終了）
               <input
                 type="date"
-                className="h-8 min-w-0 border bg-background px-2"
+                className="h-9 min-w-0 border bg-background px-2"
                 value={filters.createdTo}
                 onChange={(event) =>
                   onChange({ ...filters, createdTo: event.target.value })
@@ -159,14 +170,12 @@ function QuizSearchFilters({
               />
             </label>
             <label className="grid gap-1">
-              <span className="text-xs text-muted-foreground">
-                最低正答率（%）
-              </span>
+              最低正答率（%）
               <input
                 type="number"
                 min="0"
                 max="100"
-                className="h-8 min-w-0 border bg-background px-2"
+                className="h-9 min-w-0 border bg-background px-2"
                 value={filters.minAccuracy}
                 onChange={(event) =>
                   onChange({ ...filters, minAccuracy: event.target.value })
@@ -174,14 +183,12 @@ function QuizSearchFilters({
               />
             </label>
             <label className="grid gap-1">
-              <span className="text-xs text-muted-foreground">
-                最高正答率（%）
-              </span>
+              最高正答率（%）
               <input
                 type="number"
                 min="0"
                 max="100"
-                className="h-8 min-w-0 border bg-background px-2"
+                className="h-9 min-w-0 border bg-background px-2"
                 value={filters.maxAccuracy}
                 onChange={(event) =>
                   onChange({ ...filters, maxAccuracy: event.target.value })
@@ -193,7 +200,6 @@ function QuizSearchFilters({
             type="button"
             variant="ghost"
             onClick={() => onChange(emptyQuizFilters)}
-            size="sm"
           >
             条件をクリア
           </Button>
@@ -327,6 +333,27 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
   const resourceId = searchParams.get("resource") ?? undefined;
   const sentenceId = searchParams.get("sentence") ?? undefined;
   const [filters, setFilters] = useState<QuizFilters>(emptyQuizFilters);
+  const debouncedQuery = useDebounce(filters.query, 250);
+  const appliedFilters = useMemo<QuizFilters>(
+    () => ({
+      query: debouncedQuery,
+      quizTypes: filters.quizTypes,
+      answered: filters.answered,
+      createdFrom: filters.createdFrom,
+      createdTo: filters.createdTo,
+      minAccuracy: filters.minAccuracy,
+      maxAccuracy: filters.maxAccuracy,
+    }),
+    [
+      debouncedQuery,
+      filters.quizTypes,
+      filters.answered,
+      filters.createdFrom,
+      filters.createdTo,
+      filters.minAccuracy,
+      filters.maxAccuracy,
+    ],
+  );
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [selectedQuizIds, setSelectedQuizIds] = useState<Set<string>>(
     new Set(),
@@ -342,7 +369,7 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
       searchCreatedQuizzes({
         resource_id: resourceId,
         sentence_id: sentenceId,
-        ...toQuizSearchParams(filters),
+        ...toQuizSearchParams(appliedFilters),
         page: 1,
         size: 100,
       }),
@@ -373,7 +400,7 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
     return () => {
       active = false;
     };
-  }, [resourceId, sentenceId, filters]);
+  }, [resourceId, sentenceId, appliedFilters]);
 
   async function handleDelete(quizId: string) {
     await deleteQuiz(quizId);
@@ -472,7 +499,7 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
           {!resourceId && (
             <>
               <QuizSearchFilters filters={filters} onChange={setFilters} />
-              <ResourceLearningOverview filters={filters} />
+              <ResourceLearningOverview filters={appliedFilters} />
             </>
           )}
           {resourceId && (

@@ -215,13 +215,15 @@ it("Resourceを指定した画面ではクイズを絞り込める", async () =>
 
   expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "クイズを絞り込む" }));
+  await user.type(screen.getByLabelText("検索文字列"), "可換");
   await user.selectOptions(screen.getByLabelText("回答状態"), "true");
   await user.click(screen.getByRole("checkbox", { name: "用語→単文" }));
-  await waitFor(() =>
-    expect(searchRequests.at(-1)).toMatch(
-      /answered=true.*quiz_types=term2sent|quiz_types=term2sent.*answered=true/,
-    ),
-  );
+  await waitFor(() => {
+    const request = new URL(searchRequests.at(-1) ?? "https://example.com");
+    expect(request.searchParams.get("q")).toBe("可換");
+    expect(request.searchParams.get("answered")).toBe("true");
+    expect(request.searchParams.get("quiz_types")).toBe("term2sent");
+  });
 });
 
 it("Resourceごとの学習指標を表示する", async () => {

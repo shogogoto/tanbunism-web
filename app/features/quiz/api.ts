@@ -54,7 +54,9 @@ export type QuizRecommendation = QuizRecommendationResponse & {
   quiz_type: QuizType;
 };
 export type QuizSearchParams =
-  SearchCreatedQuizzesApiQuizCreatedSearchGetParams;
+  SearchCreatedQuizzesApiQuizCreatedSearchGetParams & {
+    q?: string | null;
+  };
 export type StudyResource = {
   uid: string;
   name: string;
