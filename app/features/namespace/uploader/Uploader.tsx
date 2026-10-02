@@ -309,6 +309,7 @@ export default function Uploader({ refresh, autoOpenPicker = false }: Props) {
       />
       <div className="sticky top-0 z-10 space-y-2 bg-background pb-1">
         <Button
+          data-page-enter-action
           onClick={handlePrimaryAction}
           disabled={isUploading || !files || sendableCount === 0}
         >

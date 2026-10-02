@@ -123,21 +123,26 @@ export default function SearchHeaderControls() {
           role="tablist"
           aria-label="検索対象"
         >
-          {searchTypes.map((type) => (
+          {searchTypes.map((type, index) => (
             <Button
               key={type}
               type="button"
               size="sm"
               variant="ghost"
               role="tab"
-              className={`h-7 gap-1.5 px-2 text-xs ${
+              aria-label={labels[type]}
+              title={`Ctrl+${index + 1}`}
+              className={`h-8 gap-1.5 rounded-md px-2 text-xs transition-all ${
                 currentType === type
-                  ? `font-medium ${activeTypeStyles[type]}`
+                  ? `bg-accent font-medium ring-1 ring-inset ring-foreground/70 ${activeTypeStyles[type]}`
                   : "text-muted-foreground opacity-55"
               }`}
               aria-selected={currentType === type}
               onClick={() => selectType(type)}
             >
+              <kbd className="min-w-3 text-center font-mono text-[10px] leading-none text-muted-foreground">
+                {index + 1}
+              </kbd>
               <span
                 className={`size-1.5 rounded-full ${
                   currentType === type ? "bg-current" : "border border-current"

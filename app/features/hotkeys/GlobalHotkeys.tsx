@@ -65,6 +65,7 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
                 <HotkeyRow keys={["g", "q"]} label="クイズへ移動" />
                 <HotkeyRow keys={["h", "l"]} label="前後のタブへ移動" />
                 <HotkeyRow keys={["Ctrl", "1–9"]} label="番号のタブへ移動" />
+                <HotkeyRow keys={["u", "d"]} label="ページを上下にスクロール" />
                 <HotkeyRow keys={["/"]} label="ページ内の入力欄へフォーカス" />
                 <HotkeyRow keys={["Esc"]} label="入力欄のフォーカスを解除" />
                 <HotkeyRow keys={["?"]} label="この一覧を開く" />
@@ -176,7 +177,7 @@ export default function GlobalHotkeys() {
       }
 
       if (!waitingForDestination.current && key === "enter") {
-        if (submitActiveQuiz()) event.preventDefault();
+        if (submitActiveQuiz() || runPageEnterAction()) event.preventDefault();
         resetChord();
         return;
       }
@@ -194,6 +195,12 @@ export default function GlobalHotkeys() {
 
       if (!waitingForDestination.current && (key === "h" || key === "l")) {
         if (moveActiveTab(key === "l" ? 1 : -1)) event.preventDefault();
+        resetChord();
+        return;
+      }
+
+      if (!waitingForDestination.current && (key === "u" || key === "d")) {
+        if (scrollPage(key === "d" ? 1 : -1)) event.preventDefault();
         resetChord();
         return;
       }
@@ -265,6 +272,9 @@ function ContextHotkeySection({
 type HotkeyDefinition = { keys: string[]; label: string };
 
 function contextHotkeys(pathname: string, search: string): HotkeyDefinition[] {
+  if (pathname === "/import") {
+    return [{ keys: ["Enter"], label: "選択した読書メモをimport" }];
+  }
   if (pathname.startsWith("/search")) {
     return [
       { keys: ["j", "k"], label: "検索結果を移動" },
@@ -320,6 +330,23 @@ function submitActiveQuiz(): boolean {
     const submit = card.querySelector<HTMLButtonElement>("[data-quiz-submit]");
     if (submit && !submit.disabled) submit.click();
   }
+  return true;
+}
+
+function runPageEnterAction(): boolean {
+  const action = document.querySelector<HTMLButtonElement>(
+    "[data-page-enter-action]:not(:disabled)",
+  );
+  if (!action) return false;
+  action.click();
+  return true;
+}
+
+function scrollPage(direction: -1 | 1): boolean {
+  const container = document.querySelector<HTMLElement>("main");
+  if (!container) return false;
+  const distance = Math.max(160, Math.round(container.clientHeight * 0.8));
+  container.scrollBy({ top: direction * distance, behavior: "smooth" });
   return true;
 }
 

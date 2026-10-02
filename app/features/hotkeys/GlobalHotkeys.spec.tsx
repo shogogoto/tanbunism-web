@@ -332,3 +332,45 @@ it("クイズTLではSpaceで開きEnterで回答する", async () => {
   expect(submit).toHaveBeenCalledOnce();
   expect(toggle).toHaveBeenCalledOnce();
 });
+
+it("import画面ではEnterで有効な主操作を実行する", async () => {
+  const user = userEvent.setup();
+  const runImport = vi.fn();
+  renderHotkeys(
+    <button type="button" data-page-enter-action onClick={runImport}>
+      取り込む
+    </button>,
+    "/import",
+  );
+
+  await user.keyboard("{Enter}");
+
+  expect(runImport).toHaveBeenCalledOnce();
+});
+
+it("uとdでページを上下にスクロールする", async () => {
+  const user = userEvent.setup();
+  const scrollBy = vi.fn();
+  renderHotkeys(<main />);
+  const main = document.querySelector("main");
+  expect(main).not.toBeNull();
+  Object.defineProperty(main, "clientHeight", { value: 500 });
+  Object.defineProperty(main, "scrollBy", { value: scrollBy });
+
+  await user.keyboard("d");
+  expect(scrollBy).toHaveBeenLastCalledWith({ top: 400, behavior: "smooth" });
+
+  await user.keyboard("u");
+  expect(scrollBy).toHaveBeenLastCalledWith({ top: -400, behavior: "smooth" });
+});
+
+it("import画面のEnterをショートカット一覧に表示する", async () => {
+  const user = userEvent.setup();
+  renderHotkeys(undefined, "/import");
+
+  await user.click(screen.getByRole("button", { name: "入力を終了" }));
+  await user.keyboard("?");
+
+  expect(screen.getByText("選択した読書メモをimport")).toBeVisible();
+  expect(screen.getByText("ページを上下にスクロール")).toBeVisible();
+});
