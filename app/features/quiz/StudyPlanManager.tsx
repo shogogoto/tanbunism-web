@@ -1,6 +1,6 @@
 import { Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useNotifications } from "~/features/notifications/NotificationProvider";
 import {
@@ -73,6 +73,7 @@ const quizTypeColumns: Array<{
 
 export default function StudyPlanManager() {
   const isMobile = useIsMobile(1024);
+  const navigate = useNavigate();
   const { refreshNotifications } = useNotifications();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [resources, setResources] = useState<StudyResource[]>([]);
@@ -188,12 +189,14 @@ export default function StudyPlanManager() {
   }, [filteredPlans]);
 
   useEffect(() => {
-    function moveCurrent(event: KeyboardEvent) {
+    function handlePlanHotkey(event: KeyboardEvent) {
       if (
         event.defaultPrevented ||
+        event.isComposing ||
         event.metaKey ||
         event.ctrlKey ||
         event.altKey ||
+        event.shiftKey ||
         isCreating ||
         editingPlan
       )
@@ -204,20 +207,56 @@ export default function StudyPlanManager() {
         (target.matches("input, textarea, select") || target.isContentEditable)
       )
         return;
-      if (event.key !== "j" && event.key !== "k") return;
-      event.preventDefault();
-      setCurrentPlanId((current) => {
-        const index = filteredPlans.findIndex(({ uid }) => uid === current);
-        const nextIndex =
-          event.key === "j"
-            ? Math.min(filteredPlans.length - 1, Math.max(0, index + 1))
-            : Math.max(0, index < 0 ? filteredPlans.length - 1 : index - 1);
-        return filteredPlans[nextIndex]?.uid;
-      });
+      const key = event.key.toLowerCase();
+      if (key === "j" || key === "k") {
+        event.preventDefault();
+        setCurrentPlanId((current) => {
+          const index = filteredPlans.findIndex(({ uid }) => uid === current);
+          const nextIndex =
+            key === "j"
+              ? Math.min(filteredPlans.length - 1, Math.max(0, index + 1))
+              : Math.max(0, index < 0 ? filteredPlans.length - 1 : index - 1);
+          return filteredPlans[nextIndex]?.uid;
+        });
+        return;
+      }
+      if (!currentPlan) return;
+      if (key === " ") {
+        event.preventDefault();
+        setSelectedPlanIds((current) => {
+          const next = new Set(current);
+          if (next.has(currentPlan.uid)) next.delete(currentPlan.uid);
+          else next.add(currentPlan.uid);
+          return next;
+        });
+        return;
+      }
+      if (key === "a" && !event.repeat && !preparingId) {
+        event.preventDefault();
+        void preparePlan(currentPlan);
+        return;
+      }
+      if (key === "e") {
+        event.preventDefault();
+        setIsCreating(false);
+        setEditingPlan(currentPlan);
+        return;
+      }
+      if (key === "enter") {
+        event.preventDefault();
+        navigate(`/quiz?plan=${encodeURIComponent(currentPlan.uid)}`);
+      }
     }
-    document.addEventListener("keydown", moveCurrent);
-    return () => document.removeEventListener("keydown", moveCurrent);
-  }, [editingPlan, filteredPlans, isCreating]);
+    document.addEventListener("keydown", handlePlanHotkey);
+    return () => document.removeEventListener("keydown", handlePlanHotkey);
+  }, [
+    currentPlan,
+    editingPlan,
+    filteredPlans,
+    isCreating,
+    navigate,
+    preparingId,
+  ]);
 
   useEffect(() => {
     if (!currentPlanId) return;
@@ -444,7 +483,7 @@ export default function StudyPlanManager() {
         </p>
       ) : (
         <div className="space-y-3" data-dashboard-swipe-ignore>
-          <div className="sticky top-0 z-20 flex min-h-11 flex-wrap items-center gap-2 rounded-md border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
+          <div className="sticky top-0 z-30 flex min-h-11 flex-wrap items-center gap-2 rounded-md border bg-background/95 px-3 py-2 shadow-sm backdrop-blur lg:h-20">
             <input
               type="search"
               className="h-8 w-full rounded-md border bg-background px-3 text-sm sm:w-56"
@@ -607,9 +646,12 @@ export default function StudyPlanManager() {
               ))}
             </div>
           ) : (
-            <div className="overflow-hidden rounded-md border">
-              <Table className="table-fixed">
-                <TableHeader>
+            <div className="rounded-md border">
+              <Table
+                className="table-fixed"
+                containerClassName="overflow-visible"
+              >
+                <TableHeader className="sticky top-20 z-20 bg-background shadow-sm">
                   <TableRow>
                     <TableHead className="w-10">
                       <input

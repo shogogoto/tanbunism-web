@@ -45,24 +45,32 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
               入力欄へ入力している間は反応しません。
             </DialogDescription>
           </DialogHeader>
-          <dl className="divide-y">
-            <HotkeyRow keys={["g", "h"]} label="履歴を開く" />
-            {isAuthenticated && (
-              <>
-                <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
-                <HotkeyRow keys={["g", "p"]} label="プロフィールへ移動" />
-                <HotkeyRow keys={["g", "n"]} label="通知へ移動" />
-                <HotkeyRow keys={["g", "i"]} label="読書メモimport" />
-              </>
-            )}
-            <HotkeyRow keys={["g", "s"]} label="検索へ移動" />
-            <HotkeyRow keys={["g", "q"]} label="クイズへ移動" />
-            <HotkeyRow keys={["h", "l"]} label="前後のタブへ移動" />
-            <HotkeyRow keys={["Ctrl", "1–9"]} label="番号のタブへ移動" />
-            <HotkeyRow keys={["/"]} label="ページ内の入力欄へフォーカス" />
-            <HotkeyRow keys={["?"]} label="この一覧を開く" />
-            <ContextHotkeyRows pathname={pathname} search={search} />
-          </dl>
+          <div className="max-h-[70vh] space-y-5 overflow-y-auto pr-1">
+            <ContextHotkeySection pathname={pathname} search={search} />
+            <section aria-labelledby="global-hotkeys-heading">
+              <h3 id="global-hotkeys-heading" className="text-sm font-semibold">
+                共通
+              </h3>
+              <dl className="mt-1 divide-y">
+                <HotkeyRow keys={["g", "h"]} label="履歴を開く" />
+                {isAuthenticated && (
+                  <>
+                    <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
+                    <HotkeyRow keys={["g", "p"]} label="プロフィールへ移動" />
+                    <HotkeyRow keys={["g", "n"]} label="通知へ移動" />
+                    <HotkeyRow keys={["g", "i"]} label="読書メモimport" />
+                  </>
+                )}
+                <HotkeyRow keys={["g", "s"]} label="検索へ移動" />
+                <HotkeyRow keys={["g", "q"]} label="クイズへ移動" />
+                <HotkeyRow keys={["h", "l"]} label="前後のタブへ移動" />
+                <HotkeyRow keys={["Ctrl", "1–9"]} label="番号のタブへ移動" />
+                <HotkeyRow keys={["/"]} label="ページ内の入力欄へフォーカス" />
+                <HotkeyRow keys={["Esc"]} label="入力欄のフォーカスを解除" />
+                <HotkeyRow keys={["?"]} label="この一覧を開く" />
+              </dl>
+            </section>
+          </div>
         </DialogContent>
       </Dialog>
     </HotkeyContext.Provider>
@@ -93,6 +101,18 @@ export default function GlobalHotkeys() {
   const chordTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
+    function releaseEditableFocus(event: KeyboardEvent) {
+      if (
+        event.key !== "Escape" ||
+        event.isComposing ||
+        !isEditableTarget(event.target)
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      (event.target as HTMLElement).blur();
+    }
+
     function resetChord() {
       waitingForDestination.current = false;
       if (chordTimer.current) clearTimeout(chordTimer.current);
@@ -203,8 +223,10 @@ export default function GlobalHotkeys() {
       action();
     }
 
+    window.addEventListener("keydown", releaseEditableFocus, true);
     window.addEventListener("keydown", handleKeyDown);
     return () => {
+      window.removeEventListener("keydown", releaseEditableFocus, true);
       window.removeEventListener("keydown", handleKeyDown);
       resetChord();
     };
@@ -213,44 +235,71 @@ export default function GlobalHotkeys() {
   return null;
 }
 
-function ContextHotkeyRows({
+function ContextHotkeySection({
   pathname,
   search,
 }: {
   pathname: string;
   search: string;
 }) {
+  const hotkeys = contextHotkeys(pathname, search);
+  if (hotkeys.length === 0) return null;
+  return (
+    <section aria-labelledby="page-hotkeys-heading">
+      <h3 id="page-hotkeys-heading" className="text-sm font-semibold">
+        この画面
+      </h3>
+      <dl className="mt-1 divide-y">
+        {hotkeys.map(({ keys, label }) => (
+          <HotkeyRow
+            key={`${keys.join("-")}-${label}`}
+            keys={keys}
+            label={label}
+          />
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+type HotkeyDefinition = { keys: string[]; label: string };
+
+function contextHotkeys(pathname: string, search: string): HotkeyDefinition[] {
   if (pathname.startsWith("/search")) {
-    return (
-      <>
-        <HotkeyRow keys={["j", "k"]} label="検索結果を移動" />
-        <HotkeyRow keys={["Enter"]} label="検索結果を開く" />
-      </>
-    );
+    return [
+      { keys: ["j", "k"], label: "検索結果を移動" },
+      { keys: ["Enter"], label: "検索結果を開く" },
+    ];
   }
-  if (pathname !== "/dashboard") return null;
+  if (pathname === "/study-plans") return studyPlanHotkeys;
+  if (pathname !== "/dashboard") return [];
   const view = new URLSearchParams(search).get("view") ?? "timeline";
+  if (view === "study-plans") return studyPlanHotkeys;
   if (view === "quiz-timeline") {
-    return (
-      <>
-        <HotkeyRow keys={["j", "k"]} label="クイズを移動" />
-        <HotkeyRow keys={["Space"]} label="選択中のクイズを開閉" />
-        <HotkeyRow keys={["1–9"]} label="選択肢を切替" />
-        <HotkeyRow keys={["Enter"]} label="回答する" />
-      </>
-    );
+    return [
+      { keys: ["j", "k"], label: "クイズを移動" },
+      { keys: ["Space"], label: "選択中のクイズを開閉" },
+      { keys: ["1–9"], label: "選択肢を切替" },
+      { keys: ["Enter"], label: "回答する" },
+    ];
   }
   if (view === "timeline") {
-    return (
-      <>
-        <HotkeyRow keys={["j", "k"]} label="単文を移動" />
-        <HotkeyRow keys={["Space"]} label="見たよを記録" />
-        <HotkeyRow keys={["Enter"]} label="単文を開く" />
-      </>
-    );
+    return [
+      { keys: ["j", "k"], label: "単文を移動" },
+      { keys: ["Space"], label: "見たよを記録" },
+      { keys: ["Enter"], label: "単文を開く" },
+    ];
   }
-  return null;
+  return [];
 }
+
+const studyPlanHotkeys: HotkeyDefinition[] = [
+  { keys: ["j", "k"], label: "currentを移動" },
+  { keys: ["Space"], label: "currentのチェックを切替" },
+  { keys: ["a"], label: "currentへクイズを追加" },
+  { keys: ["e"], label: "currentを編集" },
+  { keys: ["Enter"], label: "currentのクイズを解く" },
+];
 
 function toggleActiveQuizCard(): boolean {
   const active = document.querySelector<HTMLElement>(

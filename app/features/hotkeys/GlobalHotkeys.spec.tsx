@@ -30,9 +30,9 @@ function Location() {
   return <output aria-label="現在地">{location.pathname}</output>;
 }
 
-function renderHotkeys(children?: ReactNode) {
+function renderHotkeys(children?: ReactNode, initialEntry = "/") {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <HistoryPanelProvider>
         <HotkeyProvider>
           <input aria-label="入力欄" />
@@ -122,6 +122,19 @@ it("入力中はショートカットが干渉しない", async () => {
   expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent("/");
 });
 
+it("Escで入力欄のフォーカスを解除する", async () => {
+  const user = userEvent.setup();
+  renderHotkeys();
+
+  const input = screen.getByRole("textbox", { name: "入力欄" });
+  await user.click(input);
+  expect(input).toHaveFocus();
+
+  await user.keyboard("{Escape}");
+
+  expect(input).not.toHaveFocus();
+});
+
 it("履歴を開いてjとkとEnterで移動する", async () => {
   const user = userEvent.setup();
   renderHotkeys();
@@ -163,6 +176,23 @@ it("疑問符でショートカット一覧を開く", async () => {
   expect(
     screen.getByRole("heading", { name: "キーボードショートカット" }),
   ).toBeVisible();
+});
+
+it("画面固有のhotkeyを共通hotkeyより先に表示する", async () => {
+  const user = userEvent.setup();
+  renderHotkeys(undefined, "/dashboard?view=study-plans");
+
+  await user.click(screen.getByRole("button", { name: "入力を終了" }));
+  await user.keyboard("?");
+
+  const pageHeading = screen.getByRole("heading", { name: "この画面" });
+  const globalHeading = screen.getByRole("heading", { name: "共通" });
+  expect(
+    pageHeading.compareDocumentPosition(globalHeading) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(screen.getByText("currentのチェックを切替")).toBeVisible();
+  expect(screen.getByText("入力欄のフォーカスを解除")).toBeVisible();
 });
 
 it("ヘルプボタンでショートカット一覧を開く", async () => {

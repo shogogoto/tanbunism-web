@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 import { beforeEach, expect, it, vi } from "vitest";
 import StudyPlanManager from "./StudyPlanManager";
 import {
@@ -69,7 +69,18 @@ function renderManager() {
   return render(
     <MemoryRouter>
       <StudyPlanManager />
+      <Location />
     </MemoryRouter>,
+  );
+}
+
+function Location() {
+  const location = useLocation();
+  return (
+    <output aria-label="現在地">
+      {location.pathname}
+      {location.search}
+    </output>
   );
 }
 
@@ -86,6 +97,9 @@ it("PlanとResourceを省略可能な表として表示する", async () => {
   expect(screen.getByRole("columnheader", { name: "準備済み" })).toBeVisible();
   expect(screen.getByRole("columnheader", { name: "1回" })).toBeVisible();
   expect(screen.getByRole("columnheader", { name: "選択肢" })).toBeVisible();
+  expect(
+    screen.getByRole("columnheader", { name: "Plan" }).closest("thead"),
+  ).toHaveClass("sticky");
   expect(screen.getByLabelText("単文から用語: OFF")).toHaveTextContent("OFF");
   expect(screen.getByLabelText("用語から単文: ON")).toHaveTextContent("ON");
 
@@ -141,6 +155,48 @@ it("jとkでcurrentのStudyPlanを移動する", async () => {
 
   await user.keyboard("k");
   expect(firstRow).toHaveAttribute("aria-current", "true");
+});
+
+it("Spaceでcurrentのチェックを切り替える", async () => {
+  const user = userEvent.setup();
+  renderManager();
+  const checkbox = await screen.findByRole("checkbox", {
+    name: `${plan.name}を選択`,
+  });
+
+  await user.keyboard(" ");
+  expect(checkbox).toBeChecked();
+  await user.keyboard(" ");
+  expect(checkbox).not.toBeChecked();
+});
+
+it("aで追加しeで編集する", async () => {
+  const user = userEvent.setup();
+  renderManager();
+  await screen.findByText(plan.name);
+
+  await user.keyboard("a");
+  await waitFor(() =>
+    expect(prepareAdditionalStudyPlanQuizzes).toHaveBeenCalledWith(
+      plan.uid,
+      plan.n_quiz,
+    ),
+  );
+
+  await user.keyboard("e");
+  expect(screen.getByRole("heading", { name: "学習計画を編集" })).toBeVisible();
+});
+
+it("Enterでcurrentのクイズを開く", async () => {
+  const user = userEvent.setup();
+  renderManager();
+  await screen.findByText(plan.name);
+
+  await user.keyboard("{Enter}");
+
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
+    "/quiz?plan=plan-1",
+  );
 });
 
 it("StudyPlanへ指定数のクイズを追加する", async () => {
