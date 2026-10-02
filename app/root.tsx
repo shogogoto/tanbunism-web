@@ -7,6 +7,7 @@ import {
   ScrollRestoration,
   isRouteErrorResponse,
 } from "react-router";
+import { SWRConfig } from "swr";
 import type { Route } from "./+types/root";
 import "./app.css";
 import "katex/dist/katex.min.css";
@@ -115,11 +116,21 @@ export default function App({ loaderData }: Route.ComponentProps) {
     <ThemeProvider>
       <HashScrollRestoration />
       <ClientOnly>{() => <GATracker />}</ClientOnly>
-      <AuthProvider>
-        <TooltipProvider>
-          <Outlet />
-        </TooltipProvider>
-      </AuthProvider>
+      <SWRConfig
+        value={{
+          dedupingInterval: 30_000,
+          errorRetryCount: 2,
+          revalidateIfStale: true,
+          revalidateOnFocus: true,
+          revalidateOnReconnect: true,
+        }}
+      >
+        <AuthProvider>
+          <TooltipProvider>
+            <Outlet />
+          </TooltipProvider>
+        </AuthProvider>
+      </SWRConfig>
     </ThemeProvider>
   );
 }

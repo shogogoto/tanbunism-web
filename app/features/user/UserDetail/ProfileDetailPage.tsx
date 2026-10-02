@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import Loading from "~/shared/components/Loading";
 import { getPublicNamespaceUserUserIdNamespaceGet } from "~/shared/generated/entry/entry";
 import type {
@@ -8,6 +7,7 @@ import type {
 } from "~/shared/generated/fastAPI.schemas";
 import { getLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
 import { userProfileUserProfileUsernameGet } from "~/shared/generated/public-user/public-user";
+import { usePersistentSWR } from "~/shared/hooks/swr/useCache";
 import { genericCache } from "~/shared/lib/indexed";
 import UserDetail from ".";
 
@@ -18,65 +18,53 @@ type ProfileDetail = {
 };
 
 export default function ProfileDetailPage({ userId }: { userId: string }) {
-  const [data, setData] = useState<ProfileDetail>();
-  const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    let active = true;
-    const cacheKey = `public:profile-detail:${userId}`;
-
-    async function load() {
-      const cached = await genericCache.get(cacheKey);
-      if (!active) return;
-      if (cached) setData(cached as ProfileDetail);
-
-      try {
-        const profileResponse = await userProfileUserProfileUsernameGet(userId);
-        if (profileResponse.status !== 200 || !profileResponse.data) {
-          throw new Error("プロフィールを取得できませんでした。");
-        }
-        const [namespaceResponse, progressResponse] = await Promise.all([
-          getPublicNamespaceUserUserIdNamespaceGet(profileResponse.data.uid),
-          getLearningProgressUserUserIdLearningProgressGet(
-            profileResponse.data.uid,
-          ),
-        ]);
-        if (
-          namespaceResponse.status !== 200 ||
-          progressResponse.status !== 200
-        ) {
-          throw new Error("プロフィールの学習情報を取得できませんでした。");
-        }
-        const fresh: ProfileDetail = {
-          user: profileResponse.data,
-          namespace: namespaceResponse.data,
-          learningProgress: progressResponse.data,
-        };
-        if (!active) return;
-        setData(fresh);
-        setError(undefined);
-        void genericCache.set(cacheKey, fresh).catch(() => undefined);
-      } catch (reason) {
-        if (!active) return;
-        if (!cached) {
-          setError(
-            reason instanceof Error
-              ? reason.message
-              : "プロフィールを取得できませんでした。",
-          );
-        }
+  const cacheKey = `public:profile-detail:${userId}`;
+  const { data, error, isLoading } = usePersistentSWR<ProfileDetail>(
+    ["profile-detail", userId],
+    async () => {
+      const profileResponse = await userProfileUserProfileUsernameGet(userId);
+      if (profileResponse.status !== 200 || !profileResponse.data) {
+        throw new Error("プロフィールを取得できませんでした。");
       }
-    }
+      const [namespaceResponse, progressResponse] = await Promise.all([
+        getPublicNamespaceUserUserIdNamespaceGet(profileResponse.data.uid),
+        getLearningProgressUserUserIdLearningProgressGet(
+          profileResponse.data.uid,
+        ),
+      ]);
+      if (namespaceResponse.status !== 200 || progressResponse.status !== 200) {
+        throw new Error("プロフィールの学習情報を取得できませんでした。");
+      }
+      return {
+        user: profileResponse.data,
+        namespace: namespaceResponse.data,
+        learningProgress: progressResponse.data,
+      };
+    },
+    {
+      cacheKey,
+      getCache: async (key) =>
+        (await genericCache.get(key)) as ProfileDetail | undefined,
+      setCache: (key, fresh) =>
+        genericCache.set(key, fresh, 7 * 24 * 60 * 60_000),
+      swr: {
+        dedupingInterval: 30_000,
+        keepPreviousData: true,
+        revalidateOnFocus: true,
+        revalidateOnReconnect: true,
+      },
+    },
+  );
 
-    void load();
-    return () => {
-      active = false;
-    };
-  }, [userId]);
-
-  if (!data && !error) return <Loading type="center-x" />;
+  if (isLoading) return <Loading type="center-x" />;
   if (!data) {
-    return <p className="p-6 text-sm text-destructive">{error}</p>;
+    return (
+      <p className="p-6 text-sm text-destructive">
+        {error instanceof Error
+          ? error.message
+          : "プロフィールを取得できませんでした。"}
+      </p>
+    );
   }
   return (
     <UserDetail

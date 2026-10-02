@@ -30,11 +30,7 @@ export default function EntryDetail({ id }: Props) {
     error,
     isLoading,
   } = useGetEntryDetailEntryEntryIdGet(id, {
-    swr: {
-      revalidateIfStale: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    },
+    swr: {},
   });
 
   useEffect(() => {

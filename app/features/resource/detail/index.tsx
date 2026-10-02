@@ -30,11 +30,7 @@ export default function ResourceDetail({ id }: Props) {
     error,
     isLoading,
   } = useGetResourceDetailResourceResourceIdGet(id, {
-    swr: {
-      revalidateIfStale: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    },
+    swr: {},
   });
 
   const { data: quizStatuses = [], mutate: mutateQuizStatuses } = useSWR<
@@ -42,11 +38,7 @@ export default function ResourceDetail({ id }: Props) {
   >(
     ["resource-quiz-sentence-statuses", id],
     () => listCreatedQuizSentences(id, { waitForRefresh: true }),
-    {
-      revalidateIfStale: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    },
+    {},
   );
   const sentenceQuizStatuses = useMemo<ReadonlyMap<string, SentenceQuizStatus>>(
     () => new Map(quizStatuses.map((status) => [status.sentence_id, status])),

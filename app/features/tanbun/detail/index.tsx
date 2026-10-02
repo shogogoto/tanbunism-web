@@ -44,9 +44,6 @@ export function _TanbunChainView({ id }: Props) {
 
   const { data, isLoading } = useDetailTanbunSentenceSentenceIdGet(id, {
     swr: {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      revalidateIfStale: false,
       keepPreviousData: false,
       fallbackData,
       // suspense: true, // suspenseは使わずisLoadingで制御

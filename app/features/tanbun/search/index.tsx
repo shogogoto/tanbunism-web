@@ -45,7 +45,6 @@ function TanbunSearchLayout() {
 
   const { data, isLoading } = useSearchByTextTanbunGet(debouncedParams, {
     swr: {
-      revalidateOnFocus: false,
       keepPreviousData: true,
       fallbackData,
       onSuccess: async (data) => {
