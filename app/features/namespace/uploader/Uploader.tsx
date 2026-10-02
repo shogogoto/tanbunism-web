@@ -307,6 +307,45 @@ export default function Uploader({ refresh, autoOpenPicker = false }: Props) {
           setSuccessCount(0);
         }}
       />
+      <div className="sticky top-0 z-10 space-y-2 bg-background pb-1">
+        <Button
+          onClick={handlePrimaryAction}
+          disabled={isUploading || !files || sendableCount === 0}
+        >
+          {isUploading
+            ? "取り込み中…"
+            : sendableCount > 0
+              ? conflictCount > 0
+                ? `${conflictCount}件の競合を確認してください`
+                : `${sendableCount}件を解析して取り込む`
+              : "送信対象はありません"}
+        </Button>
+        {isUploading && processing && uploadingIndex !== null && (
+          <output
+            className="block space-y-2"
+            aria-live="polite"
+            aria-label={`取り込み中: ${paths[uploadingIndex]}`}
+          >
+            <div className="flex items-baseline justify-between gap-3 text-sm">
+              <p
+                className="min-w-0 truncate font-medium"
+                title={paths[uploadingIndex]}
+              >
+                {paths[uploadingIndex]}
+              </p>
+              <span className="shrink-0 tabular-nums text-muted-foreground">
+                {processing.position} / {processing.total}
+              </span>
+            </div>
+            <Progress value={progress} className="w-full" />
+          </output>
+        )}
+        {files && !isUploading && successCount > 0 && (
+          <p className="text-sm">
+            取り込み済み {successCount} / {files.length}
+          </p>
+        )}
+      </div>
       {files && files.length > 0 && (
         <div className="min-h-0 flex-1 overflow-hidden rounded-md border">
           <ul className="h-full overflow-y-auto divide-y text-sm">
@@ -322,31 +361,6 @@ export default function Uploader({ refresh, autoOpenPicker = false }: Props) {
             ))}
           </ul>
         </div>
-      )}
-      {isUploading && processing && uploadingIndex !== null && (
-        <output
-          className="space-y-2"
-          aria-live="polite"
-          aria-label={`取り込み中: ${paths[uploadingIndex]}`}
-        >
-          <div className="flex items-baseline justify-between gap-3 text-sm">
-            <p
-              className="min-w-0 truncate font-medium"
-              title={paths[uploadingIndex]}
-            >
-              {paths[uploadingIndex]}
-            </p>
-            <span className="shrink-0 tabular-nums text-muted-foreground">
-              {processing.position} / {processing.total}
-            </span>
-          </div>
-          <Progress value={progress} className="w-full" />
-        </output>
-      )}
-      {files && !isUploading && successCount > 0 && (
-        <p>
-          取り込み済み {successCount} / {files.length}
-        </p>
       )}
       {files &&
         !isUploading &&
@@ -372,18 +386,6 @@ export default function Uploader({ refresh, autoOpenPicker = false }: Props) {
             .join(", ")}
         </p>
       )}
-      <Button
-        onClick={handlePrimaryAction}
-        disabled={isUploading || !files || sendableCount === 0}
-      >
-        {isUploading
-          ? "取り込み中…"
-          : sendableCount > 0
-            ? conflictCount > 0
-              ? `${conflictCount}件の競合を確認してください`
-              : `${sendableCount}件を解析して取り込む`
-            : "送信対象はありません"}
-      </Button>
       {error && <p className="text-sm text-destructive">{error}</p>}
       {conflictOpenIndex !== null && activeConflict?.status === "conflict" && (
         <IdentityConflictDialog

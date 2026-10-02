@@ -148,6 +148,7 @@ it("履歴を開いてjとkとEnterで移動する", async () => {
   await user.keyboard("j");
   expect(second).toHaveFocus();
   expect(second).toHaveAttribute("data-hotkey-active", "true");
+  expect(second.querySelector("svg")).toBeInTheDocument();
   expect(first).not.toHaveAttribute("data-hotkey-active");
 
   await user.keyboard("k");
@@ -225,6 +226,24 @@ it("スラッシュで現在のページの先頭入力欄へフォーカスす�
 
   expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent("/");
   expect(screen.getByRole("textbox", { name: "入力欄" })).toHaveFocus();
+});
+
+it("スラッシュではページが指定した入力欄を優先する", async () => {
+  const user = userEvent.setup();
+  renderHotkeys(
+    <input
+      aria-label="ページの絞り込み"
+      data-page-input-priority
+      type="text"
+    />,
+  );
+
+  await user.click(screen.getByRole("button", { name: "入力を終了" }));
+  await user.keyboard("/");
+
+  expect(
+    screen.getByRole("textbox", { name: "ページの絞り込み" }),
+  ).toHaveFocus();
 });
 
 it("hとlで前後のタブへ移動する", async () => {

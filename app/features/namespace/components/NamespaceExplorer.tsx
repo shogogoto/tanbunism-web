@@ -2,6 +2,7 @@ import {
   ChevronRight,
   FileText,
   Folder,
+  FolderOpen,
   ListChecks,
   Search,
 } from "lucide-react";
@@ -51,6 +52,7 @@ export default function NamespaceExplorer({ updater, nsprops }: Props) {
       <div className="relative">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          data-page-input-priority
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="読書メモを絞り込む"
@@ -202,7 +204,8 @@ function ResourceRow({
     <div className="flex min-h-12 items-stretch gap-1">
       <Link
         to={`/resource/${item.id}`}
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-2 hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        data-hotkey-item
+        className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-2 hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/60"
       >
         <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1 sm:flex sm:items-baseline sm:gap-2">
@@ -234,6 +237,16 @@ function ResourceRow({
           )}
         </div>
       </Link>
+      {item.entryId && (
+        <Link
+          to={`/entry/${item.entryId}`}
+          className="flex shrink-0 items-center gap-1 rounded-sm px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`${item.name}のEntryを開く`}
+        >
+          <FolderOpen className="h-4 w-4" />
+          <span className="hidden sm:inline">Entry</span>
+        </Link>
+      )}
       <Link
         to={`/dashboard?view=quiz-management&resource=${item.id}`}
         className="flex shrink-0 items-center gap-1 rounded-sm px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -310,6 +323,9 @@ export function transformToTreeData(data: NameSpace): ExplorerTreeDataItem[] {
     if (!sourceNode || !targetNode || sourceNode.isResource) continue;
 
     sourceNode.children?.push(targetNode);
+    if (targetNode.isResource && !targetNode.entryId) {
+      targetNode.entryId = sourceNode.id;
+    }
     childUids.add(targetNode.id);
   }
 

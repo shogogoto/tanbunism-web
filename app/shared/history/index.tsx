@@ -11,16 +11,16 @@ function HistoryItem({
   onSelect?: () => void;
 }) {
   return (
-    <li className="flex items-center rounded-md hover:bg-muted">
-      <HistoryItemIcon url={history.url} className="mr-2" />
+    <li className="rounded-md hover:bg-muted">
       <Link
         to={history.url}
         onClick={onSelect}
         data-history-item
         data-hotkey-item
-        className="flex-1 truncate py-2"
+        className="flex min-w-0 items-center rounded-md px-2 py-2 outline-none data-[hotkey-active=true]:bg-accent data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-ring"
       >
-        {history.title}
+        <HistoryItemIcon url={history.url} className="mr-2 shrink-0" />
+        <span className="truncate">{history.title}</span>
       </Link>
     </li>
   );

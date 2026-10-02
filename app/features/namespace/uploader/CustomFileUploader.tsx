@@ -236,6 +236,8 @@ export default function CustomFileUploader({
       )}
       <input
         type="text"
+        data-page-input-priority
+        aria-label="ファイルパスを絞り込む"
         placeholder="ファイルパスを絞り込む文字列"
         value={searchTerm}
         onChange={handleSearchChange}

@@ -434,7 +434,7 @@ function focusPageInput(): boolean {
       'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]), textarea, [contenteditable="true"]',
     ),
   );
-  const input = inputs.find((element) => {
+  const visibleInputs = inputs.filter((element) => {
     const style = window.getComputedStyle(element);
     return (
       !element.hasAttribute("disabled") &&
@@ -443,6 +443,10 @@ function focusPageInput(): boolean {
       style.visibility !== "hidden"
     );
   });
+  const input =
+    visibleInputs.find((element) =>
+      element.hasAttribute("data-page-input-priority"),
+    ) ?? visibleInputs[0];
   if (!input) return false;
   input.focus();
   if (

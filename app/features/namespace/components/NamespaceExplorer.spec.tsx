@@ -72,6 +72,7 @@ function renderExplorer() {
         element: <NamespaceExplorer nsprops={nsprops} />,
       },
       { path: "/resource/:resourceId", element: <Location /> },
+      { path: "/entry/:entryId", element: <Location /> },
       { path: "/quiz/list", element: <Location /> },
     ],
     { initialEntries: ["/dashboard"] },
@@ -102,6 +103,12 @@ describe("NamespaceExplorer", () => {
     ).toHaveAttribute(
       "href",
       `/dashboard?view=quiz-management&resource=${resourceId}`,
+    );
+    expect(
+      screen.getByRole("link", { name: "国家のEntryを開く" }),
+    ).toHaveAttribute("href", `/entry/${folderId}`);
+    expect(screen.getByRole("link", { name: /^国家プラトン/ })).toHaveAttribute(
+      "data-hotkey-item",
     );
     expect(
       screen.queryByRole("button", { name: /グリッド/ }),
