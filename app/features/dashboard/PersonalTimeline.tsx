@@ -66,6 +66,8 @@ export default function PersonalTimeline() {
             : candidate,
         ),
       );
+      const refreshed = await listPersonalTanbuns().catch(() => undefined);
+      if (refreshed) setItems(refreshed);
     } catch (reason) {
       setItems((current) =>
         current.map((candidate) =>
@@ -154,9 +156,9 @@ export default function PersonalTimeline() {
                     </time>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant={item.seen_today ? "ghost" : "outline"}
                       size="sm"
-                      className={`h-6 shrink-0 gap-1 px-1.5 tabular-nums transition-transform disabled:opacity-100 ${
+                      className={`h-7 shrink-0 gap-1 px-2 tabular-nums transition-transform disabled:opacity-100 ${
                         item.seen_today
                           ? "scale-105 text-primary"
                           : "text-foreground"
@@ -175,7 +177,10 @@ export default function PersonalTimeline() {
                           item.seen_today ? "fill-current" : ""
                         }`}
                       />
-                      {item.exposure_count}
+                      <span>{item.seen_today ? "今日見た" : "見たよ"}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {item.exposure_count}日
+                      </span>
                     </Button>
                   </>
                 }

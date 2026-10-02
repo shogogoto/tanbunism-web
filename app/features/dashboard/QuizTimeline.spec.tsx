@@ -143,3 +143,49 @@ it("クイズTL上で回答して結果を確認できる", async () => {
   expect(await screen.findByText("正解です")).toBeInTheDocument();
   expect(screen.getByText("今回 正解")).toBeInTheDocument();
 });
+
+it("一部のクイズ形式が壊れていても取得できた形式を表示する", async () => {
+  vi.mocked(searchCreatedQuizzes).mockImplementation(async (params) => {
+    if (params.quiz_types?.includes("term2sent")) {
+      throw new Error("クイズ対象が用語を持たない");
+    }
+    if (!params.quiz_types?.includes("pair2rel")) {
+      return { total: 0, data: [] };
+    }
+    return {
+      total: 1,
+      data: [
+        {
+          quiz: {
+            quiz_id: "relation-quiz",
+            quiz_type: "pair2rel",
+            prompt: {
+              subject: "Aの文",
+              object: "Bの文",
+              relations: [],
+              answer_kind: "relation",
+            },
+            statement: "関係を答える",
+            options: { option: "詳細" },
+            correct: ["option"],
+            created: "2026-09-28T00:00:00Z",
+            no_correct_option: false,
+          },
+          attempts: 0,
+          corrects: 0,
+          accuracy: null,
+          last_attempted_at: null,
+        },
+      ],
+    };
+  });
+
+  render(
+    <MemoryRouter>
+      <QuizTimeline />
+    </MemoryRouter>,
+  );
+
+  expect(await screen.findByText("Aの文")).toBeVisible();
+  expect(screen.queryByRole("alert")).toBeNull();
+});

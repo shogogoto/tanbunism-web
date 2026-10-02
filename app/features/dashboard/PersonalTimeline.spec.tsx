@@ -15,19 +15,20 @@ vi.mock("./api", () => ({
 }));
 
 it("単文を見た日を一日一回だけ記録する", async () => {
-  vi.mocked(listPersonalTanbuns).mockResolvedValue([
-    {
-      uid: "sentence-1",
-      sentence: "新しく取り込んだ単文",
-      term_names: ["新しい知識"],
-      resource_uid: "resource-1",
-      resource_name: "読書メモ",
-      updated_at: "2026-09-28T00:00:00Z",
-      score: 7,
-      exposure_count: 2,
-      seen_today: false,
-    },
-  ]);
+  const item = {
+    uid: "sentence-1",
+    sentence: "新しく取り込んだ単文",
+    term_names: ["新しい知識"],
+    resource_uid: "resource-1",
+    resource_name: "読書メモ",
+    updated_at: "2026-09-28T00:00:00Z",
+    score: 7,
+    exposure_count: 2,
+    seen_today: false,
+  };
+  vi.mocked(listPersonalTanbuns)
+    .mockResolvedValueOnce([item])
+    .mockResolvedValueOnce([{ ...item, exposure_count: 3, seen_today: true }]);
   let completeRequest:
     | ((result: Awaited<ReturnType<typeof markTanbunSeen>>) => void)
     | undefined;
@@ -47,16 +48,18 @@ it("単文を見た日を一日一回だけ記録する", async () => {
   await screen.findByRole("button", {
     name: "今日見たことを記録、累計2日",
   });
-  const item = document.querySelector<HTMLElement>("[data-hotkey-item]");
-  expect(item).not.toBeNull();
-  item?.focus();
-  expect(item).toHaveFocus();
-  fireEvent.keyDown(item as HTMLElement, { key: " " });
+  const timelineItem =
+    document.querySelector<HTMLElement>("[data-hotkey-item]");
+  expect(timelineItem).not.toBeNull();
+  timelineItem?.focus();
+  expect(timelineItem).toHaveFocus();
+  fireEvent.keyDown(timelineItem as HTMLElement, { key: " " });
 
   // APIの応答を待たず、押した瞬間に表示する。
   expect(
     screen.getByRole("button", { name: "今日は記録済み、累計3日" }),
   ).toBeDisabled();
+  expect(screen.getByText("今日見た")).toBeVisible();
   expect(markTanbunSeen).toHaveBeenCalledWith("sentence-1");
 
   await act(async () => {
@@ -74,7 +77,7 @@ it("単文を見た日を一日一回だけ記録する", async () => {
   expect(screen.getByLabelText("スコア: 7")).toBeInTheDocument();
   expect(screen.getByText("新しい知識")).toBeInTheDocument();
 
-  fireEvent.keyDown(item as HTMLElement, { key: "Enter" });
+  fireEvent.keyDown(timelineItem as HTMLElement, { key: "Enter" });
   expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
     "/tanbun/sentence-1",
   );

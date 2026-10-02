@@ -2,7 +2,11 @@ import { ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
 import QuizPrompt from "~/features/quiz/QuizPrompt";
-import { type ManagedQuiz, searchCreatedQuizzes } from "~/features/quiz/api";
+import {
+  type ManagedQuiz,
+  type QuizType,
+  searchCreatedQuizzes,
+} from "~/features/quiz/api";
 import { Badge } from "~/shared/components/ui/badge";
 import { Card, CardContent } from "~/shared/components/ui/card";
 import {
@@ -22,9 +26,34 @@ export default function QuizTimeline() {
 
   useEffect(() => {
     let active = true;
-    searchCreatedQuizzes({ page: 1, size: 50 })
-      .then((result) => {
-        if (active) setQuizzes(result.data);
+    const quizTypes: QuizType[] = [
+      "term2sent",
+      "sent2term",
+      "rel2pair",
+      "pair2rel",
+    ];
+    Promise.allSettled(
+      quizTypes.map((quizType) =>
+        searchCreatedQuizzes({
+          quiz_types: [quizType],
+          page: 1,
+          size: 20,
+        }),
+      ),
+    )
+      .then((results) => {
+        if (!active) return;
+        const loaded = results.flatMap((result) =>
+          result.status === "fulfilled" ? result.value.data : [],
+        );
+        const unique = new Map(loaded.map((item) => [item.quiz.quiz_id, item]));
+        setQuizzes([...unique.values()]);
+        if (results.every((result) => result.status === "rejected")) {
+          const reason = results[0]?.reason;
+          throw reason instanceof Error
+            ? reason
+            : new Error("クイズTLを取得できませんでした。");
+        }
       })
       .catch((reason) => {
         if (active) {
@@ -43,10 +72,7 @@ export default function QuizTimeline() {
     };
   }, []);
 
-  const sorted = useMemo(
-    () => [...quizzes].sort(compareQuizTimeline).slice(0, 20),
-    [quizzes],
-  );
+  const sorted = useMemo(() => mixQuizTimeline(quizzes, 20), [quizzes]);
 
   if (loading) {
     return (
@@ -165,4 +191,26 @@ function compareQuizTimeline(left: ManagedQuiz, right: ManagedQuiz): number {
   const leftDate = left.last_attempted_at ?? left.quiz.created;
   const rightDate = right.last_attempted_at ?? right.quiz.created;
   return String(rightDate).localeCompare(String(leftDate));
+}
+
+function mixQuizTimeline(quizzes: ManagedQuiz[], limit: number): ManagedQuiz[] {
+  const unanswered = quizzes
+    .filter((item) => item.attempts === 0)
+    .sort(compareQuizTimeline);
+  const reviews = quizzes
+    .filter((item) => item.attempts > 0)
+    .sort(compareQuizTimeline);
+  const mixed: ManagedQuiz[] = [];
+  while (
+    mixed.length < limit &&
+    (unanswered.length > 0 || reviews.length > 0)
+  ) {
+    const first = unanswered.shift();
+    const second = unanswered.shift();
+    const review = reviews.shift();
+    if (first) mixed.push(first);
+    if (second && mixed.length < limit) mixed.push(second);
+    if (review && mixed.length < limit) mixed.push(review);
+  }
+  return mixed;
 }
