@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronRight, Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Badge } from "~/shared/components/ui/badge";
@@ -16,6 +16,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/shared/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/shared/components/ui/popover";
 import BrokenQuizManager from "./BrokenQuizManager";
 import QuizPrompt from "./QuizPrompt";
 import {
@@ -42,36 +47,59 @@ function Percentage({ value }: { value: number }) {
 }
 
 function Progress({ status }: { status?: ResourceLearningStatus }) {
-  if (!status) return <span className="text-muted-foreground">—</span>;
+  if (!status) {
+    return (
+      <>
+        <span className="text-center text-muted-foreground">—</span>
+        <span className="text-center text-muted-foreground">—</span>
+        <span className="text-center text-muted-foreground">—</span>
+      </>
+    );
+  }
   const attempts = Object.values(status.by_quiz_type).reduce(
     (total, item) => total + item.performance.attempts,
     0,
   );
   return (
-    <div className="flex gap-3 text-xs tabular-nums sm:gap-5">
-      <span title="対象単文にクイズを用意した割合">
-        Coverage{" "}
-        <b>
-          <Percentage value={status.overall_coverage} />
-        </b>
-      </span>
-      <span title="用意したクイズに回答した割合">
-        Attempt{" "}
-        <b>
-          <Percentage value={status.overall_attempt_rate} />
-        </b>
-      </span>
-      <span title="回答の正答率">
-        Accuracy{" "}
-        <b>
-          {attempts === 0 ? (
-            "—"
-          ) : (
-            <Percentage value={status.overall_accuracy} />
-          )}
-        </b>
-      </span>
-    </div>
+    <>
+      <b className="text-center text-xs tabular-nums">
+        <Percentage value={status.overall_coverage} />
+      </b>
+      <b className="text-center text-xs tabular-nums">
+        <Percentage value={status.overall_attempt_rate} />
+      </b>
+      <b className="text-center text-xs tabular-nums">
+        {attempts === 0 ? "—" : <Percentage value={status.overall_accuracy} />}
+      </b>
+    </>
+  );
+}
+
+function MetricHeader({
+  label,
+  description,
+}: {
+  label: string;
+  description: string;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex min-w-0 items-center justify-center gap-1 truncate text-xs font-medium text-muted-foreground hover:text-foreground"
+          aria-label={`${label}の説明`}
+          title={description}
+        >
+          <span className="truncate">{label}</span>
+          <Info className="hidden size-3 shrink-0 sm:block" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 text-sm" align="center">
+        <p className="font-medium">{label}</p>
+        <p className="mt-1 text-muted-foreground">{description}</p>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -120,7 +148,7 @@ function ResourceDisclosure({
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="group flex w-full flex-col gap-2 px-3 py-3 text-left hover:bg-muted/40 sm:flex-row sm:items-center"
+          className="group grid w-full grid-cols-[minmax(0,1fr)_repeat(3,3.5rem)] items-center px-3 py-3 text-left hover:bg-muted/40 sm:grid-cols-[minmax(0,1fr)_repeat(3,5rem)]"
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <ChevronRight className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
@@ -270,6 +298,23 @@ export default function ResourceLearningOverview({
             </DialogContent>
           </Dialog>
         )}
+      </div>
+      <div className="sticky top-0 z-20 grid grid-cols-[minmax(0,1fr)_repeat(3,3.5rem)] items-center border-b bg-background/95 px-3 py-2 backdrop-blur sm:grid-cols-[minmax(0,1fr)_repeat(3,5rem)]">
+        <span className="text-xs font-medium text-muted-foreground">
+          Resource
+        </span>
+        <MetricHeader
+          label="Coverage"
+          description="対象単文のうち、必要な形式のクイズが用意されている割合です。"
+        />
+        <MetricHeader
+          label="Attempt"
+          description="用意されたクイズのうち、一度以上回答した割合です。"
+        />
+        <MetricHeader
+          label="Accuracy"
+          description="これまでに回答したクイズの正答率です。未回答の場合は—になります。"
+        />
       </div>
       <div className="divide-y">
         {items.map((item) => (

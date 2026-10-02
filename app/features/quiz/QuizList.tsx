@@ -1,3 +1,4 @@
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
@@ -63,6 +64,15 @@ function QuizSearchFilters({
   filters: QuizFilters;
   onChange: (filters: QuizFilters) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const activeCount =
+    filters.quizTypes.length +
+    Number(Boolean(filters.answered)) +
+    Number(Boolean(filters.createdFrom)) +
+    Number(Boolean(filters.createdTo)) +
+    Number(Boolean(filters.minAccuracy)) +
+    Number(Boolean(filters.maxAccuracy));
+
   function toggleQuizType(quizType: QuizType) {
     onChange({
       ...filters,
@@ -73,99 +83,122 @@ function QuizSearchFilters({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">クイズを絞り込む</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 text-sm">
-        <fieldset className="flex flex-wrap gap-3">
-          <legend className="mb-2 font-medium">QuizType</legend>
-          {Object.entries(quizTypeLabels).map(([type, label]) => (
-            <label key={type} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={filters.quizTypes.includes(type as QuizType)}
-                onChange={() => toggleQuizType(type as QuizType)}
-              />
-              {label}
+    <Card className="gap-0 py-0">
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/40"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <SlidersHorizontal className="size-4 text-muted-foreground" />
+        <span className="text-sm font-medium">クイズを絞り込む</span>
+        {activeCount > 0 && <Badge variant="secondary">{activeCount}</Badge>}
+        <ChevronDown
+          className={`ml-auto size-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <CardContent className="space-y-3 border-t px-3 py-3 text-sm">
+          <fieldset className="flex flex-wrap gap-3">
+            <legend className="mb-1 text-xs font-medium text-muted-foreground">
+              QuizType
+            </legend>
+            {Object.entries(quizTypeLabels).map(([type, label]) => (
+              <label key={type} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={filters.quizTypes.includes(type as QuizType)}
+                  onChange={() => toggleQuizType(type as QuizType)}
+                />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <label className="grid gap-1">
+              <span className="text-xs text-muted-foreground">回答状態</span>
+              <select
+                className="h-8 min-w-0 border bg-background px-2"
+                value={filters.answered}
+                onChange={(event) =>
+                  onChange({
+                    ...filters,
+                    answered: event.target.value as QuizFilters["answered"],
+                  })
+                }
+              >
+                <option value="">すべて</option>
+                <option value="false">未回答</option>
+                <option value="true">回答済み</option>
+              </select>
             </label>
-          ))}
-        </fieldset>
-        <label className="grid gap-1">
-          回答状態
-          <select
-            className="h-9 border bg-background px-2"
-            value={filters.answered}
-            onChange={(event) =>
-              onChange({
-                ...filters,
-                answered: event.target.value as QuizFilters["answered"],
-              })
-            }
+            <label className="grid gap-1">
+              <span className="text-xs text-muted-foreground">
+                作成日（開始）
+              </span>
+              <input
+                type="date"
+                className="h-8 min-w-0 border bg-background px-2"
+                value={filters.createdFrom}
+                onChange={(event) =>
+                  onChange({ ...filters, createdFrom: event.target.value })
+                }
+              />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-xs text-muted-foreground">
+                作成日（終了）
+              </span>
+              <input
+                type="date"
+                className="h-8 min-w-0 border bg-background px-2"
+                value={filters.createdTo}
+                onChange={(event) =>
+                  onChange({ ...filters, createdTo: event.target.value })
+                }
+              />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-xs text-muted-foreground">
+                最低正答率（%）
+              </span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                className="h-8 min-w-0 border bg-background px-2"
+                value={filters.minAccuracy}
+                onChange={(event) =>
+                  onChange({ ...filters, minAccuracy: event.target.value })
+                }
+              />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-xs text-muted-foreground">
+                最高正答率（%）
+              </span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                className="h-8 min-w-0 border bg-background px-2"
+                value={filters.maxAccuracy}
+                onChange={(event) =>
+                  onChange({ ...filters, maxAccuracy: event.target.value })
+                }
+              />
+            </label>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onChange(emptyQuizFilters)}
+            size="sm"
           >
-            <option value="">すべて</option>
-            <option value="false">未回答</option>
-            <option value="true">回答済み</option>
-          </select>
-        </label>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1">
-            作成日（開始）
-            <input
-              type="date"
-              className="h-9 border bg-background px-2"
-              value={filters.createdFrom}
-              onChange={(event) =>
-                onChange({ ...filters, createdFrom: event.target.value })
-              }
-            />
-          </label>
-          <label className="grid gap-1">
-            作成日（終了）
-            <input
-              type="date"
-              className="h-9 border bg-background px-2"
-              value={filters.createdTo}
-              onChange={(event) =>
-                onChange({ ...filters, createdTo: event.target.value })
-              }
-            />
-          </label>
-          <label className="grid gap-1">
-            最低正答率（%）
-            <input
-              type="number"
-              min="0"
-              max="100"
-              className="h-9 border bg-background px-2"
-              value={filters.minAccuracy}
-              onChange={(event) =>
-                onChange({ ...filters, minAccuracy: event.target.value })
-              }
-            />
-          </label>
-          <label className="grid gap-1">
-            最高正答率（%）
-            <input
-              type="number"
-              min="0"
-              max="100"
-              className="h-9 border bg-background px-2"
-              value={filters.maxAccuracy}
-              onChange={(event) =>
-                onChange({ ...filters, maxAccuracy: event.target.value })
-              }
-            />
-          </label>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => onChange(emptyQuizFilters)}
-        >
-          条件をクリア
-        </Button>
-      </CardContent>
+            条件をクリア
+          </Button>
+        </CardContent>
+      )}
     </Card>
   );
 }

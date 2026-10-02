@@ -214,6 +214,7 @@ it("Resourceを指定した画面ではクイズを絞り込める", async () =>
   renderQuizList("/quiz/list?resource=resource-1");
 
   expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "クイズを絞り込む" }));
   await user.selectOptions(screen.getByLabelText("回答状態"), "true");
   await user.click(screen.getByRole("checkbox", { name: "用語→単文" }));
   await waitFor(() =>
@@ -231,13 +232,20 @@ it("Resourceごとの学習指標を表示する", async () => {
     </MemoryRouter>,
   );
 
-  expect(await screen.findAllByText("Coverage")).toHaveLength(2);
+  expect(await screen.findByText("Coverage")).toBeVisible();
   expect(screen.getByText("未着手ノート")).toBeInTheDocument();
-  expect(screen.getAllByText("Attempt")).toHaveLength(2);
-  expect(screen.getAllByText("Accuracy")).toHaveLength(2);
+  expect(screen.getByText("Attempt")).toBeVisible();
+  expect(screen.getByText("Accuracy")).toBeVisible();
   expect(screen.getAllByText("50%")).toHaveLength(2);
   expect(screen.getAllByText("100%")).toHaveLength(1);
   expect(screen.getByText("0問")).toBeInTheDocument();
+  const coverageHeader = screen.getByRole("button", {
+    name: "Coverageの説明",
+  });
+  expect(coverageHeader.parentElement).toHaveClass("sticky");
+  await user.click(coverageHeader);
+  expect(screen.getByText(/対象単文のうち、必要な形式のクイズ/)).toBeVisible();
+  await user.keyboard("{Escape}");
   expect(screen.getByRole("button", { name: /参照切れ 1件/ })).toBeVisible();
   await user.click(screen.getByRole("button", { name: /参照切れ 1件/ }));
   expect(screen.getByRole("heading", { name: "参照切れクイズ" })).toBeVisible();
@@ -251,6 +259,7 @@ it("Resource一覧の先頭で指定した条件を開いたResourceへ適用す
   renderQuizList();
 
   await screen.findByText("Resource別の学習状況");
+  await user.click(screen.getByRole("button", { name: "クイズを絞り込む" }));
   await user.click(screen.getByRole("checkbox", { name: "用語→単文" }));
   await user.click(screen.getByRole("button", { name: /代数学ノート/ }));
 
