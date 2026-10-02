@@ -1,5 +1,5 @@
 import { Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
@@ -29,24 +29,31 @@ const activeTypeStyles: Record<SearchType, string> = {
 
 export default function SearchHeaderControls() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const searchParamsKey = searchParams.toString();
   const query = searchParams.get("q") ?? "";
   const [draftQuery, setDraftQuery] = useState(query);
   const debouncedQuery = useDebounce(draftQuery, 250);
-  const enabledTypes = useMemo(
-    () => parseSearchTypes(searchParams.get("types")),
+  const currentType = useMemo(
+    () => parseSearchType(searchParams.get("type")),
     [searchParams],
   );
+  const committedQueryRef = useRef<string | undefined>(undefined);
   const settings = useMemo(
-    () => readSearchSettings(searchParams),
-    [searchParams],
+    () => readSearchSettings(new URLSearchParams(searchParamsKey)),
+    [searchParamsKey],
   );
 
   useEffect(() => {
+    if (committedQueryRef.current === query) {
+      committedQueryRef.current = undefined;
+      return;
+    }
     setDraftQuery(query);
   }, [query]);
 
   useEffect(() => {
     if (debouncedQuery === query) return;
+    committedQueryRef.current = debouncedQuery;
     setSearchParams(
       (current) => {
         const next = new URLSearchParams(current);
@@ -69,14 +76,11 @@ export default function SearchHeaderControls() {
     );
   }
 
-  function toggleType(type: SearchType) {
-    const nextTypes = enabledTypes.includes(type)
-      ? enabledTypes.filter((item) => item !== type)
-      : [...enabledTypes, type];
-    if (nextTypes.length === 0) return;
+  function selectType(type: SearchType) {
     updateParams((next) => {
-      if (nextTypes.length === searchTypes.length) next.delete("types");
-      else next.set("types", nextTypes.join(","));
+      if (type === "knowledge") next.delete("type");
+      else next.set("type", type);
+      next.delete("types");
     });
   }
 
@@ -96,7 +100,7 @@ export default function SearchHeaderControls() {
           />
           <div className="absolute right-1 top-1">
             <SearchSettingsPanel
-              enabledTypes={enabledTypes}
+              currentType={currentType}
               settings={settings}
               onChange={(nextSettings) =>
                 setSearchParams(
@@ -115,7 +119,8 @@ export default function SearchHeaderControls() {
           </div>
         </div>
         <div
-          className="flex flex-wrap items-center gap-1"
+          className="flex items-center gap-1"
+          role="tablist"
           aria-label="検索対象"
         >
           {searchTypes.map((type) => (
@@ -124,19 +129,18 @@ export default function SearchHeaderControls() {
               type="button"
               size="sm"
               variant="ghost"
+              role="tab"
               className={`h-7 gap-1.5 px-2 text-xs ${
-                enabledTypes.includes(type)
+                currentType === type
                   ? `font-medium ${activeTypeStyles[type]}`
                   : "text-muted-foreground opacity-55"
               }`}
-              aria-pressed={enabledTypes.includes(type)}
-              onClick={() => toggleType(type)}
+              aria-selected={currentType === type}
+              onClick={() => selectType(type)}
             >
               <span
                 className={`size-1.5 rounded-full ${
-                  enabledTypes.includes(type)
-                    ? "bg-current"
-                    : "border border-current"
+                  currentType === type ? "bg-current" : "border border-current"
                 }`}
               />
               {labels[type]}
@@ -148,12 +152,8 @@ export default function SearchHeaderControls() {
   );
 }
 
-function parseSearchTypes(value: string | null): SearchType[] {
-  if (!value) return [...searchTypes];
-  const parsed = value
-    .split(",")
-    .filter((type): type is SearchType =>
-      searchTypes.includes(type as SearchType),
-    );
-  return parsed.length > 0 ? parsed : [...searchTypes];
+function parseSearchType(value: string | null): SearchType {
+  return searchTypes.includes(value as SearchType)
+    ? (value as SearchType)
+    : "knowledge";
 }

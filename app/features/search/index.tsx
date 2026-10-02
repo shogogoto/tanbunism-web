@@ -62,15 +62,13 @@ const emptyState = (): SearchState => ({
 
 export default function UnifiedSearch() {
   const [searchParams] = useSearchParams();
+  const searchParamsKey = searchParams.toString();
   const queryParam = searchParams.get("q") ?? "";
-  const typesParam = searchParams.get("types");
-  const enabledTypes = useMemo(
-    () => parseSearchTypes(typesParam),
-    [typesParam],
-  );
+  const typeParam = searchParams.get("type");
+  const enabledTypes = useMemo(() => [parseSearchType(typeParam)], [typeParam]);
   const settings = useMemo(
-    () => readSearchSettings(searchParams),
-    [searchParams],
+    () => readSearchSettings(new URLSearchParams(searchParamsKey)),
+    [searchParamsKey],
   );
   const enabledKey = enabledTypes.join(",");
   const settingsKey = JSON.stringify(settings);
@@ -80,18 +78,14 @@ export default function UnifiedSearch() {
   const [error, setError] = useState<string>();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const previousSearchRef = useRef("");
-  const lastRequestRef = useRef("");
 
   const searchKey = `${queryParam}:${enabledKey}:${settingsKey}`;
 
   useEffect(() => {
     const reset = previousSearchRef.current !== searchKey;
     const requestedPage = reset ? 1 : page;
-    const requestKey = `${searchKey}:${requestedPage}`;
-    if (lastRequestRef.current === requestKey) return;
 
     previousSearchRef.current = searchKey;
-    lastRequestRef.current = requestKey;
     if (reset) {
       setPage(1);
       setState(emptyState());
@@ -402,14 +396,10 @@ async function getCachedSearchSlice(
   }
 }
 
-function parseSearchTypes(value: string | null): SearchType[] {
-  if (!value) return [...searchTypes];
-  const parsed = value
-    .split(",")
-    .filter((type): type is SearchType =>
-      searchTypes.includes(type as SearchType),
-    );
-  return parsed.length > 0 ? parsed : [...searchTypes];
+function parseSearchType(value: string | null): SearchType {
+  return searchTypes.includes(value as SearchType)
+    ? (value as SearchType)
+    : "knowledge";
 }
 
 function KnowledgeResult({

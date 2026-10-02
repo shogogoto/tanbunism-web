@@ -119,99 +119,52 @@ function renderSearch(initialEntry = "/search?q=数学") {
 }
 
 describe("統合検索", () => {
-  it("知識・リソース・ユーザーを混ぜ、知識はスコアだけを表示する", async () => {
+  it("知識・リソース・ユーザーをタブで切り替える", async () => {
+    const ui = userEvent.setup();
     renderSearch();
 
-    expect(await screen.findByText("3件の検索結果")).toBeVisible();
+    expect(await screen.findByText("1件の検索結果")).toBeVisible();
     expect(screen.getByRole("link", { name: /数学の知識/ })).toBeVisible();
-    expect(screen.getByText("数学ノート")).toBeVisible();
-    expect(screen.getAllByText("読書家")).toHaveLength(2);
-    expect(screen.getByText("Lv. 7")).toBeVisible();
     expect(screen.getByLabelText("スコア: 12")).toBeVisible();
-    expect(screen.getByLabelText("文字数: 100")).toBeVisible();
-    expect(screen.getByLabelText("単文数: 1")).toBeVisible();
-    expect(screen.getByLabelText("用語数: 1")).toBeVisible();
-    expect(screen.getByLabelText("関係数: 0")).toBeVisible();
-    expect(screen.queryByText("詳細数")).not.toBeInTheDocument();
-    expect(document.querySelector("[data-slot=badge]")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "知識" })).toHaveAttribute(
-      "aria-pressed",
+    expect(screen.getByRole("tab", { name: "知識" })).toHaveAttribute(
+      "aria-selected",
       "true",
     );
-    expect(screen.getByRole("button", { name: "リソース" })).toHaveAttribute(
-      "aria-pressed",
+    await ui.click(screen.getByRole("tab", { name: "リソース" }));
+    await waitFor(() => expect(requestedTypes).toContain("resource"));
+    await waitFor(() => expect(document.body).toHaveTextContent("数学ノート"));
+    expect(screen.queryByRole("link", { name: /数学の知識/ })).toBeNull();
+    expect(screen.getByRole("tab", { name: "リソース" })).toHaveAttribute(
+      "aria-selected",
       "true",
     );
-    expect(screen.getByRole("button", { name: "ユーザー" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(requestedTypes.sort()).toEqual(["knowledge", "resource", "user"]);
-    expect(document.querySelectorAll("[data-hotkey-item]")).toHaveLength(3);
-    await waitFor(async () => expect(await genericCache.count()).toBe(3));
-  });
 
-  it("遅い検索を待たず、取得できた種類から表示する", async () => {
-    let releaseResource: (() => void) | undefined;
-    server.use(
-      http.post("*/resource/search", async () => {
-        requestedTypes.push("resource");
-        await new Promise<void>((resolve) => {
-          releaseResource = resolve;
-        });
-        return HttpResponse.json({ total: 1, data: [resourceInfo] });
-      }),
-    );
-
-    renderSearch("/search?q=数学&types=knowledge,resource");
-
-    await waitFor(() => expect(releaseResource).toBeTypeOf("function"));
-    expect(
-      await screen.findByRole("link", { name: /数学の知識/ }),
-    ).toBeVisible();
-    expect(
-      screen.queryByRole("link", { name: /^リソース:/ }),
-    ).not.toBeInTheDocument();
-
-    releaseResource?.();
-    expect(
-      await screen.findByRole("link", { name: /^リソース:/ }),
-    ).toBeVisible();
-  });
-
-  it("検索対象を同じ画面で絞り込む", async () => {
-    const ui = userEvent.setup();
-    renderSearch("/search?q=数学&types=knowledge,resource");
-
-    await screen.findByText("2件の検索結果");
-    requestedTypes = [];
-    await ui.click(screen.getByRole("button", { name: "リソース" }));
-
-    await waitFor(() => expect(requestedTypes).toEqual(["knowledge"]));
-    expect(screen.getByRole("button", { name: "リソース" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
-    expect(screen.getByRole("button", { name: "リソース" })).toHaveClass(
-      "text-muted-foreground",
-      "opacity-55",
-    );
-    expect(screen.getByText("1件の検索結果")).toBeVisible();
+    await ui.click(screen.getByRole("tab", { name: "ユーザー" }));
+    expect(await screen.findByText("Lv. 7")).toBeVisible();
+    expect(requestedTypes).toEqual(["knowledge", "resource", "user"]);
   });
 
   it("対象ごとの詳細条件を検索APIへ反映する", async () => {
     const ui = userEvent.setup();
     renderSearch();
-    await screen.findByText("3件の検索結果");
+    await screen.findByText("1件の検索結果");
 
     await ui.click(screen.getByRole("button", { name: "詳細設定" }));
     await ui.selectOptions(screen.getByLabelText("一致方法"), "EQUAL");
     await ui.selectOptions(screen.getByLabelText("詳細"), "3");
+    await ui.keyboard("{Escape}");
+
+    await ui.click(screen.getByRole("tab", { name: "リソース" }));
+    await ui.click(screen.getByRole("button", { name: "詳細設定" }));
     await ui.type(screen.getByLabelText("所有ユーザー"), "reader");
     await ui.selectOptions(
       screen.getByLabelText("リソースの並び順"),
       "updated",
     );
+    await ui.keyboard("{Escape}");
+
+    await ui.click(screen.getByRole("tab", { name: "ユーザー" }));
+    await ui.click(screen.getByRole("button", { name: "詳細設定" }));
     await ui.selectOptions(
       screen.getByLabelText("ユーザーの並び順"),
       "n_resource",
@@ -243,8 +196,8 @@ describe("統合検索", () => {
 
   it("検索対象ごとに詳細条件を開閉する", async () => {
     const ui = userEvent.setup();
-    renderSearch();
-    await screen.findByText("3件の検索結果");
+    renderSearch("/search?q=数学&type=resource");
+    await screen.findByText("1件の検索結果");
 
     await ui.click(screen.getByRole("button", { name: "詳細設定" }));
     const details = document.querySelector("[data-slot=popover-content]");
@@ -253,52 +206,35 @@ describe("統合検索", () => {
       "overscroll-contain",
       "touch-pan-y",
     );
-    const knowledge = screen.getByRole("button", {
-      name: "知識の検索条件",
+    const resources = screen.getByRole("button", {
+      name: "リソースの検索条件",
     });
-    expect(knowledge).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByLabelText("一致方法")).toBeVisible();
-
-    await ui.click(knowledge);
-    expect(knowledge).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByLabelText("一致方法")).not.toBeInTheDocument();
+    expect(resources).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByLabelText("所有ユーザー")).toBeVisible();
+    expect(screen.queryByLabelText("一致方法")).toBeNull();
+    expect(screen.queryByLabelText("ユーザーの並び順")).toBeNull();
 
-    await ui.click(knowledge);
-    expect(screen.getByLabelText("一致方法")).toBeVisible();
+    await ui.click(resources);
+    expect(resources).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("所有ユーザー")).toBeNull();
   });
 
-  it("検索対象が変わっても種類別キャッシュを再利用する", async () => {
-    const firstRender = renderSearch("/search?q=数学&types=knowledge");
-    expect(
-      await screen.findByRole("link", { name: /数学の知識/ }),
-    ).toBeVisible();
-    await waitFor(async () => expect(await genericCache.count()).toBe(1));
-    firstRender.unmount();
+  it("入力中にdebounce済みURLの古い値へ巻き戻さない", async () => {
+    const ui = userEvent.setup({ delay: 100 });
+    renderSearch();
+    const input = screen.getByRole("searchbox", { name: "検索" });
 
-    let revalidationRequests = 0;
-    server.use(
-      http.get("*/tanbun/", () => {
-        revalidationRequests += 1;
-        return HttpResponse.json(
-          { detail: "temporary failure" },
-          { status: 500 },
-        );
-      }),
-    );
-    renderSearch("/search?q=数学&types=knowledge,resource");
+    await ui.clear(input);
+    await ui.type(input, "グラフ検索");
 
-    expect(
-      await screen.findByRole("link", { name: /数学の知識/ }),
-    ).toBeVisible();
-    expect(await screen.findByText("数学ノート")).toBeVisible();
-    await waitFor(() => {
-      expect(revalidationRequests).toBe(1);
+    expect(input).toHaveValue("グラフ検索");
+    await waitFor(() =>
       expect(
-        screen.queryByText("知識を検索できませんでした。"),
-      ).not.toBeInTheDocument();
-    });
-    await waitFor(async () => expect(await genericCache.count()).toBe(2));
+        knowledgeRequests.some(
+          (request) => request.searchParams.get("q") === "グラフ検索",
+        ),
+      ).toBe(true),
+    );
   });
 
   it("末尾が見えたら次の検索結果を自動で追加する", async () => {

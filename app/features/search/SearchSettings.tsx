@@ -17,12 +17,12 @@ import { SearchByTextTanbunGetType } from "~/shared/generated/fastAPI.schemas";
 import type { SearchSettings, SearchType } from "./settings";
 
 export default function SearchSettingsPanel({
-  enabledTypes,
+  currentType,
   settings,
   onChange,
   onReset,
 }: {
-  enabledTypes: SearchType[];
+  currentType: SearchType;
   settings: SearchSettings;
   onChange: (settings: SearchSettings) => void;
   onReset: () => void;
@@ -45,13 +45,13 @@ export default function SearchSettingsPanel({
         align="end"
         className="max-h-[calc(100dvh-8rem)] w-[min(42rem,calc(100vw-2rem))] touch-pan-y space-y-3 overflow-y-auto overscroll-contain"
       >
-        {enabledTypes.includes("knowledge") && (
+        {currentType === "knowledge" && (
           <KnowledgeSettings settings={settings} onChange={onChange} />
         )}
-        {enabledTypes.includes("resource") && (
+        {currentType === "resource" && (
           <ResourceSettings settings={settings} onChange={onChange} />
         )}
-        {enabledTypes.includes("user") && (
+        {currentType === "user" && (
           <UserSettings settings={settings} onChange={onChange} />
         )}
         <Button type="button" variant="outline" size="sm" onClick={onReset}>
