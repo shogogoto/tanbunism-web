@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { useNotifications } from "~/features/notifications/NotificationProvider";
@@ -60,6 +60,17 @@ const quizTypeLabels: Record<QuizType, string> = {
   pair2rel: "単文組 → 関係",
 };
 
+const quizTypeColumns: Array<{
+  type: QuizType;
+  from: string;
+  to: string;
+}> = [
+  { type: "sent2term", from: "単文", to: "用語" },
+  { type: "term2sent", from: "用語", to: "単文" },
+  { type: "pair2rel", from: "単文組", to: "関係" },
+  { type: "rel2pair", from: "関係", to: "単文組" },
+];
+
 export default function StudyPlanManager() {
   const isMobile = useIsMobile(1024);
   const { refreshNotifications } = useNotifications();
@@ -72,6 +83,8 @@ export default function StudyPlanManager() {
     new Set(),
   );
   const [bulkAction, setBulkAction] = useState<"delete" | "types">();
+  const [query, setQuery] = useState("");
+  const [currentPlanId, setCurrentPlanId] = useState<string>();
   const [preparingId, setPreparingId] = useState<string>();
   const [preparedCounts, setPreparedCounts] = useState<Record<string, number>>(
     {},
@@ -80,6 +93,7 @@ export default function StudyPlanManager() {
     Record<string, number>
   >({});
   const [error, setError] = useState<string>();
+  const rowRefs = useRef(new Map<string, HTMLElement>());
 
   useEffect(() => {
     let active = true;
@@ -122,11 +136,15 @@ export default function StudyPlanManager() {
     };
   }, []);
 
-  const resourceNames = new Map(
-    resources.map((resource) => [
-      resource.uid.replaceAll("-", ""),
-      resource.name,
-    ]),
+  const resourceNames = useMemo(
+    () =>
+      new Map(
+        resources.map((resource) => [
+          resource.uid.replaceAll("-", ""),
+          resource.name,
+        ]),
+      ),
+    [resources],
   );
 
   function resourceName(resourceId: string) {
@@ -138,6 +156,75 @@ export default function StudyPlanManager() {
   const selectedPlans = plans.filter(({ uid }) => selectedPlanIds.has(uid));
   const selectedPlan =
     selectedPlans.length === 1 ? selectedPlans[0] : undefined;
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const filteredPlans = useMemo(
+    () =>
+      plans.filter((plan) => {
+        if (!normalizedQuery) return true;
+        const resourceText = plan.resource_ids
+          .map(
+            (resourceId) =>
+              resourceNames.get(resourceId.replaceAll("-", "")) ??
+              "不明なResource",
+          )
+          .join(" ");
+        return `${plan.name} ${resourceText}`
+          .toLocaleLowerCase()
+          .includes(normalizedQuery);
+      }),
+    [plans, normalizedQuery, resourceNames],
+  );
+  const currentPlan =
+    filteredPlans.find(({ uid }) => uid === currentPlanId) ?? filteredPlans[0];
+  const actionPlan =
+    selectedPlan ?? (selectedPlanIds.size === 0 ? currentPlan : undefined);
+
+  useEffect(() => {
+    setCurrentPlanId((current) =>
+      filteredPlans.some(({ uid }) => uid === current)
+        ? current
+        : filteredPlans[0]?.uid,
+    );
+  }, [filteredPlans]);
+
+  useEffect(() => {
+    function moveCurrent(event: KeyboardEvent) {
+      if (
+        event.defaultPrevented ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        isCreating ||
+        editingPlan
+      )
+        return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.matches("input, textarea, select") || target.isContentEditable)
+      )
+        return;
+      if (event.key !== "j" && event.key !== "k") return;
+      event.preventDefault();
+      setCurrentPlanId((current) => {
+        const index = filteredPlans.findIndex(({ uid }) => uid === current);
+        const nextIndex =
+          event.key === "j"
+            ? Math.min(filteredPlans.length - 1, Math.max(0, index + 1))
+            : Math.max(0, index < 0 ? filteredPlans.length - 1 : index - 1);
+        return filteredPlans[nextIndex]?.uid;
+      });
+    }
+    document.addEventListener("keydown", moveCurrent);
+    return () => document.removeEventListener("keydown", moveCurrent);
+  }, [editingPlan, filteredPlans, isCreating]);
+
+  useEffect(() => {
+    if (!currentPlanId) return;
+    rowRefs.current
+      .get(currentPlanId)
+      ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [currentPlanId]);
 
   async function removeSelectedPlans() {
     const selected = new Set(selectedPlanIds);
@@ -357,19 +444,28 @@ export default function StudyPlanManager() {
         </p>
       ) : (
         <div className="space-y-3" data-dashboard-swipe-ignore>
-          <div className="flex min-h-9 flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
+          <div className="sticky top-0 z-20 flex min-h-11 flex-wrap items-center gap-2 rounded-md border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
+            <input
+              type="search"
+              className="h-8 w-full rounded-md border bg-background px-3 text-sm sm:w-56"
+              aria-label="StudyPlanを検索"
+              placeholder="Plan / Resourceを検索"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
             {isMobile && (
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   aria-label="すべてのStudyPlanを選択"
                   checked={
-                    plans.length > 0 && selectedPlanIds.size === plans.length
+                    filteredPlans.length > 0 &&
+                    filteredPlans.every(({ uid }) => selectedPlanIds.has(uid))
                   }
                   onChange={(event) =>
                     setSelectedPlanIds(
                       event.target.checked
-                        ? new Set(plans.map(({ uid }) => uid))
+                        ? new Set(filteredPlans.map(({ uid }) => uid))
                         : new Set(),
                     )
                   }
@@ -380,57 +476,83 @@ export default function StudyPlanManager() {
             <span className="text-xs text-muted-foreground">
               {selectedPlanIds.size}件選択中
             </span>
-            {selectedPlanIds.size > 0 && (
+            {currentPlan && (
+              <span
+                className="max-w-40 truncate text-xs text-muted-foreground"
+                title={currentPlan.name}
+              >
+                current: {currentPlan.name}
+              </span>
+            )}
+            {(actionPlan || selectedPlanIds.size > 0) && (
               <div className="ml-auto flex flex-wrap items-center gap-2">
-                {selectedPlan && planActions(selectedPlan)}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={Boolean(bulkAction)}
-                  onClick={() => void applyAllQuizTypes()}
-                >
-                  {bulkAction === "types" ? "変更中…" : "4形式に変更"}
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
+                {actionPlan && planActions(actionPlan)}
+                {selectedPlanIds.size > 0 && (
+                  <>
                     <Button
                       type="button"
                       size="sm"
-                      variant="destructive"
+                      variant="outline"
                       disabled={Boolean(bulkAction)}
+                      onClick={() => void applyAllQuizTypes()}
                     >
-                      {selectedPlanIds.size}件を削除
+                      {bulkAction === "types" ? "変更中…" : "4形式に変更"}
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        選択した{selectedPlanIds.size}件を削除しますか？
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        クイズや回答履歴は削除されません。
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => void removeSelectedPlans()}
-                      >
-                        {bulkAction === "delete" ? "削除中…" : "削除する"}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          disabled={Boolean(bulkAction)}
+                        >
+                          {selectedPlanIds.size}件を削除
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            選択した{selectedPlanIds.size}件を削除しますか？
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            クイズや回答履歴は削除されません。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => void removeSelectedPlans()}
+                          >
+                            {bulkAction === "delete" ? "削除中…" : "削除する"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
+                )}
               </div>
             )}
           </div>
+          {filteredPlans.length === 0 && (
+            <p className="rounded-md border p-4 text-sm text-muted-foreground">
+              検索条件に一致する学習計画がありません。
+            </p>
+          )}
           {isMobile ? (
             <div className="space-y-2">
-              {plans.map((plan) => (
+              {filteredPlans.map((plan) => (
                 <article
                   key={plan.uid}
-                  className="min-w-0 space-y-3 rounded-md border p-3"
+                  ref={(element) => {
+                    if (element) rowRefs.current.set(plan.uid, element);
+                    else rowRefs.current.delete(plan.uid);
+                  }}
+                  aria-current={currentPlan?.uid === plan.uid || undefined}
+                  className={`min-w-0 scroll-mt-20 space-y-3 rounded-md border p-3 ${
+                    currentPlan?.uid === plan.uid
+                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                      : ""
+                  }`}
                 >
                   <div className="flex min-w-0 items-start gap-3">
                     <input
@@ -494,31 +616,54 @@ export default function StudyPlanManager() {
                         type="checkbox"
                         aria-label="すべてのStudyPlanを選択"
                         checked={
-                          plans.length > 0 &&
-                          selectedPlanIds.size === plans.length
+                          filteredPlans.length > 0 &&
+                          filteredPlans.every(({ uid }) =>
+                            selectedPlanIds.has(uid),
+                          )
                         }
                         onChange={(event) =>
                           setSelectedPlanIds(
                             event.target.checked
-                              ? new Set(plans.map(({ uid }) => uid))
+                              ? new Set(filteredPlans.map(({ uid }) => uid))
                               : new Set(),
                           )
                         }
                       />
                     </TableHead>
-                    <TableHead className="w-[20%]">Plan</TableHead>
-                    <TableHead className="w-[28%]">Resource</TableHead>
-                    <TableHead className="w-[30%]">クイズ形式</TableHead>
-                    <TableHead className="w-[22%]">準備状況・設定</TableHead>
+                    <TableHead className="w-36">Plan</TableHead>
+                    <TableHead className="w-44">Resource</TableHead>
+                    <TableHead className="w-16 text-center">準備済み</TableHead>
+                    <TableHead className="w-14 text-center">1回</TableHead>
+                    <TableHead className="w-14 text-center">選択肢</TableHead>
+                    {quizTypeColumns.map(({ type, from, to }) => (
+                      <TableHead
+                        key={type}
+                        className="w-20 whitespace-normal text-center text-[11px] leading-tight"
+                      >
+                        <span className="block">{from}</span>
+                        <span className="block">→{to}</span>
+                      </TableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {plans.map((plan) => (
+                  {filteredPlans.map((plan) => (
                     <TableRow
                       key={plan.uid}
+                      ref={(element) => {
+                        if (element) rowRefs.current.set(plan.uid, element);
+                        else rowRefs.current.delete(plan.uid);
+                      }}
                       data-state={
                         selectedPlanIds.has(plan.uid) ? "selected" : undefined
                       }
+                      aria-current={currentPlan?.uid === plan.uid || undefined}
+                      className={
+                        currentPlan?.uid === plan.uid
+                          ? "scroll-mt-20 bg-primary/5 ring-1 ring-inset ring-primary"
+                          : "scroll-mt-20"
+                      }
+                      onClick={() => setCurrentPlanId(plan.uid)}
                     >
                       <TableCell>
                         <input
@@ -560,26 +705,32 @@ export default function StudyPlanManager() {
                           })}
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-normal">
-                        <div className="flex flex-wrap gap-1">
-                          {plan.quiz_types.map((quizType) => (
-                            <Badge key={quizType} variant="outline">
-                              {quizTypeLabels[quizType]}
-                            </Badge>
-                          ))}
-                        </div>
+                      <TableCell className="text-center tabular-nums">
+                        {preparedCounts[plan.uid] ?? 0}
                       </TableCell>
-                      <TableCell className="whitespace-normal">
-                        <strong className="text-base tabular-nums">
-                          {preparedCounts[plan.uid] ?? 0}
-                        </strong>
-                        <span className="ml-1 text-xs text-muted-foreground">
-                          問準備済み
-                        </span>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          1回{plan.n_quiz}問・{plan.n_option}択
-                        </div>
+                      <TableCell className="text-center tabular-nums">
+                        {plan.n_quiz}
                       </TableCell>
+                      <TableCell className="text-center tabular-nums">
+                        {plan.n_option}
+                      </TableCell>
+                      {quizTypeColumns.map(({ type, from, to }) => {
+                        const enabled = plan.quiz_types.includes(type);
+                        return (
+                          <TableCell key={type} className="text-center">
+                            <span
+                              className={`inline-flex min-w-9 justify-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                                enabled
+                                  ? "bg-primary/15 text-primary"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                              aria-label={`${from}から${to}: ${enabled ? "ON" : "OFF"}`}
+                            >
+                              {enabled ? "ON" : "OFF"}
+                            </span>
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   ))}
                 </TableBody>

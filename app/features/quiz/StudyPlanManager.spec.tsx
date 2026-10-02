@@ -35,6 +35,14 @@ const plan = {
   created: "2026-10-02T00:00:00Z",
 };
 
+const secondPlan = {
+  ...plan,
+  uid: "plan-2",
+  name: "ネットワーク復習",
+  resource_ids: ["resource-2"],
+  quiz_types: ["sent2term" as const, "pair2rel" as const],
+};
+
 beforeEach(() => {
   vi.mocked(listStudyPlans).mockResolvedValue([plan]);
   vi.mocked(listStudyResources).mockResolvedValue([
@@ -75,7 +83,11 @@ it("PlanとResourceを省略可能な表として表示する", async () => {
     screen.getByText("とても長いResource名").closest("[title]"),
   ).toHaveAttribute("title", "とても長いResource名");
   expect(screen.queryByRole("columnheader", { name: "操作" })).toBeNull();
-  expect(screen.queryByRole("link", { name: "解く" })).toBeNull();
+  expect(screen.getByRole("columnheader", { name: "準備済み" })).toBeVisible();
+  expect(screen.getByRole("columnheader", { name: "1回" })).toBeVisible();
+  expect(screen.getByRole("columnheader", { name: "選択肢" })).toBeVisible();
+  expect(screen.getByLabelText("単文から用語: OFF")).toHaveTextContent("OFF");
+  expect(screen.getByLabelText("用語から単文: ON")).toHaveTextContent("ON");
 
   await user.click(
     screen.getByRole("checkbox", {
@@ -86,6 +98,49 @@ it("PlanとResourceを省略可能な表として表示する", async () => {
     "href",
     "/quiz?plan=plan-1",
   );
+});
+
+it("Plan名とResource名を検索する", async () => {
+  const user = userEvent.setup();
+  vi.mocked(listStudyPlans).mockResolvedValue([plan, secondPlan]);
+  vi.mocked(listStudyResources).mockResolvedValue([
+    { uid: "resource-1", name: "とても長いResource名" },
+    { uid: "resource-2", name: "TCP/IP入門" },
+  ]);
+  renderManager();
+
+  const search = await screen.findByRole("searchbox", {
+    name: "StudyPlanを検索",
+  });
+  expect(search.parentElement).toHaveClass("sticky");
+  await user.type(search, "TCP/IP");
+
+  expect(screen.getByText(secondPlan.name)).toBeVisible();
+  expect(screen.queryByText(plan.name)).toBeNull();
+});
+
+it("jとkでcurrentのStudyPlanを移動する", async () => {
+  const user = userEvent.setup();
+  vi.mocked(listStudyPlans).mockResolvedValue([plan, secondPlan]);
+  vi.mocked(listStudyResources).mockResolvedValue([
+    { uid: "resource-1", name: "とても長いResource名" },
+    { uid: "resource-2", name: "TCP/IP入門" },
+  ]);
+  renderManager();
+
+  const firstRow = (await screen.findByText(plan.name)).closest("tr");
+  const secondRow = screen.getByText(secondPlan.name).closest("tr");
+  expect(firstRow).toHaveAttribute("aria-current", "true");
+
+  await user.keyboard("j");
+  expect(secondRow).toHaveAttribute("aria-current", "true");
+  expect(screen.getByRole("link", { name: "解く" })).toHaveAttribute(
+    "href",
+    "/quiz?plan=plan-2",
+  );
+
+  await user.keyboard("k");
+  expect(firstRow).toHaveAttribute("aria-current", "true");
 });
 
 it("StudyPlanへ指定数のクイズを追加する", async () => {
