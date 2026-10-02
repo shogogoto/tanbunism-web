@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router";
+import { SWRConfig } from "swr";
 import { vi } from "vitest";
 import QuizList, { formatCompactQuizDate } from "./QuizList";
 import ResourceLearningOverview from "./ResourceLearningOverview";
@@ -155,9 +156,11 @@ afterAll(() => server.close());
 
 function renderQuizList(initialEntry = "/quiz/list") {
   render(
-    <MemoryRouter initialEntries={[initialEntry]}>
-      <QuizList />
-    </MemoryRouter>,
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <QuizList />
+      </MemoryRouter>
+    </SWRConfig>,
   );
 }
 
@@ -229,9 +232,11 @@ it("Resourceを指定した画面ではクイズを絞り込める", async () =>
 it("Resourceごとの学習指標を表示する", async () => {
   const user = userEvent.setup();
   render(
-    <MemoryRouter>
-      <ResourceLearningOverview filters={emptyQuizFilters} />
-    </MemoryRouter>,
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <MemoryRouter>
+        <ResourceLearningOverview filters={emptyQuizFilters} />
+      </MemoryRouter>
+    </SWRConfig>,
   );
 
   expect(await screen.findByText("Coverage")).toBeVisible();

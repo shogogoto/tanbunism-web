@@ -1,6 +1,7 @@
 import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import useSWR from "swr";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +50,7 @@ type LoadState =
       total: number;
     }
   | { status: "error"; message: string };
+type LoadedState = Extract<LoadState, { status: "loaded" }>;
 
 const quizTypeLabels = {
   term2sent: "用語→単文",
@@ -354,66 +356,71 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
       filters.maxAccuracy,
     ],
   );
-  const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [selectedQuizIds, setSelectedQuizIds] = useState<Set<string>>(
     new Set(),
   );
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteError, setBulkDeleteError] = useState<string>();
-
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 絞り込み・対象Resourceが変わったら以前の選択を破棄する。
   useEffect(() => {
-    let active = true;
-
-    Promise.all([
-      listStudyResources(),
-      searchCreatedQuizzes({
-        resource_id: resourceId,
-        sentence_id: sentenceId,
-        ...toQuizSearchParams(appliedFilters),
-        page: 1,
-        size: 100,
-      }),
-    ])
-      .then(([resources, result]) => {
-        if (active) {
-          setLoadState({
-            status: "loaded",
-            resources,
-            quizzes: result.data,
-            total: result.total,
-          });
-          setSelectedQuizIds(new Set());
-        }
-      })
-      .catch((error: unknown) => {
-        if (active) {
-          setLoadState({
-            status: "error",
-            message:
-              error instanceof Error
-                ? error.message
-                : "クイズを取得できませんでした。",
-          });
-        }
-      });
-
-    return () => {
-      active = false;
-    };
+    setSelectedQuizIds(new Set());
   }, [resourceId, sentenceId, appliedFilters]);
+  const { data, error, mutate } = useSWR<LoadedState>(
+    ["quiz-management", resourceId, sentenceId, appliedFilters],
+    async () => {
+      const [resources, result] = await Promise.all([
+        listStudyResources(),
+        searchCreatedQuizzes(
+          {
+            resource_id: resourceId,
+            sentence_id: sentenceId,
+            ...toQuizSearchParams(appliedFilters),
+            page: 1,
+            size: 100,
+          },
+          { waitForRefresh: true },
+        ),
+      ]);
+      return {
+        status: "loaded",
+        resources,
+        quizzes: result.data,
+        total: result.total,
+      };
+    },
+    {
+      dedupingInterval: 30_000,
+      keepPreviousData: true,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+    },
+  );
+  const loadState: LoadState =
+    data ??
+    (error
+      ? {
+          status: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "クイズを取得できませんでした。",
+        }
+      : { status: "loading" });
 
   async function handleDelete(quizId: string) {
     await deleteQuiz(quizId);
-    setLoadState((current) =>
-      current.status === "loaded"
-        ? {
-            ...current,
-            quizzes: current.quizzes.filter(
-              ({ quiz }) => quiz.quiz_id !== quizId,
-            ),
-            total: Math.max(0, current.total - 1),
-          }
-        : current,
+    await mutate(
+      (current) =>
+        current
+          ? {
+              ...current,
+              quizzes: current.quizzes.filter(
+                ({ quiz }) => quiz.quiz_id !== quizId,
+              ),
+              total: Math.max(0, current.total - 1),
+            }
+          : current,
+      { revalidate: false },
     );
     setSelectedQuizIds((current) => {
       if (!current.has(quizId)) return current;
@@ -428,16 +435,18 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
     setBulkDeleteError(undefined);
     try {
       await deleteQuizzes([...selectedQuizIds]);
-      setLoadState((current) =>
-        current.status === "loaded"
-          ? {
-              ...current,
-              quizzes: current.quizzes.filter(
-                ({ quiz }) => !selectedQuizIds.has(quiz.quiz_id),
-              ),
-              total: Math.max(0, current.total - selectedQuizIds.size),
-            }
-          : current,
+      await mutate(
+        (current) =>
+          current
+            ? {
+                ...current,
+                quizzes: current.quizzes.filter(
+                  ({ quiz }) => !selectedQuizIds.has(quiz.quiz_id),
+                ),
+                total: Math.max(0, current.total - selectedQuizIds.size),
+              }
+            : current,
+        { revalidate: false },
       );
       setSelectedQuizIds(new Set());
     } catch (error) {

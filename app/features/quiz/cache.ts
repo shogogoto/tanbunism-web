@@ -11,13 +11,34 @@ type QuizCacheArea =
   | "quiz-chain"
   | "study-plans";
 
-export const quizCacheTtl = {
-  short: 60_000,
-  medium: 5 * 60_000,
-  long: 24 * 60 * 60_000,
+type QuizCachePolicy = {
+  refreshAfter: number;
+  expireAfter: number;
+};
+
+export const quizCachePolicy = {
+  live: {
+    refreshAfter: 5 * 60_000,
+    expireAfter: 24 * 60 * 60_000,
+  },
+  normal: {
+    refreshAfter: 30 * 60_000,
+    expireAfter: 7 * 24 * 60 * 60_000,
+  },
+  stable: {
+    refreshAfter: 24 * 60 * 60_000,
+    expireAfter: 30 * 24 * 60 * 60_000,
+  },
 } as const;
 
-const CACHE_PREFIX = "private:quiz:v1";
+type QuizCacheEnvelope<T> = {
+  kind: "quiz-cache-v2";
+  value: T;
+  updatedAt: number;
+};
+
+const CACHE_PREFIX = "private:quiz:v2";
+const refreshes = new Map<string, Promise<unknown>>();
 
 function currentUserId(): string | undefined {
   try {
@@ -54,23 +75,51 @@ function cacheKey(userId: string, area: QuizCacheArea, identity: unknown) {
 export async function withQuizCache<T>(
   area: QuizCacheArea,
   identity: unknown,
-  ttl: number,
+  policy: QuizCachePolicy,
   load: () => Promise<T>,
+  { waitForRefresh = false }: { waitForRefresh?: boolean } = {},
 ): Promise<T> {
   const userId = currentUserId();
   if (!userId) return load();
 
   const key = cacheKey(userId, area, identity);
+  const refresh = () => {
+    const running = refreshes.get(key) as Promise<T> | undefined;
+    if (running) return running;
+    const promise = load()
+      .then(async (value) => {
+        const envelope: QuizCacheEnvelope<T> = {
+          kind: "quiz-cache-v2",
+          value,
+          updatedAt: Date.now(),
+        };
+        await genericCache
+          .set(key, envelope, policy.expireAfter)
+          .catch(() => undefined);
+        return value;
+      })
+      .finally(() => refreshes.delete(key));
+    refreshes.set(key, promise);
+    return promise;
+  };
+
   try {
-    const cached = (await genericCache.get(key)) as T | undefined;
-    if (cached !== undefined) return cached;
+    const cached = (await genericCache.get(key)) as
+      | QuizCacheEnvelope<T>
+      | undefined;
+    if (cached?.kind === "quiz-cache-v2") {
+      if (Date.now() - cached.updatedAt >= policy.refreshAfter) {
+        const updating = refresh();
+        if (waitForRefresh) return updating;
+        void updating.catch(() => undefined);
+      }
+      return cached.value;
+    }
   } catch {
     // IndexedDBが利用できない環境でもAPI取得は継続する。
   }
 
-  const fresh = await load();
-  await genericCache.set(key, fresh, ttl).catch(() => undefined);
-  return fresh;
+  return refresh();
 }
 
 export async function invalidateQuizCache(

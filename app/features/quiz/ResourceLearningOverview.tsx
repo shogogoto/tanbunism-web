@@ -1,6 +1,7 @@
 import { AlertTriangle, ChevronRight, Info } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router";
+import useSWR from "swr";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import {
@@ -112,36 +113,29 @@ function ResourceDisclosure({
 }) {
   const { resource, quizzes: status, learning } = item;
   const [open, setOpen] = useState(false);
-  const [quizzes, setQuizzes] = useState<ManagedQuiz[]>();
-  const [error, setError] = useState<string>();
   const total = status?.total_quizzes ?? 0;
-
-  useEffect(() => {
-    if (!open || total === 0) return;
-    let active = true;
-    setQuizzes(undefined);
-    setError(undefined);
-    searchCreatedQuizzes({
-      resource_id: resource.uid,
-      ...toQuizSearchParams(filters),
-      page: 1,
-      size: 100,
-    })
-      .then((result) => {
-        if (active) setQuizzes(result.data);
-      })
-      .catch((caught: unknown) => {
-        if (!active) return;
-        setError(
-          caught instanceof Error
-            ? caught.message
-            : "クイズを取得できませんでした。",
-        );
-      });
-    return () => {
-      active = false;
-    };
-  }, [filters, open, resource.uid, total]);
+  const searchParams = toQuizSearchParams(filters);
+  const { data, error, isLoading } = useSWR(
+    open && total > 0
+      ? ["quiz-management-resource", resource.uid, searchParams]
+      : null,
+    () =>
+      searchCreatedQuizzes(
+        {
+          resource_id: resource.uid,
+          ...searchParams,
+          page: 1,
+          size: 100,
+        },
+        { waitForRefresh: true },
+      ),
+    {
+      dedupingInterval: 30_000,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+    },
+  );
+  const quizzes: ManagedQuiz[] | undefined = data?.data;
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -160,13 +154,17 @@ function ResourceDisclosure({
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="border-t bg-muted/15">
-          {open && total > 0 && !quizzes && !error && (
+          {open && total > 0 && isLoading && (
             <p className="px-9 py-3 text-sm text-muted-foreground">
               関連クイズを読み込み中…
             </p>
           )}
           {error && (
-            <p className="px-9 py-3 text-sm text-destructive">{error}</p>
+            <p className="px-9 py-3 text-sm text-destructive">
+              {error instanceof Error
+                ? error.message
+                : "クイズを取得できませんでした。"}
+            </p>
           )}
           {total === 0 && (
             <p className="px-9 py-3 text-sm text-muted-foreground">
@@ -210,57 +208,49 @@ export default function ResourceLearningOverview({
 }: {
   filters: QuizFilters;
 }) {
-  const [items, setItems] = useState<ResourceStatus[]>();
-  const [error, setError] = useState<string>();
-  const [brokenCount, setBrokenCount] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-    Promise.all([listStudyResources(), listCreatedQuizResources()])
-      .then(async ([resources, quizStatuses]) => {
-        const quizByResource = new Map(
-          quizStatuses.map((status) => [status.resource.uid, status]),
-        );
-        const learning = await Promise.all(
-          resources.map((resource) => getLearningProgress(resource.uid)),
-        );
-        if (!active) return;
-        setItems(
-          resources.map((resource, index) => ({
-            resource,
-            quizzes: quizByResource.get(resource.uid),
-            learning: learning[index],
-          })),
-        );
-      })
-      .catch((caught: unknown) => {
-        if (!active) return;
-        setError(
-          caught instanceof Error
-            ? caught.message
-            : "学習状況を取得できませんでした。",
-        );
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    listBrokenQuizReferences()
-      .then((references) => {
-        if (active)
-          setBrokenCount(new Set(references.map((item) => item.quiz_id)).size);
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { data: items, error } = useSWR<ResourceStatus[]>(
+    "quiz-management-resource-overview",
+    async () => {
+      const [resources, quizStatuses] = await Promise.all([
+        listStudyResources(),
+        listCreatedQuizResources({ waitForRefresh: true }),
+      ]);
+      const quizByResource = new Map(
+        quizStatuses.map((status) => [status.resource.uid, status]),
+      );
+      const learning = await Promise.all(
+        resources.map((resource) =>
+          getLearningProgress(resource.uid, { waitForRefresh: true }),
+        ),
+      );
+      return resources.map((resource, index) => ({
+        resource,
+        quizzes: quizByResource.get(resource.uid),
+        learning: learning[index],
+      }));
+    },
+    {
+      dedupingInterval: 30_000,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+    },
+  );
+  const { data: brokenCount = 0, mutate: mutateBrokenCount } = useSWR(
+    "quiz-management-broken-count",
+    async () => {
+      const references = await listBrokenQuizReferences();
+      return new Set(references.map((item) => item.quiz_id)).size;
+    },
+  );
 
   if (error)
-    return <p className="px-3 py-2 text-sm text-destructive">{error}</p>;
+    return (
+      <p className="px-3 py-2 text-sm text-destructive">
+        {error instanceof Error
+          ? error.message
+          : "学習状況を取得できませんでした。"}
+      </p>
+    );
   if (!items) {
     return (
       <p className="px-3 py-2 text-sm text-muted-foreground">
@@ -294,7 +284,11 @@ export default function ResourceLearningOverview({
                   元の単文を修復先へ付け替えるか、不要なクイズを削除してください。
                 </DialogDescription>
               </DialogHeader>
-              <BrokenQuizManager onCountChange={setBrokenCount} />
+              <BrokenQuizManager
+                onCountChange={(count) =>
+                  void mutateBrokenCount(count, { revalidate: false })
+                }
+              />
             </DialogContent>
           </Dialog>
         )}

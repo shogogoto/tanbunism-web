@@ -1,4 +1,4 @@
-import { invalidateQuizCache, quizCacheTtl, withQuizCache } from "./cache";
+import { invalidateQuizCache, quizCachePolicy, withQuizCache } from "./cache";
 import {
   answerQuizApiQuizAnswerQuizIdPost,
   createQuizApiQuizPost,
@@ -115,6 +115,10 @@ export type UnplannedQuiz = {
   resource_name?: string | null;
 };
 
+type QuizCacheOptions = {
+  waitForRefresh?: boolean;
+};
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
 
@@ -185,7 +189,7 @@ function unwrap<T>(
 }
 
 export async function listStudyPlans(): Promise<StudyPlan[]> {
-  return withQuizCache("study-plans", {}, quizCacheTtl.medium, async () => {
+  return withQuizCache("study-plans", {}, quizCachePolicy.normal, async () => {
     const response = await listStudyPlansApiQuizStudyPlansGet({
       credentials: "include",
     });
@@ -199,7 +203,7 @@ export async function listAnswerHistory(
   return withQuizCache(
     "answer-history",
     params,
-    quizCacheTtl.short,
+    quizCachePolicy.live,
     async () => {
       const response = await listAnswerHistoryApiQuizAnswersGet(params, {
         credentials: "include",
@@ -210,12 +214,20 @@ export async function listAnswerHistory(
 }
 
 export async function getQuizChain(quizId: string): Promise<QuizChain> {
-  return withQuizCache("quiz-chain", quizId, quizCacheTtl.long, async () => {
-    const response = await expandQuizChainApiQuizChainQuizzesQuizIdGet(quizId, {
-      credentials: "include",
-    });
-    return unwrap(response, "クイズの知識を取得できませんでした。");
-  });
+  return withQuizCache(
+    "quiz-chain",
+    quizId,
+    quizCachePolicy.stable,
+    async () => {
+      const response = await expandQuizChainApiQuizChainQuizzesQuizIdGet(
+        quizId,
+        {
+          credentials: "include",
+        },
+      );
+      return unwrap(response, "クイズの知識を取得できませんでした。");
+    },
+  );
 }
 
 export async function listStudyResources(): Promise<StudyResource[]> {
@@ -444,13 +456,13 @@ export async function answerQuiz(
   return chain;
 }
 
-export async function listCreatedQuizResources(): Promise<
-  QuizResourceStatus[]
-> {
+export async function listCreatedQuizResources(
+  options: QuizCacheOptions = {},
+): Promise<QuizResourceStatus[]> {
   return withQuizCache(
     "created-resources",
     {},
-    quizCacheTtl.medium,
+    quizCachePolicy.normal,
     async () => {
       const response = await listCreatedQuizResourcesQuizCreatedResourcesGet({
         credentials: "include",
@@ -460,16 +472,18 @@ export async function listCreatedQuizResources(): Promise<
         "Resourceごとのクイズ状況を取得できませんでした。",
       );
     },
+    options,
   );
 }
 
 export async function getLearningProgress(
   resourceId: string,
+  options: QuizCacheOptions = {},
 ): Promise<ResourceLearningStatus> {
   return withQuizCache(
     "learning-progress",
     resourceId,
-    quizCacheTtl.short,
+    quizCachePolicy.live,
     async () => {
       const response =
         await getLearningProgressApiQuizLearningProgressResourceIdGet(
@@ -478,16 +492,18 @@ export async function getLearningProgress(
         );
       return unwrap(response, "Resourceの学習状況を取得できませんでした。");
     },
+    options,
   );
 }
 
 export async function listCreatedQuizSentences(
   resourceId: string,
+  options: QuizCacheOptions = {},
 ): Promise<SentenceQuizStatus[]> {
   return withQuizCache(
     "created-sentences",
     resourceId,
-    quizCacheTtl.medium,
+    quizCachePolicy.normal,
     async () => {
       const response =
         await listCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGet(
@@ -496,6 +512,7 @@ export async function listCreatedQuizSentences(
         );
       return unwrap(response, "単文ごとのクイズ状況を取得できませんでした。");
     },
+    options,
   );
 }
 
@@ -512,7 +529,7 @@ export async function listCreatedQuizzes(
   return withQuizCache(
     "created-list",
     params,
-    quizCacheTtl.medium,
+    quizCachePolicy.normal,
     async () => {
       const response = await listCreatedQuizzesQuizCreatedGet(params, {
         credentials: "include",
@@ -524,11 +541,12 @@ export async function listCreatedQuizzes(
 
 export async function searchCreatedQuizzes(
   params: QuizSearchParams,
+  options: QuizCacheOptions = {},
 ): Promise<ManagedQuizResult> {
   return withQuizCache(
     "created-search",
     params,
-    quizCacheTtl.medium,
+    quizCachePolicy.normal,
     async () => {
       const response = await searchCreatedQuizzesApiQuizCreatedSearchGet(
         params,
@@ -536,6 +554,7 @@ export async function searchCreatedQuizzes(
       );
       return unwrap(response, "作成したクイズを検索できませんでした。");
     },
+    options,
   );
 }
 

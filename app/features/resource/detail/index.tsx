@@ -41,7 +41,7 @@ export default function ResourceDetail({ id }: Props) {
     SentenceQuizStatus[]
   >(
     ["resource-quiz-sentence-statuses", id],
-    () => listCreatedQuizSentences(id),
+    () => listCreatedQuizSentences(id, { waitForRefresh: true }),
     {
       revalidateIfStale: false,
       revalidateOnFocus: false,
