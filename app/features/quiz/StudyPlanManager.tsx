@@ -23,7 +23,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/shared/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/shared/components/ui/table";
 import type { StudyPlanDraft } from "~/shared/generated/fastAPI.schemas";
+import { useIsMobile } from "~/shared/hooks/use-mobile";
 import StudyPlanForm from "./StudyPlanForm";
 import {
   type QuizType,
@@ -52,6 +61,7 @@ const quizTypeLabels: Record<QuizType, string> = {
 };
 
 export default function StudyPlanManager() {
+  const isMobile = useIsMobile(1024);
   const { refreshNotifications } = useNotifications();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [resources, setResources] = useState<StudyResource[]>([]);
@@ -124,6 +134,10 @@ export default function StudyPlanManager() {
       resourceNames.get(resourceId.replaceAll("-", "")) ?? "不明なResource"
     );
   }
+
+  const selectedPlans = plans.filter(({ uid }) => selectedPlanIds.has(uid));
+  const selectedPlan =
+    selectedPlans.length === 1 ? selectedPlans[0] : undefined;
 
   async function removeSelectedPlans() {
     const selected = new Set(selectedPlanIds);
@@ -344,28 +358,31 @@ export default function StudyPlanManager() {
       ) : (
         <div className="space-y-3" data-dashboard-swipe-ignore>
           <div className="flex min-h-9 flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                aria-label="すべてのStudyPlanを選択"
-                checked={
-                  plans.length > 0 && selectedPlanIds.size === plans.length
-                }
-                onChange={(event) =>
-                  setSelectedPlanIds(
-                    event.target.checked
-                      ? new Set(plans.map(({ uid }) => uid))
-                      : new Set(),
-                  )
-                }
-              />
-              すべて選択
-            </label>
+            {isMobile && (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  aria-label="すべてのStudyPlanを選択"
+                  checked={
+                    plans.length > 0 && selectedPlanIds.size === plans.length
+                  }
+                  onChange={(event) =>
+                    setSelectedPlanIds(
+                      event.target.checked
+                        ? new Set(plans.map(({ uid }) => uid))
+                        : new Set(),
+                    )
+                  }
+                />
+                すべて選択
+              </label>
+            )}
             <span className="text-xs text-muted-foreground">
               {selectedPlanIds.size}件選択中
             </span>
             {selectedPlanIds.size > 0 && (
-              <div className="ml-auto flex flex-wrap gap-2">
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {selectedPlan && planActions(selectedPlan)}
                 <Button
                   type="button"
                   size="sm"
@@ -408,63 +425,167 @@ export default function StudyPlanManager() {
               </div>
             )}
           </div>
-          {plans.map((plan) => (
-            <article
-              key={plan.uid}
-              className="min-w-0 space-y-3 rounded-md border p-3"
-            >
-              <div className="flex min-w-0 items-start gap-3">
-                <input
-                  type="checkbox"
-                  className="mt-1 shrink-0"
-                  aria-label={`${plan.name}を選択`}
-                  checked={selectedPlanIds.has(plan.uid)}
-                  onChange={(event) =>
-                    setSelectedPlanIds((current) => {
-                      const next = new Set(current);
-                      if (event.target.checked) next.add(plan.uid);
-                      else next.delete(plan.uid);
-                      return next;
-                    })
-                  }
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium" title={plan.name}>
-                    {plan.name}
+          {isMobile ? (
+            <div className="space-y-2">
+              {plans.map((plan) => (
+                <article
+                  key={plan.uid}
+                  className="min-w-0 space-y-3 rounded-md border p-3"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1 shrink-0"
+                      aria-label={`${plan.name}を選択`}
+                      checked={selectedPlanIds.has(plan.uid)}
+                      onChange={(event) =>
+                        setSelectedPlanIds((current) => {
+                          const next = new Set(current);
+                          if (event.target.checked) next.add(plan.uid);
+                          else next.delete(plan.uid);
+                          return next;
+                        })
+                      }
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium" title={plan.name}>
+                        {plan.name}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        <strong className="text-sm tabular-nums text-foreground">
+                          {preparedCounts[plan.uid] ?? 0}
+                        </strong>
+                        問準備済み・1回{plan.n_quiz}問・{plan.n_option}択
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    <strong className="text-sm tabular-nums text-foreground">
-                      {preparedCounts[plan.uid] ?? 0}
-                    </strong>
-                    問準備済み・1回{plan.n_quiz}問・{plan.n_option}択
+                  <div className="flex min-w-0 flex-wrap gap-1">
+                    {plan.resource_ids.map((resourceId) => {
+                      const name = resourceName(resourceId);
+                      return (
+                        <Badge
+                          key={resourceId}
+                          variant="secondary"
+                          className="max-w-56"
+                          title={name}
+                        >
+                          <span className="truncate">{name}</span>
+                        </Badge>
+                      );
+                    })}
                   </div>
-                </div>
-              </div>
-              <div className="flex min-w-0 flex-wrap gap-1">
-                {plan.resource_ids.map((resourceId) => {
-                  const name = resourceName(resourceId);
-                  return (
-                    <Badge
-                      key={resourceId}
-                      variant="secondary"
-                      className="max-w-56"
-                      title={name}
+                  <div className="flex flex-wrap gap-1">
+                    {plan.quiz_types.map((quizType) => (
+                      <Badge key={quizType} variant="outline">
+                        {quizTypeLabels[quizType]}
+                      </Badge>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-md border">
+              <Table className="table-fixed">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">
+                      <input
+                        type="checkbox"
+                        aria-label="すべてのStudyPlanを選択"
+                        checked={
+                          plans.length > 0 &&
+                          selectedPlanIds.size === plans.length
+                        }
+                        onChange={(event) =>
+                          setSelectedPlanIds(
+                            event.target.checked
+                              ? new Set(plans.map(({ uid }) => uid))
+                              : new Set(),
+                          )
+                        }
+                      />
+                    </TableHead>
+                    <TableHead className="w-[20%]">Plan</TableHead>
+                    <TableHead className="w-[28%]">Resource</TableHead>
+                    <TableHead className="w-[30%]">クイズ形式</TableHead>
+                    <TableHead className="w-[22%]">準備状況・設定</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {plans.map((plan) => (
+                    <TableRow
+                      key={plan.uid}
+                      data-state={
+                        selectedPlanIds.has(plan.uid) ? "selected" : undefined
+                      }
                     >
-                      <span className="truncate">{name}</span>
-                    </Badge>
-                  );
-                })}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {plan.quiz_types.map((quizType) => (
-                  <Badge key={quizType} variant="outline">
-                    {quizTypeLabels[quizType]}
-                  </Badge>
-                ))}
-              </div>
-              {planActions(plan)}
-            </article>
-          ))}
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          aria-label={`${plan.name}を選択`}
+                          checked={selectedPlanIds.has(plan.uid)}
+                          onChange={(event) =>
+                            setSelectedPlanIds((current) => {
+                              const next = new Set(current);
+                              if (event.target.checked) next.add(plan.uid);
+                              else next.delete(plan.uid);
+                              return next;
+                            })
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="min-w-0 whitespace-normal">
+                        <div
+                          className="max-w-44 truncate font-medium"
+                          title={plan.name}
+                        >
+                          {plan.name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="min-w-0 whitespace-normal">
+                        <div className="flex min-w-0 flex-wrap gap-1">
+                          {plan.resource_ids.map((resourceId) => {
+                            const name = resourceName(resourceId);
+                            return (
+                              <Badge
+                                key={resourceId}
+                                variant="secondary"
+                                className="max-w-48"
+                                title={name}
+                              >
+                                <span className="truncate">{name}</span>
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-normal">
+                        <div className="flex flex-wrap gap-1">
+                          {plan.quiz_types.map((quizType) => (
+                            <Badge key={quizType} variant="outline">
+                              {quizTypeLabels[quizType]}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-normal">
+                        <strong className="text-base tabular-nums">
+                          {preparedCounts[plan.uid] ?? 0}
+                        </strong>
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          問準備済み
+                        </span>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          1回{plan.n_quiz}問・{plan.n_option}択
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       )}
       {!isLoading && (

@@ -65,14 +65,23 @@ function renderManager() {
   );
 }
 
-it("横長の表を使わずPlanとResourceを省スペース表示する", async () => {
+it("PlanとResourceを省略可能な表として表示する", async () => {
+  const user = userEvent.setup();
   renderManager();
 
-  expect(await screen.findByRole("article")).toHaveTextContent(plan.name);
+  expect(await screen.findByRole("table")).toHaveTextContent(plan.name);
+  expect(screen.getByText(plan.name)).toHaveAttribute("title", plan.name);
   expect(
     screen.getByText("とても長いResource名").closest("[title]"),
   ).toHaveAttribute("title", "とても長いResource名");
-  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  expect(screen.queryByRole("columnheader", { name: "操作" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "解く" })).toBeNull();
+
+  await user.click(
+    screen.getByRole("checkbox", {
+      name: "とても長い学習計画の名前を選択",
+    }),
+  );
   expect(screen.getByRole("link", { name: "解く" })).toHaveAttribute(
     "href",
     "/quiz?plan=plan-1",
@@ -83,6 +92,11 @@ it("StudyPlanへ指定数のクイズを追加する", async () => {
   const user = userEvent.setup();
   renderManager();
 
+  await user.click(
+    await screen.findByRole("checkbox", {
+      name: "とても長い学習計画の名前を選択",
+    }),
+  );
   const count = await screen.findByRole("spinbutton", {
     name: `${plan.name}に追加する問題数`,
   });
