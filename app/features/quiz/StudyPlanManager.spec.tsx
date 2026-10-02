@@ -133,6 +133,26 @@ it("Plan名とResource名を検索する", async () => {
   expect(screen.queryByText(plan.name)).toBeNull();
 });
 
+it("新しいStudyPlanでは4形式を既定で選択する", async () => {
+  const user = userEvent.setup();
+  renderManager();
+  await screen.findByText(plan.name);
+
+  await user.click(screen.getByRole("button", { name: "学習計画を作成" }));
+
+  for (const label of [
+    "用語から単文",
+    "単文から用語",
+    "関係から単文の組",
+    "単文の組から関係",
+  ]) {
+    expect(screen.getByRole("checkbox", { name: label })).toBeChecked();
+  }
+  expect(
+    screen.getByRole("spinbutton", { name: "出題数（合計）" }),
+  ).toHaveValue(5);
+});
+
 it("jとkでcurrentのStudyPlanを移動する", async () => {
   const user = userEvent.setup();
   vi.mocked(listStudyPlans).mockResolvedValue([plan, secondPlan]);

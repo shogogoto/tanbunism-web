@@ -19,6 +19,10 @@ const quizTypes = [
   ["pair2rel", "単文の組から関係"],
 ] as const;
 
+const defaultQuizTypes: StudyPlanDraft["quiz_types"] = quizTypes.map(
+  ([value]) => value,
+);
+
 export default function StudyPlanForm({
   onCreated,
   plan,
@@ -39,9 +43,12 @@ export default function StudyPlanForm({
   const [name, setName] = useState(plan?.name ?? "");
   const [selectedQuizTypes, setSelectedQuizTypes] = useState<
     StudyPlanDraft["quiz_types"]
-  >(plan?.quiz_types ?? ["term2sent"]);
+  >(plan?.quiz_types ?? defaultQuizTypes);
   const [nQuiz, setNQuiz] = useState<number | "">(
-    Math.max(plan?.n_quiz ?? 5, plan?.quiz_types.length ?? 1),
+    Math.max(
+      plan?.n_quiz ?? 5,
+      plan?.quiz_types.length ?? defaultQuizTypes.length,
+    ),
   );
   const [nOption, setNOption] = useState(plan?.n_option ?? 4);
   const [error, setError] = useState<string>();

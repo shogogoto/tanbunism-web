@@ -301,7 +301,7 @@ export default function QuizSession() {
       const plan = await createStudyPlan({
         name: "おまかせ",
         resource_ids: resources.slice(0, 20).map(({ uid }) => uid),
-        quiz_types: ["term2sent", "sent2term"],
+        quiz_types: ["term2sent", "sent2term", "rel2pair", "pair2rel"],
         n_quiz: 5,
         n_option: 4,
       });

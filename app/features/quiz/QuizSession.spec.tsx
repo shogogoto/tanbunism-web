@@ -386,7 +386,7 @@ describe("QuizSession", () => {
         expect(draft).toMatchObject({
           name: "おまかせ",
           resource_ids: [resourceId],
-          quiz_types: ["term2sent", "sent2term"],
+          quiz_types: ["term2sent", "sent2term", "rel2pair", "pair2rel"],
           n_quiz: 5,
           n_option: 4,
         });
