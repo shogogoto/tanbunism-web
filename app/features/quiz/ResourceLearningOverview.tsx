@@ -1,12 +1,22 @@
-import { ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Badge } from "~/shared/components/ui/badge";
+import { Button } from "~/shared/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/shared/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/shared/components/ui/dialog";
+import BrokenQuizManager from "./BrokenQuizManager";
 import QuizPrompt from "./QuizPrompt";
 import {
   type ManagedQuiz,
@@ -14,10 +24,12 @@ import {
   type ResourceLearningStatus,
   type StudyResource,
   getLearningProgress,
+  listBrokenQuizReferences,
   listCreatedQuizResources,
   listStudyResources,
   searchCreatedQuizzes,
 } from "./api";
+import { type QuizFilters, toQuizSearchParams } from "./quizFilters";
 
 type ResourceStatus = {
   resource: StudyResource;
@@ -63,35 +75,48 @@ function Progress({ status }: { status?: ResourceLearningStatus }) {
   );
 }
 
-function ResourceDisclosure({ item }: { item: ResourceStatus }) {
+function ResourceDisclosure({
+  item,
+  filters,
+}: {
+  item: ResourceStatus;
+  filters: QuizFilters;
+}) {
   const { resource, quizzes: status, learning } = item;
   const [open, setOpen] = useState(false);
   const [quizzes, setQuizzes] = useState<ManagedQuiz[]>();
   const [error, setError] = useState<string>();
   const total = status?.total_quizzes ?? 0;
 
-  async function handleOpenChange(next: boolean) {
-    setOpen(next);
-    if (!next || quizzes || total === 0) return;
+  useEffect(() => {
+    if (!open || total === 0) return;
+    let active = true;
+    setQuizzes(undefined);
     setError(undefined);
-    try {
-      const result = await searchCreatedQuizzes({
-        resource_id: resource.uid,
-        page: 1,
-        size: 100,
+    searchCreatedQuizzes({
+      resource_id: resource.uid,
+      ...toQuizSearchParams(filters),
+      page: 1,
+      size: 100,
+    })
+      .then((result) => {
+        if (active) setQuizzes(result.data);
+      })
+      .catch((caught: unknown) => {
+        if (!active) return;
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "クイズを取得できませんでした。",
+        );
       });
-      setQuizzes(result.data);
-    } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "クイズを取得できませんでした。",
-      );
-    }
-  }
+    return () => {
+      active = false;
+    };
+  }, [filters, open, resource.uid, total]);
 
   return (
-    <Collapsible open={open} onOpenChange={handleOpenChange}>
+    <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
         <button
           type="button"
@@ -133,6 +158,11 @@ function ResourceDisclosure({ item }: { item: ResourceStatus }) {
               </p>
             </div>
           ))}
+          {quizzes?.length === 0 && total > 0 && (
+            <p className="px-9 py-3 text-sm text-muted-foreground">
+              絞り込み条件に合うクイズはありません。
+            </p>
+          )}
           <div className="flex justify-end border-t px-3 py-2">
             <Link
               to={`?view=quiz-management&resource=${resource.uid}`}
@@ -147,9 +177,14 @@ function ResourceDisclosure({ item }: { item: ResourceStatus }) {
   );
 }
 
-export default function ResourceLearningOverview() {
+export default function ResourceLearningOverview({
+  filters,
+}: {
+  filters: QuizFilters;
+}) {
   const [items, setItems] = useState<ResourceStatus[]>();
   const [error, setError] = useState<string>();
+  const [brokenCount, setBrokenCount] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -183,6 +218,19 @@ export default function ResourceLearningOverview() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    listBrokenQuizReferences()
+      .then((references) => {
+        if (active)
+          setBrokenCount(new Set(references.map((item) => item.quiz_id)).size);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
   if (error)
     return <p className="px-3 py-2 text-sm text-destructive">{error}</p>;
   if (!items) {
@@ -196,12 +244,40 @@ export default function ResourceLearningOverview() {
 
   return (
     <section className="border-y sm:border-x">
-      <h2 className="border-b px-3 py-3 text-sm font-semibold">
-        Resource別の学習状況
-      </h2>
+      <div className="flex items-center gap-2 border-b px-3 py-3">
+        <h2 className="text-sm font-semibold">Resource別の学習状況</h2>
+        {brokenCount > 0 && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="ml-auto border-amber-500/50 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
+              >
+                <AlertTriangle className="size-4" />
+                参照切れ {brokenCount}件
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>参照切れクイズ</DialogTitle>
+                <DialogDescription>
+                  元の単文を修復先へ付け替えるか、不要なクイズを削除してください。
+                </DialogDescription>
+              </DialogHeader>
+              <BrokenQuizManager onCountChange={setBrokenCount} />
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
       <div className="divide-y">
         {items.map((item) => (
-          <ResourceDisclosure key={item.resource.uid} item={item} />
+          <ResourceDisclosure
+            key={item.resource.uid}
+            item={item}
+            filters={filters}
+          />
         ))}
       </div>
     </section>

@@ -30,7 +30,11 @@ const labels: Record<BrokenQuizReference["quiz_type"], string> = {
   pair2rel: "ペア→関係",
 };
 
-export default function BrokenQuizManager() {
+export default function BrokenQuizManager({
+  onCountChange,
+}: {
+  onCountChange?: (count: number) => void;
+}) {
   const [items, setItems] = useState<BrokenQuizReference[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -66,6 +70,10 @@ export default function BrokenQuizManager() {
     }
     return [...result.values()];
   }, [items]);
+
+  useEffect(() => {
+    if (!loading) onCountChange?.(groups.length);
+  }, [groups.length, loading, onCountChange]);
 
   async function remove(quizId: string) {
     setDeleting(quizId);
