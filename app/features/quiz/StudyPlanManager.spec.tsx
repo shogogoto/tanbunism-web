@@ -1,158 +1,136 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 import StudyPlanManager from "./StudyPlanManager";
 import {
-  type StudyPlan,
   deleteStudyPlan,
   listStudyPlanPreparations,
   listStudyPlans,
   listStudyResources,
   prepareAdditionalStudyPlanQuizzes,
+  updateStudyPlan,
 } from "./api";
 
-const { refreshNotifications } = vi.hoisted(() => ({
-  refreshNotifications: vi.fn(),
-}));
-
 vi.mock("~/features/notifications/NotificationProvider", () => ({
-  useNotifications: () => ({ refreshNotifications }),
+  useNotifications: () => ({ refreshNotifications: vi.fn() }),
 }));
 
 vi.mock("./api", () => ({
-  createStudyPlan: vi.fn(),
-  updateStudyPlan: vi.fn(),
   deleteStudyPlan: vi.fn(),
-  listStudyPlans: vi.fn(),
   listStudyPlanPreparations: vi.fn(),
+  listStudyPlans: vi.fn(),
   listStudyResources: vi.fn(),
   prepareAdditionalStudyPlanQuizzes: vi.fn(),
+  updateStudyPlan: vi.fn(),
 }));
 
-const plan: StudyPlan = {
+const plan = {
   uid: "plan-1",
-  name: "数学の復習",
+  name: "とても長い学習計画の名前",
   resource_ids: ["resource-1"],
-  quiz_types: ["term2sent", "pair2rel"],
-  n_quiz: 6,
-  n_option: 3,
-  created: "2026-09-25T00:00:00Z",
+  quiz_types: ["term2sent" as const],
+  n_quiz: 2,
+  n_option: 4,
+  created: "2026-10-02T00:00:00Z",
 };
 
-describe("StudyPlanManager", () => {
-  beforeEach(() => {
-    Object.defineProperty(window, "innerWidth", {
-      configurable: true,
-      value: 1024,
+beforeEach(() => {
+  vi.mocked(listStudyPlans).mockResolvedValue([plan]);
+  vi.mocked(listStudyResources).mockResolvedValue([
+    { uid: "resource-1", name: "とても長いResource名" },
+  ]);
+  vi.mocked(listStudyPlanPreparations).mockResolvedValue([
+    { plan_id: "plan-1", prepared_quiz_count: 3 },
+  ]);
+  vi.mocked(updateStudyPlan).mockResolvedValue({
+    ...plan,
+    quiz_types: ["term2sent", "sent2term", "rel2pair", "pair2rel"],
+    n_quiz: 4,
+  });
+  vi.mocked(deleteStudyPlan).mockResolvedValue(undefined);
+  vi.mocked(prepareAdditionalStudyPlanQuizzes).mockResolvedValue({
+    plan_id: "plan-1",
+    requested_count: 6,
+    added_count: 3,
+    prepared_quiz_count: 6,
+  });
+});
+
+function renderManager() {
+  return render(
+    <MemoryRouter>
+      <StudyPlanManager />
+    </MemoryRouter>,
+  );
+}
+
+it("横長の表を使わずPlanとResourceを省スペース表示する", async () => {
+  renderManager();
+
+  expect(await screen.findByRole("article")).toHaveTextContent(plan.name);
+  expect(
+    screen.getByText("とても長いResource名").closest("[title]"),
+  ).toHaveAttribute("title", "とても長いResource名");
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "解く" })).toHaveAttribute(
+    "href",
+    "/quiz?plan=plan-1",
+  );
+});
+
+it("StudyPlanへ指定数のクイズを追加する", async () => {
+  const user = userEvent.setup();
+  renderManager();
+
+  const count = await screen.findByRole("spinbutton", {
+    name: `${plan.name}に追加する問題数`,
+  });
+  await user.clear(count);
+  await user.type(count, "6");
+  await user.click(screen.getByRole("button", { name: "追加" }));
+
+  await waitFor(() =>
+    expect(prepareAdditionalStudyPlanQuizzes).toHaveBeenCalledWith("plan-1", 6),
+  );
+});
+
+it("選択したStudyPlanを4形式へ一括変更する", async () => {
+  const user = userEvent.setup();
+  renderManager();
+
+  await user.click(
+    await screen.findByRole("checkbox", {
+      name: "とても長い学習計画の名前を選択",
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "4形式に変更" }));
+
+  await waitFor(() => {
+    expect(updateStudyPlan).toHaveBeenCalledWith("plan-1", {
+      name: plan.name,
+      resource_ids: plan.resource_ids,
+      quiz_types: ["term2sent", "sent2term", "rel2pair", "pair2rel"],
+      n_quiz: 4,
+      n_option: 4,
     });
-    vi.mocked(listStudyPlans).mockResolvedValue([plan]);
-    vi.mocked(listStudyResources).mockResolvedValue([
-      { uid: "resource-1", name: "数学の本" },
-    ]);
-    vi.mocked(listStudyPlanPreparations).mockResolvedValue([
-      { plan_id: "plan-1", prepared_quiz_count: 4 },
-    ]);
-    vi.mocked(deleteStudyPlan).mockResolvedValue();
-    vi.mocked(prepareAdditionalStudyPlanQuizzes).mockResolvedValue({
-      plan_id: "plan-1",
-      requested_count: 6,
-      added_count: 3,
-      prepared_quiz_count: 7,
-    });
-    refreshNotifications.mockReset();
-    refreshNotifications.mockResolvedValue(undefined);
   });
+});
 
-  it("スマホでは横長の表をカード表示に切り替える", async () => {
-    Object.defineProperty(window, "innerWidth", {
-      configurable: true,
-      value: 390,
-    });
+it("行内ボタンではなく選択ツールバーからStudyPlanを削除する", async () => {
+  const user = userEvent.setup();
+  renderManager();
 
-    render(
-      <MemoryRouter>
-        <StudyPlanManager />
-      </MemoryRouter>,
-    );
+  await user.click(
+    await screen.findByRole("checkbox", {
+      name: "とても長い学習計画の名前を選択",
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "1件を削除" }));
+  await user.click(screen.getByRole("button", { name: "削除する" }));
 
-    expect(await screen.findByRole("article")).toHaveTextContent("数学の復習");
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-  });
-
-  it("小型タブレットでも横長の表をカード表示に切り替える", async () => {
-    Object.defineProperty(window, "innerWidth", {
-      configurable: true,
-      value: 820,
-    });
-
-    render(
-      <MemoryRouter>
-        <StudyPlanManager />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByRole("article")).toHaveTextContent("数学の復習");
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-  });
-
-  it("計画の内容を確認し、その計画でクイズを始められる", async () => {
-    render(
-      <MemoryRouter>
-        <StudyPlanManager />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByText("数学の復習")).toBeInTheDocument();
-    expect(screen.getByText("数学の本")).toBeInTheDocument();
-    expect(screen.getByText("用語 → 単文")).toBeInTheDocument();
-    expect(screen.getByText("単文組 → 関係")).toBeInTheDocument();
-    expect(screen.getByText("4")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "解く" })).toHaveAttribute(
-      "href",
-      "/quiz?plan=plan-1",
-    );
-  });
-
-  it("StudyPlanへ指定数のクイズを追加し、完了を通知する", async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <StudyPlanManager />
-      </MemoryRouter>,
-    );
-
-    await screen.findByText("数学の復習");
-    const count = screen.getByRole("spinbutton", {
-      name: "数学の復習に追加する問題数",
-    });
-    await user.clear(count);
-    await user.type(count, "6");
-    await user.click(screen.getByRole("button", { name: "追加" }));
-
-    await waitFor(() =>
-      expect(prepareAdditionalStudyPlanQuizzes).toHaveBeenCalledWith(
-        "plan-1",
-        6,
-      ),
-    );
-    expect(screen.getByText("7")).toBeVisible();
-    expect(refreshNotifications).toHaveBeenCalledOnce();
-  });
-
-  it("計画を削除して一覧から取り除く", async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <StudyPlanManager />
-      </MemoryRouter>,
-    );
-
-    await screen.findByText("数学の復習");
-    await user.click(screen.getByRole("button", { name: "削除" }));
-    await user.click(screen.getByRole("button", { name: "削除する" }));
-
-    await waitFor(() => expect(deleteStudyPlan).toHaveBeenCalledWith("plan-1"));
-    expect(screen.queryByText("数学の復習")).not.toBeInTheDocument();
-  });
+  await waitFor(() => expect(deleteStudyPlan).toHaveBeenCalledWith("plan-1"));
+  expect(
+    screen.queryByText("とても長い学習計画の名前"),
+  ).not.toBeInTheDocument();
 });

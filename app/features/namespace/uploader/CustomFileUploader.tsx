@@ -1,5 +1,11 @@
 import { FolderOpen, RefreshCw } from "lucide-react";
-import { type ChangeEvent, useCallback, useEffect, useState } from "react";
+import {
+  type ChangeEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "~/shared/components/ui/button";
 import {
   type StoredDirectoryHandle,
@@ -16,6 +22,7 @@ type Props = {
   acceptExt?: string[];
   recentPaths?: string[];
   setFiles: (files: File[] | null) => void;
+  autoOpen?: boolean;
 };
 
 // デフォルトのinput要素ではフィルタ前のfiles数が表示されてしまう
@@ -23,7 +30,10 @@ export default function CustomFileUploader({
   acceptExt,
   recentPaths = [],
   setFiles,
+  autoOpen = false,
 }: Props) {
+  const nativePickerRef = useRef<HTMLInputElement>(null);
+  const didAutoOpen = useRef(false);
   const [filteredFileCount, setFilteredFileCount] = useState(0);
   const [directoryName, setDirectoryName] = useState(
     "フォルダを選択してください",
@@ -124,6 +134,13 @@ export default function CustomFileUploader({
     };
   }, [readDirectory, supportsDirectoryHandle]);
 
+  useEffect(() => {
+    if (!autoOpen || didAutoOpen.current) return;
+    didAutoOpen.current = true;
+    const frame = requestAnimationFrame(() => nativePickerRef.current?.click());
+    return () => cancelAnimationFrame(frame);
+  }, [autoOpen]);
+
   async function chooseDirectory() {
     const picker = (window as DirectoryPickerWindow).showDirectoryPicker;
     if (!picker) return;
@@ -190,6 +207,7 @@ export default function CustomFileUploader({
       ) : (
         <div className="relative h-10 w-full overflow-hidden rounded-md border">
           <input
+            ref={nativePickerRef}
             id="directory-upload"
             type="file"
             // @ts-ignore: webkitdirectory is not included in React's input types.
@@ -202,6 +220,19 @@ export default function CustomFileUploader({
             <span className="truncate text-sm">{displayLabel}</span>
           </div>
         </div>
+      )}
+      {supportsDirectoryHandle && (
+        <input
+          ref={nativePickerRef}
+          type="file"
+          // @ts-ignore: webkitdirectory is not included in React's input types.
+          webkitdirectory=""
+          onChange={handleFileChange}
+          accept={acceptExt?.join(",")}
+          className="hidden"
+          tabIndex={-1}
+          aria-hidden="true"
+        />
       )}
       <input
         type="text"

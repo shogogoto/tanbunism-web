@@ -59,7 +59,7 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
             <HotkeyRow keys={["g", "q"]} label="クイズへ移動" />
             <HotkeyRow keys={["h", "l"]} label="前後のタブへ移動" />
             <HotkeyRow keys={["Ctrl", "1–9"]} label="番号のタブへ移動" />
-            <HotkeyRow keys={["/"]} label="検索入力へフォーカス" />
+            <HotkeyRow keys={["/"]} label="ページ内の入力欄へフォーカス" />
             <HotkeyRow keys={["?"]} label="この一覧を開く" />
             <ContextHotkeyRows pathname={pathname} search={search} />
           </dl>
@@ -86,24 +86,11 @@ export function HotkeyHelpButton() {
 
 export default function GlobalHotkeys() {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   const { isAuthenticated, user } = useAuth();
   const { openHistory } = useHistoryPanel();
   const { openHelp } = useHotkeys();
   const waitingForDestination = useRef(false);
   const chordTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const focusSearchAfterNavigation = useRef(false);
-
-  useEffect(() => {
-    if (
-      !focusSearchAfterNavigation.current ||
-      !pathname.startsWith("/search")
-    ) {
-      return;
-    }
-    focusSearchAfterNavigation.current = false;
-    requestAnimationFrame(focusSearchInput);
-  }, [pathname]);
 
   useEffect(() => {
     function resetChord() {
@@ -149,14 +136,8 @@ export default function GlobalHotkeys() {
       }
 
       if (key === "/") {
-        event.preventDefault();
         resetChord();
-        if (pathname.startsWith("/search")) {
-          focusSearchInput();
-        } else {
-          focusSearchAfterNavigation.current = true;
-          navigate("/search");
-        }
+        if (focusPageInput()) event.preventDefault();
         return;
       }
 
@@ -227,7 +208,7 @@ export default function GlobalHotkeys() {
       window.removeEventListener("keydown", handleKeyDown);
       resetChord();
     };
-  }, [isAuthenticated, navigate, openHelp, openHistory, pathname, user]);
+  }, [isAuthenticated, navigate, openHelp, openHistory, user]);
 
   return null;
 }
@@ -398,8 +379,28 @@ function moveActiveItem(offset: -1 | 1, dialog: Element | null): boolean {
   return true;
 }
 
-function focusSearchInput() {
-  document
-    .querySelector<HTMLInputElement>("[data-global-search-input]")
-    ?.focus();
+function focusPageInput(): boolean {
+  const inputs = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]), textarea, [contenteditable="true"]',
+    ),
+  );
+  const input = inputs.find((element) => {
+    const style = window.getComputedStyle(element);
+    return (
+      !element.hasAttribute("disabled") &&
+      !element.closest("[hidden]") &&
+      style.display !== "none" &&
+      style.visibility !== "hidden"
+    );
+  });
+  if (!input) return false;
+  input.focus();
+  if (
+    input instanceof HTMLInputElement ||
+    input instanceof HTMLTextAreaElement
+  ) {
+    input.select();
+  }
+  return true;
 }

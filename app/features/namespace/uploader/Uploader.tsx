@@ -23,6 +23,7 @@ import { fileWithoutTopDirectory } from "./utils";
 
 type Props = {
   refresh?: () => void;
+  autoOpenPicker?: boolean;
 };
 
 function responseDetail(value: unknown): string {
@@ -63,7 +64,7 @@ function mergeResolutions(
   ];
 }
 
-export default function Uploader({ refresh }: Props) {
+export default function Uploader({ refresh, autoOpenPicker = false }: Props) {
   const [files, setFiles] = useState<File[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -290,6 +291,7 @@ export default function Uploader({ refresh }: Props) {
         </div>
       </details>
       <CustomFileUploader
+        autoOpen={autoOpenPicker}
         acceptExt={exts}
         recentPaths={recentPaths}
         setFiles={(selectedFiles) => {

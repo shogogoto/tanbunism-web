@@ -106,6 +106,13 @@ export type BrokenQuizReference = {
   retired_at: string;
 };
 
+export type UnplannedQuiz = {
+  quiz_id: string;
+  quiz_type: QuizType;
+  resource_id: string;
+  resource_name?: string | null;
+};
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
 
@@ -639,6 +646,19 @@ export async function listBrokenQuizReferences(): Promise<
     );
   }
   return (await response.json()) as BrokenQuizReference[];
+}
+
+export async function listUnplannedQuizzes(): Promise<UnplannedQuiz[]> {
+  const response = await fetch(`${API_BASE_URL}/quiz/created/unplanned`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new QuizApiError(
+      "StudyPlan未所属クイズを取得できませんでした。",
+      response.status,
+    );
+  }
+  return (await response.json()) as UnplannedQuiz[];
 }
 
 export async function listResourceSentenceCandidates(

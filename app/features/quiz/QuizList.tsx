@@ -24,6 +24,7 @@ import BrokenQuizManager from "./BrokenQuizManager";
 import QuizPrompt from "./QuizPrompt";
 import ReportedQuizManager from "./ReportedQuizManager";
 import ResourceLearningOverview from "./ResourceLearningOverview";
+import UnplannedQuizManager from "./UnplannedQuizManager";
 import {
   type ManagedQuiz,
   type StudyResource,
@@ -464,6 +465,7 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
         <section className="space-y-3">
           {embedded && !resourceId && <ReportedQuizManager />}
           {embedded && !resourceId && <BrokenQuizManager />}
+          {embedded && !resourceId && <UnplannedQuizManager />}
           {!resourceId && <ResourceLearningOverview />}
           {resourceId && (
             <Button asChild variant="ghost" size="sm">

@@ -23,15 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/shared/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/shared/components/ui/table";
-import { useIsMobile } from "~/shared/hooks/use-mobile";
+import type { StudyPlanDraft } from "~/shared/generated/fastAPI.schemas";
 import StudyPlanForm from "./StudyPlanForm";
 import {
   type QuizType,
@@ -42,7 +34,15 @@ import {
   listStudyPlans,
   listStudyResources,
   prepareAdditionalStudyPlanQuizzes,
+  updateStudyPlan,
 } from "./api";
+
+const allQuizTypes: StudyPlanDraft["quiz_types"] = [
+  "term2sent",
+  "sent2term",
+  "rel2pair",
+  "pair2rel",
+];
 
 const quizTypeLabels: Record<QuizType, string> = {
   term2sent: "用語 → 単文",
@@ -52,14 +52,16 @@ const quizTypeLabels: Record<QuizType, string> = {
 };
 
 export default function StudyPlanManager() {
-  const isMobile = useIsMobile(1024);
   const { refreshNotifications } = useNotifications();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [resources, setResources] = useState<StudyResource[]>([]);
   const [editingPlan, setEditingPlan] = useState<StudyPlan>();
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string>();
+  const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [bulkAction, setBulkAction] = useState<"delete" | "types">();
   const [preparingId, setPreparingId] = useState<string>();
   const [preparedCounts, setPreparedCounts] = useState<Record<string, number>>(
     {},
@@ -123,13 +125,16 @@ export default function StudyPlanManager() {
     );
   }
 
-  async function removePlan(plan: StudyPlan) {
-    setDeletingId(plan.uid);
+  async function removeSelectedPlans() {
+    const selected = new Set(selectedPlanIds);
+    setBulkAction("delete");
     setError(undefined);
     try {
-      await deleteStudyPlan(plan.uid);
-      setPlans((current) => current.filter(({ uid }) => uid !== plan.uid));
-      if (editingPlan?.uid === plan.uid) setEditingPlan(undefined);
+      await Promise.all([...selected].map((planId) => deleteStudyPlan(planId)));
+      setPlans((current) => current.filter(({ uid }) => !selected.has(uid)));
+      setSelectedPlanIds(new Set());
+      if (editingPlan && selected.has(editingPlan.uid))
+        setEditingPlan(undefined);
     } catch (deleteError) {
       setError(
         deleteError instanceof Error
@@ -137,7 +142,39 @@ export default function StudyPlanManager() {
           : "学習計画を削除できませんでした。",
       );
     } finally {
-      setDeletingId(undefined);
+      setBulkAction(undefined);
+    }
+  }
+
+  async function applyAllQuizTypes() {
+    const selected = plans.filter(({ uid }) => selectedPlanIds.has(uid));
+    setBulkAction("types");
+    setError(undefined);
+    try {
+      const updated = await Promise.all(
+        selected.map((plan) =>
+          updateStudyPlan(plan.uid, {
+            name: plan.name,
+            resource_ids: plan.resource_ids,
+            quiz_types: allQuizTypes,
+            n_quiz: Math.max(plan.n_quiz, allQuizTypes.length),
+            n_option: plan.n_option,
+          }),
+        ),
+      );
+      const updatedById = new Map(updated.map((plan) => [plan.uid, plan]));
+      setPlans((current) =>
+        current.map((plan) => updatedById.get(plan.uid) ?? plan),
+      );
+      setSelectedPlanIds(new Set());
+    } catch (updateError) {
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : "クイズ形式を一括変更できませんでした。",
+      );
+    } finally {
+      setBulkAction(undefined);
     }
   }
 
@@ -177,11 +214,9 @@ export default function StudyPlanManager() {
     }
   }
 
-  function planActions(plan: StudyPlan, mobile = false) {
+  function planActions(plan: StudyPlan) {
     return (
-      <div
-        className={`flex items-center gap-1 ${mobile ? "flex-wrap" : "min-w-max justify-end"}`}
-      >
+      <div className="flex flex-wrap items-center gap-1">
         <label className="flex items-center gap-1 text-xs text-muted-foreground">
           <span>追加</span>
           <input
@@ -228,33 +263,6 @@ export default function StudyPlanManager() {
         >
           編集
         </Button>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={deletingId === plan.uid}
-            >
-              削除
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                「{plan.name}」を削除しますか？
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                クイズや回答履歴は削除されません。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction onClick={() => void removePlan(plan)}>
-                削除する
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     );
   }
@@ -334,105 +342,130 @@ export default function StudyPlanManager() {
           学習計画がありません。Resourceとクイズ形式を選び、最初の計画を作成してください。
         </p>
       ) : (
-        <>
-          {isMobile ? (
-            <div className="space-y-2">
-              {plans.map((plan) => (
-                <article
-                  key={plan.uid}
-                  className="space-y-3 rounded-md border p-3"
+        <div className="space-y-3" data-dashboard-swipe-ignore>
+          <div className="flex min-h-9 flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                aria-label="すべてのStudyPlanを選択"
+                checked={
+                  plans.length > 0 && selectedPlanIds.size === plans.length
+                }
+                onChange={(event) =>
+                  setSelectedPlanIds(
+                    event.target.checked
+                      ? new Set(plans.map(({ uid }) => uid))
+                      : new Set(),
+                  )
+                }
+              />
+              すべて選択
+            </label>
+            <span className="text-xs text-muted-foreground">
+              {selectedPlanIds.size}件選択中
+            </span>
+            {selectedPlanIds.size > 0 && (
+              <div className="ml-auto flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={Boolean(bulkAction)}
+                  onClick={() => void applyAllQuizTypes()}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="font-medium">{plan.name}</div>
-                    <div className="shrink-0 text-sm">
-                      <strong className="tabular-nums">
-                        {preparedCounts[plan.uid] ?? 0}
-                      </strong>
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        問準備済み
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {plan.resource_ids.map((resourceId) => (
-                      <Badge key={resourceId} variant="secondary">
-                        {resourceName(resourceId)}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {plan.quiz_types.map((quizType) => (
-                      <Badge key={quizType} variant="outline">
-                        {quizTypeLabels[quizType]}
-                      </Badge>
-                    ))}
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {plan.n_quiz}問・{plan.n_option}択
-                    </span>
-                  </div>
-                  {planActions(plan, true)}
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div
-              data-dashboard-swipe-ignore
-              className="overflow-x-auto rounded-md border"
+                  {bulkAction === "types" ? "変更中…" : "4形式に変更"}
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      disabled={Boolean(bulkAction)}
+                    >
+                      {selectedPlanIds.size}件を削除
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        選択した{selectedPlanIds.size}件を削除しますか？
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        クイズや回答履歴は削除されません。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => void removeSelectedPlans()}
+                      >
+                        {bulkAction === "delete" ? "削除中…" : "削除する"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
+          </div>
+          {plans.map((plan) => (
+            <article
+              key={plan.uid}
+              className="min-w-0 space-y-3 rounded-md border p-3"
             >
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Plan</TableHead>
-                    <TableHead>Resource</TableHead>
-                    <TableHead>クイズ形式</TableHead>
-                    <TableHead>準備済み</TableHead>
-                    <TableHead>1回の問題数</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {plans.map((plan) => (
-                    <TableRow key={plan.uid}>
-                      <TableCell>
-                        <div className="font-medium">{plan.name}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex max-w-56 flex-wrap gap-1">
-                          {plan.resource_ids.map((resourceId) => (
-                            <Badge key={resourceId} variant="secondary">
-                              {resourceName(resourceId)}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex max-w-72 flex-wrap gap-1">
-                          {plan.quiz_types.map((quizType) => (
-                            <Badge key={quizType} variant="outline">
-                              {quizTypeLabels[quizType]}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-base font-semibold tabular-nums">
-                          {preparedCounts[plan.uid] ?? 0}
-                        </span>
-                        <span className="ml-1 text-xs text-muted-foreground">
-                          問
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {plan.n_quiz}問・{plan.n_option}択
-                      </TableCell>
-                      <TableCell>{planActions(plan)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </>
+              <div className="flex min-w-0 items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 shrink-0"
+                  aria-label={`${plan.name}を選択`}
+                  checked={selectedPlanIds.has(plan.uid)}
+                  onChange={(event) =>
+                    setSelectedPlanIds((current) => {
+                      const next = new Set(current);
+                      if (event.target.checked) next.add(plan.uid);
+                      else next.delete(plan.uid);
+                      return next;
+                    })
+                  }
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium" title={plan.name}>
+                    {plan.name}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    <strong className="text-sm tabular-nums text-foreground">
+                      {preparedCounts[plan.uid] ?? 0}
+                    </strong>
+                    問準備済み・1回{plan.n_quiz}問・{plan.n_option}択
+                  </div>
+                </div>
+              </div>
+              <div className="flex min-w-0 flex-wrap gap-1">
+                {plan.resource_ids.map((resourceId) => {
+                  const name = resourceName(resourceId);
+                  return (
+                    <Badge
+                      key={resourceId}
+                      variant="secondary"
+                      className="max-w-56"
+                      title={name}
+                    >
+                      <span className="truncate">{name}</span>
+                    </Badge>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {plan.quiz_types.map((quizType) => (
+                  <Badge key={quizType} variant="outline">
+                    {quizTypeLabels[quizType]}
+                  </Badge>
+                ))}
+              </div>
+              {planActions(plan)}
+            </article>
+          ))}
+        </div>
       )}
       {!isLoading && (
         <div className="flex justify-end">

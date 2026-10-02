@@ -9,7 +9,7 @@ export default function ImportReadingNotes() {
   return (
     <AuthGuard>
       <div className="mx-auto h-[calc(100dvh-3.5rem)] w-full max-w-5xl">
-        <Uploader />
+        <Uploader autoOpenPicker />
       </div>
     </AuthGuard>
   );

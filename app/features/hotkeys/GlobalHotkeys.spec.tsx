@@ -186,19 +186,15 @@ it("ヘルプボタンでショートカット一覧を開く", async () => {
   ).toBeVisible();
 });
 
-it("スラッシュで検索へ移動して入力欄へフォーカスする", async () => {
+it("スラッシュで現在のページの先頭入力欄へフォーカスする", async () => {
   const user = userEvent.setup();
   renderHotkeys();
 
   await user.click(screen.getByRole("button", { name: "入力を終了" }));
   await user.keyboard("/");
 
-  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
-    "/search",
-  );
-  await waitFor(() => {
-    expect(screen.getByRole("textbox", { name: "検索入力" })).toHaveFocus();
-  });
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent("/");
+  expect(screen.getByRole("textbox", { name: "入力欄" })).toHaveFocus();
 });
 
 it("hとlで前後のタブへ移動する", async () => {
