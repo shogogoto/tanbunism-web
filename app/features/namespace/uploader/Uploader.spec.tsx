@@ -155,6 +155,24 @@ describe("Uploader", () => {
     expect(postText.mock.calls[0]?.[0].path).toEqual(["humanities", "memo.tb"]);
   });
 
+  it("import対象をページ本体の通常フローに並べる", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <Uploader />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "2ファイルを選択" }));
+
+    const toolbar = screen.getByRole("region", { name: "import操作" });
+    const list = screen.getByRole("list", { name: "import対象" });
+    expect(toolbar).toHaveClass("sticky");
+    expect(list).not.toHaveClass("overflow-y-auto", "h-full");
+    expect(list).toHaveTextContent("notes/humanities/memo.tb");
+    expect(list).toHaveTextContent("notes/humanities/invalid.tb");
+  });
+
   it("処理中のファイルと全体件数を表示する", async () => {
     let complete:
       | ((result: {

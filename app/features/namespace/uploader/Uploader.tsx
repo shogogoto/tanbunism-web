@@ -275,81 +275,89 @@ export default function Uploader({ refresh, autoOpenPicker = false }: Props) {
   }
 
   return (
-    <div className="flex h-full w-full flex-col gap-4 overflow-hidden p-5 sm:p-6">
-      <div>
-        <h2 className="text-lg font-semibold">読書メモimport</h2>
-        <p className="text-sm text-muted-foreground">
-          解析に成功したファイルは、そのまま取り込みます。競合だけ確認が必要です。
-        </p>
-      </div>
-      <details className="group rounded-md border px-4 py-3 text-sm">
-        <summary className="cursor-pointer select-none font-medium">
-          対象: {exts.join(" / ")}
-        </summary>
-        <div className="pt-3">
-          <AcceptExtensions exts={exts} setExts={setExts} compact />
-        </div>
-      </details>
-      <CustomFileUploader
-        autoOpen={autoOpenPicker}
-        acceptExt={exts}
-        recentPaths={recentPaths}
-        setFiles={(selectedFiles) => {
-          setFiles(selectedFiles);
-          setError(null);
-          setProgress(0);
-          setUploadingIndex(null);
-          setProcessing(null);
-          setPreviews({});
-          setConflictOpenIndex(null);
-          // DBの状態を正とし、ブラウザの過去履歴だけで送信を省略しない。
-          setResults({});
-          setSuccessCount(0);
-        }}
-      />
-      <div className="sticky top-0 z-10 space-y-2 bg-background pb-1">
-        <Button
-          data-page-enter-action
-          onClick={handlePrimaryAction}
-          disabled={isUploading || !files || sendableCount === 0}
-        >
-          {isUploading
-            ? "取り込み中…"
-            : sendableCount > 0
-              ? conflictCount > 0
-                ? `${conflictCount}件の競合を確認してください`
-                : `${sendableCount}件を解析して取り込む`
-              : "送信対象はありません"}
-        </Button>
-        {isUploading && processing && uploadingIndex !== null && (
-          <output
-            className="block space-y-2"
-            aria-live="polite"
-            aria-label={`取り込み中: ${paths[uploadingIndex]}`}
-          >
-            <div className="flex items-baseline justify-between gap-3 text-sm">
-              <p
-                className="min-w-0 truncate font-medium"
-                title={paths[uploadingIndex]}
-              >
-                {paths[uploadingIndex]}
-              </p>
-              <span className="shrink-0 tabular-nums text-muted-foreground">
-                {processing.position} / {processing.total}
-              </span>
-            </div>
-            <Progress value={progress} className="w-full" />
-          </output>
-        )}
-        {files && !isUploading && successCount > 0 && (
-          <p className="text-sm">
-            取り込み済み {successCount} / {files.length}
+    <div className="w-full px-5 pb-5 sm:px-6 sm:pb-6">
+      <section
+        aria-label="import操作"
+        className="sticky top-0 z-10 space-y-4 border-b bg-background py-5 sm:py-6"
+      >
+        <div>
+          <h2 className="text-lg font-semibold">読書メモimport</h2>
+          <p className="text-sm text-muted-foreground">
+            解析に成功したファイルは、そのまま取り込みます。競合だけ確認が必要です。
           </p>
-        )}
-      </div>
-      {files && files.length > 0 && (
-        <div className="min-h-0 flex-1 overflow-hidden rounded-md border">
-          <ul className="h-full overflow-y-auto divide-y text-sm">
+        </div>
+        <details className="group rounded-md border px-4 py-3 text-sm">
+          <summary className="cursor-pointer select-none font-medium">
+            対象: {exts.join(" / ")}
+          </summary>
+          <div className="pt-3">
+            <AcceptExtensions exts={exts} setExts={setExts} compact />
+          </div>
+        </details>
+        <CustomFileUploader
+          autoOpen={autoOpenPicker}
+          acceptExt={exts}
+          recentPaths={recentPaths}
+          setFiles={(selectedFiles) => {
+            setFiles(selectedFiles);
+            setError(null);
+            setProgress(0);
+            setUploadingIndex(null);
+            setProcessing(null);
+            setPreviews({});
+            setConflictOpenIndex(null);
+            // DBの状態を正とし、ブラウザの過去履歴だけで送信を省略しない。
+            setResults({});
+            setSuccessCount(0);
+          }}
+        />
+        <div className="space-y-2">
+          <Button
+            data-page-enter-action
+            onClick={handlePrimaryAction}
+            disabled={isUploading || !files || sendableCount === 0}
+          >
+            {isUploading
+              ? "取り込み中…"
+              : sendableCount > 0
+                ? conflictCount > 0
+                  ? `${conflictCount}件の競合を確認してください`
+                  : `${sendableCount}件を解析して取り込む`
+                : "送信対象はありません"}
+          </Button>
+          {isUploading && processing && uploadingIndex !== null && (
+            <output
+              className="block space-y-2"
+              aria-live="polite"
+              aria-label={`取り込み中: ${paths[uploadingIndex]}`}
+            >
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <p
+                  className="min-w-0 truncate font-medium"
+                  title={paths[uploadingIndex]}
+                >
+                  {paths[uploadingIndex]}
+                </p>
+                <span className="shrink-0 tabular-nums text-muted-foreground">
+                  {processing.position} / {processing.total}
+                </span>
+              </div>
+              <Progress value={progress} className="w-full" />
+            </output>
+          )}
+          {files && !isUploading && successCount > 0 && (
+            <p className="text-sm">
+              取り込み済み {successCount} / {files.length}
+            </p>
+          )}
+        </div>
+      </section>
+      <div className="space-y-4 pt-4">
+        {files && files.length > 0 && (
+          <ul
+            aria-label="import対象"
+            className="divide-y rounded-md border text-sm"
+          >
             {files.map((file, index) => (
               <li key={`${file.name}-${index}`}>
                 <ImportPreviewRow
@@ -361,33 +369,33 @@ export default function Uploader({ refresh, autoOpenPicker = false }: Props) {
               </li>
             ))}
           </ul>
-        </div>
-      )}
-      {files &&
-        !isUploading &&
-        Object.values(results).some((result) => !result.ok) && (
-          <div className="space-y-2 rounded-md border border-destructive/40 p-3 text-sm">
-            <p className="font-medium">失敗したファイルがあります</p>
-            <p>
-              ファイルパスを確認し、内容を修正したファイルを同じ場所から選び直してください。通信エラーだけは再送できます。
-            </p>
-            {Object.values(results).some((result) => result.retryable) && (
-              <Button variant="outline" onClick={retryFailed}>
-                通信エラーのファイルだけ再送
-              </Button>
-            )}
-          </div>
         )}
-      {history.some((record) => !record.ok) && !files && (
-        <p className="text-sm text-muted-foreground">
-          前回失敗したパス（フォルダを選び直すと再送できます）:{" "}
-          {history
-            .filter((record) => !record.ok)
-            .map((record) => record.path)
-            .join(", ")}
-        </p>
-      )}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+        {files &&
+          !isUploading &&
+          Object.values(results).some((result) => !result.ok) && (
+            <div className="space-y-2 rounded-md border border-destructive/40 p-3 text-sm">
+              <p className="font-medium">失敗したファイルがあります</p>
+              <p>
+                ファイルパスを確認し、内容を修正したファイルを同じ場所から選び直してください。通信エラーだけは再送できます。
+              </p>
+              {Object.values(results).some((result) => result.retryable) && (
+                <Button variant="outline" onClick={retryFailed}>
+                  通信エラーのファイルだけ再送
+                </Button>
+              )}
+            </div>
+          )}
+        {history.some((record) => !record.ok) && !files && (
+          <p className="text-sm text-muted-foreground">
+            前回失敗したパス（フォルダを選び直すと再送できます）:{" "}
+            {history
+              .filter((record) => !record.ok)
+              .map((record) => record.path)
+              .join(", ")}
+          </p>
+        )}
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
       {conflictOpenIndex !== null && activeConflict?.status === "conflict" && (
         <IdentityConflictDialog
           key={JSON.stringify(activeConflict.conflict.conflicts)}
