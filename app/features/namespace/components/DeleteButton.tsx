@@ -2,6 +2,7 @@ import { Trash2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { invalidateQuizCache } from "~/features/quiz/cache";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +37,7 @@ export default function EntryDeleteButton({ entryId, name, refresh }: Props) {
   async function handleConfirmDelete() {
     const result = await trigger();
     if (result && result.status >= 200 && result.status < 300) {
+      await invalidateQuizCache("study-resources");
       setOpen(false);
       refresh?.();
       toast.success(`"${name}"の削除に成功しました.`);

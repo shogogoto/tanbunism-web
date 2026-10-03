@@ -1,3 +1,4 @@
+import { invalidateQuizCache } from "~/features/quiz/cache";
 import {
   getPostTextResourceTextPostUrl,
   type postTextResourceTextPostResponse,
@@ -32,9 +33,11 @@ export async function saveResourceText(
       };
     }
   }
-  return {
+  const result = {
     data,
     status: response.status,
     headers: response.headers,
   } as postTextResourceTextPostResponse;
+  if (response.ok) await invalidateQuizCache("study-resources");
+  return result;
 }

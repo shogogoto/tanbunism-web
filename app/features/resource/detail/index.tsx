@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import useSWR from "swr";
 import {
   type SentenceQuizStatus,
   listCreatedQuizSentences,
 } from "~/features/quiz/api";
+import { useQuizSWR } from "~/features/quiz/useQuizSWR";
 import EntryBreadcrumb from "~/features/resource/EntryBreadcrumb";
 import Loading from "~/shared/components/Loading";
 import { buttonVariants } from "~/shared/components/ui/button";
@@ -33,11 +33,11 @@ export default function ResourceDetail({ id }: Props) {
     swr: {},
   });
 
-  const { data: quizStatuses = [], mutate: mutateQuizStatuses } = useSWR<
+  const { data: quizStatuses = [], mutate: mutateQuizStatuses } = useQuizSWR<
     SentenceQuizStatus[]
   >(
     ["resource-quiz-sentence-statuses", id],
-    () => listCreatedQuizSentences(id, { waitForRefresh: true }),
+    (cacheOptions) => listCreatedQuizSentences(id, cacheOptions),
     {},
   );
   const sentenceQuizStatuses = useMemo<ReadonlyMap<string, SentenceQuizStatus>>(

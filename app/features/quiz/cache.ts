@@ -9,6 +9,7 @@ type QuizCacheArea =
   | "created-sentences"
   | "learning-progress"
   | "quiz-chain"
+  | "study-resources"
   | "study-plans";
 
 type QuizCachePolicy = {
@@ -49,6 +50,10 @@ function currentUserId(): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+export function hasQuizCacheIdentity(): boolean {
+  return currentUserId() !== undefined;
 }
 
 function stableValue(value: unknown): unknown {

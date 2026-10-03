@@ -37,6 +37,7 @@ import {
   searchCreatedQuizzes,
 } from "./api";
 import { type QuizFilters, toQuizSearchParams } from "./quizFilters";
+import { useQuizSWR } from "./useQuizSWR";
 
 type ResourceStatus = {
   resource: StudyResource;
@@ -116,11 +117,11 @@ function ResourceDisclosure({
   const [open, setOpen] = useState(false);
   const total = status?.total_quizzes ?? 0;
   const searchParams = toQuizSearchParams(filters);
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading } = useQuizSWR(
     open && total > 0
       ? ["quiz-management-resource", resource.uid, searchParams]
       : null,
-    () =>
+    (cacheOptions) =>
       searchCreatedQuizzes(
         {
           resource_id: resource.uid,
@@ -128,7 +129,7 @@ function ResourceDisclosure({
           page: 1,
           size: 100,
         },
-        { waitForRefresh: true },
+        cacheOptions,
       ),
     {
       dedupingInterval: 30_000,
@@ -206,19 +207,19 @@ export default function ResourceLearningOverview({
 }: {
   filters: QuizFilters;
 }) {
-  const { data: items, error } = useSWR<ResourceStatus[]>(
+  const { data: items, error } = useQuizSWR<ResourceStatus[]>(
     "quiz-management-resource-overview",
-    async () => {
+    async (cacheOptions) => {
       const [resources, quizStatuses] = await Promise.all([
-        listStudyResources(),
-        listCreatedQuizResources({ waitForRefresh: true }),
+        listStudyResources(cacheOptions),
+        listCreatedQuizResources(cacheOptions),
       ]);
       const quizByResource = new Map(
         quizStatuses.map((status) => [status.resource.uid, status]),
       );
       const learning = await Promise.all(
         resources.map((resource) =>
-          getLearningProgress(resource.uid, { waitForRefresh: true }),
+          getLearningProgress(resource.uid, cacheOptions),
         ),
       );
       return resources.map((resource, index) => ({

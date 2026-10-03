@@ -1,7 +1,6 @@
 import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import useSWR from "swr";
 import Loading from "~/shared/components/Loading";
 import {
   AlertDialog,
@@ -41,6 +40,7 @@ import {
   emptyQuizFilters,
   toQuizSearchParams,
 } from "./quizFilters";
+import { useQuizSWR } from "./useQuizSWR";
 
 type LoadState =
   | { status: "loading" }
@@ -370,11 +370,11 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
   useEffect(() => {
     setSelectedQuizIds(new Set());
   }, [resourceId, sentenceId, appliedFilters]);
-  const { data, error, mutate } = useSWR<LoadedState>(
+  const { data, error, mutate } = useQuizSWR<LoadedState>(
     ["quiz-management", resourceId, sentenceId, appliedFilters],
-    async () => {
+    async (cacheOptions) => {
       const [resources, result] = await Promise.all([
-        listStudyResources(),
+        listStudyResources(cacheOptions),
         searchCreatedQuizzes(
           {
             resource_id: resourceId,
@@ -383,7 +383,7 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
             page: 1,
             size: 100,
           },
-          { waitForRefresh: true },
+          cacheOptions,
         ),
       ]);
       return {

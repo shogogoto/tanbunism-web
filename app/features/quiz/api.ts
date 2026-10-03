@@ -115,7 +115,7 @@ export type UnplannedQuiz = {
   resource_name?: string | null;
 };
 
-type QuizCacheOptions = {
+export type QuizCacheOptions = {
   waitForRefresh?: boolean;
 };
 
@@ -230,30 +230,40 @@ export async function getQuizChain(quizId: string): Promise<QuizChain> {
   );
 }
 
-export async function listStudyResources(): Promise<StudyResource[]> {
-  const response = await getNamaspaceNamespaceGet({
-    credentials: "include",
-  });
-  const normalizeUuid = (value: string) => value.replaceAll("-", "");
-  const resourceIds = new Set(
-    Object.keys(response.data.stats ?? {}).map(normalizeUuid),
-  );
+export async function listStudyResources(
+  options: QuizCacheOptions = {},
+): Promise<StudyResource[]> {
+  return withQuizCache(
+    "study-resources",
+    {},
+    quizCachePolicy.normal,
+    async () => {
+      const response = await getNamaspaceNamespaceGet({
+        credentials: "include",
+      });
+      const normalizeUuid = (value: string) => value.replaceAll("-", "");
+      const resourceIds = new Set(
+        Object.keys(response.data.stats ?? {}).map(normalizeUuid),
+      );
 
-  return (response.data.g?.nodes ?? []).flatMap((node) => {
-    const entry = node.id as unknown;
-    if (
-      typeof entry !== "object" ||
-      entry === null ||
-      !("uid" in entry) ||
-      !("name" in entry) ||
-      typeof entry.uid !== "string" ||
-      typeof entry.name !== "string" ||
-      !resourceIds.has(normalizeUuid(entry.uid))
-    ) {
-      return [];
-    }
-    return [{ uid: entry.uid, name: entry.name }];
-  });
+      return (response.data.g?.nodes ?? []).flatMap((node) => {
+        const entry = node.id as unknown;
+        if (
+          typeof entry !== "object" ||
+          entry === null ||
+          !("uid" in entry) ||
+          !("name" in entry) ||
+          typeof entry.uid !== "string" ||
+          typeof entry.name !== "string" ||
+          !resourceIds.has(normalizeUuid(entry.uid))
+        ) {
+          return [];
+        }
+        return [{ uid: entry.uid, name: entry.name }];
+      });
+    },
+    options,
+  );
 }
 
 export async function createStudyPlan(
