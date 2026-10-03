@@ -88,36 +88,40 @@ function QuizSearchFilters({
 
   return (
     <Card className="gap-0 py-0">
-      <button
-        type="button"
-        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/40"
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-      >
-        <SlidersHorizontal className="size-4 text-muted-foreground" />
-        <span className="text-sm font-medium">クイズを絞り込む</span>
-        {activeCount > 0 && <Badge variant="secondary">{activeCount}</Badge>}
-        <ChevronDown
-          className={`ml-auto size-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
+      <div className="flex items-center gap-2 px-3 py-2">
+        <button
+          type="button"
+          className="flex shrink-0 items-center gap-2 rounded-sm py-1 text-left hover:text-foreground"
+          aria-label="クイズを絞り込む"
+          aria-expanded={open}
+          onClick={() => setOpen((current) => !current)}
+        >
+          <SlidersHorizontal className="size-4 text-muted-foreground" />
+          <span className="text-sm font-medium">
+            <span className="hidden sm:inline">クイズを</span>絞り込む
+          </span>
+          {activeCount > 0 && <Badge variant="secondary">{activeCount}</Badge>}
+          <ChevronDown
+            className={`size-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+        <label className="relative ml-auto min-w-0 flex-1 sm:max-w-sm">
+          <span className="sr-only">検索文字列</span>
+          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="search"
+            data-page-input-priority
+            className="h-9 w-full rounded-md border bg-background pr-3 pl-9"
+            value={filters.query}
+            placeholder="問題文・選択肢を検索"
+            onChange={(event) =>
+              onChange({ ...filters, query: event.target.value })
+            }
+          />
+        </label>
+      </div>
       {open && (
         <CardContent className="space-y-4 border-t px-4 py-4 text-sm sm:px-6">
-          <label className="grid gap-1">
-            検索文字列
-            <span className="relative">
-              <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="search"
-                className="h-9 w-full border bg-background pr-3 pl-9"
-                value={filters.query}
-                placeholder="問題文・選択肢を検索"
-                onChange={(event) =>
-                  onChange({ ...filters, query: event.target.value })
-                }
-              />
-            </span>
-          </label>
           <fieldset className="flex flex-wrap gap-3">
             <legend className="mb-2 font-medium">QuizType</legend>
             {Object.entries(quizTypeLabels).map(([type, label]) => (

@@ -217,8 +217,13 @@ it("Resourceを指定した画面ではクイズを絞り込める", async () =>
   renderQuizList("/quiz/list?resource=resource-1");
 
   expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "クイズを絞り込む" }));
-  await user.type(screen.getByLabelText("検索文字列"), "可換");
+  const toggle = screen.getByRole("button", { name: "クイズを絞り込む" });
+  const search = screen.getByLabelText("検索文字列");
+  expect(search).toBeVisible();
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await user.type(search, "可換");
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await user.click(toggle);
   await user.selectOptions(screen.getByLabelText("回答状態"), "true");
   await user.click(screen.getByRole("checkbox", { name: "用語→単文" }));
   await waitFor(() => {
