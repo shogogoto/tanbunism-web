@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR, { type Key, type SWRConfiguration, type SWRResponse } from "swr";
 
 export function createCacheKey<TParams extends object>(
@@ -13,6 +13,8 @@ export function usePersistentFallback<TData>(
   cacheKey: string,
   getCache: (key: string) => Promise<TData | undefined>,
 ) {
+  const getCacheRef = useRef(getCache);
+  getCacheRef.current = getCache;
   const [cached, setCached] = useState<{
     key: string;
     data: TData;
@@ -21,7 +23,7 @@ export function usePersistentFallback<TData>(
   useEffect(() => {
     let isMounted = true;
     async function loadCache() {
-      const cachedData = await getCache(cacheKey);
+      const cachedData = await getCacheRef.current(cacheKey);
       if (isMounted && cachedData) {
         setCached({ key: cacheKey, data: cachedData });
       }
@@ -31,7 +33,7 @@ export function usePersistentFallback<TData>(
     return () => {
       isMounted = false;
     };
-  }, [cacheKey, getCache]);
+  }, [cacheKey]);
 
   return cached?.key === cacheKey ? cached.data : undefined;
 }
@@ -67,11 +69,15 @@ export function usePersistentSWR<TData, TError = Error>(
   { cacheKey, getCache, setCache, swr }: PersistentSWROptions<TData, TError>,
 ): SWRResponse<TData, TError> {
   const persisted = usePersistentFallback(cacheKey, getCache);
+  const fetcherRef = useRef(fetcher);
+  const setCacheRef = useRef(setCache);
+  fetcherRef.current = fetcher;
+  setCacheRef.current = setCache;
   const fetchAndPersist = useCallback(async () => {
-    const fresh = await fetcher();
-    void setCache(cacheKey, fresh).catch(() => undefined);
+    const fresh = await fetcherRef.current();
+    void setCacheRef.current(cacheKey, fresh).catch(() => undefined);
     return fresh;
-  }, [cacheKey, fetcher, setCache]);
+  }, [cacheKey]);
   const response = useSWR<TData, TError>(key, fetchAndPersist, swr);
   const data = response.data ?? persisted;
 

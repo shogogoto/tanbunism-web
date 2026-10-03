@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
 import QuizPrompt from "~/features/quiz/QuizPrompt";
 import {
@@ -7,6 +7,7 @@ import {
   type QuizType,
   searchCreatedQuizzes,
 } from "~/features/quiz/api";
+import { useQuizSWR } from "~/features/quiz/useQuizSWR";
 import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
 import { Card, CardContent } from "~/shared/components/ui/card";
@@ -18,64 +19,58 @@ import {
 import { cn } from "~/shared/lib/utils";
 
 export default function QuizTimeline() {
-  const [quizzes, setQuizzes] = useState<ManagedQuiz[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>();
   const [sessionResults, setSessionResults] = useState<Record<string, boolean>>(
     {},
   );
-
-  useEffect(() => {
-    let active = true;
-    const quizTypes: QuizType[] = [
-      "term2sent",
-      "sent2term",
-      "rel2pair",
-      "pair2rel",
-    ];
-    Promise.allSettled(
-      quizTypes.map((quizType) =>
-        searchCreatedQuizzes({
-          quiz_types: [quizType],
-          page: 1,
-          size: 20,
-        }),
-      ),
-    )
-      .then((results) => {
-        if (!active) return;
-        const loaded = results.flatMap((result) =>
-          result.status === "fulfilled" ? result.value.data : [],
-        );
-        const unique = new Map(loaded.map((item) => [item.quiz.quiz_id, item]));
-        setQuizzes([...unique.values()]);
-        if (results.every((result) => result.status === "rejected")) {
-          const reason = results[0]?.reason;
-          throw reason instanceof Error
-            ? reason
-            : new Error("クイズTLを取得できませんでした。");
-        }
-      })
-      .catch((reason) => {
-        if (active) {
-          setError(
-            reason instanceof Error
-              ? reason.message
-              : "クイズTLを取得できませんでした。",
-          );
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const {
+    data: quizzes = [],
+    error,
+    isLoading,
+  } = useQuizSWR<ManagedQuiz[]>(
+    "dashboard-quiz-timeline",
+    async (cacheOptions) => {
+      const quizTypes: QuizType[] = [
+        "term2sent",
+        "sent2term",
+        "rel2pair",
+        "pair2rel",
+      ];
+      const results = await Promise.allSettled(
+        quizTypes.map((quizType) =>
+          searchCreatedQuizzes(
+            {
+              quiz_types: [quizType],
+              page: 1,
+              size: 20,
+            },
+            cacheOptions,
+          ),
+        ),
+      );
+      const loaded = results.flatMap((result) =>
+        result.status === "fulfilled" ? result.value.data : [],
+      );
+      if (results.every((result) => result.status === "rejected")) {
+        const reason = results[0]?.reason;
+        throw reason instanceof Error
+          ? reason
+          : new Error("クイズTLを取得できませんでした。");
+      }
+      return [
+        ...new Map(loaded.map((item) => [item.quiz.quiz_id, item])).values(),
+      ];
+    },
+    {
+      dedupingInterval: 30_000,
+      keepPreviousData: true,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+    },
+  );
 
   const sorted = useMemo(() => mixQuizTimeline(quizzes, 20), [quizzes]);
 
-  if (loading) {
+  if (isLoading) {
     return <Loading />;
   }
 
@@ -86,7 +81,9 @@ export default function QuizTimeline() {
           role="alert"
           className="border border-destructive/50 p-2 text-sm text-destructive"
         >
-          {error}
+          {error instanceof Error
+            ? error.message
+            : "クイズTLを取得できませんでした。"}
         </p>
       )}
       {sorted.length === 0 && !error && (

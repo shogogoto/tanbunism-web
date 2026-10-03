@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
+import { SWRConfig } from "swr";
 import { expect, it, vi } from "vitest";
 import { answerQuiz, searchCreatedQuizzes } from "~/features/quiz/api";
 import QuizTimeline from "./QuizTimeline";
@@ -9,6 +10,16 @@ vi.mock("~/features/quiz/api", () => ({
   answerQuiz: vi.fn(),
   searchCreatedQuizzes: vi.fn(),
 }));
+
+function renderTimeline() {
+  return render(
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <MemoryRouter>
+        <QuizTimeline />
+      </MemoryRouter>
+    </SWRConfig>,
+  );
+}
 
 it("未回答のクイズを回答済みのクイズより先に表示する", async () => {
   vi.mocked(searchCreatedQuizzes).mockResolvedValue({
@@ -55,11 +66,7 @@ it("未回答のクイズを回答済みのクイズより先に表示する", a
     ],
   });
 
-  render(
-    <MemoryRouter>
-      <QuizTimeline />
-    </MemoryRouter>,
-  );
+  renderTimeline();
 
   const unanswered = await screen.findByText("未回答の問題");
   const answered = screen.getByText("回答済みの問題");
@@ -125,11 +132,7 @@ it("クイズTL上で回答して結果を確認できる", async () => {
   });
   const user = userEvent.setup();
 
-  render(
-    <MemoryRouter>
-      <QuizTimeline />
-    </MemoryRouter>,
-  );
+  renderTimeline();
   expect(
     screen.queryByRole("button", { name: "正しい選択肢" }),
   ).not.toBeInTheDocument();
@@ -180,11 +183,7 @@ it("一部のクイズ形式が壊れていても取得できた形式を表示�
     };
   });
 
-  render(
-    <MemoryRouter>
-      <QuizTimeline />
-    </MemoryRouter>,
-  );
+  renderTimeline();
 
   expect(await screen.findByText("Aの文")).toBeVisible();
   expect(screen.queryByRole("alert")).toBeNull();

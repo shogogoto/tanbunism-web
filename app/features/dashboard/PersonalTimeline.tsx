@@ -1,11 +1,13 @@
 import { Eye } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router";
 import KnowledgeCard, {
   KnowledgeScore,
 } from "~/features/tanbun/components/KnowledgeCard";
 import Loading from "~/shared/components/Loading";
 import { Button } from "~/shared/components/ui/button";
+import { usePersistentSWR } from "~/shared/hooks/swr/useCache";
+import { genericCache } from "~/shared/lib/indexed";
 import {
   type PersonalTanbunItem,
   getTodayTanbunExposureCount,
@@ -13,46 +15,72 @@ import {
   markTanbunSeen,
 } from "./api";
 
+type PersonalTimelineData = {
+  items: PersonalTanbunItem[];
+  seenTodayCount: number;
+};
+
+export const PERSONAL_TIMELINE_CACHE_KEY =
+  "private:dashboard:personal-timeline";
+const PERSONAL_TIMELINE_CACHE_TTL = 24 * 60 * 60_000;
+
 export default function PersonalTimeline() {
-  const [items, setItems] = useState<PersonalTanbunItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>();
-  const [seenTodayCount, setSeenTodayCount] = useState(0);
+  const {
+    data,
+    error: loadError,
+    isLoading,
+    mutate,
+  } = usePersistentSWR<PersonalTimelineData>(
+    "dashboard-personal-timeline",
+    async () => {
+      const [items, today] = await Promise.all([
+        listPersonalTanbuns(),
+        getTodayTanbunExposureCount(),
+      ]);
+      return { items, seenTodayCount: today.count };
+    },
+    {
+      cacheKey: PERSONAL_TIMELINE_CACHE_KEY,
+      getCache: async (key) =>
+        (await genericCache.get(key)) as PersonalTimelineData | undefined,
+      setCache: (key, fresh) =>
+        genericCache.set(key, fresh, PERSONAL_TIMELINE_CACHE_TTL),
+      swr: {
+        dedupingInterval: 30_000,
+        keepPreviousData: true,
+        revalidateOnFocus: true,
+        revalidateOnReconnect: true,
+      },
+    },
+  );
+  const items = data?.items ?? [];
+  const seenTodayCount = data?.seenTodayCount ?? 0;
+  const [actionError, setActionError] = useState<string>();
   const pendingExposureIds = useRef(new Set<string>());
 
-  useEffect(() => {
-    let active = true;
-    Promise.all([listPersonalTanbuns(), getTodayTanbunExposureCount()])
-      .then(([loaded, today]) => {
-        if (active) {
-          setItems(loaded);
-          setSeenTodayCount(today.count);
-        }
-      })
-      .catch((reason) => {
-        if (active) {
-          setError(
-            reason instanceof Error
-              ? reason.message
-              : "TLを取得できませんでした。",
-          );
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  function updateTimeline(
+    update: (current: PersonalTimelineData) => PersonalTimelineData,
+  ) {
+    void mutate(
+      (current) => {
+        if (!current) return current;
+        const next = update(current);
+        void genericCache
+          .set(PERSONAL_TIMELINE_CACHE_KEY, next, PERSONAL_TIMELINE_CACHE_TTL)
+          .catch(() => undefined);
+        return next;
+      },
+      { revalidate: false },
+    );
+  }
 
   async function markSeen(item: PersonalTanbunItem) {
     if (item.seen_today || pendingExposureIds.current.has(item.uid)) return;
     pendingExposureIds.current.add(item.uid);
-    setError(undefined);
-    setSeenTodayCount((current) => current + 1);
-    setItems((current) =>
-      current.map((candidate) =>
+    setActionError(undefined);
+    updateTimeline((current) => ({
+      seenTodayCount: current.seenTodayCount + 1,
+      items: current.items.map((candidate) =>
         candidate.uid === item.uid
           ? {
               ...candidate,
@@ -61,11 +89,13 @@ export default function PersonalTimeline() {
             }
           : candidate,
       ),
-    );
+    }));
     try {
       const result = await markTanbunSeen(item.uid);
-      setItems((current) =>
-        current.map((candidate) =>
+      const today = await getTodayTanbunExposureCount().catch(() => undefined);
+      updateTimeline((current) => ({
+        seenTodayCount: today?.count ?? current.seenTodayCount,
+        items: current.items.map((candidate) =>
           candidate.uid === item.uid
             ? {
                 ...candidate,
@@ -74,12 +104,11 @@ export default function PersonalTimeline() {
               }
             : candidate,
         ),
-      );
-      const today = await getTodayTanbunExposureCount().catch(() => undefined);
-      if (today) setSeenTodayCount(today.count);
+      }));
     } catch (reason) {
-      setItems((current) =>
-        current.map((candidate) =>
+      updateTimeline((current) => ({
+        seenTodayCount: Math.max(0, current.seenTodayCount - 1),
+        items: current.items.map((candidate) =>
           candidate.uid === item.uid
             ? {
                 ...candidate,
@@ -88,9 +117,8 @@ export default function PersonalTimeline() {
               }
             : candidate,
         ),
-      );
-      setSeenTodayCount((current) => Math.max(0, current - 1));
-      setError(
+      }));
+      setActionError(
         reason instanceof Error
           ? reason.message
           : "閲覧を記録できませんでした。",
@@ -100,9 +128,17 @@ export default function PersonalTimeline() {
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return <Loading />;
   }
+
+  const error =
+    actionError ??
+    (loadError instanceof Error
+      ? loadError.message
+      : loadError
+        ? "TLを取得できませんでした。"
+        : undefined);
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-2">

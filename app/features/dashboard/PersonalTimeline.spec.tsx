@@ -1,7 +1,12 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { MemoryRouter, useLocation } from "react-router";
-import { expect, it, vi } from "vitest";
-import PersonalTimeline from "./PersonalTimeline";
+import { SWRConfig } from "swr";
+import { beforeEach, expect, it, vi } from "vitest";
+import { genericCache } from "~/shared/lib/indexed";
+import PersonalTimeline, {
+  PERSONAL_TIMELINE_CACHE_KEY,
+} from "./PersonalTimeline";
 import {
   getTodayTanbunExposureCount,
   listPersonalTanbuns,
@@ -18,6 +23,21 @@ vi.mock("./api", () => ({
   getTodayTanbunExposureCount: vi.fn(),
   markTanbunSeen: vi.fn(),
 }));
+
+beforeEach(async () => {
+  await genericCache.clear();
+});
+
+function renderTimeline(children?: ReactNode) {
+  return render(
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <MemoryRouter>
+        <PersonalTimeline />
+        {children}
+      </MemoryRouter>
+    </SWRConfig>,
+  );
+}
 
 it("単文を見た日を一日一回だけ記録する", async () => {
   const item = {
@@ -44,12 +64,7 @@ it("単文を見た日を一日一回だけ記録する", async () => {
         completeRequest = resolve;
       }),
   );
-  render(
-    <MemoryRouter>
-      <PersonalTimeline />
-      <Location />
-    </MemoryRouter>,
-  );
+  renderTimeline(<Location />);
 
   await screen.findByRole("button", {
     name: "今日見たことを記録、累計2日",
@@ -120,11 +135,7 @@ it("記録に失敗したら表示を元に戻す", async () => {
         failRequest = reject;
       }),
   );
-  render(
-    <MemoryRouter>
-      <PersonalTimeline />
-    </MemoryRouter>,
-  );
+  renderTimeline();
 
   const button = await screen.findByRole("button", {
     name: "今日見たことを記録、累計2日",
@@ -145,4 +156,34 @@ it("記録に失敗したら表示を元に戻す", async () => {
   ).toBeEnabled();
   expect(screen.getByText("0件")).toBeVisible();
   expect(screen.getByRole("alert")).toHaveTextContent("記録に失敗しました");
+});
+
+it("更新中も永続cacheのTLを表示する", async () => {
+  await genericCache.set(PERSONAL_TIMELINE_CACHE_KEY, {
+    items: [
+      {
+        uid: "cached-sentence",
+        sentence: "キャッシュされた単文",
+        term_names: [],
+        resource_uid: "resource-1",
+        resource_name: "読書メモ",
+        updated_at: null,
+        exposure_count: 1,
+        seen_today: false,
+      },
+    ],
+    seenTodayCount: 3,
+  });
+  vi.mocked(listPersonalTanbuns).mockImplementation(
+    () => new Promise(() => undefined),
+  );
+  vi.mocked(getTodayTanbunExposureCount).mockImplementation(
+    () => new Promise(() => undefined),
+  );
+
+  renderTimeline();
+
+  expect(await screen.findByText("キャッシュされた単文")).toBeVisible();
+  expect(screen.getByText("3件")).toBeVisible();
+  expect(screen.queryByLabelText("読み込み中")).toBeNull();
 });
