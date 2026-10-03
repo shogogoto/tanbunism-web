@@ -219,6 +219,7 @@ it("Resourceを指定した画面ではクイズを絞り込める", async () =>
   expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
   const toggle = screen.getByRole("button", { name: "クイズを絞り込む" });
   const search = screen.getByLabelText("検索文字列");
+  expect(toggle.closest("[data-slot=card]")).toHaveClass("sticky", "top-0");
   expect(search).toBeVisible();
   expect(toggle).toHaveAttribute("aria-expanded", "false");
   await user.type(search, "可換");

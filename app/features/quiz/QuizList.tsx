@@ -88,7 +88,7 @@ function QuizSearchFilters({
   }
 
   return (
-    <Card className="gap-0 py-0">
+    <Card className="sticky top-0 z-30 gap-0 bg-background/95 py-0 shadow-sm backdrop-blur">
       <div className="flex items-center gap-2 px-3 py-2">
         <button
           type="button"

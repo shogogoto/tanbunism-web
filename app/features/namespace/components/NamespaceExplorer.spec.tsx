@@ -152,10 +152,11 @@ describe("NamespaceExplorer", () => {
     const user = userEvent.setup();
     renderExplorer();
 
-    await user.type(
-      screen.getByRole("textbox", { name: "読書メモを絞り込む" }),
-      "アリストテレス",
-    );
+    const search = screen.getByRole("textbox", {
+      name: "読書メモを絞り込む",
+    });
+    expect(search.parentElement).toHaveClass("sticky", "top-0");
+    await user.type(search, "アリストテレス");
 
     expect(screen.getByText("ニコマコス倫理学")).toBeInTheDocument();
     expect(screen.queryByText("国家")).not.toBeInTheDocument();

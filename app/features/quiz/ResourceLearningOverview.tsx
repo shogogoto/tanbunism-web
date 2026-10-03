@@ -287,7 +287,7 @@ export default function ResourceLearningOverview({
           </Dialog>
         )}
       </div>
-      <div className="sticky top-0 z-20 grid grid-cols-[minmax(0,1fr)_repeat(3,3.5rem)] items-center border-b bg-background/95 px-3 py-2 backdrop-blur sm:grid-cols-[minmax(0,1fr)_repeat(3,5rem)]">
+      <div className="sticky top-14 z-20 grid grid-cols-[minmax(0,1fr)_repeat(3,3.5rem)] items-center border-b bg-background/95 px-3 py-2 backdrop-blur sm:grid-cols-[minmax(0,1fr)_repeat(3,5rem)]">
         <span className="text-xs font-medium text-muted-foreground">
           Resource
         </span>

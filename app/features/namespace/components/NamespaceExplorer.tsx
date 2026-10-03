@@ -49,7 +49,7 @@ export default function NamespaceExplorer({ updater, nsprops }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="relative">
+      <div className="sticky top-0 z-30 bg-background pb-2">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           data-page-input-priority

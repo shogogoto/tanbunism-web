@@ -171,6 +171,12 @@ describe("統合検索", () => {
       "data-[hotkey-active=true]:outline-foreground",
     );
     expect(requestedTypes).toEqual(["knowledge", "resource", "user"]);
+
+    await ui.click(screen.getByRole("tab", { name: "知識" }));
+    const returnedKnowledge = await screen.findByRole("link", {
+      name: /数学の知識/,
+    });
+    await waitFor(() => expect(returnedKnowledge).toHaveFocus());
   });
 
   it("対象ごとの詳細条件を検索APIへ反映する", async () => {

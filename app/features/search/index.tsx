@@ -79,8 +79,16 @@ export default function UnifiedSearch() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const previousSearchRef = useRef("");
+  const focusedTypeRef = useRef(enabledKey);
+  const shouldFocusResultsRef = useRef(true);
 
   const searchKey = `${queryParam}:${enabledKey}:${settingsKey}`;
+
+  useEffect(() => {
+    if (focusedTypeRef.current === enabledKey) return;
+    focusedTypeRef.current = enabledKey;
+    shouldFocusResultsRef.current = true;
+  }, [enabledKey]);
 
   useEffect(() => {
     const reset = previousSearchRef.current !== searchKey;
@@ -181,22 +189,19 @@ export default function UnifiedSearch() {
     const items = Array.from(
       results.querySelectorAll<HTMLElement>("[data-hotkey-item]"),
     );
-    if (
-      items.length === 0 ||
-      items.some((item) => item.dataset.hotkeyActive === "true")
-    ) {
-      return;
-    }
-    const first = items[0];
-    if (!first) return;
-    first.dataset.hotkeyActive = "true";
+    const current =
+      items.find((item) => item.dataset.hotkeyActive === "true") ?? items[0];
+    if (!current) return;
+    current.dataset.hotkeyActive = "true";
+    if (!shouldFocusResultsRef.current) return;
     const active = document.activeElement;
     if (
       !(active instanceof HTMLElement) ||
       !active.matches("input, textarea, select, [contenteditable=true]")
     ) {
-      first.focus({ preventScroll: true });
+      current.focus({ preventScroll: true });
     }
+    shouldFocusResultsRef.current = false;
   });
 
   return (
