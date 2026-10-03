@@ -176,7 +176,10 @@ describe("統合検索", () => {
     const returnedKnowledge = await screen.findByRole("link", {
       name: /数学の知識/,
     });
-    await waitFor(() => expect(returnedKnowledge).toHaveFocus());
+    await waitFor(() => {
+      expect(returnedKnowledge).toHaveFocus();
+      expect(returnedKnowledge).toHaveAttribute("data-hotkey-active", "true");
+    });
   });
 
   it("対象ごとの詳細条件を検索APIへ反映する", async () => {

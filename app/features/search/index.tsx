@@ -6,7 +6,7 @@ import {
   type LucideIcon,
   TextInitial,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Highlight } from "~/features/tanbun/components/Highlight";
 import KnowledgeCard from "~/features/tanbun/components/KnowledgeCard";
@@ -83,12 +83,6 @@ export default function UnifiedSearch() {
   const shouldFocusResultsRef = useRef(true);
 
   const searchKey = `${queryParam}:${enabledKey}:${settingsKey}`;
-
-  useEffect(() => {
-    if (focusedTypeRef.current === enabledKey) return;
-    focusedTypeRef.current = enabledKey;
-    shouldFocusResultsRef.current = true;
-  }, [enabledKey]);
 
   useEffect(() => {
     const reset = previousSearchRef.current !== searchKey;
@@ -181,19 +175,32 @@ export default function UnifiedSearch() {
     () => mixResults(state, enabledTypes),
     [state, enabledTypes],
   );
+  const resultCount = mixedResults.length;
   const total = enabledTypes.reduce((sum, type) => sum + state.totals[type], 0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (focusedTypeRef.current !== enabledKey) {
+      focusedTypeRef.current = enabledKey;
+      shouldFocusResultsRef.current = true;
+    }
+
+    if (resultCount === 0) return;
     const results = resultsRef.current;
     if (!results) return;
     const items = Array.from(
       results.querySelectorAll<HTMLElement>("[data-hotkey-item]"),
     );
-    const current =
-      items.find((item) => item.dataset.hotkeyActive === "true") ?? items[0];
+    const shouldRestore = shouldFocusResultsRef.current;
+    const current = shouldRestore
+      ? items[0]
+      : (items.find((item) => item.dataset.hotkeyActive === "true") ??
+        items[0]);
     if (!current) return;
+    if (shouldRestore) {
+      for (const item of items) item.removeAttribute("data-hotkey-active");
+    }
     current.dataset.hotkeyActive = "true";
-    if (!shouldFocusResultsRef.current) return;
+    if (!shouldRestore) return;
     const active = document.activeElement;
     if (
       !(active instanceof HTMLElement) ||
@@ -202,7 +209,7 @@ export default function UnifiedSearch() {
       current.focus({ preventScroll: true });
     }
     shouldFocusResultsRef.current = false;
-  });
+  }, [enabledKey, resultCount]);
 
   return (
     <div className="mx-auto min-h-full w-full max-w-3xl bg-background px-2 sm:px-3">
