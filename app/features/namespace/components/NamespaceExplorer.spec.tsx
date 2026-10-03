@@ -115,6 +115,14 @@ describe("NamespaceExplorer", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("Entryの開閉とは独立した詳細リンクを表示する", () => {
+    renderExplorer();
+
+    const link = screen.getByRole("link", { name: "哲学のEntryを開く" });
+    expect(link).toHaveAttribute("href", `/entry/${folderId}`);
+    expect(link.closest("button")).toBeNull();
+  });
+
   it("Resource行をクリックすると詳細へ移動する", async () => {
     const user = userEvent.setup();
     renderExplorer();

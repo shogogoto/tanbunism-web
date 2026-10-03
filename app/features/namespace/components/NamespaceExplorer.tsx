@@ -167,6 +167,14 @@ function NamespaceItem({
             {item.resourceCount} Resources
           </span>
         </CollapsibleTrigger>
+        <Link
+          to={`/entry/${item.id}`}
+          className="flex shrink-0 items-center gap-1 rounded-sm px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`${item.name}のEntryを開く`}
+        >
+          <FolderOpen className="h-4 w-4" />
+          <span className="hidden sm:inline">Entry</span>
+        </Link>
         {!readOnly && !hasChildren && refresh && (
           <EntryDeleteButton
             entryId={item.id}
