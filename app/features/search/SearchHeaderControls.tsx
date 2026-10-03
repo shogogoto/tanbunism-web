@@ -143,11 +143,6 @@ export default function SearchHeaderControls() {
               <kbd className="min-w-3 text-center font-mono text-[10px] leading-none text-muted-foreground">
                 {index + 1}
               </kbd>
-              <span
-                className={`size-1.5 rounded-full ${
-                  currentType === type ? "bg-current" : "border border-current"
-                }`}
-              />
               {labels[type]}
             </Button>
           ))}
