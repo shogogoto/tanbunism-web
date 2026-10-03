@@ -156,8 +156,8 @@ describe("統合検索", () => {
     );
     expect(resourceLink).toHaveFocus();
     expect(resourceLink).toHaveClass(
-      "data-[hotkey-active=true]:outline-2",
-      "data-[hotkey-active=true]:outline-foreground",
+      "data-[hotkey-active=true]:ring-2",
+      "data-[hotkey-active=true]:ring-primary",
     );
     expect(screen.getByRole("tab", { name: "知識" })).not.toHaveClass("ring-1");
 
@@ -169,8 +169,8 @@ describe("統合検索", () => {
     );
     expect(userLink).toHaveFocus();
     expect(userLink).toHaveClass(
-      "data-[hotkey-active=true]:outline-2",
-      "data-[hotkey-active=true]:outline-foreground",
+      "data-[hotkey-active=true]:ring-2",
+      "data-[hotkey-active=true]:ring-primary",
     );
     expect(requestedTypes).toEqual(["knowledge", "resource", "user"]);
 
