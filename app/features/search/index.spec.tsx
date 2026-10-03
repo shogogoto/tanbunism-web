@@ -132,6 +132,12 @@ describe("統合検索", () => {
     );
     expect(screen.getByRole("tab", { name: "知識" })).toHaveTextContent("1");
     expect(screen.getByRole("tab", { name: "知識" })).toHaveClass("ring-1");
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: /数学の知識/ })).toHaveAttribute(
+        "data-hotkey-active",
+        "true",
+      ),
+    );
     await ui.click(screen.getByRole("tab", { name: "リソース" }));
     await waitFor(() => expect(requestedTypes).toContain("resource"));
     await waitFor(() => expect(document.body).toHaveTextContent("数学ノート"));
@@ -143,10 +149,22 @@ describe("統合検索", () => {
     expect(screen.getByRole("tab", { name: "リソース" })).toHaveTextContent(
       "2",
     );
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: /数学ノート/ })).toHaveAttribute(
+        "data-hotkey-active",
+        "true",
+      ),
+    );
     expect(screen.getByRole("tab", { name: "知識" })).not.toHaveClass("ring-1");
 
     await ui.click(screen.getByRole("tab", { name: "ユーザー" }));
     expect(await screen.findByText("Lv. 7")).toBeVisible();
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: /読書家/ })).toHaveAttribute(
+        "data-hotkey-active",
+        "true",
+      ),
+    );
     expect(requestedTypes).toEqual(["knowledge", "resource", "user"]);
   });
 

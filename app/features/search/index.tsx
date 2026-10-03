@@ -77,6 +77,7 @@ export default function UnifiedSearch() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>();
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const previousSearchRef = useRef("");
 
   const searchKey = `${queryParam}:${enabledKey}:${settingsKey}`;
@@ -174,6 +175,22 @@ export default function UnifiedSearch() {
   );
   const total = enabledTypes.reduce((sum, type) => sum + state.totals[type], 0);
 
+  useEffect(() => {
+    const results = resultsRef.current;
+    if (!results) return;
+    const items = Array.from(
+      results.querySelectorAll<HTMLElement>("[data-hotkey-item]"),
+    );
+    if (
+      items.length === 0 ||
+      items.some((item) => item.dataset.hotkeyActive === "true")
+    ) {
+      return;
+    }
+    const first = items[0];
+    if (first) first.dataset.hotkeyActive = "true";
+  });
+
   return (
     <div className="mx-auto min-h-full w-full max-w-3xl bg-background px-2 sm:px-3">
       <div className="py-2">
@@ -190,7 +207,7 @@ export default function UnifiedSearch() {
         </p>
       )}
 
-      <div className="divide-y border-y sm:border-x">
+      <div ref={resultsRef} className="divide-y border-y sm:border-x">
         {mixedResults.map((result) => {
           if (result.type === "knowledge") {
             return (
