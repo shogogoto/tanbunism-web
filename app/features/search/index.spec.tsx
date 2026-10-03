@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -7,9 +7,11 @@ import type {
   ResourceSearchBody,
   UserSearchBody,
 } from "~/shared/generated/fastAPI.schemas";
+import { createCacheKey } from "~/shared/hooks/swr/useCache";
 import { genericCache } from "~/shared/lib/indexed";
 import UnifiedSearch from ".";
 import SearchHeaderControls from "./SearchHeaderControls";
+import { defaultSearchSettings } from "./settings";
 
 const originalIntersectionObserver = globalThis.IntersectionObserver;
 
@@ -179,6 +181,51 @@ describe("統合検索", () => {
     await waitFor(() => {
       expect(returnedKnowledge).toHaveFocus();
       expect(returnedKnowledge).toHaveAttribute("data-hotkey-active", "true");
+    });
+  });
+
+  it("同件数のcacheが最新結果へ入れ替わってもcurrentを復元する", async () => {
+    const cachedResource = {
+      ...resourceInfo,
+      resource: { ...resource, uid: "cached-resource", name: "古いノート" },
+    };
+    const cacheKey = createCacheKey("unified-search-resource", {
+      query: "数学",
+      settings: JSON.stringify(defaultSearchSettings.resource),
+      page: 1,
+    });
+    await genericCache.set(cacheKey, {
+      type: "resource",
+      data: [cachedResource],
+      total: 1,
+    });
+    let resolveFresh: ((response: Response) => void) | undefined;
+    server.use(
+      http.post(
+        "*/resource/search",
+        () =>
+          new Promise((resolve) => {
+            resolveFresh = resolve;
+          }),
+      ),
+    );
+    const ui = userEvent.setup();
+    renderSearch();
+
+    await ui.click(screen.getByRole("tab", { name: "リソース" }));
+    const cachedLink = await screen.findByRole("link", { name: /古いノート/ });
+    await waitFor(() => {
+      expect(cachedLink).toHaveFocus();
+      expect(cachedLink).toHaveAttribute("data-hotkey-active", "true");
+    });
+
+    await act(async () => {
+      resolveFresh?.(HttpResponse.json({ total: 1, data: [resourceInfo] }));
+    });
+    const freshLink = await screen.findByRole("link", { name: /数学ノート/ });
+    await waitFor(() => {
+      expect(freshLink).toHaveFocus();
+      expect(freshLink).toHaveAttribute("data-hotkey-active", "true");
     });
   });
 

@@ -175,7 +175,7 @@ export default function UnifiedSearch() {
     () => mixResults(state, enabledTypes),
     [state, enabledTypes],
   );
-  const resultCount = mixedResults.length;
+  const resultIdentity = mixedResults.map(mixedResultId).join("|");
   const total = enabledTypes.reduce((sum, type) => sum + state.totals[type], 0);
 
   useLayoutEffect(() => {
@@ -184,32 +184,30 @@ export default function UnifiedSearch() {
       shouldFocusResultsRef.current = true;
     }
 
-    if (resultCount === 0) return;
+    if (!resultIdentity) return;
     const results = resultsRef.current;
     if (!results) return;
     const items = Array.from(
       results.querySelectorAll<HTMLElement>("[data-hotkey-item]"),
     );
     const shouldRestore = shouldFocusResultsRef.current;
-    const current = shouldRestore
-      ? items[0]
-      : (items.find((item) => item.dataset.hotkeyActive === "true") ??
-        items[0]);
+    const marked = items.find((item) => item.dataset.hotkeyActive === "true");
+    const current = shouldRestore ? items[0] : (marked ?? items[0]);
     if (!current) return;
     if (shouldRestore) {
       for (const item of items) item.removeAttribute("data-hotkey-active");
     }
     current.dataset.hotkeyActive = "true";
-    if (!shouldRestore) return;
     const active = document.activeElement;
     if (
-      !(active instanceof HTMLElement) ||
-      !active.matches("input, textarea, select, [contenteditable=true]")
+      (shouldRestore || !marked) &&
+      (!(active instanceof HTMLElement) ||
+        !active.matches("input, textarea, select, [contenteditable=true]"))
     ) {
       current.focus({ preventScroll: true });
     }
-    shouldFocusResultsRef.current = false;
-  }, [enabledKey, resultCount]);
+    if (shouldRestore) shouldFocusResultsRef.current = false;
+  }, [enabledKey, resultIdentity]);
 
   return (
     <div className="mx-auto min-h-full w-full max-w-3xl bg-background px-2 sm:px-3">
@@ -288,6 +286,13 @@ type MixedResult =
   | { type: "knowledge"; value: Tanbun }
   | { type: "resource"; value: ResourceInfo }
   | { type: "user"; value: UserSearchRow };
+
+function mixedResultId(result: MixedResult): string {
+  if (result.type === "knowledge") return `knowledge:${result.value.uid}`;
+  if (result.type === "resource")
+    return `resource:${result.value.resource.uid}`;
+  return `user:${result.value.user.uid}`;
+}
 
 function mixResults(state: SearchState, enabled: SearchType[]): MixedResult[] {
   const rows: Record<SearchType, MixedResult[]> = {
