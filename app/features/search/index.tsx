@@ -462,7 +462,7 @@ function ResourceResult({
     <Link
       to={`/resource/${resource.uid}`}
       data-hotkey-item
-      className="relative block outline-none after:pointer-events-none after:absolute after:inset-0 after:z-10 data-[hotkey-active=true]:after:ring-2 data-[hotkey-active=true]:after:ring-inset data-[hotkey-active=true]:after:ring-primary"
+      className="relative block outline-none data-[hotkey-active=true]:z-10 data-[hotkey-active=true]:outline-2 data-[hotkey-active=true]:-outline-offset-2 data-[hotkey-active=true]:outline-foreground"
     >
       <Card className="gap-0 rounded-none border-0 border-l-2 border-l-orange-500 py-0 shadow-none hover:bg-muted/40">
         <CardContent className="space-y-1.5 p-2">
@@ -544,7 +544,7 @@ function UserResult({ value, query }: { value: UserSearchRow; query: string }) {
     <Link
       to={`/user/${user.username || user.uid}`}
       data-hotkey-item
-      className="relative block outline-none after:pointer-events-none after:absolute after:inset-0 after:z-10 data-[hotkey-active=true]:after:ring-2 data-[hotkey-active=true]:after:ring-inset data-[hotkey-active=true]:after:ring-primary"
+      className="relative block outline-none data-[hotkey-active=true]:z-10 data-[hotkey-active=true]:outline-2 data-[hotkey-active=true]:-outline-offset-2 data-[hotkey-active=true]:outline-foreground"
     >
       <Card className="gap-0 rounded-none border-0 border-l-2 border-l-purple-500 py-0 shadow-none hover:bg-muted/40">
         <CardContent className="flex min-w-0 items-center gap-2 p-2">

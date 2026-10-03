@@ -154,8 +154,8 @@ describe("統合検索", () => {
       expect(resourceLink).toHaveAttribute("data-hotkey-active", "true"),
     );
     expect(resourceLink).toHaveClass(
-      "after:absolute",
-      "data-[hotkey-active=true]:after:ring-2",
+      "data-[hotkey-active=true]:outline-2",
+      "data-[hotkey-active=true]:outline-foreground",
     );
     expect(screen.getByRole("tab", { name: "知識" })).not.toHaveClass("ring-1");
 
@@ -166,8 +166,8 @@ describe("統合検索", () => {
       expect(userLink).toHaveAttribute("data-hotkey-active", "true"),
     );
     expect(userLink).toHaveClass(
-      "after:absolute",
-      "data-[hotkey-active=true]:after:ring-2",
+      "data-[hotkey-active=true]:outline-2",
+      "data-[hotkey-active=true]:outline-foreground",
     );
     expect(requestedTypes).toEqual(["knowledge", "resource", "user"]);
   });
