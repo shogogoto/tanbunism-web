@@ -7,6 +7,7 @@ import {
   type QuizType,
   searchCreatedQuizzes,
 } from "~/features/quiz/api";
+import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
 import { Card, CardContent } from "~/shared/components/ui/card";
 import {
@@ -75,9 +76,7 @@ export default function QuizTimeline() {
   const sorted = useMemo(() => mixQuizTimeline(quizzes, 20), [quizzes]);
 
   if (loading) {
-    return (
-      <p className="p-4 text-sm text-muted-foreground">クイズTLを読み込み中…</p>
-    );
+    return <Loading />;
   }
 
   return (

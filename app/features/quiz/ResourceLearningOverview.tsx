@@ -2,6 +2,7 @@ import { AlertTriangle, ChevronRight, Info } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import useSWR from "swr";
+import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import {
@@ -142,7 +143,8 @@ function ResourceDisclosure({
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="group grid w-full grid-cols-[minmax(0,1fr)_repeat(3,3.5rem)] items-center px-3 py-3 text-left hover:bg-muted/40 sm:grid-cols-[minmax(0,1fr)_repeat(3,5rem)]"
+          data-hotkey-item
+          className="group grid w-full grid-cols-[minmax(0,1fr)_repeat(3,3.5rem)] items-center px-3 py-3 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/60 data-[hotkey-active=true]:outline-2 data-[hotkey-active=true]:-outline-offset-2 data-[hotkey-active=true]:outline-foreground sm:grid-cols-[minmax(0,1fr)_repeat(3,5rem)]"
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <ChevronRight className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
@@ -154,11 +156,7 @@ function ResourceDisclosure({
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="border-t bg-muted/15">
-          {open && total > 0 && isLoading && (
-            <p className="px-9 py-3 text-sm text-muted-foreground">
-              関連クイズを読み込み中…
-            </p>
-          )}
+          {open && total > 0 && isLoading && <Loading />}
           {error && (
             <p className="px-9 py-3 text-sm text-destructive">
               {error instanceof Error
@@ -252,11 +250,7 @@ export default function ResourceLearningOverview({
       </p>
     );
   if (!items) {
-    return (
-      <p className="px-3 py-2 text-sm text-muted-foreground">
-        学習状況を読み込み中…
-      </p>
-    );
+    return <Loading />;
   }
   if (items.length === 0) return null;
 

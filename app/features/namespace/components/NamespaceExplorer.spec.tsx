@@ -123,6 +123,22 @@ describe("NamespaceExplorer", () => {
     expect(link.closest("button")).toBeNull();
   });
 
+  it("Entryをcurrent対象にしてEnterで開閉する", async () => {
+    const user = userEvent.setup();
+    renderExplorer();
+
+    const entry = screen.getByRole("button", { name: /哲学.*2 Resources/ });
+    expect(entry).toHaveAttribute("data-hotkey-item");
+    expect(entry).toHaveClass(
+      "data-[hotkey-active=true]:outline-2",
+      "data-[hotkey-active=true]:outline-foreground",
+    );
+
+    entry.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.queryByText("国家")).not.toBeInTheDocument();
+  });
+
   it("Resource行をクリックすると詳細へ移動する", async () => {
     const user = userEvent.setup();
     renderExplorer();

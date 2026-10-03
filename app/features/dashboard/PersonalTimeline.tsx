@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import KnowledgeCard, {
   KnowledgeScore,
 } from "~/features/tanbun/components/KnowledgeCard";
+import Loading from "~/shared/components/Loading";
 import { Button } from "~/shared/components/ui/button";
 import {
   type PersonalTanbunItem,
@@ -100,7 +101,7 @@ export default function PersonalTimeline() {
   }
 
   if (loading) {
-    return <p className="p-4 text-sm text-muted-foreground">TLを読み込み中…</p>;
+    return <Loading />;
   }
 
   return (

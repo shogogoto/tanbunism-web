@@ -188,7 +188,15 @@ export default function UnifiedSearch() {
       return;
     }
     const first = items[0];
-    if (first) first.dataset.hotkeyActive = "true";
+    if (!first) return;
+    first.dataset.hotkeyActive = "true";
+    const active = document.activeElement;
+    if (
+      !(active instanceof HTMLElement) ||
+      !active.matches("input, textarea, select, [contenteditable=true]")
+    ) {
+      first.focus({ preventScroll: true });
+    }
   });
 
   return (

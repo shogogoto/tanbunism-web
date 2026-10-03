@@ -278,6 +278,29 @@ it("hとlで前後のタブへ移動する", async () => {
   expect(screen.getByRole("tab", { name: "次のタブ" })).toHaveFocus();
 });
 
+it("focusがタブにあってもcurrentの次の項目へ移動する", async () => {
+  const user = userEvent.setup();
+  renderHotkeys(
+    <>
+      <button type="button" data-hotkey-item data-hotkey-active="true">
+        最初のCard
+      </button>
+      <button type="button" data-hotkey-item>
+        次のCard
+      </button>
+    </>,
+  );
+
+  await user.click(screen.getByRole("button", { name: "入力を終了" }));
+  await user.keyboard("j");
+
+  expect(screen.getByRole("button", { name: "次のCard" })).toHaveFocus();
+  expect(screen.getByRole("button", { name: "次のCard" })).toHaveAttribute(
+    "data-hotkey-active",
+    "true",
+  );
+});
+
 it("Ctrlと数字で指定位置のタブへ移動する", async () => {
   const user = userEvent.setup();
   const selectThird = vi.fn();

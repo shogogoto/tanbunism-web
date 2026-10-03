@@ -2,6 +2,7 @@ import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import useSWR from "swr";
+import Loading from "~/shared/components/Loading";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -499,7 +500,7 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
         </header>
       )}
 
-      {loadState.status === "loading" && <p>読み込み中…</p>}
+      {loadState.status === "loading" && <Loading />}
       {loadState.status === "error" && (
         <p role="alert" className="text-destructive">
           {loadState.message}

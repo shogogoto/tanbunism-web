@@ -153,8 +153,8 @@ function NamespaceItem({
     <Collapsible defaultOpen>
       <div className="flex min-h-11 items-center gap-1">
         <CollapsibleTrigger
-          className="group flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-2 text-left hover:bg-accent/60"
-          disabled={!hasChildren}
+          data-hotkey-item
+          className="group flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-2 text-left hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/60 data-[hotkey-active=true]:outline-2 data-[hotkey-active=true]:-outline-offset-2 data-[hotkey-active=true]:outline-foreground"
         >
           <ChevronRight
             className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90 ${
@@ -213,7 +213,7 @@ function ResourceRow({
       <Link
         to={`/resource/${item.id}`}
         data-hotkey-item
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-2 hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/60"
+        className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-2 hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/60 data-[hotkey-active=true]:outline-2 data-[hotkey-active=true]:-outline-offset-2 data-[hotkey-active=true]:outline-foreground"
       >
         <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1 sm:flex sm:items-baseline sm:gap-2">

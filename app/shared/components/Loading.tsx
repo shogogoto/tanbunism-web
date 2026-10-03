@@ -10,16 +10,20 @@ export default function Loading({ isLoading = true, type }: Props) {
     return null;
   }
 
-  const circle = <LoaderCircle className="animate-spin" />;
+  const circle = <LoaderCircle className="animate-spin" aria-hidden="true" />;
   if (type === "center-x" || type === undefined) {
-    return <div className="flex justify-center p-4">{circle}</div>;
+    return (
+      <output className="flex justify-center p-4" aria-label="読み込み中">
+        {circle}
+      </output>
+    );
   }
 
   return (
-    <div className="flex justify-center p-4">
+    <output className="flex justify-center p-4" aria-label="読み込み中">
       <div className="flex items-center justify-center p-2 bg-background rounded-full shadow-lg">
         {circle}
       </div>
-    </div>
+    </output>
   );
 }

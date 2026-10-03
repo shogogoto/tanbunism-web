@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
+import Loading from "~/shared/components/Loading";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,11 +77,7 @@ export default function UnplannedQuizManager() {
   }
 
   if (loading) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        StudyPlan未所属クイズを確認中…
-      </p>
-    );
+    return <Loading />;
   }
   if (error) return <p className="text-sm text-destructive">{error}</p>;
   if (items.length === 0) return null;

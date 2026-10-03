@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useNotifications } from "~/features/notifications/NotificationProvider";
+import Loading from "~/shared/components/Loading";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -473,9 +474,7 @@ export default function StudyPlanManager() {
         </DialogContent>
       </Dialog>
 
-      {isLoading && (
-        <p className="text-sm text-muted-foreground">読み込み中…</p>
-      )}
+      {isLoading && <Loading />}
 
       {!isLoading && plans.length === 0 && !isCreating ? (
         <p className="rounded-md border p-4 text-sm text-muted-foreground">

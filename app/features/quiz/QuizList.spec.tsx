@@ -262,7 +262,14 @@ it("Resourceごとの学習指標を表示する", async () => {
   await user.click(screen.getByRole("button", { name: /参照切れ 1件/ }));
   expect(screen.getByRole("heading", { name: "参照切れクイズ" })).toBeVisible();
   await user.keyboard("{Escape}");
-  await user.click(screen.getByRole("button", { name: /代数学ノート/ }));
+  const resource = screen.getByRole("button", { name: /代数学ノート/ });
+  expect(resource).toHaveAttribute("data-hotkey-item");
+  expect(resource).toHaveClass(
+    "data-[hotkey-active=true]:outline-2",
+    "data-[hotkey-active=true]:outline-foreground",
+  );
+  resource.focus();
+  await user.keyboard("{Enter}");
   expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
 });
 

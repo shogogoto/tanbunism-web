@@ -300,6 +300,18 @@ function contextHotkeys(pathname: string, search: string): HotkeyDefinition[] {
       { keys: ["Enter"], label: "単文を開く" },
     ];
   }
+  if (view === "notes") {
+    return [
+      { keys: ["j", "k"], label: "Entry・Resourceを移動" },
+      { keys: ["Enter"], label: "Entryを開閉／Resourceを開く" },
+    ];
+  }
+  if (view === "quiz-management") {
+    return [
+      { keys: ["j", "k"], label: "Resourceを移動" },
+      { keys: ["Enter"], label: "currentを開閉" },
+    ];
+  }
   return [];
 }
 
@@ -439,7 +451,11 @@ function moveActiveItem(offset: -1 | 1, dialog: Element | null): boolean {
   ).filter((item) => !item.closest("[hidden]"));
   if (items.length === 0) return false;
 
-  const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+  const focusedIndex = items.indexOf(document.activeElement as HTMLElement);
+  const markedIndex = items.findIndex(
+    (item) => item.dataset.hotkeyActive === "true",
+  );
+  const currentIndex = focusedIndex >= 0 ? focusedIndex : markedIndex;
   const nextIndex =
     currentIndex < 0
       ? offset === 1

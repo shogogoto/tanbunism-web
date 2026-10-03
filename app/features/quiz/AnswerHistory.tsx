@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
+import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import {
@@ -156,9 +157,7 @@ export default function AnswerHistory() {
         </CardContent>
       </Card>
 
-      {isLoading && (
-        <p className="text-sm text-muted-foreground">読み込み中…</p>
-      )}
+      {isLoading && <Loading />}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}

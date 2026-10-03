@@ -132,12 +132,11 @@ describe("統合検索", () => {
     );
     expect(screen.getByRole("tab", { name: "知識" })).toHaveTextContent("1");
     expect(screen.getByRole("tab", { name: "知識" })).toHaveClass("ring-1");
-    await waitFor(() =>
-      expect(screen.getByRole("link", { name: /数学の知識/ })).toHaveAttribute(
-        "data-hotkey-active",
-        "true",
-      ),
-    );
+    const knowledgeLink = screen.getByRole("link", { name: /数学の知識/ });
+    await waitFor(() => {
+      expect(knowledgeLink).toHaveAttribute("data-hotkey-active", "true");
+      expect(knowledgeLink).toHaveFocus();
+    });
     await ui.click(screen.getByRole("tab", { name: "リソース" }));
     await waitFor(() => expect(requestedTypes).toContain("resource"));
     await waitFor(() => expect(document.body).toHaveTextContent("数学ノート"));
@@ -153,6 +152,7 @@ describe("統合検索", () => {
     await waitFor(() =>
       expect(resourceLink).toHaveAttribute("data-hotkey-active", "true"),
     );
+    expect(resourceLink).toHaveFocus();
     expect(resourceLink).toHaveClass(
       "data-[hotkey-active=true]:outline-2",
       "data-[hotkey-active=true]:outline-foreground",
@@ -165,6 +165,7 @@ describe("統合検索", () => {
     await waitFor(() =>
       expect(userLink).toHaveAttribute("data-hotkey-active", "true"),
     );
+    expect(userLink).toHaveFocus();
     expect(userLink).toHaveClass(
       "data-[hotkey-active=true]:outline-2",
       "data-[hotkey-active=true]:outline-foreground",
