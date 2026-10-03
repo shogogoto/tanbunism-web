@@ -114,6 +114,23 @@ it("PlanとResourceを省略可能な表として表示する", async () => {
   );
 });
 
+it("読み込み表示を表のbody内に表示する", async () => {
+  let resolvePlans: ((plans: (typeof plan)[]) => void) | undefined;
+  vi.mocked(listStudyPlans).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        resolvePlans = resolve;
+      }),
+  );
+  renderManager();
+
+  const loading = screen.getByLabelText("読み込み中");
+  expect(loading.closest("tbody")).not.toBeNull();
+
+  resolvePlans?.([plan]);
+  expect(await screen.findByText(plan.name)).toBeVisible();
+});
+
 it("Plan名とResource名を検索する", async () => {
   const user = userEvent.setup();
   vi.mocked(listStudyPlans).mockResolvedValue([plan, secondPlan]);

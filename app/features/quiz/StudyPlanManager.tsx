@@ -474,8 +474,6 @@ export default function StudyPlanManager() {
         </DialogContent>
       </Dialog>
 
-      {isLoading && <Loading />}
-
       {!isLoading && plans.length === 0 && !isCreating ? (
         <p className="rounded-md border p-4 text-sm text-muted-foreground">
           学習計画がありません。Resourceとクイズ形式を選び、最初の計画を作成してください。
@@ -571,78 +569,82 @@ export default function StudyPlanManager() {
               </div>
             )}
           </div>
-          {filteredPlans.length === 0 && (
+          {!isLoading && filteredPlans.length === 0 && (
             <p className="rounded-md border p-4 text-sm text-muted-foreground">
               検索条件に一致する学習計画がありません。
             </p>
           )}
           {isMobile ? (
             <div className="space-y-2">
-              {filteredPlans.map((plan) => (
-                <article
-                  key={plan.uid}
-                  ref={(element) => {
-                    if (element) rowRefs.current.set(plan.uid, element);
-                    else rowRefs.current.delete(plan.uid);
-                  }}
-                  aria-current={currentPlan?.uid === plan.uid || undefined}
-                  className={`min-w-0 scroll-mt-20 space-y-3 rounded-md border p-3 ${
-                    currentPlan?.uid === plan.uid
-                      ? "border-primary bg-primary/5 ring-1 ring-primary"
-                      : ""
-                  }`}
-                >
-                  <div className="flex min-w-0 items-start gap-3">
-                    <input
-                      type="checkbox"
-                      className="mt-1 shrink-0"
-                      aria-label={`${plan.name}を選択`}
-                      checked={selectedPlanIds.has(plan.uid)}
-                      onChange={(event) =>
-                        setSelectedPlanIds((current) => {
-                          const next = new Set(current);
-                          if (event.target.checked) next.add(plan.uid);
-                          else next.delete(plan.uid);
-                          return next;
-                        })
-                      }
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium" title={plan.name}>
-                        {plan.name}
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        <strong className="text-sm tabular-nums text-foreground">
-                          {preparedCounts[plan.uid] ?? 0}
-                        </strong>
-                        問準備済み・1回{plan.n_quiz}問・{plan.n_option}択
+              {isLoading ? (
+                <Loading />
+              ) : (
+                filteredPlans.map((plan) => (
+                  <article
+                    key={plan.uid}
+                    ref={(element) => {
+                      if (element) rowRefs.current.set(plan.uid, element);
+                      else rowRefs.current.delete(plan.uid);
+                    }}
+                    aria-current={currentPlan?.uid === plan.uid || undefined}
+                    className={`min-w-0 scroll-mt-20 space-y-3 rounded-md border p-3 ${
+                      currentPlan?.uid === plan.uid
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex min-w-0 items-start gap-3">
+                      <input
+                        type="checkbox"
+                        className="mt-1 shrink-0"
+                        aria-label={`${plan.name}を選択`}
+                        checked={selectedPlanIds.has(plan.uid)}
+                        onChange={(event) =>
+                          setSelectedPlanIds((current) => {
+                            const next = new Set(current);
+                            if (event.target.checked) next.add(plan.uid);
+                            else next.delete(plan.uid);
+                            return next;
+                          })
+                        }
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium" title={plan.name}>
+                          {plan.name}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          <strong className="text-sm tabular-nums text-foreground">
+                            {preparedCounts[plan.uid] ?? 0}
+                          </strong>
+                          問準備済み・1回{plan.n_quiz}問・{plan.n_option}択
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex min-w-0 flex-wrap gap-1">
-                    {plan.resource_ids.map((resourceId) => {
-                      const name = resourceName(resourceId);
-                      return (
-                        <Badge
-                          key={resourceId}
-                          variant="secondary"
-                          className="max-w-56"
-                          title={name}
-                        >
-                          <span className="truncate">{name}</span>
+                    <div className="flex min-w-0 flex-wrap gap-1">
+                      {plan.resource_ids.map((resourceId) => {
+                        const name = resourceName(resourceId);
+                        return (
+                          <Badge
+                            key={resourceId}
+                            variant="secondary"
+                            className="max-w-56"
+                            title={name}
+                          >
+                            <span className="truncate">{name}</span>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {plan.quiz_types.map((quizType) => (
+                        <Badge key={quizType} variant="outline">
+                          {quizTypeLabels[quizType]}
                         </Badge>
-                      );
-                    })}
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {plan.quiz_types.map((quizType) => (
-                      <Badge key={quizType} variant="outline">
-                        {quizTypeLabels[quizType]}
-                      </Badge>
-                    ))}
-                  </div>
-                </article>
-              ))}
+                      ))}
+                    </div>
+                  </article>
+                ))
+              )}
             </div>
           ) : (
             <div className="rounded-md border">
@@ -688,92 +690,102 @@ export default function StudyPlanManager() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPlans.map((plan) => (
-                    <TableRow
-                      key={plan.uid}
-                      ref={(element) => {
-                        if (element) rowRefs.current.set(plan.uid, element);
-                        else rowRefs.current.delete(plan.uid);
-                      }}
-                      data-state={
-                        selectedPlanIds.has(plan.uid) ? "selected" : undefined
-                      }
-                      aria-current={currentPlan?.uid === plan.uid || undefined}
-                      className={
-                        currentPlan?.uid === plan.uid
-                          ? "scroll-mt-20 bg-primary/5 ring-1 ring-inset ring-primary"
-                          : "scroll-mt-20"
-                      }
-                      onClick={() => setCurrentPlanId(plan.uid)}
-                    >
-                      <TableCell>
-                        <input
-                          type="checkbox"
-                          aria-label={`${plan.name}を選択`}
-                          checked={selectedPlanIds.has(plan.uid)}
-                          onChange={(event) =>
-                            setSelectedPlanIds((current) => {
-                              const next = new Set(current);
-                              if (event.target.checked) next.add(plan.uid);
-                              else next.delete(plan.uid);
-                              return next;
-                            })
-                          }
-                        />
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6 + quizTypeColumns.length}>
+                        <Loading />
                       </TableCell>
-                      <TableCell className="min-w-0 whitespace-normal">
-                        <div
-                          className="max-w-44 truncate font-medium"
-                          title={plan.name}
-                        >
-                          {plan.name}
-                        </div>
-                      </TableCell>
-                      <TableCell className="min-w-0 whitespace-normal">
-                        <div className="flex min-w-0 flex-wrap gap-1">
-                          {plan.resource_ids.map((resourceId) => {
-                            const name = resourceName(resourceId);
-                            return (
-                              <Badge
-                                key={resourceId}
-                                variant="secondary"
-                                className="max-w-48"
-                                title={name}
-                              >
-                                <span className="truncate">{name}</span>
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center tabular-nums">
-                        {preparedCounts[plan.uid] ?? 0}
-                      </TableCell>
-                      <TableCell className="text-center tabular-nums">
-                        {plan.n_quiz}
-                      </TableCell>
-                      <TableCell className="text-center tabular-nums">
-                        {plan.n_option}
-                      </TableCell>
-                      {quizTypeColumns.map(({ type, from, to }) => {
-                        const enabled = plan.quiz_types.includes(type);
-                        return (
-                          <TableCell key={type} className="text-center">
-                            <span
-                              className={`inline-flex min-w-9 justify-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                                enabled
-                                  ? "bg-primary/15 text-primary"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
-                              aria-label={`${from}から${to}: ${enabled ? "ON" : "OFF"}`}
-                            >
-                              {enabled ? "ON" : "OFF"}
-                            </span>
-                          </TableCell>
-                        );
-                      })}
                     </TableRow>
-                  ))}
+                  ) : (
+                    filteredPlans.map((plan) => (
+                      <TableRow
+                        key={plan.uid}
+                        ref={(element) => {
+                          if (element) rowRefs.current.set(plan.uid, element);
+                          else rowRefs.current.delete(plan.uid);
+                        }}
+                        data-state={
+                          selectedPlanIds.has(plan.uid) ? "selected" : undefined
+                        }
+                        aria-current={
+                          currentPlan?.uid === plan.uid || undefined
+                        }
+                        className={
+                          currentPlan?.uid === plan.uid
+                            ? "scroll-mt-20 bg-primary/5 ring-1 ring-inset ring-primary"
+                            : "scroll-mt-20"
+                        }
+                        onClick={() => setCurrentPlanId(plan.uid)}
+                      >
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            aria-label={`${plan.name}を選択`}
+                            checked={selectedPlanIds.has(plan.uid)}
+                            onChange={(event) =>
+                              setSelectedPlanIds((current) => {
+                                const next = new Set(current);
+                                if (event.target.checked) next.add(plan.uid);
+                                else next.delete(plan.uid);
+                                return next;
+                              })
+                            }
+                          />
+                        </TableCell>
+                        <TableCell className="min-w-0 whitespace-normal">
+                          <div
+                            className="max-w-44 truncate font-medium"
+                            title={plan.name}
+                          >
+                            {plan.name}
+                          </div>
+                        </TableCell>
+                        <TableCell className="min-w-0 whitespace-normal">
+                          <div className="flex min-w-0 flex-wrap gap-1">
+                            {plan.resource_ids.map((resourceId) => {
+                              const name = resourceName(resourceId);
+                              return (
+                                <Badge
+                                  key={resourceId}
+                                  variant="secondary"
+                                  className="max-w-48"
+                                  title={name}
+                                >
+                                  <span className="truncate">{name}</span>
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center tabular-nums">
+                          {preparedCounts[plan.uid] ?? 0}
+                        </TableCell>
+                        <TableCell className="text-center tabular-nums">
+                          {plan.n_quiz}
+                        </TableCell>
+                        <TableCell className="text-center tabular-nums">
+                          {plan.n_option}
+                        </TableCell>
+                        {quizTypeColumns.map(({ type, from, to }) => {
+                          const enabled = plan.quiz_types.includes(type);
+                          return (
+                            <TableCell key={type} className="text-center">
+                              <span
+                                className={`inline-flex min-w-9 justify-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                                  enabled
+                                    ? "bg-primary/15 text-primary"
+                                    : "bg-muted text-muted-foreground"
+                                }`}
+                                aria-label={`${from}から${to}: ${enabled ? "ON" : "OFF"}`}
+                              >
+                                {enabled ? "ON" : "OFF"}
+                              </span>
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
