@@ -23,6 +23,9 @@ import {
   startSwipeGesture,
 } from "./swipe";
 
+const panelTransition =
+  "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150";
+
 export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get("view");
@@ -110,22 +113,44 @@ export default function Dashboard() {
         >
           <div className="relative">
             {renderedSections.has("timeline") && (
-              <div hidden={activeSection !== "timeline"}>
+              <div
+                hidden={activeSection !== "timeline"}
+                className={
+                  activeSection === "timeline" ? panelTransition : undefined
+                }
+              >
                 <PersonalTimeline />
               </div>
             )}
             {renderedSections.has("quiz-timeline") && (
-              <div hidden={activeSection !== "quiz-timeline"}>
+              <div
+                hidden={activeSection !== "quiz-timeline"}
+                className={
+                  activeSection === "quiz-timeline"
+                    ? panelTransition
+                    : undefined
+                }
+              >
                 <QuizTimeline />
               </div>
             )}
             {renderedSections.has("answers") && (
-              <div hidden={activeSection !== "answers"}>
+              <div
+                hidden={activeSection !== "answers"}
+                className={
+                  activeSection === "answers" ? panelTransition : undefined
+                }
+              >
                 <AnswerHistory />
               </div>
             )}
             {renderedSections.has("notes") && (
-              <div hidden={activeSection !== "notes"}>
+              <div
+                hidden={activeSection !== "notes"}
+                className={
+                  activeSection === "notes" ? panelTransition : undefined
+                }
+              >
                 <Card>
                   <CardContent className="p-4 sm:p-6">
                     <NamespaceExplorer nsprops={namespace} />
@@ -147,12 +172,24 @@ export default function Dashboard() {
               </div>
             )}
             {renderedSections.has("study-plans") && (
-              <div hidden={activeSection !== "study-plans"}>
+              <div
+                hidden={activeSection !== "study-plans"}
+                className={
+                  activeSection === "study-plans" ? panelTransition : undefined
+                }
+              >
                 <StudyPlanManager />
               </div>
             )}
             {renderedSections.has("quiz-management") && (
-              <div hidden={activeSection !== "quiz-management"}>
+              <div
+                hidden={activeSection !== "quiz-management"}
+                className={
+                  activeSection === "quiz-management"
+                    ? panelTransition
+                    : undefined
+                }
+              >
                 <QuizList embedded />
               </div>
             )}
