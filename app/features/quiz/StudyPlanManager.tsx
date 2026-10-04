@@ -38,6 +38,7 @@ import StudyPlanForm from "./StudyPlanForm";
 import {
   type QuizType,
   type StudyPlan,
+  type StudyPlanPreparationStatus,
   type StudyResource,
   deleteStudyPlan,
   listStudyPlanPreparations,
@@ -46,6 +47,7 @@ import {
   prepareAdditionalStudyPlanQuizzes,
   updateStudyPlan,
 } from "./api";
+import { useQuizSWR } from "./useQuizSWR";
 
 const allQuizTypes: StudyPlanDraft["quiz_types"] = [
   "term2sent",
@@ -72,15 +74,37 @@ const quizTypeColumns: Array<{
   { type: "rel2pair", from: "関係", to: "単文組" },
 ];
 
+const emptyPlans: StudyPlan[] = [];
+const emptyResources: StudyResource[] = [];
+const emptyPreparations: StudyPlanPreparationStatus[] = [];
+
 export default function StudyPlanManager() {
   const isMobile = useIsMobile(1024);
   const navigate = useNavigate();
   const { refreshNotifications } = useNotifications();
-  const [plans, setPlans] = useState<StudyPlan[]>([]);
-  const [resources, setResources] = useState<StudyResource[]>([]);
+  const {
+    data: plans = emptyPlans,
+    error: plansError,
+    isLoading,
+    mutate: mutatePlans,
+  } = useQuizSWR<StudyPlan[]>("study-plan-manager-plans", listStudyPlans, {
+    keepPreviousData: true,
+  });
+  const { data: resources = emptyResources, error: resourcesError } =
+    useQuizSWR<StudyResource[]>(
+      "study-plan-manager-resources",
+      listStudyResources,
+      { keepPreviousData: true },
+    );
+  const {
+    data: preparations = emptyPreparations,
+    error: preparationsError,
+    mutate: mutatePreparations,
+  } = useQuizSWR("study-plan-manager-preparations", listStudyPlanPreparations, {
+    keepPreviousData: true,
+  });
   const [editingPlan, setEditingPlan] = useState<StudyPlan>();
   const [isCreating, setIsCreating] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(
     new Set(),
   );
@@ -88,9 +112,6 @@ export default function StudyPlanManager() {
   const [query, setQuery] = useState("");
   const [currentPlanId, setCurrentPlanId] = useState<string>();
   const [preparingId, setPreparingId] = useState<string>();
-  const [preparedCounts, setPreparedCounts] = useState<Record<string, number>>(
-    {},
-  );
   const [additionalCounts, setAdditionalCounts] = useState<
     Record<string, number>
   >({});
@@ -98,45 +119,27 @@ export default function StudyPlanManager() {
   const rowRefs = useRef(new Map<string, HTMLElement>());
 
   useEffect(() => {
-    let active = true;
-    Promise.all([
-      listStudyPlans(),
-      listStudyResources(),
-      listStudyPlanPreparations(),
-    ])
-      .then(([loadedPlans, loadedResources, preparations]) => {
-        if (!active) return;
-        setPlans(loadedPlans);
-        setResources(loadedResources);
-        setPreparedCounts(
-          Object.fromEntries(
-            preparations.map((status) => [
-              status.plan_id,
-              status.prepared_quiz_count,
-            ]),
-          ),
-        );
-        setAdditionalCounts(
-          Object.fromEntries(
-            loadedPlans.map((plan) => [plan.uid, Math.max(1, plan.n_quiz)]),
-          ),
-        );
-      })
-      .catch((loadError) => {
-        if (!active) return;
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "学習計画を取得できませんでした。",
-        );
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+    setAdditionalCounts((current) =>
+      Object.fromEntries(
+        plans.map((plan) => [
+          plan.uid,
+          current[plan.uid] ?? Math.max(1, plan.n_quiz),
+        ]),
+      ),
+    );
+  }, [plans]);
+
+  const preparedCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        preparations.map((status) => [
+          status.plan_id,
+          status.prepared_quiz_count,
+        ]),
+      ),
+    [preparations],
+  );
+  const loadError = plansError ?? resourcesError ?? preparationsError;
 
   const resourceNames = useMemo(
     () =>
@@ -272,7 +275,10 @@ export default function StudyPlanManager() {
     setError(undefined);
     try {
       await Promise.all([...selected].map((planId) => deleteStudyPlan(planId)));
-      setPlans((current) => current.filter(({ uid }) => !selected.has(uid)));
+      await mutatePlans(
+        (current) => (current ?? []).filter(({ uid }) => !selected.has(uid)),
+        { revalidate: false },
+      );
       setSelectedPlanIds(new Set());
       if (editingPlan && selected.has(editingPlan.uid))
         setEditingPlan(undefined);
@@ -304,8 +310,10 @@ export default function StudyPlanManager() {
         ),
       );
       const updatedById = new Map(updated.map((plan) => [plan.uid, plan]));
-      setPlans((current) =>
-        current.map((plan) => updatedById.get(plan.uid) ?? plan),
+      await mutatePlans(
+        (current) =>
+          (current ?? []).map((plan) => updatedById.get(plan.uid) ?? plan),
+        { revalidate: false },
       );
       setSelectedPlanIds(new Set());
     } catch (updateError) {
@@ -331,10 +339,16 @@ export default function StudyPlanManager() {
         plan.uid,
         requested,
       );
-      setPreparedCounts((current) => ({
-        ...current,
-        [plan.uid]: prepared.prepared_quiz_count,
-      }));
+      await mutatePreparations(
+        (current) => [
+          ...(current ?? []).filter((status) => status.plan_id !== plan.uid),
+          {
+            plan_id: plan.uid,
+            prepared_quiz_count: prepared.prepared_quiz_count,
+          },
+        ],
+        { revalidate: false },
+      );
       if (prepared.added_count > 0) {
         const description = `「${plan.name}」に${prepared.added_count}問追加しました。準備済みは合計${prepared.prepared_quiz_count}問です。`;
         toast.success("クイズの準備が完了しました", { description });
@@ -410,9 +424,12 @@ export default function StudyPlanManager() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">
-      {error && (
+      {(error || loadError) && (
         <p className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
+          {error ??
+            (loadError instanceof Error
+              ? loadError.message
+              : "学習計画を取得できませんでした。")}
         </p>
       )}
 
@@ -438,8 +455,16 @@ export default function StudyPlanManager() {
             plan={editingPlan}
             createLabel="学習計画を作成"
             onCreated={(plan) => {
-              setPlans((current) => [...current, plan]);
-              setPreparedCounts((current) => ({ ...current, [plan.uid]: 0 }));
+              void mutatePlans((current) => [...(current ?? []), plan], {
+                revalidate: false,
+              });
+              void mutatePreparations(
+                (current) => [
+                  ...(current ?? []),
+                  { plan_id: plan.uid, prepared_quiz_count: 0 },
+                ],
+                { revalidate: false },
+              );
               setAdditionalCounts((current) => ({
                 ...current,
                 [plan.uid]: Math.max(1, plan.n_quiz),
@@ -447,23 +472,18 @@ export default function StudyPlanManager() {
               setIsCreating(false);
             }}
             onUpdated={(plan) => {
-              setPlans((current) =>
-                current.map((item) => (item.uid === plan.uid ? plan : item)),
+              void mutatePlans(
+                (current) =>
+                  (current ?? []).map((item) =>
+                    item.uid === plan.uid ? plan : item,
+                  ),
+                { revalidate: false },
               );
               setAdditionalCounts((current) => ({
                 ...current,
                 [plan.uid]: Math.max(1, plan.n_quiz),
               }));
-              void listStudyPlanPreparations().then((preparations) => {
-                setPreparedCounts(
-                  Object.fromEntries(
-                    preparations.map((status) => [
-                      status.plan_id,
-                      status.prepared_quiz_count,
-                    ]),
-                  ),
-                );
-              });
+              void mutatePreparations();
               setEditingPlan(undefined);
             }}
             onCancel={() => {
@@ -475,9 +495,26 @@ export default function StudyPlanManager() {
       </Dialog>
 
       {!isLoading && plans.length === 0 && !isCreating ? (
-        <p className="rounded-md border p-4 text-sm text-muted-foreground">
-          学習計画がありません。Resourceとクイズ形式を選び、最初の計画を作成してください。
-        </p>
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="icon"
+              className="size-11 rounded-full shadow-md"
+              aria-label="学習計画を作成"
+              title="学習計画を作成"
+              onClick={() => {
+                setEditingPlan(undefined);
+                setIsCreating(true);
+              }}
+            >
+              <Plus className="size-5" />
+            </Button>
+          </div>
+          <p className="rounded-md border p-4 text-sm text-muted-foreground">
+            学習計画がありません。Resourceとクイズ形式を選び、最初の計画を作成してください。
+          </p>
+        </div>
       ) : (
         <div className="space-y-3" data-dashboard-swipe-ignore>
           <div className="sticky top-0 z-30 flex min-h-11 flex-wrap items-center gap-2 rounded-md border bg-background/95 px-3 py-2 shadow-sm backdrop-blur lg:h-20">
@@ -568,6 +605,21 @@ export default function StudyPlanManager() {
                 )}
               </div>
             )}
+            <Button
+              type="button"
+              size="icon"
+              className={`size-9 shrink-0 rounded-full shadow-sm ${
+                actionPlan || selectedPlanIds.size > 0 ? "" : "ml-auto"
+              }`}
+              aria-label="学習計画を作成"
+              title="学習計画を作成"
+              onClick={() => {
+                setEditingPlan(undefined);
+                setIsCreating(true);
+              }}
+            >
+              <Plus className="size-4" />
+            </Button>
           </div>
           {!isLoading && filteredPlans.length === 0 && (
             <p className="rounded-md border p-4 text-sm text-muted-foreground">
@@ -790,23 +842,6 @@ export default function StudyPlanManager() {
               </Table>
             </div>
           )}
-        </div>
-      )}
-      {!isLoading && (
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            size="icon"
-            className="size-11 rounded-full shadow-md"
-            aria-label="学習計画を作成"
-            title="学習計画を作成"
-            onClick={() => {
-              setEditingPlan(undefined);
-              setIsCreating(true);
-            }}
-          >
-            <Plus className="size-5" />
-          </Button>
         </div>
       )}
     </div>

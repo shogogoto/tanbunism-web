@@ -188,13 +188,21 @@ function unwrap<T>(
   return response.data as T;
 }
 
-export async function listStudyPlans(): Promise<StudyPlan[]> {
-  return withQuizCache("study-plans", {}, quizCachePolicy.normal, async () => {
-    const response = await listStudyPlansApiQuizStudyPlansGet({
-      credentials: "include",
-    });
-    return unwrap(response, "学習計画を取得できませんでした。");
-  });
+export async function listStudyPlans(
+  options: QuizCacheOptions = {},
+): Promise<StudyPlan[]> {
+  return withQuizCache(
+    "study-plans",
+    {},
+    quizCachePolicy.normal,
+    async () => {
+      const response = await listStudyPlansApiQuizStudyPlansGet({
+        credentials: "include",
+      });
+      return unwrap(response, "学習計画を取得できませんでした。");
+    },
+    options,
+  );
 }
 
 export async function listAnswerHistory(
@@ -273,7 +281,7 @@ export async function createStudyPlan(
     credentials: "include",
   });
   const plan = unwrap(response, "学習計画を作成できませんでした。");
-  await invalidateQuizCache("study-plans");
+  await invalidateQuizCache("study-plans", "study-plan-preparations");
   return plan;
 }
 
@@ -287,7 +295,7 @@ export async function updateStudyPlan(
     { credentials: "include" },
   );
   const plan = unwrap(response, "学習計画を更新できませんでした。");
-  await invalidateQuizCache("study-plans");
+  await invalidateQuizCache("study-plans", "study-plan-preparations");
   return plan;
 }
 
@@ -298,14 +306,21 @@ export async function deleteStudyPlan(planId: string): Promise<void> {
   if (response.status >= 400) {
     throw new QuizApiError("学習計画を削除できませんでした。", response.status);
   }
-  await invalidateQuizCache("study-plans");
+  await invalidateQuizCache("study-plans", "study-plan-preparations");
 }
 
-export async function listStudyPlanPreparations(): Promise<
-  StudyPlanPreparationStatus[]
-> {
-  return requestStudyPlanPreparation<StudyPlanPreparationStatus[]>(
-    "/quiz/study-plans/preparations",
+export async function listStudyPlanPreparations(
+  options: QuizCacheOptions = {},
+): Promise<StudyPlanPreparationStatus[]> {
+  return withQuizCache(
+    "study-plan-preparations",
+    {},
+    quizCachePolicy.normal,
+    () =>
+      requestStudyPlanPreparation<StudyPlanPreparationStatus[]>(
+        "/quiz/study-plans/preparations",
+      ),
+    options,
   );
 }
 
@@ -327,6 +342,7 @@ export async function prepareAdditionalStudyPlanQuizzes(
     "created-search",
     "created-sentences",
     "learning-progress",
+    "study-plan-preparations",
   );
   return result;
 }

@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router";
+import { SWRConfig } from "swr";
 import { beforeEach, expect, it, vi } from "vitest";
 import StudyPlanManager from "./StudyPlanManager";
 import {
@@ -67,10 +68,12 @@ beforeEach(() => {
 
 function renderManager() {
   return render(
-    <MemoryRouter>
-      <StudyPlanManager />
-      <Location />
-    </MemoryRouter>,
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <MemoryRouter>
+        <StudyPlanManager />
+        <Location />
+      </MemoryRouter>
+    </SWRConfig>,
   );
 }
 
@@ -102,6 +105,9 @@ it("PlanとResourceを省略可能な表として表示する", async () => {
   ).toHaveClass("sticky");
   expect(screen.getByLabelText("単文から用語: OFF")).toHaveTextContent("OFF");
   expect(screen.getByLabelText("用語から単文: ON")).toHaveTextContent("ON");
+  expect(
+    screen.getByRole("button", { name: "学習計画を作成" }).closest(".sticky"),
+  ).not.toBeNull();
 
   await user.click(
     screen.getByRole("checkbox", {
@@ -112,6 +118,20 @@ it("PlanとResourceを省略可能な表として表示する", async () => {
     "href",
     "/quiz?plan=plan-1",
   );
+});
+
+it("PlanのcacheをResourceと準備状況の更新待ちにせず表示する", async () => {
+  vi.mocked(listStudyResources).mockImplementationOnce(
+    () => new Promise(() => undefined),
+  );
+  vi.mocked(listStudyPlanPreparations).mockImplementationOnce(
+    () => new Promise(() => undefined),
+  );
+
+  renderManager();
+
+  expect(await screen.findByText(plan.name)).toBeVisible();
+  expect(screen.queryByLabelText("読み込み中")).not.toBeInTheDocument();
 });
 
 it("読み込み表示を表のbody内に表示する", async () => {

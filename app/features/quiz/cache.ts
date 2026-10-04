@@ -10,6 +10,7 @@ type QuizCacheArea =
   | "learning-progress"
   | "quiz-chain"
   | "study-resources"
+  | "study-plan-preparations"
   | "study-plans";
 
 type QuizCachePolicy = {
