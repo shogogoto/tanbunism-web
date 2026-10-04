@@ -11,7 +11,12 @@
 export interface PrepareStudyPlansRequest {
   /**
    * @minItems 1
-   * @maxItems 20
+   * @maxItems 100
    */
   plan_ids: string[];
+  /**
+   * @minimum 1
+   * @maximum 20
+   */
+  additional_count: number;
 }

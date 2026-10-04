@@ -109,6 +109,8 @@ export default function StudyPlanManager() {
   const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(
     new Set(),
   );
+  const [bulkPrepareOpen, setBulkPrepareOpen] = useState(false);
+  const [bulkPrepareCount, setBulkPrepareCount] = useState(5);
   const [bulkAction, setBulkAction] = useState<
     "delete" | "types" | "prepare"
   >();
@@ -335,13 +337,18 @@ export default function StudyPlanManager() {
     setBulkAction("prepare");
     setError(undefined);
     try {
-      const accepted = await prepareSelectedStudyPlans(planIds);
+      const additionalCount = Math.min(20, Math.max(1, bulkPrepareCount));
+      const accepted = await prepareSelectedStudyPlans(
+        planIds,
+        additionalCount,
+      );
       toast.success(
         `${accepted.accepted_count}件の学習計画をバックグラウンドで準備します`,
         {
           description: "完了したら通知でお知らせします。",
         },
       );
+      setBulkPrepareOpen(false);
       setSelectedPlanIds(new Set());
     } catch (prepareError) {
       setError(
@@ -521,6 +528,67 @@ export default function StudyPlanManager() {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={bulkPrepareOpen}
+        onOpenChange={(open) => {
+          if (!bulkAction) setBulkPrepareOpen(open);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>クイズを一括準備</DialogTitle>
+            <DialogDescription>
+              選択した{selectedPlanIds.size}
+              件の学習計画をバックグラウンドで処理します。
+            </DialogDescription>
+          </DialogHeader>
+          <label className="grid gap-2 text-sm">
+            各学習計画に追加する問題数
+            <input
+              type="number"
+              min={1}
+              max={20}
+              className="h-10 rounded-md border bg-background px-3"
+              value={bulkPrepareCount}
+              onChange={(event) =>
+                setBulkPrepareCount(Number(event.target.value))
+              }
+              onBlur={() =>
+                setBulkPrepareCount((current) =>
+                  Math.min(20, Math.max(1, current || 1)),
+                )
+              }
+            />
+          </label>
+          <p className="text-sm text-muted-foreground">
+            最大
+            <strong className="mx-1 tabular-nums text-foreground">
+              {selectedPlanIds.size *
+                Math.min(20, Math.max(1, bulkPrepareCount || 1))}
+              問
+            </strong>
+            を生成します。対象となる新しい問題がなければ、この数より少なくなります。
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={Boolean(bulkAction)}
+              onClick={() => setBulkPrepareOpen(false)}
+            >
+              キャンセル
+            </Button>
+            <Button
+              type="button"
+              disabled={Boolean(bulkAction)}
+              onClick={() => void prepareSelectedPlans()}
+            >
+              {bulkAction === "prepare" ? "受付中…" : "バックグラウンドで準備"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {!isLoading && plans.length === 0 && !isCreating ? (
         <div className="space-y-3">
           <div className="flex justify-end">
@@ -594,7 +662,7 @@ export default function StudyPlanManager() {
                         type="button"
                         size="sm"
                         disabled={Boolean(bulkAction)}
-                        onClick={() => void prepareSelectedPlans()}
+                        onClick={() => setBulkPrepareOpen(true)}
                       >
                         {bulkAction === "prepare"
                           ? "受付中…"

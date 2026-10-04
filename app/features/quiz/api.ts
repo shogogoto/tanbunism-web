@@ -371,13 +371,17 @@ export async function prepareAdditionalStudyPlanQuizzes(
 
 export async function prepareSelectedStudyPlans(
   planIds: string[],
+  additionalCount: number,
 ): Promise<PrepareStudyPlansAccepted> {
   return requestStudyPlanPreparation<PrepareStudyPlansAccepted>(
     "/quiz/study-plans/prepare",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan_ids: planIds }),
+      body: JSON.stringify({
+        plan_ids: planIds,
+        additional_count: additionalCount,
+      }),
     },
   );
 }

@@ -1211,7 +1211,9 @@ export const ListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponse =
  * 選択したStudyPlanのクイズ準備をバックグラウンドで開始する.
  * @summary Prepare Study Plans Api
  */
-export const prepareStudyPlansApiQuizStudyPlansPreparePostBodyPlanIdsMax = 20;
+export const prepareStudyPlansApiQuizStudyPlansPreparePostBodyPlanIdsMax = 100;
+
+export const prepareStudyPlansApiQuizStudyPlansPreparePostBodyAdditionalCountMax = 20;
 
 export const PrepareStudyPlansApiQuizStudyPlansPreparePostBody = zod
   .object({
@@ -1219,6 +1221,11 @@ export const PrepareStudyPlansApiQuizStudyPlansPreparePostBody = zod
       .array(zod.string().uuid())
       .min(1)
       .max(prepareStudyPlansApiQuizStudyPlansPreparePostBodyPlanIdsMax),
+    additional_count: zod
+      .number()
+      .int()
+      .min(1)
+      .max(prepareStudyPlansApiQuizStudyPlansPreparePostBodyAdditionalCountMax),
   })
   .describe("バックグラウンドでまとめて準備するStudyPlan.");
 

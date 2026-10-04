@@ -321,11 +321,25 @@ it("選択したStudyPlanをバックグラウンドで一括準備する", asyn
   );
   await user.click(screen.getByRole("button", { name: "選択した2件を準備" }));
 
+  expect(
+    screen.getByRole("heading", { name: "クイズを一括準備" }),
+  ).toBeVisible();
+  expect(screen.getByText("10問")).toBeVisible();
+  const count = screen.getByRole("spinbutton", {
+    name: "各学習計画に追加する問題数",
+  });
+  await user.clear(count);
+  await user.type(count, "3");
+  expect(screen.getByText("6問")).toBeVisible();
+  await user.click(
+    screen.getByRole("button", { name: "バックグラウンドで準備" }),
+  );
+
   await waitFor(() =>
-    expect(prepareSelectedStudyPlans).toHaveBeenCalledWith([
-      plan.uid,
-      secondPlan.uid,
-    ]),
+    expect(prepareSelectedStudyPlans).toHaveBeenCalledWith(
+      [plan.uid, secondPlan.uid],
+      3,
+    ),
   );
   expect(screen.getByText("0件選択中")).toBeVisible();
 });
