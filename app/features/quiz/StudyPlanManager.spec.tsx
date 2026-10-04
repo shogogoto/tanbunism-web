@@ -15,7 +15,10 @@ import {
 } from "./api";
 
 vi.mock("~/features/notifications/NotificationProvider", () => ({
-  useNotifications: () => ({ refreshNotifications: vi.fn() }),
+  useNotifications: () => ({
+    notifications: [],
+    refreshNotifications: vi.fn(),
+  }),
 }));
 
 vi.mock("./api", () => ({

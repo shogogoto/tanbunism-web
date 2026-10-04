@@ -90,13 +90,18 @@ export function NotificationProvider({
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") refresh();
     };
+    const refreshFromPush = (event: MessageEvent) => {
+      if (event.data?.type === "tanbunism:push") refresh();
+    };
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refreshWhenVisible);
+    navigator.serviceWorker?.addEventListener("message", refreshFromPush);
     const interval = window.setInterval(refresh, REFRESH_INTERVAL_MS);
     return () => {
       controller.abort();
       window.removeEventListener("focus", refresh);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
+      navigator.serviceWorker?.removeEventListener("message", refreshFromPush);
       window.clearInterval(interval);
     };
   }, [applyFeed, refreshNotifications, userId]);

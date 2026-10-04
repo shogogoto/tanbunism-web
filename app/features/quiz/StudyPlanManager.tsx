@@ -82,7 +82,7 @@ const emptyPreparations: StudyPlanPreparationStatus[] = [];
 export default function StudyPlanManager() {
   const isMobile = useIsMobile(1024);
   const navigate = useNavigate();
-  const { refreshNotifications } = useNotifications();
+  const { notifications, refreshNotifications } = useNotifications();
   const {
     data: plans = emptyPlans,
     error: plansError,
@@ -122,6 +122,21 @@ export default function StudyPlanManager() {
   >({});
   const [error, setError] = useState<string>();
   const rowRefs = useRef(new Map<string, HTMLElement>());
+  const latestPreparationNotificationId = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    const latest = notifications.find(
+      ({ kind }) =>
+        kind === "quiz_preparation_complete" ||
+        kind === "quiz_preparation_failed",
+    );
+    if (!latest || latestPreparationNotificationId.current === latest.uid)
+      return;
+    latestPreparationNotificationId.current = latest.uid;
+    void listStudyPlanPreparations({ forceRefresh: true })
+      .then((fresh) => mutatePreparations(fresh, { revalidate: false }))
+      .catch(() => undefined);
+  }, [mutatePreparations, notifications]);
 
   useEffect(() => {
     setAdditionalCounts((current) =>

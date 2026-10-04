@@ -18,6 +18,13 @@ self.addEventListener("push", (event) => {
       typeof self.navigator.setAppBadge === "function" && data.unread_count
         ? self.navigator.setAppBadge(data.unread_count)
         : Promise.resolve(),
+      self.clients
+        .matchAll({ type: "window", includeUncontrolled: true })
+        .then((clients) => {
+          for (const client of clients) {
+            client.postMessage({ type: "tanbunism:push" });
+          }
+        }),
     ]),
   );
 });

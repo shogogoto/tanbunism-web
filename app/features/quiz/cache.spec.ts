@@ -85,6 +85,32 @@ it("SWRからの再検証では古い値を表示したまま最新値を待て�
   expect(load).toHaveBeenCalledTimes(2);
 });
 
+it("バックグラウンド処理の完了後は期限内の値も強制更新できる", async () => {
+  authenticate("user-1");
+  const load = vi
+    .fn<() => Promise<string>>()
+    .mockResolvedValueOnce("cached")
+    .mockResolvedValueOnce("fresh");
+
+  await withQuizCache(
+    "study-plan-preparations",
+    {},
+    quizCachePolicy.normal,
+    load,
+  );
+
+  expect(
+    await withQuizCache(
+      "study-plan-preparations",
+      {},
+      quizCachePolicy.normal,
+      load,
+      { forceRefresh: true },
+    ),
+  ).toBe("fresh");
+  expect(load).toHaveBeenCalledTimes(2);
+});
+
 it("ユーザーを跨いでクイズキャッシュを共有しない", async () => {
   const load = vi
     .fn()

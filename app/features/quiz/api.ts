@@ -126,6 +126,7 @@ export type QuizIssueSummary = {
 
 export type QuizCacheOptions = {
   waitForRefresh?: boolean;
+  forceRefresh?: boolean;
 };
 
 const API_BASE_URL =

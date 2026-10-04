@@ -84,7 +84,10 @@ export async function withQuizCache<T>(
   identity: unknown,
   policy: QuizCachePolicy,
   load: () => Promise<T>,
-  { waitForRefresh = false }: { waitForRefresh?: boolean } = {},
+  {
+    waitForRefresh = false,
+    forceRefresh = false,
+  }: { waitForRefresh?: boolean; forceRefresh?: boolean } = {},
 ): Promise<T> {
   const userId = currentUserId();
   if (!userId) return load();
@@ -109,6 +112,8 @@ export async function withQuizCache<T>(
     refreshes.set(key, promise);
     return promise;
   };
+
+  if (forceRefresh) return refresh();
 
   try {
     const cached = (await genericCache.get(key)) as
