@@ -275,9 +275,14 @@ it("Resourceごとの学習指標を表示する", async () => {
     "data-[hotkey-active=true]:outline-2",
     "data-[hotkey-active=true]:outline-foreground",
   );
+  expect(resource.closest("[data-resource-row]")).not.toHaveClass("sticky");
   resource.focus();
   await user.keyboard("{Enter}");
   expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
+  expect(resource.closest("[data-resource-row]")).toHaveClass(
+    "sticky",
+    "top-[5.5rem]",
+  );
   expect(
     screen.getByRole("link", { name: "代数学ノートのクイズを管理" }),
   ).toBeVisible();
