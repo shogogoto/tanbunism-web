@@ -110,6 +110,15 @@ describe("UploadUnit", () => {
     expect(result.details).toBe("NetworkError");
   });
 
+  it("import枠の上限は待機させず再送可能にする", () => {
+    const result = describeUploadError(
+      429,
+      "現在importが混み合っています。少し待ってから再送してください",
+    );
+    expect(result.retryable).toBe(true);
+    expect(result.message).toContain("混み合っています");
+  });
+
   it("詳細不明の409を取り込み済みと決めつけない", () => {
     const result = describeUploadError(409, "同時に更新されました");
     expect(result.retryable).toBe(true);

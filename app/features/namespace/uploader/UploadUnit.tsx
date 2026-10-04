@@ -68,6 +68,14 @@ export function describeUploadError(
 ) {
   const raw = typeof detail === "string" ? detail : "";
   const message = raw || (status ? `HTTP ${status}` : "通信に失敗しました");
+  if (status === 429) {
+    return {
+      message:
+        raw || "現在importが混み合っています。少し待って再送してください。",
+      details: raw || undefined,
+      retryable: true,
+    };
+  }
   if (status === 409) {
     return {
       message:
@@ -178,8 +186,18 @@ export default function UploadUnit({
           });
           return;
         }
-        // @ts-expect-error generated response types vary by status code.
-        const detail = result.data?.detail?.message ?? result.data?.detail;
+        const errorData = result.data as {
+          message?: unknown;
+          detail?: unknown;
+        };
+        const nestedDetail = errorData.detail;
+        const detail =
+          errorData.message ??
+          (nestedDetail &&
+          typeof nestedDetail === "object" &&
+          "message" in nestedDetail
+            ? nestedDetail.message
+            : nestedDetail);
         const described = describeUploadError(result.status, detail);
         setUploadError(described);
         onResult({ ok: false, ...described });

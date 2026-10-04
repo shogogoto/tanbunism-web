@@ -28,6 +28,9 @@ type Props = {
 
 function responseDetail(value: unknown): string {
   if (!value || typeof value !== "object") return String(value ?? "");
+  if ("message" in value && typeof value.message === "string") {
+    return value.message;
+  }
   if (!("detail" in value)) return JSON.stringify(value);
   const detail = (value as { detail?: unknown }).detail;
   if (typeof detail === "string") return detail;
