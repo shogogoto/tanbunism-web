@@ -114,6 +114,12 @@ export type UnplannedQuiz = {
   resource_id: string;
   resource_name?: string | null;
 };
+export type QuizIssueSummary = {
+  broken_count: number;
+  reported_count: number;
+  unplanned_count: number;
+  total_count: number;
+};
 
 export type QuizCacheOptions = {
   waitForRefresh?: boolean;
@@ -155,6 +161,19 @@ export async function listCreatedQuizReports(): Promise<QuizReport[]> {
     );
   }
   return (await response.json()) as QuizReport[];
+}
+
+export async function getQuizIssueSummary(): Promise<QuizIssueSummary> {
+  const response = await fetch(`${API_BASE_URL}/quiz/created/issues/summary`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new QuizApiError(
+      "要対応の件数を取得できませんでした。",
+      response.status,
+    );
+  }
+  return (await response.json()) as QuizIssueSummary;
 }
 
 export class QuizApiError extends Error {

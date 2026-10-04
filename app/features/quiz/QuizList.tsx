@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import useSWR from "swr";
 import Loading from "~/shared/components/Loading";
 import {
   AlertDialog,
@@ -36,6 +37,7 @@ import {
   type StudyResource,
   deleteQuiz,
   deleteQuizzes,
+  getQuizIssueSummary,
   listStudyResources,
   searchCreatedQuizzes,
 } from "./api";
@@ -370,6 +372,11 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
   const sentenceId = searchParams.get("sentence") ?? undefined;
   const maintenanceMode =
     embedded && !resourceId && searchParams.get("quizMode") === "issues";
+  const { data: issueSummary, mutate: refreshIssueSummary } = useSWR(
+    embedded && !resourceId ? "quiz-management-issue-summary" : null,
+    getQuizIssueSummary,
+    { dedupingInterval: 30_000 },
+  );
   const [filters, setFilters] = useState<QuizFilters>(emptyQuizFilters);
   const [resourceQuery, setResourceQuery] = useState("");
   const debouncedQuery = useDebounce(filters.query, 250);
@@ -511,6 +518,7 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
       else next.delete("quizMode");
       return next;
     });
+    if (!active) void refreshIssueSummary();
   }
 
   return (
@@ -556,7 +564,7 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
             ) : (
               <>
                 <AlertTriangle className="size-4" />
-                要対応
+                要対応 {issueSummary?.total_count ?? 0}
               </>
             )}
           </Button>

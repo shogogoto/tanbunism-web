@@ -128,6 +128,14 @@ const server = setupServer(
     maintenanceRequests += 1;
     return HttpResponse.json([]);
   }),
+  http.get("*/quiz/created/issues/summary", () =>
+    HttpResponse.json({
+      broken_count: 1,
+      reported_count: 2,
+      unplanned_count: 1,
+      total_count: 3,
+    }),
+  ),
   http.get("*/quiz/learning-progress/resource-1", () =>
     HttpResponse.json(learningStatus),
   ),
@@ -309,7 +317,7 @@ it("要対応を開くまでメンテナンス対象を取得しない", async (
   expect(maintenanceRequests).toBe(0);
   expect(searchRequests).toHaveLength(0);
 
-  await user.click(screen.getByRole("button", { name: "要対応" }));
+  await user.click(await screen.findByRole("button", { name: "要対応 3" }));
 
   expect(await screen.findByRole("heading", { name: "要対応" })).toBeVisible();
   await waitFor(() => expect(maintenanceRequests).toBe(3));
