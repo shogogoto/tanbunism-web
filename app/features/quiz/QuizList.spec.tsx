@@ -79,6 +79,7 @@ const learningStatus = {
   last_attempted_at: "2026-07-28T01:00:00Z",
 };
 const searchRequests: string[] = [];
+let maintenanceRequests = 0;
 
 const server = setupServer(
   http.get("*/namespace", () =>
@@ -104,8 +105,9 @@ const server = setupServer(
   http.get("*/quiz/created/resources", () =>
     HttpResponse.json([resourceStatus]),
   ),
-  http.get("*/quiz/created/broken", () =>
-    HttpResponse.json([
+  http.get("*/quiz/created/broken", () => {
+    maintenanceRequests += 1;
+    return HttpResponse.json([
       {
         quiz_id: "broken-quiz-1",
         quiz_type: "term2sent",
@@ -116,8 +118,16 @@ const server = setupServer(
         roles: ["QUIZ_TARGET"],
         retired_at: "2026-09-30T00:00:00Z",
       },
-    ]),
-  ),
+    ]);
+  }),
+  http.get("*/quiz/created/reports", () => {
+    maintenanceRequests += 1;
+    return HttpResponse.json([]);
+  }),
+  http.get("*/quiz/created/unplanned", () => {
+    maintenanceRequests += 1;
+    return HttpResponse.json([]);
+  }),
   http.get("*/quiz/learning-progress/resource-1", () =>
     HttpResponse.json(learningStatus),
   ),
@@ -149,15 +159,16 @@ const server = setupServer(
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   searchRequests.length = 0;
+  maintenanceRequests = 0;
   server.resetHandlers();
 });
 afterAll(() => server.close());
 
-function renderQuizList(initialEntry = "/quiz/list") {
+function renderQuizList(initialEntry = "/quiz/list", embedded = false) {
   render(
     <SWRConfig value={{ provider: () => new Map() }}>
       <MemoryRouter initialEntries={[initialEntry]}>
-        <QuizList />
+        <QuizList embedded={embedded} />
       </MemoryRouter>
     </SWRConfig>,
   );
@@ -265,10 +276,6 @@ it("Resourceごとの学習指標を表示する", async () => {
   await user.click(coverageHeader);
   expect(screen.getByText(/対象単文のうち、必要な形式のクイズ/)).toBeVisible();
   await user.keyboard("{Escape}");
-  expect(screen.getByRole("button", { name: /参照切れ 1件/ })).toBeVisible();
-  await user.click(screen.getByRole("button", { name: /参照切れ 1件/ }));
-  expect(screen.getByRole("heading", { name: "参照切れクイズ" })).toBeVisible();
-  await user.keyboard("{Escape}");
   const resource = screen.getByRole("button", { name: /代数学ノート/ });
   expect(resource).toHaveAttribute("data-hotkey-item");
   expect(resource).toHaveClass(
@@ -290,6 +297,24 @@ it("Resourceごとの学習指標を表示する", async () => {
   expect(
     screen.getByRole("link", { name: "代数学ノートのクイズを管理" }),
   ).toBeVisible();
+});
+
+it("要対応を開くまでメンテナンス対象を取得しない", async () => {
+  const user = userEvent.setup();
+  renderQuizList("/dashboard?view=quiz-management", true);
+
+  expect(screen.queryByLabelText("読み込み中")).not.toBeInTheDocument();
+  expect(await screen.findByText("Resource別の学習状況")).toBeVisible();
+  expect(await screen.findByText("代数学ノート")).toBeVisible();
+  expect(maintenanceRequests).toBe(0);
+  expect(searchRequests).toHaveLength(0);
+
+  await user.click(screen.getByRole("button", { name: "要対応" }));
+
+  expect(await screen.findByRole("heading", { name: "要対応" })).toBeVisible();
+  await waitFor(() => expect(maintenanceRequests).toBe(3));
+  expect(screen.getByRole("button", { name: "すべてのクイズ" })).toBeVisible();
+  expect(screen.queryByText("Resource別の学習状況")).not.toBeInTheDocument();
 });
 
 it("Resource一覧をResource名で絞り込む", async () => {

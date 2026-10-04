@@ -1,28 +1,17 @@
-import { AlertTriangle, ChevronRight, Info } from "lucide-react";
+import { ChevronRight, Info } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
-import useSWR from "swr";
 import Loading from "~/shared/components/Loading";
-import { Button } from "~/shared/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/shared/components/ui/collapsible";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "~/shared/components/ui/dialog";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "~/shared/components/ui/popover";
-import BrokenQuizManager from "./BrokenQuizManager";
 import QuizPrompt from "./QuizPrompt";
 import {
   type ManagedQuiz,
@@ -30,7 +19,6 @@ import {
   type ResourceLearningStatus,
   type StudyResource,
   getLearningProgress,
-  listBrokenQuizReferences,
   listCreatedQuizResources,
   listStudyResources,
   searchCreatedQuizzes,
@@ -240,14 +228,6 @@ export default function ResourceLearningOverview({
       revalidateOnReconnect: true,
     },
   );
-  const { data: brokenCount = 0, mutate: mutateBrokenCount } = useSWR(
-    "quiz-management-broken-count",
-    async () => {
-      const references = await listBrokenQuizReferences();
-      return new Set(references.map((item) => item.quiz_id)).size;
-    },
-  );
-
   if (error)
     return (
       <p className="px-3 py-2 text-sm text-destructive">
@@ -257,7 +237,16 @@ export default function ResourceLearningOverview({
       </p>
     );
   if (!items) {
-    return <Loading />;
+    return (
+      <section className="border-y sm:border-x">
+        <div className="flex items-center gap-2 border-b px-3 py-3">
+          <h2 className="text-sm font-semibold">Resource別の学習状況</h2>
+        </div>
+        <p className="px-3 py-4 text-sm text-muted-foreground">
+          学習状況を読み込み中…
+        </p>
+      </section>
+    );
   }
   if (items.length === 0) return null;
 
@@ -272,34 +261,6 @@ export default function ResourceLearningOverview({
     <section className="border-y sm:border-x">
       <div className="flex items-center gap-2 border-b px-3 py-3">
         <h2 className="text-sm font-semibold">Resource別の学習状況</h2>
-        {brokenCount > 0 && (
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="ml-auto border-amber-500/50 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
-              >
-                <AlertTriangle className="size-4" />
-                参照切れ {brokenCount}件
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-3xl">
-              <DialogHeader>
-                <DialogTitle>参照切れクイズ</DialogTitle>
-                <DialogDescription>
-                  元の単文を修復先へ付け替えるか、不要なクイズを削除してください。
-                </DialogDescription>
-              </DialogHeader>
-              <BrokenQuizManager
-                onCountChange={(count) =>
-                  void mutateBrokenCount(count, { revalidate: false })
-                }
-              />
-            </DialogContent>
-          </Dialog>
-        )}
       </div>
       <div className="sticky top-14 z-20 grid grid-cols-[minmax(0,1fr)_2.5rem_repeat(3,3rem)_3.25rem] items-center border-b bg-background/95 px-3 py-2 backdrop-blur sm:grid-cols-[minmax(0,1fr)_4rem_repeat(3,5rem)_4rem]">
         <span className="text-xs font-medium text-muted-foreground">

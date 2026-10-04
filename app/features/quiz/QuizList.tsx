@@ -1,4 +1,9 @@
-import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import Loading from "~/shared/components/Loading";
@@ -23,10 +28,9 @@ import {
   CardTitle,
 } from "~/shared/components/ui/card";
 import { useDebounce } from "~/shared/hooks/useDebounce";
+import QuizMaintenance from "./QuizMaintenance";
 import QuizPrompt from "./QuizPrompt";
-import ReportedQuizManager from "./ReportedQuizManager";
 import ResourceLearningOverview from "./ResourceLearningOverview";
-import UnplannedQuizManager from "./UnplannedQuizManager";
 import {
   type ManagedQuiz,
   type StudyResource,
@@ -361,9 +365,11 @@ function QuizCard({
 }
 
 export default function QuizList({ embedded = false }: { embedded?: boolean }) {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const resourceId = searchParams.get("resource") ?? undefined;
   const sentenceId = searchParams.get("sentence") ?? undefined;
+  const maintenanceMode =
+    embedded && !resourceId && searchParams.get("quizMode") === "issues";
   const [filters, setFilters] = useState<QuizFilters>(emptyQuizFilters);
   const [resourceQuery, setResourceQuery] = useState("");
   const debouncedQuery = useDebounce(filters.query, 250);
@@ -397,7 +403,9 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
     setSelectedQuizIds(new Set());
   }, [resourceId, sentenceId, appliedFilters]);
   const { data, error, mutate } = useQuizSWR<LoadedState>(
-    ["quiz-management", resourceId, sentenceId, appliedFilters],
+    maintenanceMode || !resourceId
+      ? null
+      : ["quiz-management", resourceId, sentenceId, appliedFilters],
     async (cacheOptions) => {
       const [resources, result] = await Promise.all([
         listStudyResources(cacheOptions),
@@ -496,6 +504,15 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
       ? loadState.resources.find((resource) => resource.uid === resourceId)
       : undefined;
 
+  function setMaintenanceMode(active: boolean) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (active) next.set("quizMode", "issues");
+      else next.delete("quizMode");
+      return next;
+    });
+  }
+
   return (
     <div
       className={
@@ -526,36 +543,54 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
         </header>
       )}
 
-      {loadState.status === "loading" && <Loading />}
-      {loadState.status === "error" && (
-        <p role="alert" className="text-destructive">
-          {loadState.message}
-        </p>
+      {embedded && !resourceId && (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setMaintenanceMode(!maintenanceMode)}
+          >
+            {maintenanceMode ? (
+              "すべてのクイズ"
+            ) : (
+              <>
+                <AlertTriangle className="size-4" />
+                要対応
+              </>
+            )}
+          </Button>
+        </div>
       )}
-      {loadState.status === "loaded" && (
+      {maintenanceMode ? (
+        <QuizMaintenance />
+      ) : !resourceId ? (
         <section className="space-y-3">
-          {embedded && !resourceId && <ReportedQuizManager />}
-          {embedded && !resourceId && <UnplannedQuizManager />}
-          {!resourceId && (
-            <>
-              <ResourceSearchFilter
-                value={resourceQuery}
-                onChange={setResourceQuery}
-              />
-              <ResourceLearningOverview resourceQuery={resourceQuery} />
-            </>
+          <ResourceSearchFilter
+            value={resourceQuery}
+            onChange={setResourceQuery}
+          />
+          <ResourceLearningOverview resourceQuery={resourceQuery} />
+        </section>
+      ) : (
+        <>
+          {loadState.status === "loading" && <Loading />}
+          {loadState.status === "error" && (
+            <p role="alert" className="text-destructive">
+              {loadState.message}
+            </p>
           )}
-          {resourceId && (
-            <Button asChild variant="ghost" size="sm">
-              <Link
-                to={embedded ? "/dashboard?view=quiz-management" : "/quiz/list"}
-              >
-                ← Resource一覧へ
-              </Link>
-            </Button>
-          )}
-          {resourceId && (
-            <>
+          {loadState.status === "loaded" && (
+            <section className="space-y-3">
+              <Button asChild variant="ghost" size="sm">
+                <Link
+                  to={
+                    embedded ? "/dashboard?view=quiz-management" : "/quiz/list"
+                  }
+                >
+                  ← Resource一覧へ
+                </Link>
+              </Button>
               <h2 className="text-lg font-semibold">このResourceのクイズ</h2>
               <QuizSearchFilters filters={filters} onChange={setFilters} />
               <div className="flex flex-wrap items-center gap-2">
@@ -623,9 +658,7 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
               )}
               {loadState.quizzes.length === 0 ? (
                 <p className="border p-4 text-sm text-muted-foreground">
-                  {resourceId
-                    ? "このResourceから作成したクイズはありません。"
-                    : "条件に合う作成済みクイズはありません。"}
+                  このResourceから作成したクイズはありません。
                 </p>
               ) : (
                 loadState.quizzes.map((managed) => (
@@ -645,9 +678,9 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
                   />
                 ))
               )}
-            </>
+            </section>
           )}
-        </section>
+        </>
       )}
     </div>
   );
