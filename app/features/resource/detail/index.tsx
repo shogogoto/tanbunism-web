@@ -69,7 +69,7 @@ export default function ResourceDetail({ id }: Props) {
     const message = isIncomplete
       ? (response.data?.detail?.message ??
         response.data?.message ??
-        "Resourceの取り込みが完了していません。同じ読書メモを再importしてください。")
+        "Resourceの取り込みが完了していません。同じファイルを再インポートしてください。")
       : "Resourceを読み込めませんでした。通信状態を確認して再読み込みしてください。";
     return (
       <div className="mx-auto max-w-xl p-6">
@@ -81,7 +81,7 @@ export default function ResourceDetail({ id }: Props) {
           <div className="flex flex-wrap gap-2">
             {isIncomplete && (
               <Link to="/import" className={buttonVariants({ size: "sm" })}>
-                読書メモimportへ
+                インポートへ
               </Link>
             )}
             <button

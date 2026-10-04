@@ -161,11 +161,7 @@ export default function Dashboard() {
                   size="icon"
                   className="fixed bottom-20 right-4 z-30 size-12 rounded-full shadow-xl ring-4 ring-background transition-transform hover:scale-105 md:bottom-6 md:right-6"
                 >
-                  <Link
-                    to="/import"
-                    aria-label="読書メモimport"
-                    title="読書メモimport"
-                  >
+                  <Link to="/import" aria-label="インポート" title="インポート">
                     <Plus className="size-6" />
                   </Link>
                 </Button>

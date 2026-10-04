@@ -58,7 +58,7 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
                     <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
                     <HotkeyRow keys={["g", "p"]} label="プロフィールへ移動" />
                     <HotkeyRow keys={["g", "n"]} label="通知へ移動" />
-                    <HotkeyRow keys={["g", "i"]} label="読書メモimport" />
+                    <HotkeyRow keys={["g", "i"]} label="インポートへ移動" />
                   </>
                 )}
                 <HotkeyRow keys={["g", "s"]} label="検索へ移動" />
@@ -279,7 +279,7 @@ type HotkeyDefinition = { keys: string[]; label: string };
 
 function contextHotkeys(pathname: string, search: string): HotkeyDefinition[] {
   if (pathname === "/import") {
-    return [{ keys: ["Enter"], label: "選択した読書メモをimport" }];
+    return [{ keys: ["Enter"], label: "選択したファイルをインポート" }];
   }
   if (pathname.startsWith("/search")) {
     return [

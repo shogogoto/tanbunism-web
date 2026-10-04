@@ -3,7 +3,7 @@ import { fn } from "storybook/test";
 import { IdentityConflictDialog } from "./IdentityConflictDialog";
 
 const meta = {
-  title: "読書メモ/同一性の競合解消",
+  title: "インポート/同一性の競合解消",
   component: IdentityConflictDialog,
   parameters: {
     layout: "fullscreen",

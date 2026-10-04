@@ -72,7 +72,7 @@ export default function UserDetail({
 
       <Card>
         <CardHeader>
-          <CardTitle>読書メモ</CardTitle>
+          <CardTitle>リソース</CardTitle>
           <CardDescription>公開されているEntryとResource</CardDescription>
         </CardHeader>
         <CardContent>
@@ -80,7 +80,7 @@ export default function UserDetail({
             <NamespaceTree data={namespace} readOnly />
           ) : (
             <p className="text-sm text-muted-foreground">
-              まだ読書メモがありません。
+              まだリソースがありません。
             </p>
           )}
         </CardContent>

@@ -40,7 +40,7 @@ it("通知を未読数付きの主要メニューとして表示する", () => {
     "/notifications",
   );
   expect(screen.getByLabelText("未読4件")).toBeVisible();
-  expect(screen.getByRole("link", { name: "読書メモimport" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "インポート" })).toHaveAttribute(
     "href",
     "/import",
   );

@@ -152,7 +152,7 @@ export default function PersonalTimeline() {
       )}
       {items.length === 0 && !error && (
         <p className="border p-2 text-sm text-muted-foreground">
-          読書メモをimportすると、ここに新しい単文が並びます。
+          リソースをインポートすると、ここに新しい単文が並びます。
         </p>
       )}
       {items.length > 0 && (

@@ -99,7 +99,7 @@ it("g nで通知へ移動する", async () => {
   );
 });
 
-it("g iで読書メモ取り込みへ移動する", async () => {
+it("g iでインポートへ移動する", async () => {
   const user = userEvent.setup();
   renderHotkeys();
 
@@ -442,6 +442,6 @@ it("import画面のEnterをショートカット一覧に表示する", async ()
   await user.click(screen.getByRole("button", { name: "入力を終了" }));
   await user.keyboard("?");
 
-  expect(screen.getByText("選択した読書メモをimport")).toBeVisible();
+  expect(screen.getByText("選択したファイルをインポート")).toBeVisible();
   expect(screen.getByText("ページを上下にスクロール")).toBeVisible();
 });

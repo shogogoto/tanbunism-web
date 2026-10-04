@@ -4,7 +4,7 @@ import { fn } from "storybook/test";
 import { ImportPreviewRow } from "./ImportPreviewRow";
 
 const meta = {
-  title: "読書メモ/取り込み前の確認",
+  title: "インポート/取り込み前の確認",
   component: ImportPreviewRow,
   decorators: [
     (Story) => (

@@ -12,7 +12,7 @@ it("Ctrl+数字で選べる番号を各タブへ表示する", () => {
   );
 
   const timeline = screen.getByRole("tab", { name: "TL" });
-  const notes = screen.getByRole("tab", { name: "読書メモ" });
+  const notes = screen.getByRole("tab", { name: "リソース" });
 
   expect(timeline).toHaveAttribute("title", "Ctrl+1");
   expect(timeline.querySelector("kbd")).toHaveTextContent("1");

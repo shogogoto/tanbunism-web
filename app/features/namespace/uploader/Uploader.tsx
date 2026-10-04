@@ -281,7 +281,7 @@ export default function Uploader({ refresh, autoOpenPicker = false }: Props) {
         className="sticky top-0 z-10 space-y-4 border-b bg-background py-5 sm:py-6"
       >
         <div>
-          <h2 className="text-lg font-semibold">読書メモimport</h2>
+          <h2 className="text-lg font-semibold">インポート</h2>
           <p className="text-sm text-muted-foreground">
             解析に成功したファイルは、そのまま取り込みます。競合だけ確認が必要です。
           </p>
@@ -417,7 +417,7 @@ export default function Uploader({ refresh, autoOpenPicker = false }: Props) {
 }
 
 export async function notifyImportComplete(count: number) {
-  const body = `${count}件の読書メモの処理が完了しました。`;
+  const body = `${count}件のファイルの処理が完了しました。`;
   toast.success(body);
   if (
     typeof window === "undefined" ||
@@ -431,7 +431,7 @@ export async function notifyImportComplete(count: number) {
   }
   try {
     const registration = await navigator.serviceWorker.getRegistration();
-    await registration?.showNotification("読書メモの取り込みが完了しました", {
+    await registration?.showNotification("インポートが完了しました", {
       body,
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",

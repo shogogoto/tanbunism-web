@@ -148,12 +148,12 @@ describe("NamespaceExplorer", () => {
     expect(screen.getByText(`/resource/${resourceId}`)).toBeInTheDocument();
   });
 
-  it("タイトルまたは著者で読書メモを絞り込む", async () => {
+  it("タイトルまたは著者でリソースを絞り込む", async () => {
     const user = userEvent.setup();
     renderExplorer();
 
     const search = screen.getByRole("textbox", {
-      name: "読書メモを絞り込む",
+      name: "リソースを絞り込む",
     });
     expect(search.parentElement).toHaveClass("sticky", "top-0");
     await user.type(search, "アリストテレス");

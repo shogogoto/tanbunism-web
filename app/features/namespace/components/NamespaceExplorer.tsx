@@ -39,8 +39,8 @@ export default function NamespaceExplorer({ updater, nsprops }: Props) {
   );
 
   if (isLoading) return <Loading type="center-x" />;
-  if (error) return <div>読書メモを取得できませんでした。</div>;
-  if (!data) return <div>読書メモはありません。</div>;
+  if (error) return <div>リソースを取得できませんでした。</div>;
+  if (!data) return <div>リソースはありません。</div>;
 
   function refresh() {
     mutate();
@@ -55,8 +55,8 @@ export default function NamespaceExplorer({ updater, nsprops }: Props) {
           data-page-input-priority
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="読書メモを絞り込む"
-          aria-label="読書メモを絞り込む"
+          placeholder="リソースを絞り込む"
+          aria-label="リソースを絞り込む"
           className="h-9 pl-8"
         />
       </div>
@@ -64,7 +64,7 @@ export default function NamespaceExplorer({ updater, nsprops }: Props) {
         <NamespaceTreeItems items={tree} refresh={refresh} />
       ) : (
         <p className="px-2 py-4 text-sm text-muted-foreground">
-          一致する読書メモはありません。
+          一致するリソースはありません。
         </p>
       )}
     </div>

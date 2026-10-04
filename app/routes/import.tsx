@@ -2,7 +2,7 @@ import AuthGuard from "~/features/auth/AuthGuard";
 import Uploader from "~/features/namespace/uploader/Uploader";
 
 export function meta() {
-  return [{ title: "読書メモimport | Tanbunism" }];
+  return [{ title: "インポート | Tanbunism" }];
 }
 
 export default function ImportReadingNotes() {
