@@ -508,7 +508,11 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
 
   const selectedResource =
     loadState.status === "loaded"
-      ? loadState.resources.find((resource) => resource.uid === resourceId)
+      ? loadState.resources.find(
+          (resource) =>
+            resource.uid.replaceAll("-", "") ===
+            resourceId?.replaceAll("-", ""),
+        )
       : undefined;
 
   function setMaintenanceMode(active: boolean) {
@@ -599,7 +603,17 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
                   ← Resource一覧へ
                 </Link>
               </Button>
-              <h2 className="text-lg font-semibold">このResourceのクイズ</h2>
+              <div className="flex min-w-0 items-center justify-between gap-3">
+                <h2 className="min-w-0 truncate text-lg font-semibold">
+                  {selectedResource?.name ?? "Resource"}のクイズ
+                </h2>
+                <Link
+                  to={`/resource/${resourceId}`}
+                  className="shrink-0 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                >
+                  Resourceを開く
+                </Link>
+              </div>
               <QuizSearchFilters filters={filters} onChange={setFilters} />
               <div className="flex flex-wrap items-center gap-2">
                 <label className="flex items-center gap-2 text-sm">

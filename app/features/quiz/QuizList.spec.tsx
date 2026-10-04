@@ -351,6 +351,16 @@ it("Resource行の管理列からクイズ管理を開く", async () => {
       name: "代数学ノートのクイズを管理",
     }),
   );
-  expect(await screen.findByText("このResourceのクイズ")).toBeVisible();
+  expect(await screen.findByText("代数学ノートのクイズ")).toBeVisible();
+  expect(screen.getByRole("link", { name: "Resourceを開く" })).toHaveAttribute(
+    "href",
+    "/resource/resource-1",
+  );
   expect(screen.getByText(quiz.statement)).toBeVisible();
+});
+
+it("UUID表記が違っても対象Resource名を表示する", async () => {
+  renderQuizList("/quiz/list?resource=resource--1");
+
+  expect(await screen.findByText("代数学ノートのクイズ")).toBeVisible();
 });
