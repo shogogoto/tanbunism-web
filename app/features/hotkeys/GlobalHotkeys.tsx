@@ -171,13 +171,19 @@ export default function GlobalHotkeys() {
       }
 
       if (!waitingForDestination.current && key === " ") {
-        if (toggleActiveQuizCard()) event.preventDefault();
+        if (toggleActiveResourceDisclosure() || toggleActiveQuizCard())
+          event.preventDefault();
         resetChord();
         return;
       }
 
       if (!waitingForDestination.current && key === "enter") {
-        if (submitActiveQuiz() || runPageEnterAction()) event.preventDefault();
+        if (
+          submitActiveQuiz() ||
+          openActiveResourceManagement() ||
+          runPageEnterAction()
+        )
+          event.preventDefault();
         resetChord();
         return;
       }
@@ -308,8 +314,9 @@ function contextHotkeys(pathname: string, search: string): HotkeyDefinition[] {
   }
   if (view === "quiz-management") {
     return [
-      { keys: ["j", "k"], label: "Resourceを移動" },
-      { keys: ["Enter"], label: "currentを開閉" },
+      { keys: ["j", "k"], label: "Resource・展開中のクイズを移動" },
+      { keys: ["Space"], label: "currentのResourceを開閉" },
+      { keys: ["Enter"], label: "currentのResourceのクイズを管理" },
     ];
   }
   return [];
@@ -329,6 +336,42 @@ function toggleActiveQuizCard(): boolean {
   );
   if (!active) return false;
   active.click();
+  return true;
+}
+
+function activeResourceDisclosure(): {
+  active: HTMLElement;
+  disclosure: HTMLElement;
+} | null {
+  const active = document.querySelector<HTMLElement>(
+    '[data-resource-disclosure] [data-hotkey-item][data-hotkey-active="true"]',
+  );
+  const disclosure = active?.closest<HTMLElement>("[data-resource-disclosure]");
+  return active && disclosure ? { active, disclosure } : null;
+}
+
+function toggleActiveResourceDisclosure(): boolean {
+  const current = activeResourceDisclosure();
+  const trigger = current?.disclosure.querySelector<HTMLElement>(
+    "[data-resource-disclosure-trigger]",
+  );
+  if (!current || !trigger) return false;
+  if (current.active !== trigger) {
+    current.active.removeAttribute("data-hotkey-active");
+    trigger.dataset.hotkeyActive = "true";
+    trigger.focus({ preventScroll: true });
+  }
+  trigger.click();
+  return true;
+}
+
+function openActiveResourceManagement(): boolean {
+  const current = activeResourceDisclosure();
+  const link = current?.disclosure.querySelector<HTMLElement>(
+    "[data-resource-management-link]",
+  );
+  if (!link) return false;
+  link.click();
   return true;
 }
 

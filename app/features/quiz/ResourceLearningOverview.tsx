@@ -132,7 +132,7 @@ function ResourceDisclosure({
   const quizzes: ManagedQuiz[] | undefined = data?.data;
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
+    <Collapsible open={open} onOpenChange={setOpen} data-resource-disclosure>
       <div
         data-resource-row
         className={`grid grid-cols-[minmax(0,1fr)_2.5rem_repeat(3,3rem)_3.25rem] items-center px-3 sm:grid-cols-[minmax(0,1fr)_4rem_repeat(3,5rem)_4rem] ${
@@ -145,6 +145,7 @@ function ResourceDisclosure({
           <button
             type="button"
             data-hotkey-item
+            data-resource-disclosure-trigger
             className="group col-span-5 grid w-full grid-cols-[minmax(0,1fr)_2.5rem_repeat(3,3rem)] items-center py-3 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/60 data-[hotkey-active=true]:outline-2 data-[hotkey-active=true]:-outline-offset-2 data-[hotkey-active=true]:outline-foreground sm:grid-cols-[minmax(0,1fr)_4rem_repeat(3,5rem)]"
           >
             <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -160,6 +161,7 @@ function ResourceDisclosure({
           className="mx-auto rounded-sm px-2 py-1 text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={`${resource.name}のクイズを管理`}
           title="このResourceのクイズを管理"
+          data-resource-management-link
         >
           管理
         </Link>
@@ -182,7 +184,10 @@ function ResourceDisclosure({
           {quizzes?.map((managed) => (
             <div
               key={managed.quiz.quiz_id}
-              className="border-b px-9 py-2 last:border-b-0"
+              data-hotkey-item
+              data-resource-quiz-item
+              tabIndex={-1}
+              className="relative border-b px-9 py-2 outline-none last:border-b-0 data-[hotkey-active=true]:z-10 data-[hotkey-active=true]:bg-accent/60 data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary"
             >
               <QuizPrompt quiz={managed.quiz} compact />
               <p className="mt-1 text-xs text-muted-foreground">

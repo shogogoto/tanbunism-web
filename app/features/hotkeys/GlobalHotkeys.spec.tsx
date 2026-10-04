@@ -301,6 +301,54 @@ it("focusがタブにあってもcurrentの次の項目へ移動する", async (
   );
 });
 
+it("クイズ管理ではSpaceでResourceを開閉し配下のクイズも移動する", async () => {
+  const user = userEvent.setup();
+  const toggleResource = vi.fn();
+  const openManagement = vi.fn();
+  renderHotkeys(
+    <div data-resource-disclosure>
+      <button
+        type="button"
+        data-hotkey-item
+        data-hotkey-active="true"
+        data-resource-disclosure-trigger
+        onClick={toggleResource}
+      >
+        Resource
+      </button>
+      <div data-hotkey-item data-resource-quiz-item tabIndex={-1}>
+        配下のクイズ
+      </div>
+      <a
+        href="/quiz-management"
+        data-resource-management-link
+        onClick={(event) => {
+          event.preventDefault();
+          openManagement();
+        }}
+      >
+        管理
+      </a>
+    </div>,
+    "/dashboard?view=quiz-management",
+  );
+
+  await user.keyboard(" ");
+  expect(toggleResource).toHaveBeenCalledOnce();
+
+  await user.keyboard("j");
+  const childQuiz = screen.getByText("配下のクイズ");
+  expect(childQuiz).toHaveFocus();
+  expect(childQuiz).toHaveAttribute("data-hotkey-active", "true");
+
+  await user.keyboard("{Enter}");
+  expect(openManagement).toHaveBeenCalledOnce();
+
+  await user.keyboard(" ");
+  expect(toggleResource).toHaveBeenCalledTimes(2);
+  expect(screen.getByRole("button", { name: "Resource" })).toHaveFocus();
+});
+
 it("Ctrlと数字で指定位置のタブへ移動する", async () => {
   const user = userEvent.setup();
   const selectThird = vi.fn();

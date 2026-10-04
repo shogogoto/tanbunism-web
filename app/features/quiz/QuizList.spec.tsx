@@ -278,7 +278,11 @@ it("Resourceごとの学習指標を表示する", async () => {
   expect(resource.closest("[data-resource-row]")).not.toHaveClass("sticky");
   resource.focus();
   await user.keyboard("{Enter}");
-  expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
+  const openedQuiz = (await screen.findByText(quiz.statement)).closest(
+    "[data-resource-quiz-item]",
+  );
+  expect(openedQuiz).toHaveAttribute("data-hotkey-item");
+  expect(openedQuiz).toHaveAttribute("tabindex", "-1");
   expect(resource.closest("[data-resource-row]")).toHaveClass(
     "sticky",
     "top-[5.5rem]",
