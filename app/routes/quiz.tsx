@@ -5,7 +5,7 @@ export function meta() {
     { title: "クイズ | Tanbunism" },
     {
       name: "description",
-      content: "StudyPlanに基づいて提案されたクイズを解く",
+      content: "みんなが作成したクイズを解く",
     },
   ];
 }

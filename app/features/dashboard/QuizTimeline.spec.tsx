@@ -3,11 +3,16 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
 import { expect, it, vi } from "vitest";
-import { answerQuiz, searchCreatedQuizzes } from "~/features/quiz/api";
+import {
+  answerQuiz,
+  listQuizFeed,
+  searchCreatedQuizzes,
+} from "~/features/quiz/api";
 import QuizTimeline from "./QuizTimeline";
 
 vi.mock("~/features/quiz/api", () => ({
   answerQuiz: vi.fn(),
+  listQuizFeed: vi.fn(),
   searchCreatedQuizzes: vi.fn(),
 }));
 
@@ -20,6 +25,45 @@ function renderTimeline() {
     </SWRConfig>,
   );
 }
+
+it("全ユーザー版では専用feedを取得する", async () => {
+  vi.mocked(listQuizFeed).mockResolvedValue({
+    total: 1,
+    data: [
+      {
+        quiz: {
+          quiz_id: "global-quiz",
+          quiz_type: "term2sent",
+          prompt: {
+            subject: "みんなの問題",
+            answer_kind: "sentence",
+          },
+          statement: "みんなの問題",
+          options: {},
+          correct: [],
+          created: "2026-10-04T00:00:00Z",
+          no_correct_option: false,
+        },
+        attempts: 0,
+        corrects: 0,
+        accuracy: null,
+        last_attempted_at: null,
+      },
+    ],
+  });
+
+  render(
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <MemoryRouter>
+        <QuizTimeline scope="global" />
+      </MemoryRouter>
+    </SWRConfig>,
+  );
+
+  expect(await screen.findByText("みんなの問題")).toBeVisible();
+  expect(listQuizFeed).toHaveBeenCalledOnce();
+  expect(searchCreatedQuizzes).not.toHaveBeenCalled();
+});
 
 it("未回答のクイズを回答済みのクイズより先に表示する", async () => {
   vi.mocked(searchCreatedQuizzes).mockResolvedValue({

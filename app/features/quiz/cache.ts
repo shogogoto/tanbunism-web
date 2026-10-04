@@ -8,6 +8,7 @@ type QuizCacheArea =
   | "created-search"
   | "created-sentences"
   | "learning-progress"
+  | "quiz-feed"
   | "quiz-chain"
   | "study-resources"
   | "study-plan-preparations"

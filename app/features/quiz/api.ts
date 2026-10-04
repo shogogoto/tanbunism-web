@@ -477,6 +477,7 @@ export async function answerQuiz(
     "answer-history",
     "created-search",
     "learning-progress",
+    "quiz-feed",
     "quiz-chain",
   );
   return chain;
@@ -579,6 +580,29 @@ export async function searchCreatedQuizzes(
         { credentials: "include" },
       );
       return unwrap(response, "作成したクイズを検索できませんでした。");
+    },
+    options,
+  );
+}
+
+export async function listQuizFeed(
+  options: QuizCacheOptions = {},
+): Promise<ManagedQuizResult> {
+  return withQuizCache(
+    "quiz-feed",
+    { page: 1, size: 80 },
+    quizCachePolicy.live,
+    async () => {
+      const response = await fetch(`${API_BASE_URL}/quiz/feed?page=1&size=80`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new QuizApiError(
+          "みんなのクイズを取得できませんでした。",
+          response.status,
+        );
+      }
+      return (await response.json()) as ManagedQuizResult;
     },
     options,
   );

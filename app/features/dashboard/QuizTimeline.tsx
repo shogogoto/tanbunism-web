@@ -5,6 +5,7 @@ import QuizPrompt from "~/features/quiz/QuizPrompt";
 import {
   type ManagedQuiz,
   type QuizType,
+  listQuizFeed,
   searchCreatedQuizzes,
 } from "~/features/quiz/api";
 import { useQuizSWR } from "~/features/quiz/useQuizSWR";
@@ -18,7 +19,11 @@ import {
 } from "~/shared/components/ui/collapsible";
 import { cn } from "~/shared/lib/utils";
 
-export default function QuizTimeline() {
+export default function QuizTimeline({
+  scope = "personal",
+}: {
+  scope?: "personal" | "global";
+}) {
   const [sessionResults, setSessionResults] = useState<Record<string, boolean>>(
     {},
   );
@@ -27,8 +32,11 @@ export default function QuizTimeline() {
     error,
     isLoading,
   } = useQuizSWR<ManagedQuiz[]>(
-    "dashboard-quiz-timeline",
+    scope === "global" ? "global-quiz-timeline" : "dashboard-quiz-timeline",
     async (cacheOptions) => {
+      if (scope === "global") {
+        return (await listQuizFeed(cacheOptions)).data;
+      }
       const quizTypes: QuizType[] = [
         "term2sent",
         "sent2term",
@@ -88,7 +96,9 @@ export default function QuizTimeline() {
       )}
       {sorted.length === 0 && !error && (
         <p className="border p-2 text-sm text-muted-foreground">
-          学習計画でクイズを準備すると、ここに表示されます。
+          {scope === "global"
+            ? "回答できるクイズはまだありません。"
+            : "学習計画でクイズを準備すると、ここに表示されます。"}
         </p>
       )}
       {sorted.length > 0 && (
