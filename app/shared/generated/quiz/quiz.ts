@@ -21,13 +21,17 @@ import type {
   HTTPValidationError,
   ListAnswerHistoryApiQuizAnswersGetParams,
   ListCreatedQuizzesQuizCreatedGetParams,
+  ListQuizFeedApiQuizFeedGetParams,
   ListQuizQuizGetParams,
   ManagedQuizResult,
   PrepareStudyPlanRequest,
   PrepareStudyPlanResult,
   QuizChain,
+  QuizIssueSummary,
   QuizReattachmentResult,
   QuizRecommendationResponse,
+  QuizReport,
+  QuizReportRequest,
   QuizResourceStatus,
   ReadableQuiz,
   ReadableQuizResult,
@@ -39,6 +43,7 @@ import type {
   StudyPlan,
   StudyPlanDraft,
   StudyPlanPreparationStatus,
+  UnplannedQuiz,
 } from "../fastAPI.schemas";
 
 export type createQuizApiQuizPostResponse200 = {
@@ -349,6 +354,118 @@ export const useListCreatedQuizzesQuizCreatedGet = <
     ...query,
   };
 };
+export type listQuizFeedApiQuizFeedGetResponse200 = {
+  data: ManagedQuizResult;
+  status: 200;
+};
+
+export type listQuizFeedApiQuizFeedGetResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listQuizFeedApiQuizFeedGetResponseSuccess =
+  listQuizFeedApiQuizFeedGetResponse200 & {
+    headers: Headers;
+  };
+export type listQuizFeedApiQuizFeedGetResponseError =
+  listQuizFeedApiQuizFeedGetResponse422 & {
+    headers: Headers;
+  };
+
+export type listQuizFeedApiQuizFeedGetResponse =
+  | listQuizFeedApiQuizFeedGetResponseSuccess
+  | listQuizFeedApiQuizFeedGetResponseError;
+
+export const getListQuizFeedApiQuizFeedGetUrl = (
+  params?: ListQuizFeedApiQuizFeedGetParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `https://knowde.onrender.com/quiz/feed?${stringifiedParams}`
+    : "https://knowde.onrender.com/quiz/feed";
+};
+
+/**
+ * 全ユーザーが作成したQuizを閲覧者の回答状況付きで取得.
+ * @summary List Quiz Feed Api
+ */
+export const listQuizFeedApiQuizFeedGet = async (
+  params?: ListQuizFeedApiQuizFeedGetParams,
+  options?: RequestInit,
+): Promise<listQuizFeedApiQuizFeedGetResponse> => {
+  const res = await fetch(getListQuizFeedApiQuizFeedGetUrl(params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listQuizFeedApiQuizFeedGetResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as listQuizFeedApiQuizFeedGetResponse;
+};
+
+export const getListQuizFeedApiQuizFeedGetKey = (
+  params?: ListQuizFeedApiQuizFeedGetParams,
+) =>
+  [
+    "https://knowde.onrender.com/quiz/feed",
+    ...(params ? [params] : []),
+  ] as const;
+
+export type ListQuizFeedApiQuizFeedGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listQuizFeedApiQuizFeedGet>>
+>;
+
+/**
+ * @summary List Quiz Feed Api
+ */
+export const useListQuizFeedApiQuizFeedGet = <
+  TError = Promise<HTTPValidationError>,
+>(
+  params?: ListQuizFeedApiQuizFeedGetParams,
+  options?: {
+    swr?: SWRConfiguration<
+      Awaited<ReturnType<typeof listQuizFeedApiQuizFeedGet>>,
+      TError
+    > & { swrKey?: Key; enabled?: boolean };
+    fetch?: RequestInit;
+  },
+) => {
+  const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey =
+    swrOptions?.swrKey ??
+    (() => (isEnabled ? getListQuizFeedApiQuizFeedGetKey(params) : null));
+  const swrFn = () => listQuizFeedApiQuizFeedGet(params, fetchOptions);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(
+    swrKey,
+    swrFn,
+    swrOptions,
+  );
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
 export type listCreatedQuizResourcesQuizCreatedResourcesGetResponse200 = {
   data: QuizResourceStatus[];
   status: 200;
@@ -486,7 +603,7 @@ export const getSearchCreatedQuizzesApiQuizCreatedSearchGetUrl = (
 };
 
 /**
- * 作成Quizを形式・回答状態・日時・正答率で検索.
+ * 作成Quizを文字列・形式・回答状態・日時・正答率で検索.
  * @summary Search Created Quizzes Api
  */
 export const searchCreatedQuizzesApiQuizCreatedSearchGet = async (
@@ -772,6 +889,269 @@ export const useListBrokenCreatedQuizzesQuizCreatedBrokenGet = <
     ...query,
   };
 };
+export type getCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetResponse200 = {
+  data: QuizIssueSummary;
+  status: 200;
+};
+
+export type getCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetResponseSuccess =
+  getCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetResponse200 & {
+    headers: Headers;
+  };
+
+export type getCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetResponse =
+  getCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetResponseSuccess;
+
+export const getGetCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetUrl =
+  () => {
+    return "https://knowde.onrender.com/quiz/created/issues/summary";
+  };
+
+/**
+ * 要対応と整理候補のQuiz件数を取得.
+ * @summary Get Created Quiz Issue Summary
+ */
+export const getCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGet = async (
+  options?: RequestInit,
+): Promise<getCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetResponse> => {
+  const res = await fetch(
+    getGetCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetResponse["data"] =
+    body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as getCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetResponse;
+};
+
+export const getGetCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetKey = () =>
+  ["https://knowde.onrender.com/quiz/created/issues/summary"] as const;
+
+export type GetCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetQueryResult =
+  NonNullable<
+    Awaited<
+      ReturnType<typeof getCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGet>
+    >
+  >;
+
+/**
+ * @summary Get Created Quiz Issue Summary
+ */
+export const useGetCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGet = <
+  TError = Promise<unknown>,
+>(options?: {
+  swr?: SWRConfiguration<
+    Awaited<
+      ReturnType<typeof getCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGet>
+    >,
+    TError
+  > & { swrKey?: Key; enabled?: boolean };
+  fetch?: RequestInit;
+}) => {
+  const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey =
+    swrOptions?.swrKey ??
+    (() =>
+      isEnabled
+        ? getGetCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetKey()
+        : null);
+  const swrFn = () =>
+    getCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGet(fetchOptions);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(
+    swrKey,
+    swrFn,
+    swrOptions,
+  );
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+export type listCreatedQuizReportsQuizCreatedReportsGetResponse200 = {
+  data: QuizReport[];
+  status: 200;
+};
+
+export type listCreatedQuizReportsQuizCreatedReportsGetResponseSuccess =
+  listCreatedQuizReportsQuizCreatedReportsGetResponse200 & {
+    headers: Headers;
+  };
+
+export type listCreatedQuizReportsQuizCreatedReportsGetResponse =
+  listCreatedQuizReportsQuizCreatedReportsGetResponseSuccess;
+
+export const getListCreatedQuizReportsQuizCreatedReportsGetUrl = () => {
+  return "https://knowde.onrender.com/quiz/created/reports";
+};
+
+/**
+ * 自分が作成したQuizへ届いた不備報告を取得.
+ * @summary List Created Quiz Reports
+ */
+export const listCreatedQuizReportsQuizCreatedReportsGet = async (
+  options?: RequestInit,
+): Promise<listCreatedQuizReportsQuizCreatedReportsGetResponse> => {
+  const res = await fetch(getListCreatedQuizReportsQuizCreatedReportsGetUrl(), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listCreatedQuizReportsQuizCreatedReportsGetResponse["data"] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as listCreatedQuizReportsQuizCreatedReportsGetResponse;
+};
+
+export const getListCreatedQuizReportsQuizCreatedReportsGetKey = () =>
+  ["https://knowde.onrender.com/quiz/created/reports"] as const;
+
+export type ListCreatedQuizReportsQuizCreatedReportsGetQueryResult =
+  NonNullable<
+    Awaited<ReturnType<typeof listCreatedQuizReportsQuizCreatedReportsGet>>
+  >;
+
+/**
+ * @summary List Created Quiz Reports
+ */
+export const useListCreatedQuizReportsQuizCreatedReportsGet = <
+  TError = Promise<unknown>,
+>(options?: {
+  swr?: SWRConfiguration<
+    Awaited<ReturnType<typeof listCreatedQuizReportsQuizCreatedReportsGet>>,
+    TError
+  > & { swrKey?: Key; enabled?: boolean };
+  fetch?: RequestInit;
+}) => {
+  const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey =
+    swrOptions?.swrKey ??
+    (() =>
+      isEnabled ? getListCreatedQuizReportsQuizCreatedReportsGetKey() : null);
+  const swrFn = () => listCreatedQuizReportsQuizCreatedReportsGet(fetchOptions);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(
+    swrKey,
+    swrFn,
+    swrOptions,
+  );
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+export type listUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponse200 = {
+  data: UnplannedQuiz[];
+  status: 200;
+};
+
+export type listUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponseSuccess =
+  listUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponse200 & {
+    headers: Headers;
+  };
+
+export type listUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponse =
+  listUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponseSuccess;
+
+export const getListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetUrl =
+  () => {
+    return "https://knowde.onrender.com/quiz/created/unplanned";
+  };
+
+/**
+ * StudyPlanの対象外になっている自分のQuizを取得.
+ * @summary List Unplanned Created Quizzes Api
+ */
+export const listUnplannedCreatedQuizzesApiQuizCreatedUnplannedGet = async (
+  options?: RequestInit,
+): Promise<listUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponse> => {
+  const res = await fetch(
+    getListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponse["data"] =
+    body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as listUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponse;
+};
+
+export const getListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetKey = () =>
+  ["https://knowde.onrender.com/quiz/created/unplanned"] as const;
+
+export type ListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetQueryResult =
+  NonNullable<
+    Awaited<
+      ReturnType<typeof listUnplannedCreatedQuizzesApiQuizCreatedUnplannedGet>
+    >
+  >;
+
+/**
+ * @summary List Unplanned Created Quizzes Api
+ */
+export const useListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGet = <
+  TError = Promise<unknown>,
+>(options?: {
+  swr?: SWRConfiguration<
+    Awaited<
+      ReturnType<typeof listUnplannedCreatedQuizzesApiQuizCreatedUnplannedGet>
+    >,
+    TError
+  > & { swrKey?: Key; enabled?: boolean };
+  fetch?: RequestInit;
+}) => {
+  const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey =
+    swrOptions?.swrKey ??
+    (() =>
+      isEnabled
+        ? getListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetKey()
+        : null);
+  const swrFn = () =>
+    listUnplannedCreatedQuizzesApiQuizCreatedUnplannedGet(fetchOptions);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(
+    swrKey,
+    swrFn,
+    swrOptions,
+  );
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
 export type deleteCreatedQuizzesApiQuizCreatedDeletePostResponse200 = {
   data: DeleteQuizzesResult;
   status: 200;
@@ -1014,6 +1394,117 @@ export const useRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachP
       ...query,
     };
   };
+export type reportQuizIssueApiQuizQuizIdReportsPostResponse204 = {
+  data: undefined;
+  status: 204;
+};
+
+export type reportQuizIssueApiQuizQuizIdReportsPostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type reportQuizIssueApiQuizQuizIdReportsPostResponseSuccess =
+  reportQuizIssueApiQuizQuizIdReportsPostResponse204 & {
+    headers: Headers;
+  };
+export type reportQuizIssueApiQuizQuizIdReportsPostResponseError =
+  reportQuizIssueApiQuizQuizIdReportsPostResponse422 & {
+    headers: Headers;
+  };
+
+export type reportQuizIssueApiQuizQuizIdReportsPostResponse =
+  | reportQuizIssueApiQuizQuizIdReportsPostResponseSuccess
+  | reportQuizIssueApiQuizQuizIdReportsPostResponseError;
+
+export const getReportQuizIssueApiQuizQuizIdReportsPostUrl = (
+  quizId: string,
+) => {
+  return `https://knowde.onrender.com/quiz/${quizId}/reports`;
+};
+
+/**
+ * 自他を問わず、表示できたQuizの不備を報告する.
+ * @summary Report Quiz Issue Api
+ */
+export const reportQuizIssueApiQuizQuizIdReportsPost = async (
+  quizId: string,
+  quizReportRequest: QuizReportRequest,
+  options?: RequestInit,
+): Promise<reportQuizIssueApiQuizQuizIdReportsPostResponse> => {
+  const res = await fetch(
+    getReportQuizIssueApiQuizQuizIdReportsPostUrl(quizId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(quizReportRequest),
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: reportQuizIssueApiQuizQuizIdReportsPostResponse["data"] = body
+    ? JSON.parse(body)
+    : undefined;
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as reportQuizIssueApiQuizQuizIdReportsPostResponse;
+};
+
+export const getReportQuizIssueApiQuizQuizIdReportsPostMutationFetcher = (
+  quizId: string,
+  options?: RequestInit,
+) => {
+  return (_: Key, { arg }: { arg: QuizReportRequest }) => {
+    return reportQuizIssueApiQuizQuizIdReportsPost(quizId, arg, options);
+  };
+};
+export const getReportQuizIssueApiQuizQuizIdReportsPostMutationKey = (
+  quizId: string,
+) => [`https://knowde.onrender.com/quiz/${quizId}/reports`] as const;
+
+export type ReportQuizIssueApiQuizQuizIdReportsPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reportQuizIssueApiQuizQuizIdReportsPost>>
+>;
+
+/**
+ * @summary Report Quiz Issue Api
+ */
+export const useReportQuizIssueApiQuizQuizIdReportsPost = <
+  TError = Promise<HTTPValidationError>,
+>(
+  quizId: string,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof reportQuizIssueApiQuizQuizIdReportsPost>>,
+      TError,
+      Key,
+      QuizReportRequest,
+      Awaited<ReturnType<typeof reportQuizIssueApiQuizQuizIdReportsPost>>
+    > & { swrKey?: string };
+    fetch?: RequestInit;
+  },
+) => {
+  const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+  const swrKey =
+    swrOptions?.swrKey ??
+    getReportQuizIssueApiQuizQuizIdReportsPostMutationKey(quizId);
+  const swrFn = getReportQuizIssueApiQuizQuizIdReportsPostMutationFetcher(
+    quizId,
+    fetchOptions,
+  );
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
 export type deleteQuizApiQuizQuizIdDeleteResponse204 = {
   data: undefined;
   status: 204;

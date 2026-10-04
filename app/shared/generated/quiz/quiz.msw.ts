@@ -13,6 +13,7 @@ import {
   QuizChainRole,
   QuizRecommendationReason,
   QuizRel,
+  QuizReportReason,
   QuizType,
 } from "../fastAPI.schemas";
 import type {
@@ -23,8 +24,10 @@ import type {
   ManagedQuizResult,
   PrepareStudyPlanResult,
   QuizChain,
+  QuizIssueSummary,
   QuizReattachmentResult,
   QuizRecommendationResponse,
+  QuizReport,
   QuizResourceStatus,
   ReadableQuiz,
   ReadableQuizResult,
@@ -32,6 +35,7 @@ import type {
   SentenceQuizStatus,
   StudyPlan,
   StudyPlanPreparationStatus,
+  UnplannedQuiz,
 } from "../fastAPI.schemas";
 
 export const getCreateQuizApiQuizPostResponseMock = (
@@ -232,6 +236,86 @@ export const getListCreatedQuizzesQuizCreatedGetResponseMock = (
   ...overrideResponse,
 });
 
+export const getListQuizFeedApiQuizFeedGetResponseMock = (
+  overrideResponse: Partial<Extract<ManagedQuizResult, object>> = {},
+): ManagedQuizResult => ({
+  data: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    quiz: {
+      quiz_id: faker.string.uuid(),
+      quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
+      prompt: {
+        subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        subject_terms: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          undefined,
+        ]),
+        object: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          undefined,
+        ]),
+        object_terms: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          undefined,
+        ]),
+        relations: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => ({
+            name: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            is_forward: faker.datatype.boolean(),
+          })),
+          undefined,
+        ]),
+        answer_kind: faker.helpers.arrayElement([
+          "term",
+          "sentence",
+          "relation",
+        ] as const),
+      },
+      statement: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      options: {
+        [faker.string.alphanumeric(5)]: faker.string.alpha({
+          length: { min: 10, max: 20 },
+        }),
+      },
+      correct: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+      created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
+      no_correct_option: faker.datatype.boolean(),
+    },
+    attempts: faker.number.int(),
+    corrects: faker.number.int(),
+    accuracy: faker.helpers.arrayElement([
+      faker.number.float({ fractionDigits: 2 }),
+      null,
+    ]),
+    last_attempted_at: faker.helpers.arrayElement([
+      `${faker.date.past().toISOString().slice(0, 19)}Z`,
+      null,
+    ]),
+  })),
+  total: faker.number.int(),
+  ...overrideResponse,
+});
+
 export const getListCreatedQuizResourcesQuizCreatedResourcesGetResponseMock =
   (): QuizResourceStatus[] =>
     Array.from(
@@ -423,6 +507,53 @@ export const getListBrokenCreatedQuizzesQuizCreatedBrokenGetResponseMock =
         (_, i) => i + 1,
       ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
       retired_at: `${faker.date.past().toISOString().slice(0, 19)}Z`,
+    }));
+
+export const getGetCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetResponseMock =
+  (
+    overrideResponse: Partial<Extract<QuizIssueSummary, object>> = {},
+  ): QuizIssueSummary => ({
+    broken_count: faker.number.int(),
+    reported_count: faker.number.int(),
+    unplanned_count: faker.number.int(),
+    total_count: faker.number.int(),
+    ...overrideResponse,
+  });
+
+export const getListCreatedQuizReportsQuizCreatedReportsGetResponseMock =
+  (): QuizReport[] =>
+    Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      quiz_id: faker.string.uuid(),
+      reason: faker.helpers.arrayElement(Object.values(QuizReportReason)),
+      detail: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      report_count: faker.number.int(),
+      resource_id: faker.helpers.arrayElement([faker.string.uuid(), null]),
+      resource_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      updated_at: `${faker.date.past().toISOString().slice(0, 19)}Z`,
+    }));
+
+export const getListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponseMock =
+  (): UnplannedQuiz[] =>
+    Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      quiz_id: faker.string.uuid(),
+      quiz_type: faker.helpers.arrayElement(Object.values(QuizType)),
+      resource_id: faker.string.uuid(),
+      resource_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
     }));
 
 export const getDeleteCreatedQuizzesApiQuizCreatedDeletePostResponseMock = (
@@ -1355,6 +1486,32 @@ export const getListCreatedQuizzesQuizCreatedGetMockHandler = (
   );
 };
 
+export const getListQuizFeedApiQuizFeedGetMockHandler = (
+  overrideResponse?:
+    | ManagedQuizResult
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ManagedQuizResult> | ManagedQuizResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/quiz/feed",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      await delay(200);
+
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListQuizFeedApiQuizFeedGetResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListCreatedQuizResourcesQuizCreatedResourcesGetMockHandler = (
   overrideResponse?:
     | QuizResourceStatus[]
@@ -1460,6 +1617,86 @@ export const getListBrokenCreatedQuizzesQuizCreatedBrokenGetMockHandler = (
   );
 };
 
+export const getGetCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetMockHandler =
+  (
+    overrideResponse?:
+      | QuizIssueSummary
+      | ((
+          info: Parameters<Parameters<typeof http.get>[1]>[0],
+        ) => Promise<QuizIssueSummary> | QuizIssueSummary),
+    options?: RequestHandlerOptions,
+  ) => {
+    return http.get(
+      "*/quiz/created/issues/summary",
+      async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+        await delay(200);
+
+        return HttpResponse.json(
+          overrideResponse !== undefined
+            ? typeof overrideResponse === "function"
+              ? await overrideResponse(info)
+              : overrideResponse
+            : getGetCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetResponseMock(),
+          { status: 200 },
+        );
+      },
+      options,
+    );
+  };
+
+export const getListCreatedQuizReportsQuizCreatedReportsGetMockHandler = (
+  overrideResponse?:
+    | QuizReport[]
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<QuizReport[]> | QuizReport[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/quiz/created/reports",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      await delay(200);
+
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCreatedQuizReportsQuizCreatedReportsGetResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetMockHandler =
+  (
+    overrideResponse?:
+      | UnplannedQuiz[]
+      | ((
+          info: Parameters<Parameters<typeof http.get>[1]>[0],
+        ) => Promise<UnplannedQuiz[]> | UnplannedQuiz[]),
+    options?: RequestHandlerOptions,
+  ) => {
+    return http.get(
+      "*/quiz/created/unplanned",
+      async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+        await delay(200);
+
+        return HttpResponse.json(
+          overrideResponse !== undefined
+            ? typeof overrideResponse === "function"
+              ? await overrideResponse(info)
+              : overrideResponse
+            : getListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponseMock(),
+          { status: 200 },
+        );
+      },
+      options,
+    );
+  };
+
 export const getDeleteCreatedQuizzesApiQuizCreatedDeletePostMockHandler = (
   overrideResponse?:
     | DeleteQuizzesResult
@@ -1512,6 +1749,28 @@ export const getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachP
       options,
     );
   };
+
+export const getReportQuizIssueApiQuizQuizIdReportsPostMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/quiz/:quizId/reports",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      await delay(200);
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
 
 export const getDeleteQuizApiQuizQuizIdDeleteMockHandler = (
   overrideResponse?:
@@ -1934,12 +2193,17 @@ export const getQuizMock = () => [
   getCreateQuizApiQuizPostMockHandler(),
   getListQuizQuizGetMockHandler(),
   getListCreatedQuizzesQuizCreatedGetMockHandler(),
+  getListQuizFeedApiQuizFeedGetMockHandler(),
   getListCreatedQuizResourcesQuizCreatedResourcesGetMockHandler(),
   getSearchCreatedQuizzesApiQuizCreatedSearchGetMockHandler(),
   getListCreatedQuizSentencesQuizCreatedResourcesResourceIdSentencesGetMockHandler(),
   getListBrokenCreatedQuizzesQuizCreatedBrokenGetMockHandler(),
+  getGetCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetMockHandler(),
+  getListCreatedQuizReportsQuizCreatedReportsGetMockHandler(),
+  getListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetMockHandler(),
   getDeleteCreatedQuizzesApiQuizCreatedDeletePostMockHandler(),
   getRepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPostMockHandler(),
+  getReportQuizIssueApiQuizQuizIdReportsPostMockHandler(),
   getDeleteQuizApiQuizQuizIdDeleteMockHandler(),
   getAnswerQuizApiQuizAnswerQuizIdPostMockHandler(),
   getListAnswerQuizAnswerQuizIdGetMockHandler(),

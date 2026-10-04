@@ -209,6 +209,7 @@ const xpSourcePresentation: Record<XpSource, { label: string; unit: string }> =
     quiz_creation: { label: "クイズ作成", unit: "問" },
     quiz_answer: { label: "クイズ回答", unit: "回" },
     correct_bonus: { label: "正解ボーナス", unit: "回" },
+    tanbun_exposure: { label: "見たよ", unit: "日" },
   };
 
 export function LearningSummary({ namespace }: { namespace: NameSpace }) {

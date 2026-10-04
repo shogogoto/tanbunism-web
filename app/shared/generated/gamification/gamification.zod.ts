@@ -16,6 +16,7 @@ export const GetLearningProgressUserUserIdLearningProgressGetParams =
   });
 
 export const getLearningProgressUserUserIdLearningProgressGetResponseActivityNSentenceDefault = 0;
+export const getLearningProgressUserUserIdLearningProgressGetResponseActivityNTanbunExposureDefault = 0;
 export const getLearningProgressUserUserIdLearningProgressGetResponseActivityNQuizCreatedDefault = 0;
 export const getLearningProgressUserUserIdLearningProgressGetResponseActivityNQuizAnsweredDefault = 0;
 export const getLearningProgressUserUserIdLearningProgressGetResponseActivityNQuizCorrectDefault = 0;
@@ -29,6 +30,12 @@ export const GetLearningProgressUserUserIdLearningProgressGetResponse = zod
           .int()
           .default(
             getLearningProgressUserUserIdLearningProgressGetResponseActivityNSentenceDefault,
+          ),
+        n_tanbun_exposure: zod
+          .number()
+          .int()
+          .default(
+            getLearningProgressUserUserIdLearningProgressGetResponseActivityNTanbunExposureDefault,
           ),
         n_quiz_created: zod
           .number()
@@ -53,6 +60,7 @@ export const GetLearningProgressUserUserIdLearningProgressGetResponse = zod
     xp: zod
       .object({
         knowledge: zod.number().int(),
+        tanbun_exposure: zod.number().int(),
         quiz_creation: zod.number().int(),
         quiz_answer: zod.number().int(),
         correct_bonus: zod.number().int(),
@@ -64,6 +72,7 @@ export const GetLearningProgressUserUserIdLearningProgressGetResponse = zod
           source: zod
             .enum([
               "knowledge",
+              "tanbun_exposure",
               "quiz_creation",
               "quiz_answer",
               "correct_bonus",

@@ -5,6 +5,7 @@ import SearchHeaderControls from "~/features/search/SearchHeaderControls";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
 import { Button } from "~/shared/components/ui/button";
 import { HistoryPanel } from "~/shared/history/HistoryPanel";
+import HeaderXpProgress from "./HeaderXpProgress";
 import UserNavi from "./UserNavi";
 import { SiteLogo } from "./components/SiteLogo";
 
@@ -24,9 +25,12 @@ export default function AppHeader() {
           <SiteLogo />
         </Link>
 
-        <h1 className="absolute left-1/2 max-w-[42vw] -translate-x-1/2 truncate text-sm font-semibold text-foreground">
-          {pageTitle(pathname)}
-        </h1>
+        <div className="absolute left-1/2 flex max-w-[62vw] -translate-x-1/2 items-center gap-2">
+          <h1 className="min-w-0 truncate text-sm font-semibold text-foreground">
+            {pageTitle(pathname)}
+          </h1>
+          {isAuthenticated && user && <HeaderXpProgress user={user} />}
+        </div>
 
         <div className="ml-auto flex items-center gap-1 md:hidden">
           <HistoryPanel />

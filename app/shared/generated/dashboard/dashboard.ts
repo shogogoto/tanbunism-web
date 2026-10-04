@@ -15,6 +15,7 @@ import type {
   HTTPValidationError,
   PersonalTanbunItem,
   TanbunExposureResult,
+  TodayTanbunExposureCount,
 } from "../fastAPI.schemas";
 
 export type getPersonalTanbunsDashboardTanbunsGetResponse200 = {
@@ -119,6 +120,104 @@ export const useGetPersonalTanbunsDashboardTanbunsGet = <
       isEnabled ? getGetPersonalTanbunsDashboardTanbunsGetKey(params) : null);
   const swrFn = () =>
     getPersonalTanbunsDashboardTanbunsGet(params, fetchOptions);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(
+    swrKey,
+    swrFn,
+    swrOptions,
+  );
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+export type getTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetResponse200 =
+  {
+    data: TodayTanbunExposureCount;
+    status: 200;
+  };
+
+export type getTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetResponseSuccess =
+  getTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetResponse200 & {
+    headers: Headers;
+  };
+
+export type getTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetResponse =
+  getTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetResponseSuccess;
+
+export const getGetTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetUrl =
+  () => {
+    return "https://knowde.onrender.com/dashboard/tanbuns/exposures/today";
+  };
+
+/**
+ * 今日「見たよ」を記録した単文数を取得.
+ * @summary Get Today Tanbun Exposure Count
+ */
+export const getTodayTanbunExposureCountDashboardTanbunsExposuresTodayGet =
+  async (
+    options?: RequestInit,
+  ): Promise<getTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetResponse> => {
+    const res = await fetch(
+      getGetTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetUrl(),
+      {
+        ...options,
+        method: "GET",
+      },
+    );
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetResponse["data"] =
+      body ? JSON.parse(body) : {};
+    return {
+      data,
+      status: res.status,
+      headers: res.headers,
+    } as getTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetResponse;
+  };
+
+export const getGetTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetKey =
+  () =>
+    ["https://knowde.onrender.com/dashboard/tanbuns/exposures/today"] as const;
+
+export type GetTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetQueryResult =
+  NonNullable<
+    Awaited<
+      ReturnType<
+        typeof getTodayTanbunExposureCountDashboardTanbunsExposuresTodayGet
+      >
+    >
+  >;
+
+/**
+ * @summary Get Today Tanbun Exposure Count
+ */
+export const useGetTodayTanbunExposureCountDashboardTanbunsExposuresTodayGet = <
+  TError = Promise<unknown>,
+>(options?: {
+  swr?: SWRConfiguration<
+    Awaited<
+      ReturnType<
+        typeof getTodayTanbunExposureCountDashboardTanbunsExposuresTodayGet
+      >
+    >,
+    TError
+  > & { swrKey?: Key; enabled?: boolean };
+  fetch?: RequestInit;
+}) => {
+  const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey =
+    swrOptions?.swrKey ??
+    (() =>
+      isEnabled
+        ? getGetTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetKey()
+        : null);
+  const swrFn = () =>
+    getTodayTanbunExposureCountDashboardTanbunsExposuresTodayGet(fetchOptions);
 
   const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(
     swrKey,

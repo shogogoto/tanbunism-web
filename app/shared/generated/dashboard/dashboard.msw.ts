@@ -12,6 +12,7 @@ import type { RequestHandlerOptions } from "msw";
 import type {
   PersonalTanbunItem,
   TanbunExposureResult,
+  TodayTanbunExposureCount,
 } from "../fastAPI.schemas";
 
 export const getGetPersonalTanbunsDashboardTanbunsGetResponseMock =
@@ -36,6 +37,15 @@ export const getGetPersonalTanbunsDashboardTanbunsGetResponseMock =
       exposure_count: faker.number.int(),
       seen_today: faker.datatype.boolean(),
     }));
+
+export const getGetTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetResponseMock =
+  (
+    overrideResponse: Partial<Extract<TodayTanbunExposureCount, object>> = {},
+  ): TodayTanbunExposureCount => ({
+    seen_on: faker.date.past().toISOString().slice(0, 10),
+    count: faker.number.int(),
+    ...overrideResponse,
+  });
 
 export const getMarkTanbunSeenDashboardTanbunsSentenceIdExposuresPostResponseMock =
   (
@@ -74,6 +84,33 @@ export const getGetPersonalTanbunsDashboardTanbunsGetMockHandler = (
   );
 };
 
+export const getGetTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetMockHandler =
+  (
+    overrideResponse?:
+      | TodayTanbunExposureCount
+      | ((
+          info: Parameters<Parameters<typeof http.get>[1]>[0],
+        ) => Promise<TodayTanbunExposureCount> | TodayTanbunExposureCount),
+    options?: RequestHandlerOptions,
+  ) => {
+    return http.get(
+      "*/dashboard/tanbuns/exposures/today",
+      async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+        await delay(200);
+
+        return HttpResponse.json(
+          overrideResponse !== undefined
+            ? typeof overrideResponse === "function"
+              ? await overrideResponse(info)
+              : overrideResponse
+            : getGetTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetResponseMock(),
+          { status: 200 },
+        );
+      },
+      options,
+    );
+  };
+
 export const getMarkTanbunSeenDashboardTanbunsSentenceIdExposuresPostMockHandler =
   (
     overrideResponse?:
@@ -102,5 +139,6 @@ export const getMarkTanbunSeenDashboardTanbunsSentenceIdExposuresPostMockHandler
   };
 export const getDashboardMock = () => [
   getGetPersonalTanbunsDashboardTanbunsGetMockHandler(),
+  getGetTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetMockHandler(),
   getMarkTanbunSeenDashboardTanbunsSentenceIdExposuresPostMockHandler(),
 ];

@@ -7,6 +7,7 @@
 import type { QuizType } from "./quizType";
 
 export type SearchCreatedQuizzesApiQuizCreatedSearchGetParams = {
+  q?: string | null;
   quiz_types?: QuizType[] | null;
   answered?: boolean | null;
   created_from?: string | null;

@@ -101,7 +101,9 @@ export const GetNotificationsNotificationsGetResponse = zod
     notifications: zod.array(
       zod
         .object({
-          kind: zod.enum(["quiz_preparation_complete"]).describe("通知の種類."),
+          kind: zod
+            .enum(["quiz_preparation_complete", "quiz_issue_reported"])
+            .describe("通知の種類."),
           title: zod
             .string()
             .min(1)
@@ -158,7 +160,9 @@ export const readNotificationNotificationsNotificationIdReadPostResponseHrefOneM
 
 export const ReadNotificationNotificationsNotificationIdReadPostResponse = zod
   .object({
-    kind: zod.enum(["quiz_preparation_complete"]).describe("通知の種類."),
+    kind: zod
+      .enum(["quiz_preparation_complete", "quiz_issue_reported"])
+      .describe("通知の種類."),
     title: zod
       .string()
       .min(1)

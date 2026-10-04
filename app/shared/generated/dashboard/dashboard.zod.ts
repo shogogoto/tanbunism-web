@@ -43,6 +43,18 @@ export const GetPersonalTanbunsDashboardTanbunsGetResponse = zod.array(
 );
 
 /**
+ * 今日「見たよ」を記録した単文数を取得.
+ * @summary Get Today Tanbun Exposure Count
+ */
+export const GetTodayTanbunExposureCountDashboardTanbunsExposuresTodayGetResponse =
+  zod
+    .object({
+      seen_on: zod.string().date(),
+      count: zod.number().int(),
+    })
+    .describe("今日「見たよ」を記録した単文数.");
+
+/**
  * 単文を今日見たことを1回だけ記録.
  * @summary Mark Tanbun Seen
  */

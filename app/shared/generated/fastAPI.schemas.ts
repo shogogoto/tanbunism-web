@@ -646,6 +646,7 @@ export type KNode = Term | _KNElem;
  */
 export interface LearningActivityCounts {
   n_sentence?: number;
+  n_tanbun_exposure?: number;
   n_quiz_created?: number;
   n_quiz_answered?: number;
   n_quiz_correct?: number;
@@ -656,6 +657,7 @@ export interface LearningActivityCounts {
  */
 export interface XpBreakdown {
   knowledge: number;
+  tanbun_exposure: number;
   quiz_creation: number;
   quiz_answer: number;
   correct_bonus: number;
@@ -668,6 +670,7 @@ export type XpSource = (typeof XpSource)[keyof typeof XpSource];
 
 export const XpSource = {
   knowledge: "knowledge",
+  tanbun_exposure: "tanbun_exposure",
   quiz_creation: "quiz_creation",
   quiz_answer: "quiz_answer",
   correct_bonus: "correct_bonus",
@@ -791,6 +794,7 @@ export type NotificationKind =
 
 export const NotificationKind = {
   quiz_preparation_complete: "quiz_preparation_complete",
+  quiz_issue_reported: "quiz_issue_reported",
 } as const;
 
 /**
@@ -1087,6 +1091,16 @@ export interface QuizCoverage {
 }
 
 /**
+ * 作成者が確認すべきQuizと整理候補の件数.
+ */
+export interface QuizIssueSummary {
+  broken_count: number;
+  reported_count: number;
+  unplanned_count: number;
+  total_count: number;
+}
+
+/**
  * クイズ回答の成績.
  */
 export interface QuizPerformance {
@@ -1129,6 +1143,39 @@ export interface QuizRecommendationResponse {
   quiz_type: QuizType;
   quiz: ReadableQuiz;
   reason: QuizRecommendationReason;
+}
+
+/**
+ * Quizの不備分類.
+ */
+export type QuizReportReason =
+  (typeof QuizReportReason)[keyof typeof QuizReportReason];
+
+export const QuizReportReason = {
+  undefined: "undefined",
+  incorrect: "incorrect",
+  other: "other",
+} as const;
+
+/**
+ * 作成者が確認するQuiz不備報告.
+ */
+export interface QuizReport {
+  quiz_id: string;
+  reason: QuizReportReason;
+  detail: string | null;
+  report_count: number;
+  resource_id: string | null;
+  resource_name: string | null;
+  updated_at: Neo4jDateTime;
+}
+
+/**
+ * Quiz不備の報告内容.
+ */
+export interface QuizReportRequest {
+  reason: QuizReportReason;
+  detail?: string | null;
 }
 
 /**
@@ -1478,6 +1525,24 @@ export interface TanbunSearchResult {
 }
 
 /**
+ * 今日「見たよ」を記録した単文数.
+ */
+export interface TodayTanbunExposureCount {
+  seen_on: string;
+  count: number;
+}
+
+/**
+ * 所有StudyPlanの対象範囲に含まれない作成済みQuiz.
+ */
+export interface UnplannedQuiz {
+  quiz_id: string;
+  quiz_type: QuizType;
+  resource_id: string;
+  resource_name: string | null;
+}
+
+/**
  * ユーザーの利用可否変更.
  */
 export interface UpdateUserStatusRequest {
@@ -1715,7 +1780,20 @@ export type ListCreatedQuizzesQuizCreatedGetParams = {
   size?: number;
 };
 
+export type ListQuizFeedApiQuizFeedGetParams = {
+  /**
+   * @exclusiveMinimum 0
+   */
+  page?: number;
+  /**
+   * @maximum 100
+   * @exclusiveMinimum 0
+   */
+  size?: number;
+};
+
 export type SearchCreatedQuizzesApiQuizCreatedSearchGetParams = {
+  q?: string | null;
   quiz_types?: QuizType[] | null;
   answered?: boolean | null;
   created_from?: string | null;

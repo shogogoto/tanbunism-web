@@ -5,8 +5,14 @@ import type { NameSpace } from "~/shared/generated/fastAPI.schemas";
 import { LearningLevel, LearningSummary } from ".";
 
 const learningProgress = {
-  activity: {},
-  xp: { knowledge: 12, quiz_creation: 3, quiz_answer: 25, correct_bonus: 4 },
+  activity: { n_tanbun_exposure: 2 },
+  xp: {
+    knowledge: 12,
+    quiz_creation: 3,
+    quiz_answer: 25,
+    correct_bonus: 4,
+    tanbun_exposure: 2,
+  },
   xp_details: [
     {
       source: "knowledge" as const,
@@ -32,12 +38,18 @@ const learningProgress = {
       xp_per_activity: 2,
       earned_xp: 4,
     },
+    {
+      source: "tanbun_exposure" as const,
+      activity_count: 2,
+      xp_per_activity: 1,
+      earned_xp: 2,
+    },
   ],
-  total_xp: 44,
+  total_xp: 46,
   level: 1,
-  current_level_xp: 44,
+  current_level_xp: 46,
   xp_for_next_level: 50,
-  xp_to_next_level: 6,
+  xp_to_next_level: 4,
 };
 
 describe("LearningSummary", () => {
@@ -72,13 +84,13 @@ describe("LearningLevel", () => {
     render(<LearningLevel progress={learningProgress} />);
 
     expect(screen.getByText("Lv. 1")).toBeInTheDocument();
-    expect(screen.getByText("累計 44 XP")).toBeInTheDocument();
-    expect(screen.getByText("次のレベルまで 6 XP")).toBeInTheDocument();
+    expect(screen.getByText("累計 46 XP")).toBeInTheDocument();
+    expect(screen.getByText("次のレベルまで 4 XP")).toBeInTheDocument();
     expect(screen.getByText("Lv. 1：累計 0 XP以上")).toBeInTheDocument();
     expect(screen.getByText("Lv. 2：累計 50 XP")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-label",
-      "レベル進捗 88%",
+      "レベル進捗 92%",
     );
 
     await user.click(
@@ -87,5 +99,6 @@ describe("LearningLevel", () => {
     expect(screen.getByText("知識の整理")).toBeVisible();
     expect(screen.getByText("12文 × 1 XP")).toBeVisible();
     expect(screen.getByText("+25 XP")).toBeVisible();
+    expect(screen.getByText("見たよ")).toBeVisible();
   });
 });

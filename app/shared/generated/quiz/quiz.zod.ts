@@ -221,6 +221,84 @@ export const ListCreatedQuizzesQuizCreatedGetResponse = zod
   .describe("totalをつけるためのもの.");
 
 /**
+ * 全ユーザーが作成したQuizを閲覧者の回答状況付きで取得.
+ * @summary List Quiz Feed Api
+ */
+export const listQuizFeedApiQuizFeedGetQueryPageDefault = 1;
+export const listQuizFeedApiQuizFeedGetQueryPageExclusiveMin = 0;
+
+export const listQuizFeedApiQuizFeedGetQuerySizeDefault = 20;
+export const listQuizFeedApiQuizFeedGetQuerySizeExclusiveMin = 0;
+export const listQuizFeedApiQuizFeedGetQuerySizeMax = 100;
+
+export const ListQuizFeedApiQuizFeedGetQueryParams = zod.object({
+  page: zod
+    .number()
+    .int()
+    .gt(listQuizFeedApiQuizFeedGetQueryPageExclusiveMin)
+    .default(listQuizFeedApiQuizFeedGetQueryPageDefault),
+  size: zod
+    .number()
+    .int()
+    .gt(listQuizFeedApiQuizFeedGetQuerySizeExclusiveMin)
+    .max(listQuizFeedApiQuizFeedGetQuerySizeMax)
+    .default(listQuizFeedApiQuizFeedGetQuerySizeDefault),
+});
+
+export const ListQuizFeedApiQuizFeedGetResponse = zod
+  .object({
+    data: zod.array(
+      zod
+        .object({
+          quiz: zod
+            .object({
+              quiz_id: zod.string().uuid(),
+              quiz_type: zod
+                .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+                .describe("問題文の種類."),
+              prompt: zod
+                .object({
+                  subject: zod.string(),
+                  subject_terms: zod.array(zod.string()).optional(),
+                  object: zod.union([zod.string(), zod.null()]).optional(),
+                  object_terms: zod.array(zod.string()).optional(),
+                  relations: zod
+                    .array(
+                      zod
+                        .object({
+                          name: zod.union([zod.string(), zod.null()]),
+                          is_forward: zod.boolean(),
+                        })
+                        .describe(
+                          "問題の対象から見た1辺の向きと、表示可能な関係名.",
+                        ),
+                    )
+                    .optional(),
+                  answer_kind: zod.enum(["term", "sentence", "relation"]),
+                })
+                .describe("UIが問題文を組み立てるための表示非依存データ."),
+              statement: zod.string(),
+              options: zod.record(zod.string(), zod.string()),
+              correct: zod.array(zod.string()),
+              created: zod.string().datetime({ offset: true }),
+              no_correct_option: zod.boolean(),
+            })
+            .describe("「読める状態」の問題文と選択肢を備えたクイズ."),
+          attempts: zod.number().int(),
+          corrects: zod.number().int(),
+          accuracy: zod.union([zod.number(), zod.null()]),
+          last_attempted_at: zod.union([
+            zod.string().datetime({ offset: true }),
+            zod.null(),
+          ]),
+        })
+        .describe("回答状況を含む管理対象Quiz."),
+    ),
+    total: zod.number().int(),
+  })
+  .describe("管理対象Quizのページング結果.");
+
+/**
  * 作成済みQuizの状況をResourceごとに取得.
  * @summary List Created Quiz Resources
  */
@@ -253,9 +331,11 @@ export const ListCreatedQuizResourcesQuizCreatedResourcesGetResponse =
   zod.array(ListCreatedQuizResourcesQuizCreatedResourcesGetResponseItem);
 
 /**
- * 作成Quizを形式・回答状態・日時・正答率で検索.
+ * 作成Quizを文字列・形式・回答状態・日時・正答率で検索.
  * @summary Search Created Quizzes Api
  */
+export const searchCreatedQuizzesApiQuizCreatedSearchGetQueryQOneMax = 200;
+
 export const searchCreatedQuizzesApiQuizCreatedSearchGetQueryMinAccuracyOneMin = 0;
 export const searchCreatedQuizzesApiQuizCreatedSearchGetQueryMinAccuracyOneMax = 1;
 
@@ -270,6 +350,14 @@ export const searchCreatedQuizzesApiQuizCreatedSearchGetQuerySizeExclusiveMin = 
 
 export const SearchCreatedQuizzesApiQuizCreatedSearchGetQueryParams =
   zod.object({
+    q: zod
+      .union([
+        zod
+          .string()
+          .max(searchCreatedQuizzesApiQuizCreatedSearchGetQueryQOneMax),
+        zod.null(),
+      ])
+      .optional(),
     quiz_types: zod
       .union([
         zod.array(
@@ -425,6 +513,58 @@ export const ListBrokenCreatedQuizzesQuizCreatedBrokenGetResponse = zod.array(
 );
 
 /**
+ * 要対応と整理候補のQuiz件数を取得.
+ * @summary Get Created Quiz Issue Summary
+ */
+export const GetCreatedQuizIssueSummaryQuizCreatedIssuesSummaryGetResponse = zod
+  .object({
+    broken_count: zod.number().int(),
+    reported_count: zod.number().int(),
+    unplanned_count: zod.number().int(),
+    total_count: zod.number().int(),
+  })
+  .describe("作成者が確認すべきQuizと整理候補の件数.");
+
+/**
+ * 自分が作成したQuizへ届いた不備報告を取得.
+ * @summary List Created Quiz Reports
+ */
+export const ListCreatedQuizReportsQuizCreatedReportsGetResponseItem = zod
+  .object({
+    quiz_id: zod.string().uuid(),
+    reason: zod
+      .enum(["undefined", "incorrect", "other"])
+      .describe("Quizの不備分類."),
+    detail: zod.union([zod.string(), zod.null()]),
+    report_count: zod.number().int(),
+    resource_id: zod.union([zod.string().uuid(), zod.null()]),
+    resource_name: zod.union([zod.string(), zod.null()]),
+    updated_at: zod.string().datetime({ offset: true }),
+  })
+  .describe("作成者が確認するQuiz不備報告.");
+export const ListCreatedQuizReportsQuizCreatedReportsGetResponse = zod.array(
+  ListCreatedQuizReportsQuizCreatedReportsGetResponseItem,
+);
+
+/**
+ * StudyPlanの対象外になっている自分のQuizを取得.
+ * @summary List Unplanned Created Quizzes Api
+ */
+export const ListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponseItem =
+  zod
+    .object({
+      quiz_id: zod.string().uuid(),
+      quiz_type: zod
+        .enum(["sent2term", "term2sent", "pair2rel", "rel2pair"])
+        .describe("問題文の種類."),
+      resource_id: zod.string().uuid(),
+      resource_name: zod.union([zod.string(), zod.null()]),
+    })
+    .describe("所有StudyPlanの対象範囲に含まれない作成済みQuiz.");
+export const ListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponse =
+  zod.array(ListUnplannedCreatedQuizzesApiQuizCreatedUnplannedGetResponseItem);
+
+/**
  * 認証ユーザー自身が作成したQuizを一括削除.
  * @summary Delete Created Quizzes Api
  */
@@ -473,6 +613,34 @@ export const RepairQuizReferenceApiQuizQuizIdBrokenRetiredSentenceIdReattachPost
       retained: zod.boolean(),
     })
     .describe("1件のQuizで付け替えた関係数と退役単文の保持状態.");
+
+/**
+ * 自他を問わず、表示できたQuizの不備を報告する.
+ * @summary Report Quiz Issue Api
+ */
+export const ReportQuizIssueApiQuizQuizIdReportsPostParams = zod.object({
+  quiz_id: zod.string().uuid(),
+});
+
+export const reportQuizIssueApiQuizQuizIdReportsPostBodyDetailOneMax = 500;
+
+export const ReportQuizIssueApiQuizQuizIdReportsPostBody = zod
+  .object({
+    reason: zod
+      .enum(["undefined", "incorrect", "other"])
+      .describe("Quizの不備分類."),
+    detail: zod
+      .union([
+        zod
+          .string()
+          .max(reportQuizIssueApiQuizQuizIdReportsPostBodyDetailOneMax),
+        zod.null(),
+      ])
+      .optional(),
+  })
+  .describe("Quiz不備の報告内容.");
+
+export const ReportQuizIssueApiQuizQuizIdReportsPostResponse = zod.void();
 
 /**
  * 認証ユーザー自身が作成したQuizを削除.

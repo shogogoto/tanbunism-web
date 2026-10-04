@@ -17,12 +17,14 @@ export const getGetLearningProgressUserUserIdLearningProgressGetResponseMock = (
 ): LearningProgress => ({
   activity: {
     n_sentence: faker.number.int(),
+    n_tanbun_exposure: faker.number.int(),
     n_quiz_created: faker.number.int(),
     n_quiz_answered: faker.number.int(),
     n_quiz_correct: faker.number.int(),
   },
   xp: {
     knowledge: faker.number.int(),
+    tanbun_exposure: faker.number.int(),
     quiz_creation: faker.number.int(),
     quiz_answer: faker.number.int(),
     correct_bonus: faker.number.int(),

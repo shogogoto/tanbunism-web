@@ -1,6 +1,7 @@
 import { Eye } from "lucide-react";
 import { useRef, useState } from "react";
 import { Link } from "react-router";
+import { useSWRConfig } from "swr";
 import KnowledgeCard, {
   KnowledgeScore,
 } from "~/features/tanbun/components/KnowledgeCard";
@@ -25,6 +26,7 @@ export const PERSONAL_TIMELINE_CACHE_KEY =
 const PERSONAL_TIMELINE_CACHE_TTL = 24 * 60 * 60_000;
 
 export default function PersonalTimeline() {
+  const { mutate: mutateGlobal } = useSWRConfig();
   const {
     data,
     error: loadError,
@@ -105,6 +107,12 @@ export default function PersonalTimeline() {
             : candidate,
         ),
       }));
+      void mutateGlobal(
+        (key) =>
+          Array.isArray(key) &&
+          typeof key[0] === "string" &&
+          key[0].endsWith("/learning-progress"),
+      );
     } catch (reason) {
       updateTimeline((current) => ({
         seenTodayCount: Math.max(0, current.seenTodayCount - 1),
