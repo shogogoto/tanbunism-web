@@ -91,7 +91,7 @@ describe("NamespaceExplorer", () => {
     ).toBe(1);
   });
 
-  it("Resourceの統計とクイズ導線を一覧に表示する", () => {
+  it("Resourceの統計とクイズ導線だけをResource行に表示する", () => {
     renderExplorer();
 
     expect(screen.getByText("2 Resources")).toBeInTheDocument();
@@ -105,8 +105,8 @@ describe("NamespaceExplorer", () => {
       `/dashboard?view=quiz-management&resource=${resourceId}`,
     );
     expect(
-      screen.getByRole("link", { name: "国家のEntryを開く" }),
-    ).toHaveAttribute("href", `/entry/${folderId}`);
+      screen.queryByRole("link", { name: "国家のEntryを開く" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^国家プラトン/ })).toHaveAttribute(
       "data-hotkey-item",
     );

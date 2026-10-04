@@ -245,16 +245,6 @@ function ResourceRow({
           )}
         </div>
       </Link>
-      {item.entryId && (
-        <Link
-          to={`/entry/${item.entryId}`}
-          className="flex shrink-0 items-center gap-1 rounded-sm px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={`${item.name}のEntryを開く`}
-        >
-          <FolderOpen className="h-4 w-4" />
-          <span className="hidden sm:inline">Entry</span>
-        </Link>
-      )}
       <Link
         to={`/dashboard?view=quiz-management&resource=${item.id}`}
         className="flex shrink-0 items-center gap-1 rounded-sm px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -331,9 +321,6 @@ export function transformToTreeData(data: NameSpace): ExplorerTreeDataItem[] {
     if (!sourceNode || !targetNode || sourceNode.isResource) continue;
 
     sourceNode.children?.push(targetNode);
-    if (targetNode.isResource && !targetNode.entryId) {
-      targetNode.entryId = sourceNode.id;
-    }
     childUids.add(targetNode.id);
   }
 
