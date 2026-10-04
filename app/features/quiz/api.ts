@@ -411,12 +411,14 @@ async function requestStudyPlanPreparation<T>(
         ? data.detail
         : undefined;
     const message =
-      typeof detail === "object" &&
-      detail !== null &&
-      "message" in detail &&
-      typeof detail.message === "string"
-        ? detail.message
-        : "クイズを準備できませんでした。";
+      typeof detail === "string"
+        ? detail
+        : typeof detail === "object" &&
+            detail !== null &&
+            "message" in detail &&
+            typeof detail.message === "string"
+          ? detail.message
+          : "クイズを準備できませんでした。";
     throw new QuizApiError(message, response.status);
   }
   return data as T;

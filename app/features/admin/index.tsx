@@ -7,6 +7,7 @@ import {
 } from "~/shared/components/ui/tabs";
 import BrokenQuizManager from "./brokenQuizzes";
 import OrphanedTanbunManager from "./orphanedTanbuns";
+import QuizPreparationSettingsManager from "./quizPreparation";
 import AdminUserManager from "./users";
 
 export default function Admin() {
@@ -31,6 +32,7 @@ export default function Admin() {
           <TabsTrigger value="orphans">孤立Tanbun</TabsTrigger>
           <TabsTrigger value="broken-quizzes">参照切れQuiz</TabsTrigger>
           <TabsTrigger value="users">ユーザー</TabsTrigger>
+          <TabsTrigger value="quiz-preparation">クイズ作成</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="orphans" className="mt-0">
@@ -41,6 +43,9 @@ export default function Admin() {
       </TabsContent>
       <TabsContent value="users" className="mt-0">
         <AdminUserManager />
+      </TabsContent>
+      <TabsContent value="quiz-preparation" className="mt-0">
+        <QuizPreparationSettingsManager />
       </TabsContent>
     </Tabs>
   );
