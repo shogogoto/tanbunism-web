@@ -1,5 +1,4 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import NotificationPage from "./NotificationPage";
@@ -7,7 +6,7 @@ import { NotificationProvider } from "./NotificationProvider";
 import {
   getPushConfiguration,
   listNotifications,
-  markNotificationRead,
+  markAllNotificationsRead,
 } from "./api";
 
 vi.mock("./api", () => ({
@@ -39,14 +38,10 @@ describe("NotificationPage", () => {
       enabled: false,
       public_key: null,
     });
-    vi.mocked(markNotificationRead).mockResolvedValue({
-      ...notification,
-      read_at: "2026-09-29T12:01:00+09:00",
-    });
+    vi.mocked(markAllNotificationsRead).mockResolvedValue({ updated_count: 1 });
   });
 
-  it("DB通知を一覧表示し、通知先を開くと既読にする", async () => {
-    const user = userEvent.setup();
+  it("DB通知を一覧表示した時点ですべて既読にする", async () => {
     render(
       <MemoryRouter>
         <NotificationProvider userId="user-1">
@@ -60,9 +55,8 @@ describe("NotificationPage", () => {
     const link = screen.getByRole("link", { name: /クイズの準備完了/ });
     expect(link).toHaveAttribute("href", "/dashboard?view=study-plans");
 
-    await user.click(link);
     await waitFor(() =>
-      expect(markNotificationRead).toHaveBeenCalledWith(notification.uid),
+      expect(markAllNotificationsRead).toHaveBeenCalledOnce(),
     );
   });
 });

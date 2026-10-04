@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Button } from "~/shared/components/ui/button";
@@ -9,11 +10,14 @@ export default function NotificationPage() {
     notifications,
     unreadCount,
     pushState,
-    markRead,
     markAllRead,
     enablePush,
     disablePush,
   } = useNotifications();
+
+  useEffect(() => {
+    if (unreadCount > 0) void markAllRead();
+  }, [markAllRead, unreadCount]);
 
   async function changePush(enabled: boolean) {
     try {
@@ -40,17 +44,6 @@ export default function NotificationPage() {
           onEnable={() => void changePush(true)}
           onDisable={() => void changePush(false)}
         />
-        {unreadCount > 0 && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 shrink-0 text-xs"
-            onClick={() => void markAllRead()}
-          >
-            すべて既読
-          </Button>
-        )}
       </div>
 
       {notifications.length === 0 ? (
@@ -96,19 +89,13 @@ export default function NotificationPage() {
                 key={notification.uid}
                 to={notification.href}
                 className={className}
-                onClick={() => void markRead(notification.uid)}
               >
                 {content}
               </Link>
             ) : (
-              <button
-                key={notification.uid}
-                type="button"
-                className={className}
-                onClick={() => void markRead(notification.uid)}
-              >
+              <div key={notification.uid} className={className}>
                 {content}
-              </button>
+              </div>
             );
           })}
         </div>
