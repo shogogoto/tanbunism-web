@@ -131,6 +131,41 @@ it("未回答のクイズを回答済みのクイズより先に表示する", a
   ).not.toBeInTheDocument();
 });
 
+it("低正答率のクイズを復習候補として優先する", async () => {
+  const managed = (id: string, accuracy: number, attemptedAt: string) => ({
+    quiz: {
+      quiz_id: id,
+      quiz_type: "term2sent" as const,
+      prompt: { subject: `${id}の問題`, answer_kind: "sentence" as const },
+      statement: `${id}の問題`,
+      options: {},
+      correct: [],
+      created: attemptedAt,
+      no_correct_option: false,
+    },
+    attempts: 2,
+    corrects: Math.round(accuracy * 2),
+    accuracy,
+    last_attempted_at: attemptedAt,
+  });
+  vi.mocked(searchCreatedQuizzes).mockResolvedValue({
+    total: 2,
+    data: [
+      managed("正解済み", 1, "2026-10-04T01:00:00Z"),
+      managed("復習対象", 0.5, "2026-10-03T01:00:00Z"),
+    ],
+  });
+
+  renderTimeline();
+
+  const review = await screen.findByText("復習対象の問題");
+  const mastered = screen.getByText("正解済みの問題");
+  expect(
+    review.compareDocumentPosition(mastered) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(screen.getByText("復習 50%")).toBeVisible();
+});
+
 it("クイズTL上で回答して結果を確認できる", async () => {
   const quiz = {
     quiz_id: "quiz-1",

@@ -19,6 +19,8 @@ import {
 } from "~/shared/components/ui/collapsible";
 import { cn } from "~/shared/lib/utils";
 
+const REVIEW_ACCURACY_THRESHOLD = 0.8;
+
 export default function QuizTimeline({
   scope = "personal",
 }: {
@@ -157,8 +159,20 @@ function QuizTimelineCard({
                   今回 {sessionResult ? "正解" : "不正解"}
                 </Badge>
               ) : (
-                <Badge variant={item.attempts === 0 ? "default" : "secondary"}>
-                  {item.attempts === 0 ? "未回答" : `${item.attempts}回答`}
+                <Badge
+                  variant={
+                    item.attempts === 0
+                      ? "default"
+                      : needsReview(item)
+                        ? "destructive"
+                        : "secondary"
+                  }
+                >
+                  {item.attempts === 0
+                    ? "未回答"
+                    : needsReview(item)
+                      ? `復習 ${Math.round((item.accuracy ?? 0) * 100)}%`
+                      : `${item.attempts}回答`}
                 </Badge>
               )}
               <ChevronDown
@@ -194,9 +208,23 @@ function QuizTimelineCard({
 function compareQuizTimeline(left: ManagedQuiz, right: ManagedQuiz): number {
   if (left.attempts === 0 && right.attempts > 0) return -1;
   if (left.attempts > 0 && right.attempts === 0) return 1;
+  if (needsReview(left) && !needsReview(right)) return -1;
+  if (!needsReview(left) && needsReview(right)) return 1;
+  if (needsReview(left) && needsReview(right)) {
+    const accuracyDifference = (left.accuracy ?? 0) - (right.accuracy ?? 0);
+    if (accuracyDifference !== 0) return accuracyDifference;
+  }
   const leftDate = left.last_attempted_at ?? left.quiz.created;
   const rightDate = right.last_attempted_at ?? right.quiz.created;
   return String(rightDate).localeCompare(String(leftDate));
+}
+
+function needsReview(item: ManagedQuiz): boolean {
+  return (
+    item.attempts > 0 &&
+    item.accuracy !== null &&
+    item.accuracy < REVIEW_ACCURACY_THRESHOLD
+  );
 }
 
 function mixQuizTimeline(quizzes: ManagedQuiz[], limit: number): ManagedQuiz[] {
