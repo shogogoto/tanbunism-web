@@ -7,7 +7,6 @@ import { SWRConfig } from "swr";
 import { vi } from "vitest";
 import QuizList, { formatCompactQuizDate } from "./QuizList";
 import ResourceLearningOverview from "./ResourceLearningOverview";
-import { emptyQuizFilters } from "./quizFilters";
 
 vi.mock("~/shared/hooks/use-mobile", () => ({
   useIsMobile: () => false,
@@ -240,7 +239,7 @@ it("Resourceごとの学習指標を表示する", async () => {
   render(
     <SWRConfig value={{ provider: () => new Map() }}>
       <MemoryRouter>
-        <ResourceLearningOverview filters={emptyQuizFilters} />
+        <ResourceLearningOverview resourceQuery="" />
       </MemoryRouter>
     </SWRConfig>,
   );
@@ -249,6 +248,13 @@ it("Resourceごとの学習指標を表示する", async () => {
   expect(screen.getByText("未着手ノート")).toBeInTheDocument();
   expect(screen.getByText("Attempt")).toBeVisible();
   expect(screen.getByText("Accuracy")).toBeVisible();
+  expect(screen.getByText("クイズ管理")).toBeVisible();
+  expect(
+    screen.getByRole("link", { name: "代数学ノートのクイズを管理" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("link", { name: "未着手ノートのクイズを管理" }),
+  ).toBeVisible();
   expect(screen.getAllByText("50%")).toHaveLength(2);
   expect(screen.getAllByText("100%")).toHaveLength(1);
   expect(screen.getByText("0問")).toBeInTheDocument();
@@ -272,26 +278,37 @@ it("Resourceごとの学習指標を表示する", async () => {
   resource.focus();
   await user.keyboard("{Enter}");
   expect(await screen.findByText(quiz.statement)).toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "代数学ノートのクイズを管理" }),
+  ).toBeVisible();
 });
 
-it("Resource一覧の先頭で指定した条件を開いたResourceへ適用する", async () => {
+it("Resource一覧をResource名で絞り込む", async () => {
   const user = userEvent.setup();
   renderQuizList();
 
   await screen.findByText("Resource別の学習状況");
-  await user.click(screen.getByRole("button", { name: "クイズを絞り込む" }));
-  await user.click(screen.getByRole("checkbox", { name: "用語→単文" }));
-  await user.click(screen.getByRole("button", { name: /代数学ノート/ }));
+  const input = screen.getByRole("searchbox", { name: "Resourceを絞る" });
+  expect(input.closest("[data-slot=card]")).toHaveClass("sticky", "top-0");
 
-  await waitFor(() =>
-    expect(
-      searchRequests.some((url) => {
-        const request = new URL(url);
-        return (
-          request.searchParams.get("resource_id") === "resource-1" &&
-          request.searchParams.get("quiz_types") === "term2sent"
-        );
-      }),
-    ).toBe(true),
+  await user.type(input, "未着手");
+  expect(screen.getByText("未着手ノート")).toBeVisible();
+  expect(screen.queryByText("代数学ノート")).not.toBeInTheDocument();
+
+  await user.clear(input);
+  await user.type(input, "存在しないResource");
+  expect(screen.getByText("条件に合うResourceはありません。")).toBeVisible();
+});
+
+it("Resource行の管理列からクイズ管理を開く", async () => {
+  const user = userEvent.setup();
+  renderQuizList();
+
+  await user.click(
+    await screen.findByRole("link", {
+      name: "代数学ノートのクイズを管理",
+    }),
   );
+  expect(await screen.findByText("このResourceのクイズ")).toBeVisible();
+  expect(screen.getByText(quiz.statement)).toBeVisible();
 });

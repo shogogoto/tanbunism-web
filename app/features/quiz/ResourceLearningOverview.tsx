@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Link } from "react-router";
 import useSWR from "swr";
 import Loading from "~/shared/components/Loading";
-import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import {
   Collapsible,
@@ -36,7 +35,6 @@ import {
   listStudyResources,
   searchCreatedQuizzes,
 } from "./api";
-import { type QuizFilters, toQuizSearchParams } from "./quizFilters";
 import { useQuizSWR } from "./useQuizSWR";
 
 type ResourceStatus = {
@@ -108,24 +106,18 @@ function MetricHeader({
 
 function ResourceDisclosure({
   item,
-  filters,
 }: {
   item: ResourceStatus;
-  filters: QuizFilters;
 }) {
   const { resource, quizzes: status, learning } = item;
   const [open, setOpen] = useState(false);
   const total = status?.total_quizzes ?? 0;
-  const searchParams = toQuizSearchParams(filters);
   const { data, error, isLoading } = useQuizSWR(
-    open && total > 0
-      ? ["quiz-management-resource", resource.uid, searchParams]
-      : null,
+    open && total > 0 ? ["quiz-management-resource", resource.uid] : null,
     (cacheOptions) =>
       searchCreatedQuizzes(
         {
           resource_id: resource.uid,
-          ...searchParams,
           page: 1,
           size: 100,
         },
@@ -140,22 +132,34 @@ function ResourceDisclosure({
   const quizzes: ManagedQuiz[] | undefined = data?.data;
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="grid grid-cols-[minmax(0,1fr)_2.5rem_repeat(3,3rem)_3.25rem] items-center px-3 sm:grid-cols-[minmax(0,1fr)_4rem_repeat(3,5rem)_4rem]"
+    >
       <CollapsibleTrigger asChild>
         <button
           type="button"
           data-hotkey-item
-          className="group grid w-full grid-cols-[minmax(0,1fr)_repeat(3,3.5rem)] items-center px-3 py-3 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/60 data-[hotkey-active=true]:outline-2 data-[hotkey-active=true]:-outline-offset-2 data-[hotkey-active=true]:outline-foreground sm:grid-cols-[minmax(0,1fr)_repeat(3,5rem)]"
+          className="group col-span-5 grid w-full grid-cols-[minmax(0,1fr)_2.5rem_repeat(3,3rem)] items-center py-3 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/60 data-[hotkey-active=true]:outline-2 data-[hotkey-active=true]:-outline-offset-2 data-[hotkey-active=true]:outline-foreground sm:grid-cols-[minmax(0,1fr)_4rem_repeat(3,5rem)]"
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <ChevronRight className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
             <p className="truncate text-sm font-medium">{resource.name}</p>
-            <Badge variant="secondary">{total}問</Badge>
           </div>
+          <b className="text-center text-xs tabular-nums">{total}問</b>
           <Progress status={learning} />
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent>
+      <Link
+        to={`?view=quiz-management&resource=${resource.uid}`}
+        className="mx-auto rounded-sm px-2 py-1 text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={`${resource.name}のクイズを管理`}
+        title="このResourceのクイズを管理"
+      >
+        管理
+      </Link>
+      <CollapsibleContent className="col-span-6 -mx-3">
         <div className="border-t bg-muted/15">
           {open && total > 0 && isLoading && <Loading />}
           {error && (
@@ -188,14 +192,6 @@ function ResourceDisclosure({
               絞り込み条件に合うクイズはありません。
             </p>
           )}
-          <div className="flex justify-end border-t px-3 py-2">
-            <Link
-              to={`?view=quiz-management&resource=${resource.uid}`}
-              className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-            >
-              このResourceのクイズを管理
-            </Link>
-          </div>
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -203,9 +199,9 @@ function ResourceDisclosure({
 }
 
 export default function ResourceLearningOverview({
-  filters,
+  resourceQuery,
 }: {
-  filters: QuizFilters;
+  resourceQuery: string;
 }) {
   const { data: items, error } = useQuizSWR<ResourceStatus[]>(
     "quiz-management-resource-overview",
@@ -255,6 +251,13 @@ export default function ResourceLearningOverview({
   }
   if (items.length === 0) return null;
 
+  const normalizedQuery = resourceQuery.trim().toLocaleLowerCase();
+  const visibleItems = normalizedQuery
+    ? items.filter(({ resource }) =>
+        resource.name.toLocaleLowerCase().includes(normalizedQuery),
+      )
+    : items;
+
   return (
     <section className="border-y sm:border-x">
       <div className="flex items-center gap-2 border-b px-3 py-3">
@@ -288,9 +291,12 @@ export default function ResourceLearningOverview({
           </Dialog>
         )}
       </div>
-      <div className="sticky top-14 z-20 grid grid-cols-[minmax(0,1fr)_repeat(3,3.5rem)] items-center border-b bg-background/95 px-3 py-2 backdrop-blur sm:grid-cols-[minmax(0,1fr)_repeat(3,5rem)]">
+      <div className="sticky top-14 z-20 grid grid-cols-[minmax(0,1fr)_2.5rem_repeat(3,3rem)_3.25rem] items-center border-b bg-background/95 px-3 py-2 backdrop-blur sm:grid-cols-[minmax(0,1fr)_4rem_repeat(3,5rem)_4rem]">
         <span className="text-xs font-medium text-muted-foreground">
           Resource
+        </span>
+        <span className="text-center text-xs font-medium text-muted-foreground">
+          問数
         </span>
         <MetricHeader
           label="Coverage"
@@ -304,15 +310,19 @@ export default function ResourceLearningOverview({
           label="Accuracy"
           description="これまでに回答したクイズの正答率です。未回答の場合は—になります。"
         />
+        <span className="text-center text-xs font-medium text-muted-foreground">
+          クイズ管理
+        </span>
       </div>
       <div className="divide-y">
-        {items.map((item) => (
-          <ResourceDisclosure
-            key={item.resource.uid}
-            item={item}
-            filters={filters}
-          />
+        {visibleItems.map((item) => (
+          <ResourceDisclosure key={item.resource.uid} item={item} />
         ))}
+        {visibleItems.length === 0 && (
+          <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+            条件に合うResourceはありません。
+          </p>
+        )}
       </div>
     </section>
   );

@@ -216,6 +216,31 @@ function QuizSearchFilters({
   );
 }
 
+function ResourceSearchFilter({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Card className="sticky top-0 z-30 gap-0 bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
+      <label className="relative block">
+        <span className="sr-only">Resourceを絞る</span>
+        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="search"
+          data-page-input-priority
+          className="h-9 w-full rounded-md border bg-background pr-3 pl-9"
+          value={value}
+          placeholder="Resource名で絞り込み"
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </label>
+    </Card>
+  );
+}
+
 function Percentage({ value }: { value: number }) {
   return <>{Math.round(value * 100)}%</>;
 }
@@ -340,6 +365,7 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
   const resourceId = searchParams.get("resource") ?? undefined;
   const sentenceId = searchParams.get("sentence") ?? undefined;
   const [filters, setFilters] = useState<QuizFilters>(emptyQuizFilters);
+  const [resourceQuery, setResourceQuery] = useState("");
   const debouncedQuery = useDebounce(filters.query, 250);
   const appliedFilters = useMemo<QuizFilters>(
     () => ({
@@ -512,8 +538,11 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
           {embedded && !resourceId && <UnplannedQuizManager />}
           {!resourceId && (
             <>
-              <QuizSearchFilters filters={filters} onChange={setFilters} />
-              <ResourceLearningOverview filters={appliedFilters} />
+              <ResourceSearchFilter
+                value={resourceQuery}
+                onChange={setResourceQuery}
+              />
+              <ResourceLearningOverview resourceQuery={resourceQuery} />
             </>
           )}
           {resourceId && (
