@@ -26,6 +26,8 @@ import type {
   ManagedQuizResult,
   PrepareStudyPlanRequest,
   PrepareStudyPlanResult,
+  PrepareStudyPlansAccepted,
+  PrepareStudyPlansRequest,
   QuizChain,
   QuizIssueSummary,
   QuizReattachmentResult,
@@ -2305,6 +2307,109 @@ export const useListStudyPlanPreparationsApiQuizStudyPlansPreparationsGet = <
     swrFn,
     swrOptions,
   );
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+export type prepareStudyPlansApiQuizStudyPlansPreparePostResponse202 = {
+  data: PrepareStudyPlansAccepted;
+  status: 202;
+};
+
+export type prepareStudyPlansApiQuizStudyPlansPreparePostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type prepareStudyPlansApiQuizStudyPlansPreparePostResponseSuccess =
+  prepareStudyPlansApiQuizStudyPlansPreparePostResponse202 & {
+    headers: Headers;
+  };
+export type prepareStudyPlansApiQuizStudyPlansPreparePostResponseError =
+  prepareStudyPlansApiQuizStudyPlansPreparePostResponse422 & {
+    headers: Headers;
+  };
+
+export type prepareStudyPlansApiQuizStudyPlansPreparePostResponse =
+  | prepareStudyPlansApiQuizStudyPlansPreparePostResponseSuccess
+  | prepareStudyPlansApiQuizStudyPlansPreparePostResponseError;
+
+export const getPrepareStudyPlansApiQuizStudyPlansPreparePostUrl = () => {
+  return "https://knowde.onrender.com/quiz/study-plans/prepare";
+};
+
+/**
+ * 選択したStudyPlanのクイズ準備をバックグラウンドで開始する.
+ * @summary Prepare Study Plans Api
+ */
+export const prepareStudyPlansApiQuizStudyPlansPreparePost = async (
+  prepareStudyPlansRequest: PrepareStudyPlansRequest,
+  options?: RequestInit,
+): Promise<prepareStudyPlansApiQuizStudyPlansPreparePostResponse> => {
+  const res = await fetch(
+    getPrepareStudyPlansApiQuizStudyPlansPreparePostUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(prepareStudyPlansRequest),
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: prepareStudyPlansApiQuizStudyPlansPreparePostResponse["data"] =
+    body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as prepareStudyPlansApiQuizStudyPlansPreparePostResponse;
+};
+
+export const getPrepareStudyPlansApiQuizStudyPlansPreparePostMutationFetcher = (
+  options?: RequestInit,
+) => {
+  return (_: Key, { arg }: { arg: PrepareStudyPlansRequest }) => {
+    return prepareStudyPlansApiQuizStudyPlansPreparePost(arg, options);
+  };
+};
+export const getPrepareStudyPlansApiQuizStudyPlansPreparePostMutationKey = () =>
+  ["https://knowde.onrender.com/quiz/study-plans/prepare"] as const;
+
+export type PrepareStudyPlansApiQuizStudyPlansPreparePostMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof prepareStudyPlansApiQuizStudyPlansPreparePost>>
+  >;
+
+/**
+ * @summary Prepare Study Plans Api
+ */
+export const usePrepareStudyPlansApiQuizStudyPlansPreparePost = <
+  TError = Promise<HTTPValidationError>,
+>(options?: {
+  swr?: SWRMutationConfiguration<
+    Awaited<ReturnType<typeof prepareStudyPlansApiQuizStudyPlansPreparePost>>,
+    TError,
+    Key,
+    PrepareStudyPlansRequest,
+    Awaited<ReturnType<typeof prepareStudyPlansApiQuizStudyPlansPreparePost>>
+  > & { swrKey?: string };
+  fetch?: RequestInit;
+}) => {
+  const { swr: swrOptions, fetch: fetchOptions } = options ?? {};
+
+  const swrKey =
+    swrOptions?.swrKey ??
+    getPrepareStudyPlansApiQuizStudyPlansPreparePostMutationKey();
+  const swrFn =
+    getPrepareStudyPlansApiQuizStudyPlansPreparePostMutationFetcher(
+      fetchOptions,
+    );
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
 
   return {
     swrKey,

@@ -1208,6 +1208,27 @@ export const ListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponse =
   );
 
 /**
+ * 選択したStudyPlanのクイズ準備をバックグラウンドで開始する.
+ * @summary Prepare Study Plans Api
+ */
+export const prepareStudyPlansApiQuizStudyPlansPreparePostBodyPlanIdsMax = 20;
+
+export const PrepareStudyPlansApiQuizStudyPlansPreparePostBody = zod
+  .object({
+    plan_ids: zod
+      .array(zod.string().uuid())
+      .min(1)
+      .max(prepareStudyPlansApiQuizStudyPlansPreparePostBodyPlanIdsMax),
+  })
+  .describe("バックグラウンドでまとめて準備するStudyPlan.");
+
+export const PrepareStudyPlansApiQuizStudyPlansPreparePostResponse = zod
+  .object({
+    accepted_count: zod.number().int(),
+  })
+  .describe("バックグラウンド準備の受付結果.");
+
+/**
  * 所有するStudyPlanを取得.
  * @summary Get Study Plan Api
  */

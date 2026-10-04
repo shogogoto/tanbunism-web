@@ -25,6 +25,8 @@ import type {
   PostFilesResourcePost200,
   PrepareStudyPlanRequest,
   PrepareStudyPlanResult,
+  PrepareStudyPlansAccepted,
+  PrepareStudyPlansRequest,
   QuizChain,
   QuizIssueSummary,
   QuizReattachmentResult,
@@ -1802,6 +1804,62 @@ export const listStudyPlanPreparationsApiQuizStudyPlansPreparationsGet = async (
     status: res.status,
     headers: res.headers,
   } as listStudyPlanPreparationsApiQuizStudyPlansPreparationsGetResponse;
+};
+
+export type prepareStudyPlansApiQuizStudyPlansPreparePostResponse202 = {
+  data: PrepareStudyPlansAccepted;
+  status: 202;
+};
+
+export type prepareStudyPlansApiQuizStudyPlansPreparePostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type prepareStudyPlansApiQuizStudyPlansPreparePostResponseSuccess =
+  prepareStudyPlansApiQuizStudyPlansPreparePostResponse202 & {
+    headers: Headers;
+  };
+export type prepareStudyPlansApiQuizStudyPlansPreparePostResponseError =
+  prepareStudyPlansApiQuizStudyPlansPreparePostResponse422 & {
+    headers: Headers;
+  };
+
+export type prepareStudyPlansApiQuizStudyPlansPreparePostResponse =
+  | prepareStudyPlansApiQuizStudyPlansPreparePostResponseSuccess
+  | prepareStudyPlansApiQuizStudyPlansPreparePostResponseError;
+
+export const getPrepareStudyPlansApiQuizStudyPlansPreparePostUrl = () => {
+  return "https://knowde.onrender.com/quiz/study-plans/prepare";
+};
+
+/**
+ * 選択したStudyPlanのクイズ準備をバックグラウンドで開始する.
+ * @summary Prepare Study Plans Api
+ */
+export const prepareStudyPlansApiQuizStudyPlansPreparePost = async (
+  prepareStudyPlansRequest: PrepareStudyPlansRequest,
+  options?: RequestInit,
+): Promise<prepareStudyPlansApiQuizStudyPlansPreparePostResponse> => {
+  const res = await fetch(
+    getPrepareStudyPlansApiQuizStudyPlansPreparePostUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(prepareStudyPlansRequest),
+    },
+  );
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: prepareStudyPlansApiQuizStudyPlansPreparePostResponse["data"] =
+    body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as prepareStudyPlansApiQuizStudyPlansPreparePostResponse;
 };
 
 export type getStudyPlanApiQuizStudyPlansPlanIdGetResponse200 = {

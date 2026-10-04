@@ -102,7 +102,11 @@ export const GetNotificationsNotificationsGetResponse = zod
       zod
         .object({
           kind: zod
-            .enum(["quiz_preparation_complete", "quiz_issue_reported"])
+            .enum([
+              "quiz_preparation_complete",
+              "quiz_preparation_failed",
+              "quiz_issue_reported",
+            ])
             .describe("通知の種類."),
           title: zod
             .string()
@@ -161,7 +165,11 @@ export const readNotificationNotificationsNotificationIdReadPostResponseHrefOneM
 export const ReadNotificationNotificationsNotificationIdReadPostResponse = zod
   .object({
     kind: zod
-      .enum(["quiz_preparation_complete", "quiz_issue_reported"])
+      .enum([
+        "quiz_preparation_complete",
+        "quiz_preparation_failed",
+        "quiz_issue_reported",
+      ])
       .describe("通知の種類."),
     title: zod
       .string()

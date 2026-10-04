@@ -794,6 +794,7 @@ export type NotificationKind =
 
 export const NotificationKind = {
   quiz_preparation_complete: "quiz_preparation_complete",
+  quiz_preparation_failed: "quiz_preparation_failed",
   quiz_issue_reported: "quiz_issue_reported",
 } as const;
 
@@ -915,6 +916,24 @@ export interface PrepareStudyPlanResult {
   prepared_quiz_count: number;
   requested_count: number;
   added_count: number;
+}
+
+/**
+ * バックグラウンド準備の受付結果.
+ */
+export interface PrepareStudyPlansAccepted {
+  accepted_count: number;
+}
+
+/**
+ * バックグラウンドでまとめて準備するStudyPlan.
+ */
+export interface PrepareStudyPlansRequest {
+  /**
+   * @minItems 1
+   * @maxItems 20
+   */
+  plan_ids: string[];
 }
 
 /**

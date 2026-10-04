@@ -23,6 +23,7 @@ import type {
   DeleteQuizzesResult,
   ManagedQuizResult,
   PrepareStudyPlanResult,
+  PrepareStudyPlansAccepted,
   QuizChain,
   QuizIssueSummary,
   QuizReattachmentResult,
@@ -939,6 +940,13 @@ export const getListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetRespons
       plan_id: faker.string.uuid(),
       prepared_quiz_count: faker.number.int(),
     }));
+
+export const getPrepareStudyPlansApiQuizStudyPlansPreparePostResponseMock = (
+  overrideResponse: Partial<Extract<PrepareStudyPlansAccepted, object>> = {},
+): PrepareStudyPlansAccepted => ({
+  accepted_count: faker.number.int(),
+  ...overrideResponse,
+});
 
 export const getGetStudyPlanApiQuizStudyPlansPlanIdGetResponseMock = (
   overrideResponse: Partial<Extract<StudyPlan, object>> = {},
@@ -1980,6 +1988,32 @@ export const getListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetMockHan
     );
   };
 
+export const getPrepareStudyPlansApiQuizStudyPlansPreparePostMockHandler = (
+  overrideResponse?:
+    | PrepareStudyPlansAccepted
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PrepareStudyPlansAccepted> | PrepareStudyPlansAccepted),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/quiz/study-plans/prepare",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      await delay(200);
+
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPrepareStudyPlansApiQuizStudyPlansPreparePostResponseMock(),
+        { status: 202 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetStudyPlanApiQuizStudyPlansPlanIdGetMockHandler = (
   overrideResponse?:
     | StudyPlan
@@ -2212,6 +2246,7 @@ export const getQuizMock = () => [
   getListStudyPlansApiQuizStudyPlansGetMockHandler(),
   getCreateStudyPlanApiQuizStudyPlansPostMockHandler(),
   getListStudyPlanPreparationsApiQuizStudyPlansPreparationsGetMockHandler(),
+  getPrepareStudyPlansApiQuizStudyPlansPreparePostMockHandler(),
   getGetStudyPlanApiQuizStudyPlansPlanIdGetMockHandler(),
   getUpdateStudyPlanApiQuizStudyPlansPlanIdPutMockHandler(),
   getDeleteStudyPlanApiQuizStudyPlansPlanIdDeleteMockHandler(),

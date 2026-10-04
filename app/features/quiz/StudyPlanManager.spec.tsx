@@ -10,6 +10,7 @@ import {
   listStudyPlans,
   listStudyResources,
   prepareAdditionalStudyPlanQuizzes,
+  prepareSelectedStudyPlans,
   updateStudyPlan,
 } from "./api";
 
@@ -23,6 +24,7 @@ vi.mock("./api", () => ({
   listStudyPlans: vi.fn(),
   listStudyResources: vi.fn(),
   prepareAdditionalStudyPlanQuizzes: vi.fn(),
+  prepareSelectedStudyPlans: vi.fn(),
   updateStudyPlan: vi.fn(),
 }));
 
@@ -63,6 +65,9 @@ beforeEach(() => {
     requested_count: 6,
     added_count: 3,
     prepared_quiz_count: 6,
+  });
+  vi.mocked(prepareSelectedStudyPlans).mockResolvedValue({
+    accepted_count: 2,
   });
 });
 
@@ -297,6 +302,32 @@ it("選択したStudyPlanを4形式へ一括変更する", async () => {
       n_option: 4,
     });
   });
+});
+
+it("選択したStudyPlanをバックグラウンドで一括準備する", async () => {
+  const user = userEvent.setup();
+  vi.mocked(listStudyPlans).mockResolvedValue([plan, secondPlan]);
+  vi.mocked(listStudyResources).mockResolvedValue([
+    { uid: "resource-1", name: "とても長いResource名" },
+    { uid: "resource-2", name: "TCP/IP入門" },
+  ]);
+  renderManager();
+
+  await user.click(
+    await screen.findByRole("checkbox", { name: `${plan.name}を選択` }),
+  );
+  await user.click(
+    screen.getByRole("checkbox", { name: `${secondPlan.name}を選択` }),
+  );
+  await user.click(screen.getByRole("button", { name: "選択した2件を準備" }));
+
+  await waitFor(() =>
+    expect(prepareSelectedStudyPlans).toHaveBeenCalledWith([
+      plan.uid,
+      secondPlan.uid,
+    ]),
+  );
+  expect(screen.getByText("0件選択中")).toBeVisible();
 });
 
 it("行内ボタンではなく選択ツールバーからStudyPlanを削除する", async () => {

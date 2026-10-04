@@ -45,6 +45,7 @@ import {
   listStudyPlans,
   listStudyResources,
   prepareAdditionalStudyPlanQuizzes,
+  prepareSelectedStudyPlans,
   updateStudyPlan,
 } from "./api";
 import { useQuizSWR } from "./useQuizSWR";
@@ -108,7 +109,9 @@ export default function StudyPlanManager() {
   const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(
     new Set(),
   );
-  const [bulkAction, setBulkAction] = useState<"delete" | "types">();
+  const [bulkAction, setBulkAction] = useState<
+    "delete" | "types" | "prepare"
+  >();
   const [query, setQuery] = useState("");
   const [currentPlanId, setCurrentPlanId] = useState<string>();
   const [preparingId, setPreparingId] = useState<string>();
@@ -321,6 +324,30 @@ export default function StudyPlanManager() {
         updateError instanceof Error
           ? updateError.message
           : "クイズ形式を一括変更できませんでした。",
+      );
+    } finally {
+      setBulkAction(undefined);
+    }
+  }
+
+  async function prepareSelectedPlans() {
+    const planIds = [...selectedPlanIds];
+    setBulkAction("prepare");
+    setError(undefined);
+    try {
+      const accepted = await prepareSelectedStudyPlans(planIds);
+      toast.success(
+        `${accepted.accepted_count}件の学習計画をバックグラウンドで準備します`,
+        {
+          description: "完了したら通知でお知らせします。",
+        },
+      );
+      setSelectedPlanIds(new Set());
+    } catch (prepareError) {
+      setError(
+        prepareError instanceof Error
+          ? prepareError.message
+          : "選択した学習計画を準備できませんでした。",
       );
     } finally {
       setBulkAction(undefined);
@@ -562,6 +589,18 @@ export default function StudyPlanManager() {
                 {actionPlan && planActions(actionPlan)}
                 {selectedPlanIds.size > 0 && (
                   <>
+                    {selectedPlanIds.size > 1 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={Boolean(bulkAction)}
+                        onClick={() => void prepareSelectedPlans()}
+                      >
+                        {bulkAction === "prepare"
+                          ? "受付中…"
+                          : `選択した${selectedPlanIds.size}件を準備`}
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       size="sm"

@@ -69,6 +69,9 @@ export type PrepareStudyPlanResult = StudyPlanPreparationStatus & {
   requested_count: number;
   added_count: number;
 };
+export type PrepareStudyPlansAccepted = {
+  accepted_count: number;
+};
 export type DeleteQuizzesResult = {
   deleted_count: number;
   deleted_answer_count: number;
@@ -364,6 +367,19 @@ export async function prepareAdditionalStudyPlanQuizzes(
     "study-plan-preparations",
   );
   return result;
+}
+
+export async function prepareSelectedStudyPlans(
+  planIds: string[],
+): Promise<PrepareStudyPlansAccepted> {
+  return requestStudyPlanPreparation<PrepareStudyPlansAccepted>(
+    "/quiz/study-plans/prepare",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan_ids: planIds }),
+    },
+  );
 }
 
 async function requestStudyPlanPreparation<T>(

@@ -49,6 +49,8 @@ export * from "./paging";
 export * from "./postFilesResourcePost200";
 export * from "./prepareStudyPlanRequest";
 export * from "./prepareStudyPlanResult";
+export * from "./prepareStudyPlansAccepted";
+export * from "./prepareStudyPlansRequest";
 export * from "./quizAttemptRate";
 export * from "./quizChain";
 export * from "./quizChainLink";

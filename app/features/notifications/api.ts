@@ -3,7 +3,10 @@ const API_BASE_URL =
 
 export type AppNotification = {
   uid: string;
-  kind: "quiz_preparation_complete";
+  kind:
+    | "quiz_preparation_complete"
+    | "quiz_preparation_failed"
+    | "quiz_issue_reported";
   title: string;
   description: string | null;
   href: string | null;
