@@ -24,13 +24,13 @@ const routesFixture = [
     Component: SignUpForm,
   },
   {
-    path: "/dashboard",
+    path: "/review",
     Component: () => <div>home</div>,
   },
 ];
 
 describe("ユーザー作成", () => {
-  it("成功したらログイン済ませてダッシュボードへ", async () => {
+  it("成功したらログイン済ませて復習へ", async () => {
     // ログインAPIのモックが期待通り204を返すように上書き
     server.use(
       http.post("*/auth/cookie/login", () => {
@@ -50,9 +50,9 @@ describe("ユーザー作成", () => {
     await user.type(emailInput, "test@example.com");
     await user.type(passwordInput, "password123");
     await user.click(submitButton);
-    waitFor(() => {
+    await waitFor(() => {
       expect(screen.getByText("home")).toBeInTheDocument();
-      expect(router.state.location.pathname).toBe("/dashboard");
+      expect(router.state.location.pathname).toBe("/review");
     });
   });
 

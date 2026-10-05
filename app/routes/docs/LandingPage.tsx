@@ -25,7 +25,7 @@ export default function LandingPage() {
   }, []);
 
   if (isAuthenticated && pathname === "/") {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/review" replace />;
   }
 
   const problems = [

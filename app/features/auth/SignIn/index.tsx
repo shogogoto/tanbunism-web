@@ -36,14 +36,14 @@ export async function UserSignInAction({ request }: ActionFunctionArgs) {
     });
   }
   toast.success("ロクインしました");
-  return redirect("/dashboard");
+  return redirect("/review");
 }
 
 export default function SignInForm() {
   const lastResult = useActionData<typeof UserSignInAction>();
   const { isAuthenticated } = useAuth();
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/review" replace />;
   }
 
   return <AuthForm lastResult={lastResult} title="ログイン" />;

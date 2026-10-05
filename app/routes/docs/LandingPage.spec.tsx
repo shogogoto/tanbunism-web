@@ -13,17 +13,17 @@ beforeEach(() => {
   auth.isAuthenticated = true;
 });
 
-it("ログイン済みならダッシュボードへ移動する", async () => {
+it("ログイン済みなら復習へ移動する", async () => {
   render(
     <MemoryRouter initialEntries={["/"]}>
       <Routes>
         <Route index element={<LandingPage />} />
-        <Route path="dashboard" element={<div>ダッシュボード画面</div>} />
+        <Route path="review" element={<div>復習画面</div>} />
       </Routes>
     </MemoryRouter>,
   );
 
-  expect(await screen.findByText("ダッシュボード画面")).toBeVisible();
+  expect(await screen.findByText("復習画面")).toBeVisible();
 });
 
 it("明示的に開いたトップはログイン済みでも表示する", () => {

@@ -29,7 +29,7 @@ export async function receiveCookie({ request }: Route.ClientLoaderArgs) {
   );
   // @ts-ignore なぜか 200が期待されてる
   if (res?.status === 204) {
-    return redirect("/dashboard");
+    return redirect("/review");
   }
   console.error("Google SSO callback failed:", res.status);
   return redirect("/");
@@ -37,7 +37,7 @@ export async function receiveCookie({ request }: Route.ClientLoaderArgs) {
 
 // clientLoaderのためにあるだけで表示されることはなさそう
 export default function GoogleCallback() {
-  return <Navigate to="/dashboard" />;
+  return <Navigate to="/review" replace />;
 }
 
 export function GoogleAuthButton({ title }: { title: string }) {

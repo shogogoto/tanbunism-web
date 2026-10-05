@@ -11,7 +11,11 @@ import {
 } from "~/shared/generated/google/google.msw";
 import { getUserMock } from "~/shared/generated/user/user.msw";
 import { AuthProvider } from "../AuthProvider";
-import GoogleCallback, { authorize, GoogleAuthButton } from "./google";
+import GoogleCallback, {
+  authorize,
+  GoogleAuthButton,
+  receiveCookie,
+} from "./google";
 
 const server = setupServer(...getGoogleMock(), ...getUserMock());
 beforeAll(() => server.listen());
@@ -44,7 +48,7 @@ const routesFixture = [
     // loader: receiveCookie,
   },
   {
-    path: "/dashboard",
+    path: "/review",
     Component: () => <div>home</div>,
   },
   {
@@ -55,6 +59,20 @@ const routesFixture = [
 
 // { initialEntries: ["/login"] },
 describe("Google SSO", () => {
+  it("callback成功後は復習へ移動する", async () => {
+    server.use(
+      http.get(
+        "*/google/cookie/callback",
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    );
+    const response = await receiveCookie({
+      request: new Request(
+        "https://tanbunism.com/google/callback?code=test&state=test",
+      ),
+    } as Parameters<typeof receiveCookie>[0]);
+    expect(response.headers.get("Location")).toBe("/review");
+  });
   it("authorize成功", async () => {
     server.use(
       getOauthGoogleCookieAuthorizeGoogleCookieAuthorizeGetMockHandler({

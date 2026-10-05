@@ -30,7 +30,7 @@ export async function UserRegisterAction({ request }: ActionFunctionArgs) {
     });
   }
   toast.success("登録に成功しました");
-  return redirect("/dashboard");
+  return redirect("/review");
 }
 
 export default function SignUpForm() {

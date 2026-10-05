@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, delay } from "msw";
 import { setupServer } from "msw/node";
@@ -28,7 +28,7 @@ const routesFixture = [
     ),
   },
   {
-    path: "/dashboard",
+    path: "/review",
     Component: () => <div>home</div>,
   },
   {
@@ -38,7 +38,7 @@ const routesFixture = [
 ];
 
 describe("ログイン", () => {
-  it("ログイン済みはダッシュボードへリダイレクト", async () => {
+  it("ログイン済みは復習へリダイレクト", async () => {
     const useAuthSpy = vi
       .spyOn(AuthMock, "useAuth")
       // @ts-ignore
@@ -48,10 +48,10 @@ describe("ログイン", () => {
     });
     render(<RouterProvider router={router} />);
     await screen.findByText("home");
-    expect(router.state.location.pathname).toBe("/dashboard");
+    expect(router.state.location.pathname).toBe("/review");
     useAuthSpy.mockRestore();
   });
-  it("ログイン成功でダッシュボードにリダイレクト", async () => {
+  it("ログイン成功で復習にリダイレクト", async () => {
     server.use(
       http.post("*/auth/cookie/login", async () => {
         await delay(200);
@@ -70,10 +70,8 @@ describe("ログイン", () => {
 
     await user.type(emailInput, "test@example.com");
     await user.type(passwordInput, "password123");
-    act(() => {
-      user.click(submitButton);
-    });
-    waitFor(() => {
+    await user.click(submitButton);
+    await waitFor(() => {
       expect(
         screen.getByRole("button", { name: "送信中..." }),
       ).toBeInTheDocument();
@@ -83,9 +81,9 @@ describe("ログイン", () => {
       expect(passwordInput).toBeDisabled();
     });
 
-    waitFor(() => {
+    await waitFor(() => {
       expect(screen.getByText("home")).toBeInTheDocument();
-      expect(router.state.location.pathname).toBe("/dashboard");
+      expect(router.state.location.pathname).toBe("/review");
     });
   });
 
