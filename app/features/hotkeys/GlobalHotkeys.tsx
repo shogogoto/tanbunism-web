@@ -163,7 +163,10 @@ export default function GlobalHotkeys() {
       }
 
       if (!waitingForDestination.current && (key === "j" || key === "k")) {
-        if (moveActiveItem(key === "j" ? 1 : -1, dialogOpen)) {
+        if (
+          moveQuizTimeline(key === "j" ? 1 : -1) ||
+          moveActiveItem(key === "j" ? 1 : -1, dialogOpen)
+        ) {
           event.preventDefault();
         }
         resetChord();
@@ -171,8 +174,7 @@ export default function GlobalHotkeys() {
       }
 
       if (!waitingForDestination.current && key === " ") {
-        if (toggleActiveResourceDisclosure() || toggleActiveQuizCard())
-          event.preventDefault();
+        if (toggleActiveResourceDisclosure()) event.preventDefault();
         resetChord();
         return;
       }
@@ -294,7 +296,6 @@ function contextHotkeys(pathname: string, search: string): HotkeyDefinition[] {
   if (view === "quiz-timeline") {
     return [
       { keys: ["j", "k"], label: "クイズを移動" },
-      { keys: ["Space"], label: "選択中のクイズを開閉" },
       { keys: ["1–9"], label: "選択肢を切替" },
       { keys: ["Enter"], label: "回答する" },
     ];
@@ -330,12 +331,16 @@ const studyPlanHotkeys: HotkeyDefinition[] = [
   { keys: ["Enter"], label: "currentのクイズを解く" },
 ];
 
-function toggleActiveQuizCard(): boolean {
-  const active = document.querySelector<HTMLElement>(
-    '[data-quiz-timeline-card] [data-hotkey-item][data-hotkey-active="true"]',
+function moveQuizTimeline(offset: -1 | 1): boolean {
+  const timeline = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-quiz-timeline]"),
+  ).find((candidate) => !candidate.closest("[hidden]"));
+  if (!timeline) return false;
+  const button = timeline.querySelector<HTMLButtonElement>(
+    offset === 1 ? "[data-quiz-timeline-next]" : "[data-quiz-timeline-prev]",
   );
-  if (!active) return false;
-  active.click();
+  if (!button || button.disabled) return true;
+  button.click();
   return true;
 }
 

@@ -66,6 +66,7 @@ it("全ユーザー版では専用feedを取得する", async () => {
 });
 
 it("未回答のクイズを回答済みのクイズより先に表示する", async () => {
+  const user = userEvent.setup();
   vi.mocked(searchCreatedQuizzes).mockResolvedValue({
     total: 2,
     data: [
@@ -118,14 +119,23 @@ it("未回答のクイズを回答済みのクイズより先に表示する", a
     unanswered.compareDocumentPosition(answered) &
       Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
-  expect(screen.getByText("未回答")).toBeInTheDocument();
+  expect(unanswered).toBeVisible();
+  expect(answered).not.toBeVisible();
+  expect(screen.getByText("未回答")).toBeVisible();
   const timelineItems = document.querySelectorAll("[data-hotkey-item]");
-  expect(timelineItems).toHaveLength(2);
+  expect(timelineItems).toHaveLength(1);
   expect(timelineItems[0]).toHaveTextContent("未回答の問題");
-  expect(timelineItems[1]).toHaveTextContent("回答済みの問題");
   expect(
     screen.queryByRole("button", { name: "回答候補" }),
   ).not.toBeInTheDocument();
+  expect(screen.getByText("1 / 2")).toBeVisible();
+
+  await user.click(screen.getByRole("button", { name: "次のクイズ" }));
+
+  expect(answered).toBeVisible();
+  expect(unanswered).not.toBeVisible();
+  expect(screen.getByRole("button", { name: "回答候補" })).toBeVisible();
+  expect(screen.getByText("2 / 2")).toBeVisible();
   expect(
     screen.queryByRole("link", { name: "クイズを解く" }),
   ).not.toBeInTheDocument();
@@ -163,6 +173,8 @@ it("低正答率のクイズを復習候補として優先する", async () => {
   expect(
     review.compareDocumentPosition(mastered) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
+  expect(review).toBeVisible();
+  expect(mastered).not.toBeVisible();
   expect(screen.getByText("復習 50%")).toBeVisible();
 });
 
@@ -212,13 +224,7 @@ it("クイズTL上で回答して結果を確認できる", async () => {
   const user = userEvent.setup();
 
   renderTimeline();
-  expect(
-    screen.queryByRole("button", { name: "正しい選択肢" }),
-  ).not.toBeInTheDocument();
-  await user.click(
-    await screen.findByRole("button", { name: /その場で解く問題/ }),
-  );
-  await user.click(screen.getByRole("button", { name: "正しい選択肢" }));
+  await user.click(await screen.findByRole("button", { name: "正しい選択肢" }));
   await user.click(screen.getByRole("button", { name: "回答する" }));
 
   expect(answerQuiz).toHaveBeenCalledWith("quiz-1", ["option-1"]);

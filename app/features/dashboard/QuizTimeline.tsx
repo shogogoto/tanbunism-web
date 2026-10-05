@@ -1,5 +1,5 @@
-import { ChevronDown } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
 import QuizPrompt from "~/features/quiz/QuizPrompt";
 import {
@@ -11,12 +11,8 @@ import {
 import { useQuizSWR } from "~/features/quiz/useQuizSWR";
 import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
+import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "~/shared/components/ui/collapsible";
 import { cn } from "~/shared/lib/utils";
 
 const REVIEW_ACCURACY_THRESHOLD = 0.8;
@@ -29,6 +25,7 @@ export default function QuizTimeline({
   const [sessionResults, setSessionResults] = useState<Record<string, boolean>>(
     {},
   );
+  const [currentIndex, setCurrentIndex] = useState(0);
   const {
     data: quizzes = [],
     error,
@@ -80,12 +77,18 @@ export default function QuizTimeline({
 
   const sorted = useMemo(() => mixQuizTimeline(quizzes, 20), [quizzes]);
 
+  useEffect(() => {
+    setCurrentIndex((current) =>
+      Math.min(current, Math.max(0, sorted.length - 1)),
+    );
+  }, [sorted.length]);
+
   if (isLoading) {
     return <Loading />;
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-2">
+    <div className="mx-auto w-full max-w-3xl space-y-2" data-quiz-timeline>
       {error && (
         <p
           role="alert"
@@ -104,104 +107,167 @@ export default function QuizTimeline({
         </p>
       )}
       {sorted.length > 0 && (
-        <div className="divide-y border-y sm:border-x">
-          {sorted.map((item) => (
-            <QuizTimelineCard
-              key={item.quiz.quiz_id}
-              item={item}
-              sessionResult={sessionResults[item.quiz.quiz_id]}
-              hasSessionResult={item.quiz.quiz_id in sessionResults}
-              onAnswered={(isCorrect) =>
-                setSessionResults((current) => ({
-                  ...current,
-                  [item.quiz.quiz_id]: isCorrect,
-                }))
-              }
-            />
-          ))}
+        <div className="flex min-h-[calc(100dvh-13rem)] flex-col border-y sm:min-h-[70vh] sm:border-x">
+          <div className="min-h-0 flex-1">
+            {sorted.map((item, index) => (
+              <div
+                key={item.quiz.quiz_id}
+                className="h-full"
+                hidden={index !== currentIndex}
+              >
+                <QuizTimelineCard
+                  item={item}
+                  isCurrent={index === currentIndex}
+                  sessionResult={sessionResults[item.quiz.quiz_id]}
+                  hasSessionResult={item.quiz.quiz_id in sessionResults}
+                  onAnswered={(isCorrect) =>
+                    setSessionResults((current) => ({
+                      ...current,
+                      [item.quiz.quiz_id]: isCorrect,
+                    }))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+          <QuizTimelinePager
+            currentIndex={currentIndex}
+            quizIds={sorted.map((item) => item.quiz.quiz_id)}
+            onChange={setCurrentIndex}
+          />
         </div>
       )}
     </div>
   );
 }
 
+function QuizTimelinePager({
+  currentIndex,
+  quizIds,
+  onChange,
+}: {
+  currentIndex: number;
+  quizIds: string[];
+  onChange: (index: number) => void;
+}) {
+  const count = quizIds.length;
+  return (
+    <nav
+      className="flex shrink-0 items-center gap-2 border-t px-2 py-3 sm:px-4"
+      aria-label="クイズを移動"
+      data-dashboard-swipe-ignore
+    >
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        data-quiz-timeline-prev
+        disabled={currentIndex === 0}
+        onClick={() => onChange(currentIndex - 1)}
+        aria-label="前のクイズ"
+      >
+        <ChevronLeft />
+      </Button>
+      <div className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto py-1">
+        {quizIds.map((quizId, index) => (
+          <button
+            key={quizId}
+            type="button"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full"
+            onClick={() => onChange(index)}
+            aria-label={`${index + 1}問目を表示`}
+            aria-current={index === currentIndex ? "true" : undefined}
+          >
+            <span
+              className={cn(
+                "block size-1.5 rounded-full bg-muted-foreground/35 transition-[width,height,background-color]",
+                index === currentIndex && "size-2.5 bg-primary",
+              )}
+              aria-hidden="true"
+            />
+          </button>
+        ))}
+      </div>
+      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+        {currentIndex + 1} / {count}
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        data-quiz-timeline-next
+        disabled={currentIndex === count - 1}
+        onClick={() => onChange(currentIndex + 1)}
+        aria-label="次のクイズ"
+      >
+        <ChevronRight />
+      </Button>
+    </nav>
+  );
+}
+
 function QuizTimelineCard({
   item,
+  isCurrent,
   sessionResult,
   hasSessionResult,
   onAnswered,
 }: {
   item: ManagedQuiz;
+  isCurrent: boolean;
   sessionResult?: boolean;
   hasSessionResult: boolean;
   onAnswered: (isCorrect: boolean) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
-    <Collapsible
-      open={isOpen}
-      onOpenChange={setIsOpen}
+    <Card
+      className="h-full min-h-full gap-0 border-0 py-0 shadow-none"
       data-quiz-timeline-card
-      data-quiz-open={isOpen}
+      data-quiz-open="true"
     >
-      <Card className="gap-0 py-0 shadow-none">
-        <CollapsibleTrigger asChild>
-          <button
-            type="button"
-            data-hotkey-item
-            className="flex w-full items-center gap-2 p-2 text-left outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/60 data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary"
+      <div
+        data-hotkey-item={isCurrent ? true : undefined}
+        data-hotkey-active={isCurrent ? "true" : undefined}
+        className="flex items-start gap-3 border-b p-4 outline-none data-[hotkey-active=true]:bg-accent/30"
+      >
+        <QuizPrompt quiz={item.quiz} className="min-w-0 flex-1" />
+        {hasSessionResult ? (
+          <Badge variant={sessionResult ? "secondary" : "destructive"}>
+            今回 {sessionResult ? "正解" : "不正解"}
+          </Badge>
+        ) : (
+          <Badge
+            variant={
+              item.attempts === 0
+                ? "default"
+                : needsReview(item)
+                  ? "destructive"
+                  : "secondary"
+            }
           >
-            <QuizPrompt quiz={item.quiz} compact className="min-w-0 flex-1" />
-            <span className="flex shrink-0 items-center gap-2">
-              {hasSessionResult ? (
-                <Badge variant={sessionResult ? "secondary" : "destructive"}>
-                  今回 {sessionResult ? "正解" : "不正解"}
-                </Badge>
-              ) : (
-                <Badge
-                  variant={
-                    item.attempts === 0
-                      ? "default"
-                      : needsReview(item)
-                        ? "destructive"
-                        : "secondary"
-                  }
-                >
-                  {item.attempts === 0
-                    ? "未回答"
-                    : needsReview(item)
-                      ? `復習 ${Math.round((item.accuracy ?? 0) * 100)}%`
-                      : `${item.attempts}回答`}
-                </Badge>
-              )}
-              <ChevronDown
-                className={cn(
-                  "size-4 text-muted-foreground transition-transform",
-                  isOpen && "rotate-180",
-                )}
-                aria-hidden="true"
-              />
-            </span>
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className="space-y-2 border-t p-0">
-            <QuizAttempt
-              quiz={item.quiz}
-              showStatement={false}
-              className="border-0"
-              onAnswered={onAnswered}
-            />
-            {item.accuracy !== null && (
-              <p className="border-t px-2 py-2 text-xs text-muted-foreground">
-                これまでの正答率 {Math.round(item.accuracy * 100)}%
-              </p>
-            )}
-          </CardContent>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
+            {item.attempts === 0
+              ? "未回答"
+              : needsReview(item)
+                ? `復習 ${Math.round((item.accuracy ?? 0) * 100)}%`
+                : `${item.attempts}回答`}
+          </Badge>
+        )}
+      </div>
+      <CardContent className="space-y-2 p-0">
+        <QuizAttempt
+          key={item.quiz.quiz_id}
+          quiz={item.quiz}
+          showStatement={false}
+          className="border-0 p-4"
+          onAnswered={onAnswered}
+        />
+        {item.accuracy !== null && (
+          <p className="border-t px-4 py-3 text-xs text-muted-foreground">
+            これまでの正答率 {Math.round(item.accuracy * 100)}%
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

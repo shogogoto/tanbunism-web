@@ -376,32 +376,55 @@ it("Ctrlと数字で指定位置のタブへ移動する", async () => {
   expect(selectThird).toHaveBeenCalledOnce();
 });
 
-it("クイズTLではSpaceで開きEnterで回答する", async () => {
+it("クイズTLではjで次の問題へ移動しEnterで回答する", async () => {
   const user = userEvent.setup();
-  const toggle = vi.fn();
+  const moveNext = vi.fn();
   const submit = vi.fn();
   renderHotkeys(
-    <div data-quiz-timeline-card data-quiz-open="true">
-      <button
-        type="button"
-        data-hotkey-item
-        data-hotkey-active="true"
-        onClick={toggle}
-      >
-        current quiz
-      </button>
-      <button type="button" data-quiz-submit onClick={submit}>
-        回答する
+    <div data-quiz-timeline>
+      <div data-quiz-timeline-card data-quiz-open="true">
+        <div data-hotkey-item data-hotkey-active="true">
+          current quiz
+        </div>
+        <button type="button" data-quiz-submit onClick={submit}>
+          回答する
+        </button>
+      </div>
+      <button type="button" data-quiz-timeline-next onClick={moveNext}>
+        次のクイズ
       </button>
     </div>,
   );
 
-  await user.keyboard(" ");
-  expect(toggle).toHaveBeenCalledOnce();
+  await user.keyboard("j");
+  expect(moveNext).toHaveBeenCalledOnce();
 
   await user.keyboard("{Enter}");
   expect(submit).toHaveBeenCalledOnce();
-  expect(toggle).toHaveBeenCalledOnce();
+});
+
+it("非表示のクイズTLは他画面のj移動を横取りしない", async () => {
+  const user = userEvent.setup();
+  const hiddenMove = vi.fn();
+  renderHotkeys(
+    <>
+      <div hidden>
+        <div data-quiz-timeline>
+          <button type="button" data-quiz-timeline-next onClick={hiddenMove}>
+            次のクイズ
+          </button>
+        </div>
+      </div>
+      <button type="button" data-hotkey-item>
+        visible item
+      </button>
+    </>,
+  );
+
+  await user.keyboard("j");
+
+  expect(hiddenMove).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "visible item" })).toHaveFocus();
 });
 
 it("import画面ではEnterで有効な主操作を実行する", async () => {
