@@ -107,14 +107,15 @@ export default function QuizTimeline({
         </p>
       )}
       {sorted.length > 0 && (
-        <div className="flex min-h-[calc(100dvh-13rem)] flex-col border-y sm:min-h-[70vh] sm:border-x">
-          <div className="min-h-0 flex-1">
+        <div className="border-y sm:border-x">
+          <QuizTimelinePager
+            currentIndex={currentIndex}
+            quizIds={sorted.map((item) => item.quiz.quiz_id)}
+            onChange={setCurrentIndex}
+          />
+          <div>
             {sorted.map((item, index) => (
-              <div
-                key={item.quiz.quiz_id}
-                className="h-full"
-                hidden={index !== currentIndex}
-              >
+              <div key={item.quiz.quiz_id} hidden={index !== currentIndex}>
                 <QuizTimelineCard
                   item={item}
                   isCurrent={index === currentIndex}
@@ -130,11 +131,6 @@ export default function QuizTimeline({
               </div>
             ))}
           </div>
-          <QuizTimelinePager
-            currentIndex={currentIndex}
-            quizIds={sorted.map((item) => item.quiz.quiz_id)}
-            onChange={setCurrentIndex}
-          />
         </div>
       )}
     </div>
@@ -153,7 +149,7 @@ function QuizTimelinePager({
   const count = quizIds.length;
   return (
     <nav
-      className="flex shrink-0 items-center gap-2 border-t px-2 py-3 sm:px-4"
+      className="flex items-center gap-2 border-b px-2 py-3 sm:px-4"
       aria-label="クイズを移動"
       data-dashboard-swipe-ignore
     >
@@ -221,7 +217,7 @@ function QuizTimelineCard({
 }) {
   return (
     <Card
-      className="h-full min-h-full gap-0 border-0 py-0 shadow-none"
+      className="gap-0 border-0 py-0 shadow-none"
       data-quiz-timeline-card
       data-quiz-open="true"
     >
