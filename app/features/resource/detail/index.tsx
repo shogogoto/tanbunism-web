@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import {
   type SentenceQuizStatus,
   listCreatedQuizSentences,
@@ -24,6 +24,8 @@ type Props = {
 };
 
 export default function ResourceDetail({ id }: Props) {
+  const [searchParams] = useSearchParams();
+  const inspectId = searchParams.get("inspect");
   const { addHistory } = useHistory();
   const {
     data: apiResult,
@@ -100,6 +102,12 @@ export default function ResourceDetail({ id }: Props) {
   const { g, resource_info, uids, terms } = apiResult.data;
   const { user, resource, resource_stats } = resource_info;
   const graph = toGraph(g);
+  const inspectedEntry = inspectId
+    ? Object.entries(uids).find(
+        ([uid]) => uid.replaceAll("-", "") === inspectId.replaceAll("-", ""),
+      )
+    : undefined;
+  const inspectedSentence = inspectedEntry?.[1];
 
   return (
     <ResourceDetailProvider
@@ -123,6 +131,23 @@ export default function ResourceDetail({ id }: Props) {
             <ResourceMeta info={resource_info} />
             <ResourceStats stats={resource_stats} resourceId={resource.uid} />
             <Separator className="my-4" />
+            {inspectId && (
+              <section className="mb-4 rounded-md border border-yellow-500/50 bg-yellow-500/10 p-3">
+                <p className="text-xs font-medium text-yellow-700 dark:text-yellow-400">
+                  管理画面で選択したTanbun
+                </p>
+                {typeof inspectedSentence === "string" ? (
+                  <p className="mt-1 font-medium">{inspectedSentence}</p>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    このResourceのデータからTanbunを取得できませんでした。
+                  </p>
+                )}
+                <p className="mt-1 font-mono text-xs text-muted-foreground">
+                  {inspectId}
+                </p>
+              </section>
+            )}
             <Backbone startId={resource.uid} key={id} />
           </div>
         </div>

@@ -6,6 +6,8 @@ export type OrphanReason =
   | "missing_owner"
   | "missing_location";
 
+export type TanbunIntegrityKind = "orphaned" | "misplaced";
+
 export type OrphanedTanbun = {
   uid: string;
   sentence: string;
@@ -24,19 +26,24 @@ export type DeleteOrphanedTanbunsResult = {
   skipped_count: number;
 };
 
-export async function listOrphanedTanbuns(): Promise<OrphanedTanbun[]> {
-  return request<OrphanedTanbun[]>("/admin/orphaned-tanbuns");
+export async function listOrphanedTanbuns(
+  kind: TanbunIntegrityKind,
+): Promise<OrphanedTanbun[]> {
+  return request<OrphanedTanbun[]>(
+    `/admin/orphaned-tanbuns?kind=${encodeURIComponent(kind)}`,
+  );
 }
 
 export async function deleteOrphanedTanbuns(
   sentenceIds: string[],
+  kind: TanbunIntegrityKind,
 ): Promise<DeleteOrphanedTanbunsResult> {
   return request<DeleteOrphanedTanbunsResult>(
     "/admin/orphaned-tanbuns/delete",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sentence_ids: sentenceIds }),
+      body: JSON.stringify({ sentence_ids: sentenceIds, kind }),
     },
   );
 }

@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import { beforeEach, expect, it, vi } from "vitest";
 import OrphanedTanbunManager from ".";
 import {
@@ -34,14 +35,23 @@ beforeEach(() => {
   });
 });
 
-it("孤立理由と保護対象の参照数を一覧できる", async () => {
-  render(<OrphanedTanbunManager />);
+it("配置切れ理由と保護対象の参照数を一覧できる", async () => {
+  render(
+    <MemoryRouter>
+      <OrphanedTanbunManager kind="misplaced" />
+    </MemoryRouter>,
+  );
 
   expect(await screen.findByText("配置を失った単文")).toBeInTheDocument();
   expect(screen.getByText("古い読書メモ")).toBeInTheDocument();
   expect(screen.getByText("配置なし")).toBeInTheDocument();
   expect(screen.getByText("Quiz 1")).toBeInTheDocument();
   expect(screen.getByText("回答 2")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /古い読書メモ/ })).toHaveAttribute(
+    "href",
+    "/resource/resource-1?inspect=orphan-1#orphan-1",
+  );
+  expect(listOrphanedTanbuns).toHaveBeenCalledWith("misplaced");
 });
 
 it("選択した孤立単文を確認後に掃除して再検出する", async () => {
@@ -49,7 +59,11 @@ it("選択した孤立単文を確認後に掃除して再検出する", async (
   vi.mocked(listOrphanedTanbuns)
     .mockResolvedValueOnce([orphan])
     .mockResolvedValueOnce([]);
-  render(<OrphanedTanbunManager />);
+  render(
+    <MemoryRouter>
+      <OrphanedTanbunManager kind="misplaced" />
+    </MemoryRouter>,
+  );
 
   await user.click(
     await screen.findByRole("checkbox", { name: /配置を失った単文/ }),
@@ -59,7 +73,10 @@ it("選択した孤立単文を確認後に掃除して再検出する", async (
   await user.click(screen.getByRole("button", { name: "掃除する" }));
 
   await waitFor(() =>
-    expect(deleteOrphanedTanbuns).toHaveBeenCalledWith(["orphan-1"]),
+    expect(deleteOrphanedTanbuns).toHaveBeenCalledWith(
+      ["orphan-1"],
+      "misplaced",
+    ),
   );
-  expect(await screen.findByText("孤立Tanbunはありません")).toBeVisible();
+  expect(await screen.findByText("配置切れTanbunはありません")).toBeVisible();
 });

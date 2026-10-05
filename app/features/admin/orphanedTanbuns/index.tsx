@@ -1,5 +1,6 @@
-import { RefreshCw, Trash2 } from "lucide-react";
+import { ExternalLink, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -26,6 +27,7 @@ import {
 import {
   type OrphanReason,
   type OrphanedTanbun,
+  type TanbunIntegrityKind,
   deleteOrphanedTanbuns,
   listOrphanedTanbuns,
 } from "./api";
@@ -36,7 +38,13 @@ const reasonLabels: Record<OrphanReason, string> = {
   missing_location: "配置なし",
 };
 
-export default function OrphanedTanbunManager() {
+type Props = {
+  kind: TanbunIntegrityKind;
+};
+
+export default function OrphanedTanbunManager({ kind }: Props) {
+  const isMisplaced = kind === "misplaced";
+  const label = isMisplaced ? "配置切れTanbun" : "孤立Tanbun";
   const [items, setItems] = useState<OrphanedTanbun[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -47,7 +55,7 @@ export default function OrphanedTanbunManager() {
     setIsLoading(true);
     setError(undefined);
     try {
-      const loaded = await listOrphanedTanbuns();
+      const loaded = await listOrphanedTanbuns(kind);
       setItems(loaded);
       setSelected((current) => {
         const loadedIds = new Set(loaded.map(({ uid }) => uid));
@@ -57,12 +65,12 @@ export default function OrphanedTanbunManager() {
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "孤立単文を取得できませんでした。",
+          : `${label}を取得できませんでした。`,
       );
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [kind, label]);
 
   useEffect(() => {
     void load();
@@ -96,7 +104,7 @@ export default function OrphanedTanbunManager() {
     setIsDeleting(true);
     setError(undefined);
     try {
-      const result = await deleteOrphanedTanbuns(ids);
+      const result = await deleteOrphanedTanbuns(ids, kind);
       toast.success(
         `${result.deleted_count}件を削除、${result.retired_count}件を退役しました`,
       );
@@ -106,7 +114,7 @@ export default function OrphanedTanbunManager() {
       setError(
         deleteError instanceof Error
           ? deleteError.message
-          : "孤立単文を削除できませんでした。",
+          : `${label}を削除できませんでした。`,
       );
     } finally {
       setIsDeleting(false);
@@ -116,9 +124,12 @@ export default function OrphanedTanbunManager() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5 p-4 sm:p-6">
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold">孤立Tanbun</h2>
+        <h2 className="text-lg font-semibold">{label}</h2>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          Resource内の配置を解決できない現行Tanbunを監査します。自動削除はせず、内容と参照状況を確認してから手動で掃除します。
+          {isMisplaced
+            ? "Resourceには所属しているものの、本文ツリー上の配置を解決できないTanbunを監査します。"
+            : "Resourceまたは所有者との対応を失ったTanbunを監査します。"}
+          自動削除はせず、内容と参照状況を確認してから手動で掃除します。
         </p>
       </section>
 
@@ -153,7 +164,7 @@ export default function OrphanedTanbunManager() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>
-                  {selected.size}件の孤立Tanbunを掃除しますか？
+                  {selected.size}件の{label}を掃除しますか？
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                   参照のない{selected.size - protectedCount}
@@ -184,7 +195,7 @@ export default function OrphanedTanbunManager() {
 
       {!isLoading && items.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="font-medium">孤立Tanbunはありません</p>
+          <p className="font-medium">{label}はありません</p>
           <p className="mt-1 text-sm text-muted-foreground">
             現在のグラフには掃除が必要なTanbunは見つかりませんでした。
           </p>
@@ -236,7 +247,17 @@ export default function OrphanedTanbunManager() {
                     </p>
                   </TableCell>
                   <TableCell className="max-w-64 whitespace-normal">
-                    <p>{item.resource_name ?? "不明"}</p>
+                    {item.resource_uid && item.reason === "missing_location" ? (
+                      <Link
+                        to={`/resource/${item.resource_uid}?inspect=${item.uid}#${item.uid}`}
+                        className="inline-flex items-center gap-1 font-medium hover:underline"
+                      >
+                        {item.resource_name ?? "Resourceを確認"}
+                        <ExternalLink className="size-3.5" />
+                      </Link>
+                    ) : (
+                      <p>{item.resource_name ?? "不明"}</p>
+                    )}
                     {item.owner_email && (
                       <p className="mt-1 text-xs text-muted-foreground">
                         {item.owner_email}

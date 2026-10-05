@@ -12,6 +12,7 @@ type Props = {
 };
 
 const HEADING_PREFIX = /^#+\s*/;
+const normalizeUid = (value: string) => value.replaceAll("-", "");
 
 // 単文や見出しをいい感じに表示し分ける
 export default function Presenter({ id, prefix }: Props) {
@@ -21,7 +22,8 @@ export default function Presenter({ id, prefix }: Props) {
   const { register, isRegistered, getNumber } = useTraceMemory();
   const [isVisible, setIsVisible] = useState(false);
   const location = useLocation();
-  const isActive = location.hash === `#${adj.kn.uid}`;
+  const isActive =
+    normalizeUid(location.hash.slice(1)) === normalizeUid(adj.kn.uid);
 
   useEffect(() => {
     if (level === 0) {
@@ -31,6 +33,15 @@ export default function Presenter({ id, prefix }: Props) {
       }
     }
   }, [id, register, level, isRegistered]);
+
+  useEffect(() => {
+    if (isActive) {
+      document.getElementById(adj.kn.uid)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [adj.kn.uid, isActive]);
 
   if (level > 0) {
     const Tag = `h${level}` as keyof JSX.IntrinsicElements;

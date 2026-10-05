@@ -3,8 +3,11 @@ import { http, HttpResponse } from "msw";
 import OrphanedTanbunManager from ".";
 
 const meta = {
-  title: "Admin/OrphanedTanbuns",
+  title: "Admin/TanbunIntegrity",
   component: OrphanedTanbunManager,
+  args: {
+    kind: "misplaced",
+  },
   parameters: {
     layout: "fullscreen",
     msw: {

@@ -30,13 +30,17 @@ export default function Admin() {
       <div className="border-b px-4 py-2 sm:px-6">
         <TabsList>
           <TabsTrigger value="orphans">孤立Tanbun</TabsTrigger>
+          <TabsTrigger value="misplaced">配置切れTanbun</TabsTrigger>
           <TabsTrigger value="broken-quizzes">参照切れQuiz</TabsTrigger>
           <TabsTrigger value="users">ユーザー</TabsTrigger>
           <TabsTrigger value="workload">負荷制御</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="orphans" className="mt-0">
-        <OrphanedTanbunManager />
+        <OrphanedTanbunManager kind="orphaned" />
+      </TabsContent>
+      <TabsContent value="misplaced" className="mt-0">
+        <OrphanedTanbunManager kind="misplaced" />
       </TabsContent>
       <TabsContent value="broken-quizzes" className="mt-0">
         <BrokenQuizManager />
