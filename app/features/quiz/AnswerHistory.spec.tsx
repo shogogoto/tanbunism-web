@@ -71,7 +71,7 @@ describe("AnswerHistory", () => {
     for (const link of screen.getAllByRole("link", { name: "数学ノート" })) {
       expect(link).toHaveAttribute("href", "/resource/resource-1");
     }
-    expect(screen.getAllByText("必ず逆元が存在する").length).toBeGreaterThan(0);
+    expect(screen.queryByText("必ず逆元が存在する")).not.toBeInTheDocument();
     expect(
       screen.queryByText("最近の回答を確認し、間違えたクイズを復習します。"),
     ).not.toBeInTheDocument();
@@ -86,6 +86,7 @@ describe("AnswerHistory", () => {
       screen.getAllByRole("button", { name: "クイズ詳細を見る" })[0],
     );
     await waitFor(() => expect(getQuizChain).toHaveBeenCalledWith("quiz-1"));
+    expect(await screen.findByText("必ず逆元が存在する")).toBeInTheDocument();
   });
 
   it("不正解だけに絞り込む", async () => {

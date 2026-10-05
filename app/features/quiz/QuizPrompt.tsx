@@ -39,8 +39,24 @@ type Props = {
   quiz: PromptQuiz;
   className?: string;
   compact?: boolean;
+  showTypeBadge?: boolean;
   renderSubject?: (subject: string) => ReactNode;
 };
+
+export function QuizTypeBadge({
+  quizType,
+  className,
+}: {
+  quizType: NonNullable<ReadableQuiz["quiz_type"]>;
+  className?: string;
+}) {
+  const style = presentation[quizType];
+  return (
+    <Badge variant="outline" className={cn("shrink-0", style.badge, className)}>
+      {style.label}
+    </Badge>
+  );
+}
 
 function TermNames({ terms = [] }: { terms?: string[] }) {
   if (terms.length === 0) return null;
@@ -106,6 +122,7 @@ export default function QuizPrompt({
   quiz,
   className,
   compact = false,
+  showTypeBadge = true,
   renderSubject = (subject) => subject,
 }: Props) {
   const prompt = quiz.prompt;
@@ -128,9 +145,7 @@ export default function QuizPrompt({
       className={cn("min-w-0", compact ? "space-y-1" : "space-y-2", className)}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className={cn("shrink-0", style.badge)}>
-          {style.label}
-        </Badge>
+        {showTypeBadge && <QuizTypeBadge quizType={quizType} />}
         <span className="text-xs text-muted-foreground">
           {style.instruction}
         </span>

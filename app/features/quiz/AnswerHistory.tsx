@@ -5,7 +5,7 @@ import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
 import { ChainSentenceLink, RelationAnnotation } from "./QuizKnowledge";
-import QuizPrompt from "./QuizPrompt";
+import QuizPrompt, { QuizTypeBadge } from "./QuizPrompt";
 import {
   type AnswerHistoryItem,
   type QuizChain,
@@ -26,7 +26,7 @@ const quizTypeLabels: Record<QuizType, string> = {
 type CorrectFilter = "" | "true" | "false";
 
 const answerRowGrid =
-  "grid grid-cols-[3.75rem_minmax(0,1fr)_5.5rem] md:grid-cols-[4.5rem_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_4rem]";
+  "grid grid-cols-[4rem_4.5rem_minmax(0,1fr)_5rem] md:grid-cols-[4.5rem_8rem_minmax(0,3fr)_minmax(0,1fr)_7rem_4rem]";
 
 export default function AnswerHistory() {
   const [items, setItems] = useState<AnswerHistoryItem[]>([]);
@@ -175,14 +175,10 @@ export default function AnswerHistory() {
               結果
             </th>
             <th scope="col" className="px-2 py-2">
-              <span className="md:hidden">問題・回答</span>
-              <span className="hidden md:inline">問題</span>
+              種別
             </th>
-            <th scope="col" className="hidden px-2 py-2 md:block">
-              あなたの回答
-            </th>
-            <th scope="col" className="hidden px-2 py-2 md:block">
-              正解
+            <th scope="col" className="px-2 py-2">
+              問題
             </th>
             <th scope="col" className="hidden px-2 py-2 md:block">
               Resource
@@ -248,12 +244,6 @@ function AnswerRow({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
   const { answer, quiz } = item;
-  const selectedAnswer =
-    answer.selected.length > 0
-      ? answer.selected.map((id) => quiz.options[id] ?? id).join(" / ")
-      : "選択なし";
-  const correctAnswer =
-    quiz.correct.map((id) => quiz.options[id] ?? id).join(" / ") || "正解なし";
 
   async function toggleDetails() {
     if (isExpanded) {
@@ -287,11 +277,14 @@ function AnswerRow({
           {answer.is_correct ? "正解" : "不正解"}
         </Badge>
       </td>
+      <td className="min-w-0 px-1 py-2 md:px-2">
+        <QuizTypeBadge
+          quizType={item.quiz_type}
+          className="max-w-full justify-center px-1 text-center text-[10px] whitespace-normal md:px-1.5 md:text-xs"
+        />
+      </td>
       <td className="min-w-0 space-y-1 px-2 py-2 text-sm">
         <div className="flex min-w-0 flex-wrap items-center gap-1">
-          <Badge variant="outline" className="px-1.5 text-[10px]">
-            {quizTypeLabels[item.quiz_type]}
-          </Badge>
           {resourceName && (
             <Link
               className="truncate text-xs text-muted-foreground hover:underline md:hidden"
@@ -302,24 +295,8 @@ function AnswerRow({
           )}
         </div>
         <div className="break-words leading-snug">
-          <QuizPrompt quiz={quiz} compact />
+          <QuizPrompt quiz={quiz} compact showTypeBadge={false} />
         </div>
-        <dl className="space-y-0.5 text-xs md:hidden">
-          <div className="flex gap-1">
-            <dt className="shrink-0 text-muted-foreground">回答:</dt>
-            <dd className="min-w-0 break-words">{selectedAnswer}</dd>
-          </div>
-          <div className="flex gap-1">
-            <dt className="shrink-0 text-muted-foreground">正解:</dt>
-            <dd className="min-w-0 break-words">{correctAnswer}</dd>
-          </div>
-        </dl>
-      </td>
-      <td className="hidden min-w-0 break-words px-2 py-2 text-sm whitespace-normal md:block">
-        {selectedAnswer}
-      </td>
-      <td className="hidden min-w-0 break-words px-2 py-2 text-sm whitespace-normal md:block">
-        {correctAnswer}
       </td>
       <td className="hidden min-w-0 px-2 py-2 text-xs md:block">
         {resourceName ? (
@@ -365,7 +342,7 @@ function AnswerRow({
       </td>
       {isExpanded && (
         <td
-          colSpan={7}
+          colSpan={6}
           className="col-span-full space-y-2 border-t bg-muted/15 px-3 py-3"
         >
           {isLoading && (
