@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from "react-router";
 import { SWRConfig } from "swr";
 import { beforeEach, expect, it, vi } from "vitest";
 import { genericCache } from "~/shared/lib/indexed";
+import { recommendationDay } from "~/shared/lib/recommendationDay";
 import PersonalTimeline, {
   PERSONAL_TIMELINE_CACHE_KEY,
 } from "./PersonalTimeline";
@@ -159,21 +160,24 @@ it("記録に失敗したら表示を元に戻す", async () => {
 });
 
 it("更新中も永続cacheのTLを表示する", async () => {
-  await genericCache.set(PERSONAL_TIMELINE_CACHE_KEY, {
-    items: [
-      {
-        uid: "cached-sentence",
-        sentence: "キャッシュされた単文",
-        term_names: [],
-        resource_uid: "resource-1",
-        resource_name: "読書メモ",
-        updated_at: null,
-        exposure_count: 1,
-        seen_today: false,
-      },
-    ],
-    seenTodayCount: 3,
-  });
+  await genericCache.set(
+    `${PERSONAL_TIMELINE_CACHE_KEY}:${recommendationDay()}`,
+    {
+      items: [
+        {
+          uid: "cached-sentence",
+          sentence: "キャッシュされた単文",
+          term_names: [],
+          resource_uid: "resource-1",
+          resource_name: "読書メモ",
+          updated_at: null,
+          exposure_count: 1,
+          seen_today: false,
+        },
+      ],
+      seenTodayCount: 3,
+    },
+  );
   vi.mocked(listPersonalTanbuns).mockImplementation(
     () => new Promise(() => undefined),
   );

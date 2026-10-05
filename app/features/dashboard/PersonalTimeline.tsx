@@ -9,6 +9,7 @@ import Loading from "~/shared/components/Loading";
 import { Button } from "~/shared/components/ui/button";
 import { usePersistentSWR } from "~/shared/hooks/swr/useCache";
 import { genericCache } from "~/shared/lib/indexed";
+import { useRecommendationDay } from "~/shared/lib/recommendationDay";
 import {
   type PersonalTanbunItem,
   getTodayTanbunExposureCount,
@@ -27,13 +28,15 @@ const PERSONAL_TIMELINE_CACHE_TTL = 24 * 60 * 60_000;
 
 export default function PersonalTimeline() {
   const { mutate: mutateGlobal } = useSWRConfig();
+  const day = useRecommendationDay();
+  const cacheKey = `${PERSONAL_TIMELINE_CACHE_KEY}:${day}`;
   const {
     data,
     error: loadError,
     isLoading,
     mutate,
   } = usePersistentSWR<PersonalTimelineData>(
-    "dashboard-personal-timeline",
+    ["dashboard-personal-timeline", day],
     async () => {
       const [items, today] = await Promise.all([
         listPersonalTanbuns(),
@@ -42,14 +45,14 @@ export default function PersonalTimeline() {
       return { items, seenTodayCount: today.count };
     },
     {
-      cacheKey: PERSONAL_TIMELINE_CACHE_KEY,
+      cacheKey,
       getCache: async (key) =>
         (await genericCache.get(key)) as PersonalTimelineData | undefined,
       setCache: (key, fresh) =>
         genericCache.set(key, fresh, PERSONAL_TIMELINE_CACHE_TTL),
       swr: {
         dedupingInterval: 30_000,
-        keepPreviousData: true,
+        keepPreviousData: false,
         revalidateOnFocus: true,
         revalidateOnReconnect: true,
       },
@@ -68,7 +71,7 @@ export default function PersonalTimeline() {
         if (!current) return current;
         const next = update(current);
         void genericCache
-          .set(PERSONAL_TIMELINE_CACHE_KEY, next, PERSONAL_TIMELINE_CACHE_TTL)
+          .set(cacheKey, next, PERSONAL_TIMELINE_CACHE_TTL)
           .catch(() => undefined);
         return next;
       },
@@ -169,6 +172,10 @@ export default function PersonalTimeline() {
             <Eye className="size-4 text-primary" aria-hidden="true" />
             <span className="text-muted-foreground">今日の見たよ</span>
             <strong className="tabular-nums">{seenTodayCount}件</strong>
+            <span className="ml-auto text-muted-foreground tabular-nums">
+              今日のおすすめ {items.filter((item) => item.seen_today).length} /{" "}
+              {items.length}
+            </span>
           </div>
           <div className="divide-y border-y sm:border-x">
             {items.map((item) => (

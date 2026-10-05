@@ -1,18 +1,14 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
 import QuizPrompt from "~/features/quiz/QuizPrompt";
-import {
-  type ManagedQuiz,
-  type QuizType,
-  listQuizFeed,
-  searchCreatedQuizzes,
-} from "~/features/quiz/api";
+import { type ManagedQuiz, listDailyQuizzes } from "~/features/quiz/api";
 import { useQuizSWR } from "~/features/quiz/useQuizSWR";
 import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
+import { useRecommendationDay } from "~/shared/lib/recommendationDay";
 import { cn } from "~/shared/lib/utils";
 
 const REVIEW_ACCURACY_THRESHOLD = 0.8;
@@ -22,6 +18,17 @@ export default function QuizTimeline({
 }: {
   scope?: "personal" | "global";
 }) {
+  const day = useRecommendationDay();
+  return <DailyQuizTimeline key={`${scope}:${day}`} scope={scope} day={day} />;
+}
+
+function DailyQuizTimeline({
+  scope,
+  day,
+}: {
+  scope: "personal" | "global";
+  day: string;
+}) {
   const [sessionResults, setSessionResults] = useState<Record<string, boolean>>(
     {},
   );
@@ -30,52 +37,24 @@ export default function QuizTimeline({
     data: quizzes = [],
     error,
     isLoading,
+    mutate,
   } = useQuizSWR<ManagedQuiz[]>(
-    scope === "global" ? "global-quiz-timeline" : "dashboard-quiz-timeline",
+    ["daily-quiz-timeline", scope, day],
     async (cacheOptions) => {
-      if (scope === "global") {
-        return (await listQuizFeed(cacheOptions)).data;
-      }
-      const quizTypes: QuizType[] = [
-        "term2sent",
-        "sent2term",
-        "rel2pair",
-        "pair2rel",
-      ];
-      const results = await Promise.allSettled(
-        quizTypes.map((quizType) =>
-          searchCreatedQuizzes(
-            {
-              quiz_types: [quizType],
-              page: 1,
-              size: 20,
-            },
-            cacheOptions,
-          ),
-        ),
-      );
-      const loaded = results.flatMap((result) =>
-        result.status === "fulfilled" ? result.value.data : [],
-      );
-      if (results.every((result) => result.status === "rejected")) {
-        const reason = results[0]?.reason;
-        throw reason instanceof Error
-          ? reason
-          : new Error("クイズTLを取得できませんでした。");
-      }
-      return [
-        ...new Map(loaded.map((item) => [item.quiz.quiz_id, item])).values(),
-      ];
+      return (await listDailyQuizzes(scope === "personal", cacheOptions)).data;
     },
     {
       dedupingInterval: 30_000,
-      keepPreviousData: true,
+      keepPreviousData: false,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
     },
   );
 
-  const sorted = useMemo(() => mixQuizTimeline(quizzes, 20), [quizzes]);
+  const sorted = quizzes;
+  const completed = sorted.filter(
+    (item) => item.answered_today || item.quiz.quiz_id in sessionResults,
+  ).length;
 
   useEffect(() => {
     setCurrentIndex((current) =>
@@ -108,6 +87,12 @@ export default function QuizTimeline({
       )}
       {sorted.length > 0 && (
         <div className="border-y sm:border-x">
+          <div className="flex items-center justify-between border-b px-4 py-2 text-sm">
+            <span>今日のおすすめ</span>
+            <span className="tabular-nums text-muted-foreground">
+              {completed} / {sorted.length}問 回答済み
+            </span>
+          </div>
           <QuizTimelinePager
             currentIndex={currentIndex}
             quizIds={sorted.map((item) => item.quiz.quiz_id)}
@@ -121,12 +106,21 @@ export default function QuizTimeline({
                   isCurrent={index === currentIndex}
                   sessionResult={sessionResults[item.quiz.quiz_id]}
                   hasSessionResult={item.quiz.quiz_id in sessionResults}
-                  onAnswered={(isCorrect) =>
+                  onAnswered={(isCorrect) => {
                     setSessionResults((current) => ({
                       ...current,
                       [item.quiz.quiz_id]: isCorrect,
-                    }))
-                  }
+                    }));
+                    void mutate(
+                      (current) =>
+                        current?.map((candidate) =>
+                          candidate.quiz.quiz_id === item.quiz.quiz_id
+                            ? { ...candidate, answered_today: true }
+                            : candidate,
+                        ),
+                      { revalidate: false },
+                    );
+                  }}
                 />
               </div>
             ))}
@@ -267,46 +261,10 @@ function QuizTimelineCard({
   );
 }
 
-function compareQuizTimeline(left: ManagedQuiz, right: ManagedQuiz): number {
-  if (left.attempts === 0 && right.attempts > 0) return -1;
-  if (left.attempts > 0 && right.attempts === 0) return 1;
-  if (needsReview(left) && !needsReview(right)) return -1;
-  if (!needsReview(left) && needsReview(right)) return 1;
-  if (needsReview(left) && needsReview(right)) {
-    const accuracyDifference = (left.accuracy ?? 0) - (right.accuracy ?? 0);
-    if (accuracyDifference !== 0) return accuracyDifference;
-  }
-  const leftDate = left.last_attempted_at ?? left.quiz.created;
-  const rightDate = right.last_attempted_at ?? right.quiz.created;
-  return String(rightDate).localeCompare(String(leftDate));
-}
-
 function needsReview(item: ManagedQuiz): boolean {
   return (
     item.attempts > 0 &&
     item.accuracy !== null &&
     item.accuracy < REVIEW_ACCURACY_THRESHOLD
   );
-}
-
-function mixQuizTimeline(quizzes: ManagedQuiz[], limit: number): ManagedQuiz[] {
-  const unanswered = quizzes
-    .filter((item) => item.attempts === 0)
-    .sort(compareQuizTimeline);
-  const reviews = quizzes
-    .filter((item) => item.attempts > 0)
-    .sort(compareQuizTimeline);
-  const mixed: ManagedQuiz[] = [];
-  while (
-    mixed.length < limit &&
-    (unanswered.length > 0 || reviews.length > 0)
-  ) {
-    const first = unanswered.shift();
-    const second = unanswered.shift();
-    const review = reviews.shift();
-    if (first) mixed.push(first);
-    if (second && mixed.length < limit) mixed.push(second);
-    if (review && mixed.length < limit) mixed.push(review);
-  }
-  return mixed;
 }

@@ -1,3 +1,4 @@
+import { recommendationDay } from "~/shared/lib/recommendationDay";
 import { invalidateQuizCache, quizCachePolicy, withQuizCache } from "./cache";
 import {
   answerQuizApiQuizAnswerQuizIdPost,
@@ -20,9 +21,9 @@ import {
 import type {
   AnswerHistoryItem,
   AnswerHistoryResult,
+  ManagedQuiz as GeneratedManagedQuiz,
   HTTPValidationError,
   ListAnswerHistoryApiQuizAnswersGetParams,
-  ManagedQuiz,
   ManagedQuizResult,
   QuizChain,
   QuizRecommendationResponse,
@@ -44,12 +45,12 @@ export type {
   ReadableQuiz,
   ResourceLearningStatus,
   ManagedQuizResult,
-  ManagedQuiz,
   SentenceQuizStatus,
   StudyPlan,
   StudyPlanDraft,
 };
 export type QuizType = StudyPlanDraft["quiz_types"][number];
+export type ManagedQuiz = GeneratedManagedQuiz & { answered_today?: boolean };
 export type QuizRecommendation = QuizRecommendationResponse & {
   quiz_type: QuizType;
 };
@@ -534,6 +535,7 @@ export async function answerQuiz(
     "created-search",
     "learning-progress",
     "quiz-feed",
+    "daily-quizzes",
     "quiz-chain",
   );
   return chain;
@@ -659,6 +661,31 @@ export async function listQuizFeed(
         );
       }
       return (await response.json()) as ManagedQuizResult;
+    },
+    options,
+  );
+}
+
+export async function listDailyQuizzes(
+  personal: boolean,
+  options: QuizCacheOptions = {},
+): Promise<{ data: ManagedQuiz[]; total: number }> {
+  return withQuizCache(
+    "daily-quizzes",
+    { personal, day: recommendationDay() },
+    quizCachePolicy.live,
+    async () => {
+      const response = await fetch(
+        `${API_BASE_URL}/quiz/daily?personal=${personal}`,
+        { credentials: "include" },
+      );
+      if (!response.ok) {
+        throw new QuizApiError(
+          "今日のクイズを取得できませんでした。",
+          response.status,
+        );
+      }
+      return response.json();
     },
     options,
   );

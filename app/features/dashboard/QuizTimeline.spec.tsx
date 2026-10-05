@@ -3,17 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
 import { expect, it, vi } from "vitest";
-import {
-  answerQuiz,
-  listQuizFeed,
-  searchCreatedQuizzes,
-} from "~/features/quiz/api";
+import { answerQuiz, listDailyQuizzes } from "~/features/quiz/api";
 import QuizTimeline from "./QuizTimeline";
 
 vi.mock("~/features/quiz/api", () => ({
   answerQuiz: vi.fn(),
-  listQuizFeed: vi.fn(),
-  searchCreatedQuizzes: vi.fn(),
+  listDailyQuizzes: vi.fn(),
 }));
 
 function renderTimeline() {
@@ -27,7 +22,7 @@ function renderTimeline() {
 }
 
 it("全ユーザー版では専用feedを取得する", async () => {
-  vi.mocked(listQuizFeed).mockResolvedValue({
+  vi.mocked(listDailyQuizzes).mockResolvedValue({
     total: 1,
     data: [
       {
@@ -61,13 +56,12 @@ it("全ユーザー版では専用feedを取得する", async () => {
   );
 
   expect(await screen.findByText("みんなの問題")).toBeVisible();
-  expect(listQuizFeed).toHaveBeenCalledOnce();
-  expect(searchCreatedQuizzes).not.toHaveBeenCalled();
+  expect(listDailyQuizzes).toHaveBeenCalledWith(false, undefined);
 });
 
-it("未回答のクイズを回答済みのクイズより先に表示する", async () => {
+it("日替わりセットの順序を維持し1問ずつ表示する", async () => {
   const user = userEvent.setup();
-  vi.mocked(searchCreatedQuizzes).mockResolvedValue({
+  vi.mocked(listDailyQuizzes).mockResolvedValue({
     total: 2,
     data: [
       {
@@ -116,32 +110,29 @@ it("未回答のクイズを回答済みのクイズより先に表示する", a
   const unanswered = await screen.findByText("未回答の問題");
   const answered = screen.getByText("回答済みの問題");
   expect(
-    unanswered.compareDocumentPosition(answered) &
+    answered.compareDocumentPosition(unanswered) &
       Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
-  expect(unanswered).toBeVisible();
-  expect(answered).not.toBeVisible();
-  expect(screen.getByText("未回答")).toBeVisible();
+  expect(answered).toBeVisible();
+  expect(unanswered).not.toBeVisible();
+  expect(screen.getByText("復習 50%")).toBeVisible();
   const timelineItems = document.querySelectorAll("[data-hotkey-item]");
   expect(timelineItems).toHaveLength(1);
-  expect(timelineItems[0]).toHaveTextContent("未回答の問題");
-  expect(
-    screen.queryByRole("button", { name: "回答候補" }),
-  ).not.toBeInTheDocument();
+  expect(timelineItems[0]).toHaveTextContent("回答済みの問題");
+  expect(screen.getByRole("button", { name: "回答候補" })).toBeVisible();
   expect(screen.getByText("1 / 2")).toBeVisible();
 
   await user.click(screen.getByRole("button", { name: "次のクイズ" }));
 
-  expect(answered).toBeVisible();
-  expect(unanswered).not.toBeVisible();
-  expect(screen.getByRole("button", { name: "回答候補" })).toBeVisible();
+  expect(unanswered).toBeVisible();
+  expect(answered).not.toBeVisible();
   expect(screen.getByText("2 / 2")).toBeVisible();
   expect(
     screen.queryByRole("link", { name: "クイズを解く" }),
   ).not.toBeInTheDocument();
 });
 
-it("低正答率のクイズを復習候補として優先する", async () => {
+it("サーバーが選んだ復習候補を並び替えず表示する", async () => {
   const managed = (id: string, accuracy: number, attemptedAt: string) => ({
     quiz: {
       quiz_id: id,
@@ -158,11 +149,11 @@ it("低正答率のクイズを復習候補として優先する", async () => {
     accuracy,
     last_attempted_at: attemptedAt,
   });
-  vi.mocked(searchCreatedQuizzes).mockResolvedValue({
+  vi.mocked(listDailyQuizzes).mockResolvedValue({
     total: 2,
     data: [
-      managed("正解済み", 1, "2026-10-04T01:00:00Z"),
       managed("復習対象", 0.5, "2026-10-03T01:00:00Z"),
+      managed("正解済み", 1, "2026-10-04T01:00:00Z"),
     ],
   });
 
@@ -192,7 +183,7 @@ it("クイズTL上で回答して結果を確認できる", async () => {
     created: "2026-09-28T00:00:00Z",
     no_correct_option: false,
   };
-  vi.mocked(searchCreatedQuizzes).mockResolvedValue({
+  vi.mocked(listDailyQuizzes).mockResolvedValue({
     total: 1,
     data: [
       {
@@ -230,16 +221,11 @@ it("クイズTL上で回答して結果を確認できる", async () => {
   expect(answerQuiz).toHaveBeenCalledWith("quiz-1", ["option-1"]);
   expect(await screen.findByText("正解です")).toBeInTheDocument();
   expect(screen.getByText("今回 正解")).toBeInTheDocument();
+  expect(screen.getByText("1 / 1問 回答済み")).toBeVisible();
 });
 
-it("一部のクイズ形式が壊れていても取得できた形式を表示する", async () => {
-  vi.mocked(searchCreatedQuizzes).mockImplementation(async (params) => {
-    if (params.quiz_types?.includes("term2sent")) {
-      throw new Error("クイズ対象が用語を持たない");
-    }
-    if (!params.quiz_types?.includes("pair2rel")) {
-      return { total: 0, data: [] };
-    }
+it("再訪しても今日の回答済み件数を表示する", async () => {
+  vi.mocked(listDailyQuizzes).mockImplementation(async () => {
     return {
       total: 1,
       data: [
@@ -263,6 +249,7 @@ it("一部のクイズ形式が壊れていても取得できた形式を表示�
           corrects: 0,
           accuracy: null,
           last_attempted_at: null,
+          answered_today: true,
         },
       ],
     };
@@ -271,5 +258,6 @@ it("一部のクイズ形式が壊れていても取得できた形式を表示�
   renderTimeline();
 
   expect(await screen.findByText("Aの文")).toBeVisible();
+  expect(screen.getByText("1 / 1問 回答済み")).toBeVisible();
   expect(screen.queryByRole("alert")).toBeNull();
 });
