@@ -1,9 +1,9 @@
 import {
   Bell,
+  BookOpen,
   CircleUserRound,
   LayoutDashboard,
   Search,
-  SquareCheckBig,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router";
@@ -24,7 +24,9 @@ export default function BottomNavigation() {
         />
       )}
       <NavigationItem to="/search" label="検索" icon={<Search />} />
-      <NavigationItem to="/quiz" label="クイズ" icon={<SquareCheckBig />} />
+      {isAuthenticated && (
+        <NavigationItem to="/review" label="復習" icon={<BookOpen />} />
+      )}
       {isAuthenticated && (
         <NavigationItem
           to="/notifications"

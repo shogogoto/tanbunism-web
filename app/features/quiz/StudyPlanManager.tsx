@@ -268,7 +268,9 @@ export default function StudyPlanManager() {
       }
       if (key === "enter") {
         event.preventDefault();
-        navigate(`/quiz?plan=${encodeURIComponent(currentPlan.uid)}`);
+        navigate(
+          `/review?view=quiz&plan=${encodeURIComponent(currentPlan.uid)}`,
+        );
       }
     }
     document.addEventListener("keydown", handlePlanHotkey);
@@ -455,7 +457,9 @@ export default function StudyPlanManager() {
           {preparingId === plan.uid ? "準備中…" : "追加"}
         </Button>
         <Button asChild size="sm" variant="outline">
-          <Link to={`/quiz?plan=${encodeURIComponent(plan.uid)}`}>解く</Link>
+          <Link to={`/review?view=quiz&plan=${encodeURIComponent(plan.uid)}`}>
+            解く
+          </Link>
         </Button>
         <Button
           variant="outline"

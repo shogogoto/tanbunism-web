@@ -1,4 +1,4 @@
-import QuizPage from "~/features/quiz";
+import { Navigate, useSearchParams } from "react-router";
 
 export function meta() {
   return [
@@ -10,4 +10,17 @@ export function meta() {
   ];
 }
 
-export default QuizPage;
+export default function QuizRedirect() {
+  const [params] = useSearchParams();
+  const plan = params.get("plan");
+  return (
+    <Navigate
+      replace
+      to={
+        plan
+          ? `/review?view=quiz&plan=${encodeURIComponent(plan)}`
+          : "/search?type=quiz"
+      }
+    />
+  );
+}

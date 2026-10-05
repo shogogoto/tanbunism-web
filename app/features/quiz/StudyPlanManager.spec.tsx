@@ -124,7 +124,7 @@ it("PlanとResourceを省略可能な表として表示する", async () => {
   );
   expect(screen.getByRole("link", { name: "解く" })).toHaveAttribute(
     "href",
-    "/quiz?plan=plan-1",
+    "/review?view=quiz&plan=plan-1",
   );
 });
 
@@ -215,7 +215,7 @@ it("jとkでcurrentのStudyPlanを移動する", async () => {
   expect(secondRow).toHaveAttribute("aria-current", "true");
   expect(screen.getByRole("link", { name: "解く" })).toHaveAttribute(
     "href",
-    "/quiz?plan=plan-2",
+    "/review?view=quiz&plan=plan-2",
   );
 
   await user.keyboard("k");
@@ -260,7 +260,7 @@ it("Enterでcurrentのクイズを開く", async () => {
   await user.keyboard("{Enter}");
 
   expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
-    "/quiz?plan=plan-1",
+    "/review?view=quiz&plan=plan-1",
   );
 });
 

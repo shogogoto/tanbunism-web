@@ -25,12 +25,15 @@ import { searchUserUserSearchPost } from "~/shared/generated/public-user/public-
 import { searchByTextTanbunGet } from "~/shared/generated/tanbun/tanbun";
 import { createCacheKey } from "~/shared/hooks/swr/useCache";
 import { genericCache } from "~/shared/lib/indexed";
+import QuizSearch from "./QuizSearch";
 import {
+  type SearchType as AllSearchType,
   type SearchSettings,
-  type SearchType,
   readSearchSettings,
   searchTypes,
 } from "./settings";
+
+type SearchType = Exclude<AllSearchType, "quiz">;
 
 const PAGE_SIZE = 20;
 
@@ -61,6 +64,15 @@ const emptyState = (): SearchState => ({
 });
 
 export default function UnifiedSearch() {
+  const [params] = useSearchParams();
+  return params.get("type") === "quiz" ? (
+    <QuizSearch key={params.get("q") ?? ""} query={params.get("q") ?? ""} />
+  ) : (
+    <StandardSearch />
+  );
+}
+
+function StandardSearch() {
   const [searchParams] = useSearchParams();
   const searchParamsKey = searchParams.toString();
   const queryParam = searchParams.get("q") ?? "";

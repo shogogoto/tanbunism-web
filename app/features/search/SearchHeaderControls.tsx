@@ -17,6 +17,7 @@ const labels: Record<SearchType, string> = {
   knowledge: "知識",
   resource: "リソース",
   user: "ユーザー",
+  quiz: "クイズ",
 };
 
 const activeTypeStyles: Record<SearchType, string> = {
@@ -25,6 +26,7 @@ const activeTypeStyles: Record<SearchType, string> = {
   resource:
     "text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300",
   user: "text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300",
+  quiz: "text-emerald-600 dark:text-emerald-400",
 };
 
 export default function SearchHeaderControls() {
@@ -94,28 +96,30 @@ export default function SearchHeaderControls() {
             data-global-search-input
             value={draftQuery}
             onChange={(event) => setDraftQuery(event.target.value)}
-            placeholder="知識、リソース、ユーザーを検索"
+            placeholder="知識、リソース、ユーザー、クイズを検索"
             aria-label="検索"
             className="pl-10 pr-12"
           />
           <div className="absolute right-1 top-1">
-            <SearchSettingsPanel
-              currentType={currentType}
-              settings={settings}
-              onChange={(nextSettings) =>
-                setSearchParams(
-                  (current) => writeSearchSettings(current, nextSettings),
-                  { replace: true },
-                )
-              }
-              onReset={() =>
-                setSearchParams(
-                  (current) =>
-                    writeSearchSettings(current, defaultSearchSettings),
-                  { replace: true },
-                )
-              }
-            />
+            {currentType !== "quiz" && (
+              <SearchSettingsPanel
+                currentType={currentType}
+                settings={settings}
+                onChange={(nextSettings) =>
+                  setSearchParams(
+                    (current) => writeSearchSettings(current, nextSettings),
+                    { replace: true },
+                  )
+                }
+                onReset={() =>
+                  setSearchParams(
+                    (current) =>
+                      writeSearchSettings(current, defaultSearchSettings),
+                    { replace: true },
+                  )
+                }
+              />
+            )}
           </div>
         </div>
         <div

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { finishSwipeGesture, lockSwipeAxis, startSwipeGesture } from "./swipe";
 
-describe("dashboard swipe", () => {
+describe("section swipe", () => {
   it("明確な横フリックだけを判定する", () => {
     const gesture = lockSwipeAxis(startSwipeGesture(200, 100), 160, 105);
 

@@ -1,6 +1,6 @@
 import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, Navigate, useSearchParams } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
 import NamespaceExplorer from "~/features/namespace/components/NamespaceExplorer";
 import AnswerHistory from "~/features/quiz/AnswerHistory";
@@ -9,19 +9,17 @@ import StudyPlanManager from "~/features/quiz/StudyPlanManager";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
 import { useGetNamaspaceNamespaceGet } from "~/shared/generated/entry/entry";
-import PersonalTimeline from "./PersonalTimeline";
-import QuizTimeline from "./QuizTimeline";
-import {
-  type DashboardSection,
-  dashboardSections,
-  isDashboardSection,
-} from "./sections";
 import {
   type SwipeGesture,
   finishSwipeGesture,
   lockSwipeAxis,
   startSwipeGesture,
-} from "./swipe";
+} from "~/shared/lib/swipe";
+import {
+  type DashboardSection,
+  dashboardSections,
+  isDashboardSection,
+} from "./sections";
 
 const panelTransition =
   "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150";
@@ -31,7 +29,7 @@ export default function Dashboard() {
   const requestedSection = searchParams.get("view");
   const activeSection = isDashboardSection(requestedSection)
     ? requestedSection
-    : "timeline";
+    : "answers";
   const [mountedSections, setMountedSections] = useState<Set<DashboardSection>>(
     () => new Set([activeSection]),
   );
@@ -55,10 +53,19 @@ export default function Dashboard() {
     );
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
-      if (section === "timeline") next.delete("view");
+      if (section === "answers") next.delete("view");
       else next.set("view", section);
       return next;
     });
+  }
+
+  if (requestedSection === "timeline" || requestedSection === "quiz-timeline") {
+    return (
+      <Navigate
+        replace
+        to={requestedSection === "timeline" ? "/review" : "/review?view=quiz"}
+      />
+    );
   }
 
   return (
@@ -112,28 +119,6 @@ export default function Dashboard() {
           }}
         >
           <div className="relative">
-            {renderedSections.has("timeline") && (
-              <div
-                hidden={activeSection !== "timeline"}
-                className={
-                  activeSection === "timeline" ? panelTransition : undefined
-                }
-              >
-                <PersonalTimeline />
-              </div>
-            )}
-            {renderedSections.has("quiz-timeline") && (
-              <div
-                hidden={activeSection !== "quiz-timeline"}
-                className={
-                  activeSection === "quiz-timeline"
-                    ? panelTransition
-                    : undefined
-                }
-              >
-                <QuizTimeline />
-              </div>
-            )}
             {renderedSections.has("answers") && (
               <div
                 hidden={activeSection !== "answers"}

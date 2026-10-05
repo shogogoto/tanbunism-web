@@ -1,6 +1,4 @@
 export const dashboardSections = [
-  { id: "timeline", label: "TL" },
-  { id: "quiz-timeline", label: "クイズTL" },
   { id: "answers", label: "回答履歴" },
   { id: "study-plans", label: "学習計画" },
   { id: "quiz-management", label: "クイズ管理" },

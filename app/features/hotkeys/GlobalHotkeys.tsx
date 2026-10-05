@@ -56,13 +56,14 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
                 {isAuthenticated && (
                   <>
                     <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
+                    <HotkeyRow keys={["g", "r"]} label="復習へ移動" />
                     <HotkeyRow keys={["g", "p"]} label="プロフィールへ移動" />
                     <HotkeyRow keys={["g", "n"]} label="通知へ移動" />
                     <HotkeyRow keys={["g", "i"]} label="インポートへ移動" />
                   </>
                 )}
                 <HotkeyRow keys={["g", "s"]} label="検索へ移動" />
-                <HotkeyRow keys={["g", "q"]} label="クイズへ移動" />
+                <HotkeyRow keys={["g", "q"]} label="クイズ検索へ移動" />
                 <HotkeyRow keys={["h", "l"]} label="前後のタブへ移動" />
                 <HotkeyRow keys={["Ctrl", "1–9"]} label="番号のタブへ移動" />
                 <HotkeyRow keys={["u", "d"]} label="ページを上下にスクロール" />
@@ -224,13 +225,14 @@ export default function GlobalHotkeys() {
       const actions: Record<string, (() => void) | undefined> = {
         h: openHistory,
         d: isAuthenticated ? () => navigate("/dashboard") : undefined,
+        r: isAuthenticated ? () => navigate("/review") : undefined,
         p: user
           ? () => navigate(`/user/${user.username || user.uid}`)
           : undefined,
         n: isAuthenticated ? () => navigate("/notifications") : undefined,
         i: isAuthenticated ? () => navigate("/import") : undefined,
         s: () => navigate("/search"),
-        q: () => navigate("/quiz"),
+        q: () => navigate("/search?type=quiz"),
       };
       const action = actions[key];
       if (!action) return;
@@ -291,18 +293,20 @@ function contextHotkeys(pathname: string, search: string): HotkeyDefinition[] {
   }
   if (pathname === "/study-plans") return studyPlanHotkeys;
   if (pathname === "/answers") return answerHistoryHotkeys;
-  if (pathname !== "/dashboard") return [];
-  const view = new URLSearchParams(search).get("view") ?? "timeline";
+  if (pathname !== "/dashboard" && pathname !== "/review") return [];
+  const view =
+    new URLSearchParams(search).get("view") ??
+    (pathname === "/review" ? "knowledge" : "answers");
   if (view === "study-plans") return studyPlanHotkeys;
   if (view === "answers") return answerHistoryHotkeys;
-  if (view === "quiz-timeline") {
+  if (pathname === "/review" && view === "quiz") {
     return [
       { keys: ["j", "k"], label: "クイズを移動" },
       { keys: ["1–9"], label: "選択肢を切替" },
       { keys: ["Enter"], label: "回答する" },
     ];
   }
-  if (view === "timeline") {
+  if (pathname === "/review" && view === "knowledge") {
     return [
       { keys: ["j", "k"], label: "単文を移動" },
       { keys: ["Space"], label: "見たよを記録" },

@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import DashboardHeaderTabs from "~/features/dashboard/DashboardHeaderTabs";
+import ReviewHeaderTabs from "~/features/review/ReviewHeaderTabs";
 import SearchHeaderControls from "~/features/search/SearchHeaderControls";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
 import { Button } from "~/shared/components/ui/button";
@@ -12,7 +13,6 @@ import { SiteLogo } from "./components/SiteLogo";
 export default function AppHeader() {
   const { user, isAuthenticated } = useAuth();
   const { pathname } = useLocation();
-  const quizSection = isQuizSection(pathname);
 
   return (
     <header className="z-40 shrink-0 border-b bg-background/95 backdrop-blur">
@@ -55,6 +55,7 @@ export default function AppHeader() {
         </div>
       </div>
       {pathname === "/dashboard" && <DashboardHeaderTabs />}
+      {pathname === "/review" && <ReviewHeaderTabs />}
       {pathname.startsWith("/search") && <SearchHeaderControls />}
     </header>
   );
@@ -63,6 +64,7 @@ export default function AppHeader() {
 function pageTitle(pathname: string): string {
   if (pathname === "/admin") return "管理";
   if (pathname === "/dashboard") return "ダッシュボード";
+  if (pathname === "/review") return "復習";
   if (isQuizSection(pathname)) return "クイズ";
   if (pathname === "/answers") return "回答履歴";
   if (pathname === "/achievement") return "学習記録";

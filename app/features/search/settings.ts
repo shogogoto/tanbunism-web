@@ -3,7 +3,7 @@ import {
   type UserSearchBody,
 } from "~/shared/generated/fastAPI.schemas";
 
-export const searchTypes = ["knowledge", "resource", "user"] as const;
+export const searchTypes = ["knowledge", "resource", "user", "quiz"] as const;
 export type SearchType = (typeof searchTypes)[number];
 
 export type ResourceOrder = "title" | "updated" | "n_char" | "n_sentence";

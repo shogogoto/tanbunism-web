@@ -35,9 +35,9 @@ it("ログイン中は個人用画面を含む主要導線を表示する", () =
     "href",
     "/search",
   );
-  expect(screen.getByRole("link", { name: "クイズ" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "復習" })).toHaveAttribute(
     "href",
-    "/quiz",
+    "/review",
   );
   expect(screen.getByRole("link", { name: "通知" })).toHaveAttribute(
     "href",
@@ -69,7 +69,7 @@ it("未ログインではダッシュボードを表示しない", () => {
     screen.queryByRole("link", { name: "ダッシュボード" }),
   ).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "検索" })).toBeVisible();
-  expect(screen.getByRole("link", { name: "クイズ" })).toBeVisible();
+  expect(screen.queryByRole("link", { name: "復習" })).not.toBeInTheDocument();
   expect(
     screen.queryByRole("link", { name: "プロフィール" }),
   ).not.toBeInTheDocument();

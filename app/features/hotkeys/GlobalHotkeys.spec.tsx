@@ -27,7 +27,12 @@ vi.mock("~/shared/history/hooks", () => ({
 
 function Location() {
   const location = useLocation();
-  return <output aria-label="現在地">{location.pathname}</output>;
+  return (
+    <output aria-label="現在地">
+      {location.pathname}
+      {location.search}
+    </output>
+  );
 }
 
 function renderHotkeys(children?: ReactNode, initialEntry = "/") {
@@ -55,6 +60,19 @@ it("gから始まるショートカットで主要画面へ移動する", async 
 
   expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
     "/search",
+  );
+});
+
+it("g rで復習、g qで全ユーザーのクイズ検索へ移動する", async () => {
+  const user = userEvent.setup();
+  renderHotkeys();
+  await user.keyboard("gr");
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
+    "/review",
+  );
+  await user.keyboard("gq");
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
+    "/search?type=quiz",
   );
 });
 

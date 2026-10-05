@@ -1,14 +1,14 @@
 import {
   Bell,
+  BookOpen,
   ChevronLeft,
   ChevronRight,
   CircleUserRound,
-  FileQuestion,
   FileUp,
   LayoutDashboard,
   Search,
 } from "lucide-react";
-import { Link, NavLink, useLocation } from "react-router";
+import { Link, NavLink } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import { HotkeyHelpButton } from "~/features/hotkeys/GlobalHotkeys";
 import { NotificationBadge } from "~/features/notifications/NotificationBadge";
@@ -18,10 +18,7 @@ import { HistoryPanel } from "~/shared/history/HistoryPanel";
 import UserNavi from "./UserNavi";
 import { SiteLogo } from "./components/SiteLogo";
 
-const publicLinks = [
-  { to: "/search", label: "検索", icon: Search },
-  { to: "/quiz", label: "クイズ", icon: FileQuestion },
-] as const;
+const publicLinks = [{ to: "/search", label: "検索", icon: Search }] as const;
 
 type Props = {
   collapsed: boolean;
@@ -30,10 +27,10 @@ type Props = {
 
 export default function DesktopSidebar({ collapsed, onToggle }: Props) {
   const { user, isAuthenticated } = useAuth();
-  const { pathname } = useLocation();
   const profilePath = user ? `/user/${user.username || user.uid}` : undefined;
   const links = isAuthenticated
     ? [
+        { to: "/review", label: "復習", icon: BookOpen },
         {
           to: "/dashboard",
           label: "ダッシュボード",
@@ -102,15 +99,11 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
           <NavLink
             key={to}
             to={to}
-            end={to === "/dashboard" || to === "/quiz" || to === profilePath}
+            end={to === "/dashboard" || to === "/review" || to === profilePath}
             title={collapsed ? label : undefined}
             className={({ isActive }) =>
               `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                isActive ||
-                (
-                  to === "/quiz" &&
-                    ["/study-plans", "/answers"].includes(pathname)
-                )
+                isActive
                   ? "bg-accent font-medium text-accent-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               } ${collapsed ? "justify-center px-2" : ""}`
