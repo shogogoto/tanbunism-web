@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  ArrowLeft,
   ChevronDown,
   Search,
   SlidersHorizontal,
@@ -564,7 +565,10 @@ export default function QuizList({ embedded = false }: { embedded?: boolean }) {
             onClick={() => setMaintenanceMode(!maintenanceMode)}
           >
             {maintenanceMode ? (
-              "すべてのクイズ"
+              <>
+                <ArrowLeft className="size-4" />
+                クイズ管理に戻る
+              </>
             ) : (
               <>
                 <AlertTriangle className="size-4" />

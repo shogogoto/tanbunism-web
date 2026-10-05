@@ -321,7 +321,9 @@ it("要対応を開くまでメンテナンス対象を取得しない", async (
 
   expect(await screen.findByRole("heading", { name: "要対応" })).toBeVisible();
   await waitFor(() => expect(maintenanceRequests).toBe(3));
-  expect(screen.getByRole("button", { name: "すべてのクイズ" })).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "クイズ管理に戻る" }),
+  ).toBeVisible();
   expect(screen.queryByText("Resource別の学習状況")).not.toBeInTheDocument();
 });
 
