@@ -28,6 +28,22 @@ type CorrectFilter = "" | "true" | "false";
 const answerRowGrid =
   "grid grid-cols-[4rem_4.5rem_minmax(0,1fr)_5rem] md:grid-cols-[4.5rem_8rem_minmax(0,3fr)_minmax(0,1fr)_7rem_4rem]";
 
+function formatAnswerDate(value: string): string {
+  const date = new Date(value);
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return new Intl.DateTimeFormat("ja-JP", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }
+  return new Intl.DateTimeFormat("ja-JP", {
+    ...(date.getFullYear() !== now.getFullYear() && { year: "numeric" }),
+    month: "numeric",
+    day: "numeric",
+  }).format(date);
+}
+
 export default function AnswerHistory() {
   const [items, setItems] = useState<AnswerHistoryItem[]>([]);
   const [resources, setResources] = useState<StudyResource[]>([]);
@@ -268,7 +284,7 @@ function AnswerRow({
   }
 
   return (
-    <tr className={`${answerRowGrid} items-start hover:bg-muted/40`}>
+    <tr className={`${answerRowGrid} items-center hover:bg-muted/40`}>
       <td className="px-2 py-2">
         <Badge
           className="px-1.5 text-[11px]"
@@ -312,8 +328,12 @@ function AnswerRow({
         )}
       </td>
       <td className="space-y-1 px-2 py-2 text-xs">
-        <time className="block leading-tight">
-          {new Date(answer.created).toLocaleString("ja-JP")}
+        <time
+          className="block leading-tight"
+          dateTime={answer.created}
+          title={new Date(answer.created).toLocaleString("ja-JP")}
+        >
+          {formatAnswerDate(answer.created)}
         </time>
         <Button
           type="button"
