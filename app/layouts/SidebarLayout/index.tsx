@@ -12,6 +12,7 @@ import { useIsMobile } from "~/shared/hooks/use-mobile";
 import "github-markdown-css/github-markdown.css";
 import AppHeader from "./AppHeader";
 import DesktopSidebar from "./DesktopSidebar";
+import HeaderXpProgress from "./HeaderXpProgress";
 import BottomNavigation from "./components/BottomNavigation";
 
 export default function SidebarLayout() {
@@ -37,6 +38,11 @@ export default function SidebarLayout() {
                 <Outlet />
               </main>
               <footer className="w-full shrink-0 border-t bg-background md:hidden">
+                {user && (
+                  <div className="flex h-7 items-center justify-center border-b px-2">
+                    <HeaderXpProgress user={user} />
+                  </div>
+                )}
                 <nav className="flex w-full justify-between p-4 py-2">
                   <BottomNavigation />
                 </nav>

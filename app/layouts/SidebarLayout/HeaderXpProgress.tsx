@@ -1,8 +1,14 @@
 import { Link } from "react-router";
 import type { UserRead } from "~/shared/generated/fastAPI.schemas";
 import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
+import { cn } from "~/shared/lib/utils";
 
-export default function HeaderXpProgress({ user }: { user: UserRead }) {
+type Props = {
+  user: UserRead;
+  className?: string;
+};
+
+export default function HeaderXpProgress({ user, className }: Props) {
   const progress = useGetLearningProgressUserUserIdLearningProgressGet(
     user.uid,
     {
@@ -27,7 +33,10 @@ export default function HeaderXpProgress({ user }: { user: UserRead }) {
   return (
     <Link
       to={profilePath}
-      className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-[11px] tabular-nums text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className={cn(
+        "flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-[11px] tabular-nums text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        className,
+      )}
       aria-label={`レベル${data.level}、累計${data.total_xp} XP、次のレベルまで${data.xp_to_next_level} XP`}
       title={`Lv.${data.level} · ${data.total_xp} XP`}
     >

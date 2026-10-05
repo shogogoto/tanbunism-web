@@ -29,7 +29,9 @@ export default function AppHeader() {
           <h1 className="min-w-0 truncate text-sm font-semibold text-foreground">
             {pageTitle(pathname)}
           </h1>
-          {isAuthenticated && user && <HeaderXpProgress user={user} />}
+          {isAuthenticated && user && (
+            <HeaderXpProgress user={user} className="hidden md:flex" />
+          )}
         </div>
 
         <div className="ml-auto flex items-center gap-1 md:hidden">
