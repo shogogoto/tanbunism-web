@@ -11,7 +11,7 @@ import {
   DialogTrigger,
 } from "~/shared/components/ui/dialog";
 import QuizPrompt from "./QuizPrompt";
-import type { QuizReport } from "./api";
+import type { QuizReport, ReadableQuiz } from "./api";
 
 const reasonLabels: Record<QuizReport["reason"], string> = {
   undefined: "未定義",
@@ -21,10 +21,11 @@ const reasonLabels: Record<QuizReport["reason"], string> = {
 
 export default function ReportedQuizDetailDialog({
   report,
+  quiz,
 }: {
   report: QuizReport;
+  quiz: ReadableQuiz;
 }) {
-  const { quiz } = report;
   return (
     <Dialog>
       <DialogTrigger asChild>

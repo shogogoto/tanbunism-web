@@ -92,7 +92,7 @@ export default function ReportedQuizManager() {
             <input
               type="checkbox"
               className="mt-1"
-              aria-label={`クイズを選択: ${item.quiz.statement}`}
+              aria-label={`クイズを選択: ${item.quiz?.statement ?? item.quiz_id}`}
               checked={selected.has(item.quiz_id)}
               onChange={(event) =>
                 setSelected((current) => {
@@ -120,7 +120,19 @@ export default function ReportedQuizManager() {
                 </Link>
               )}
             </span>
-            <ReportedQuizDetailDialog report={item} />
+            {item.quiz ? (
+              <ReportedQuizDetailDialog report={item} quiz={item.quiz} />
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled
+                title="backendの更新後に確認できます"
+              >
+                詳細
+              </Button>
+            )}
           </div>
         ))}
       </div>

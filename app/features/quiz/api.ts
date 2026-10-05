@@ -80,7 +80,7 @@ export type DeleteQuizzesResult = {
 export type QuizReportReason = "undefined" | "incorrect" | "other";
 export type QuizReport = {
   quiz_id: string;
-  quiz: ReadableQuiz;
+  quiz?: ReadableQuiz;
   reason: QuizReportReason;
   detail?: string | null;
   report_count: number;
