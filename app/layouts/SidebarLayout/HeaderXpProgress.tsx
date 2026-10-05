@@ -6,9 +6,14 @@ import { cn } from "~/shared/lib/utils";
 type Props = {
   user: UserRead;
   className?: string;
+  progressClassName?: string;
 };
 
-export default function HeaderXpProgress({ user, className }: Props) {
+export default function HeaderXpProgress({
+  user,
+  className,
+  progressClassName,
+}: Props) {
   const progress = useGetLearningProgressUserUserIdLearningProgressGet(
     user.uid,
     {
@@ -42,7 +47,10 @@ export default function HeaderXpProgress({ user, className }: Props) {
     >
       <span className="font-semibold text-foreground">Lv.{data.level}</span>
       <span
-        className="h-1.5 w-10 overflow-hidden rounded-full bg-muted sm:w-16"
+        className={cn(
+          "h-1.5 w-10 overflow-hidden rounded-full bg-muted sm:w-16",
+          progressClassName,
+        )}
         aria-hidden="true"
       >
         <span

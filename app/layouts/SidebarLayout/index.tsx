@@ -40,7 +40,10 @@ export default function SidebarLayout() {
               <footer className="w-full shrink-0 border-t bg-background md:hidden">
                 {user && (
                   <div className="flex h-7 items-center justify-center border-b px-2">
-                    <HeaderXpProgress user={user} />
+                    <HeaderXpProgress
+                      user={user}
+                      progressClassName="w-[48vw] min-w-28 max-w-56 sm:w-[48vw]"
+                    />
                   </div>
                 )}
                 <nav className="flex w-full justify-between p-4 py-2">
