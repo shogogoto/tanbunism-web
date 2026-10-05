@@ -68,11 +68,10 @@ describe("AnswerHistory", () => {
     expect(
       await screen.findByText("用語「可換」に合う文はどれ？"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "数学ノート" })).toHaveAttribute(
-      "href",
-      "/resource/resource-1",
-    );
-    expect(screen.getByText("必ず逆元が存在する")).toBeInTheDocument();
+    for (const link of screen.getAllByRole("link", { name: "数学ノート" })) {
+      expect(link).toHaveAttribute("href", "/resource/resource-1");
+    }
+    expect(screen.getAllByText("必ず逆元が存在する").length).toBeGreaterThan(0);
     expect(
       screen.queryByText("最近の回答を確認し、間違えたクイズを復習します。"),
     ).not.toBeInTheDocument();
@@ -83,7 +82,9 @@ describe("AnswerHistory", () => {
       screen.queryByRole("link", { name: "クイズを解く" }),
     ).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "クイズ詳細を見る" }));
+    await user.click(
+      screen.getAllByRole("button", { name: "クイズ詳細を見る" })[0],
+    );
     await waitFor(() => expect(getQuizChain).toHaveBeenCalledWith("quiz-1"));
   });
 

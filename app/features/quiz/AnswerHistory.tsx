@@ -3,13 +3,7 @@ import { Link } from "react-router";
 import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/shared/components/ui/card";
+import { Card, CardContent } from "~/shared/components/ui/card";
 import { ChainSentenceLink, RelationAnnotation } from "./QuizKnowledge";
 import QuizPrompt from "./QuizPrompt";
 import {
@@ -30,6 +24,9 @@ const quizTypeLabels: Record<QuizType, string> = {
 };
 
 type CorrectFilter = "" | "true" | "false";
+
+const answerRowGrid =
+  "grid grid-cols-[3.75rem_minmax(0,1fr)_5.5rem] md:grid-cols-[4.5rem_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_4rem]";
 
 export default function AnswerHistory() {
   const [items, setItems] = useState<AnswerHistoryItem[]>([]);
@@ -99,11 +96,11 @@ export default function AnswerHistory() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-3 p-2 sm:p-3">
-      <Card className="py-0 shadow-none">
-        <CardContent className="grid gap-2 p-2 sm:grid-cols-3">
-          <label className="grid min-w-0 gap-1 text-sm">
-            正誤
+    <div className="mx-auto w-full max-w-6xl space-y-2 p-2 sm:p-3">
+      <Card className="sticky top-0 z-30 h-24 gap-0 bg-background py-0 shadow-sm md:h-13">
+        <CardContent className="grid h-full grid-cols-2 items-center gap-2 p-2 md:flex">
+          <label className="flex min-w-0 items-center gap-1.5 text-xs">
+            <span>正誤</span>
             <select
               value={correct}
               onChange={(event) =>
@@ -111,15 +108,15 @@ export default function AnswerHistory() {
                   setCorrect(event.target.value as CorrectFilter),
                 )
               }
-              className="h-10 min-w-0 max-w-full rounded-md border bg-background px-3"
+              className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm"
             >
               <option value="">すべて</option>
               <option value="false">不正解</option>
               <option value="true">正解</option>
             </select>
           </label>
-          <label className="grid min-w-0 gap-1 text-sm">
-            QuizType
+          <label className="flex min-w-0 items-center gap-1.5 text-xs">
+            <span>形式</span>
             <select
               value={quizType}
               onChange={(event) =>
@@ -127,7 +124,7 @@ export default function AnswerHistory() {
                   setQuizType(event.target.value as QuizType | ""),
                 )
               }
-              className="h-10 min-w-0 max-w-full rounded-md border bg-background px-3"
+              className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm"
             >
               <option value="">すべて</option>
               {Object.entries(quizTypeLabels).map(([value, label]) => (
@@ -137,14 +134,14 @@ export default function AnswerHistory() {
               ))}
             </select>
           </label>
-          <label className="grid min-w-0 gap-1 text-sm">
-            Resource
+          <label className="col-span-2 flex min-w-0 flex-1 items-center gap-1.5 text-xs">
+            <span className="shrink-0">Resource</span>
             <select
               value={resourceId}
               onChange={(event) =>
                 updateFilter(() => setResourceId(event.target.value))
               }
-              className="h-10 min-w-0 max-w-full rounded-md border bg-background px-3"
+              className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm"
             >
               <option value="">すべて</option>
               {resources.map((resource) => (
@@ -169,17 +166,47 @@ export default function AnswerHistory() {
         </p>
       )}
 
-      <div className="divide-y border-y sm:border-x">
-        {items.map((item) => (
-          <AnswerCard
-            key={item.answer.answer_uid}
-            item={item}
-            resourceName={resourceNames.get(
-              item.resource_id.replaceAll("-", ""),
-            )}
-          />
-        ))}
-      </div>
+      <table aria-label="回答履歴" className="block w-full border text-left">
+        <thead className="sticky top-24 z-20 block border-b bg-background shadow-sm md:top-13">
+          <tr
+            className={`${answerRowGrid} items-center text-xs font-medium text-muted-foreground`}
+          >
+            <th scope="col" className="px-2 py-2">
+              結果
+            </th>
+            <th scope="col" className="px-2 py-2">
+              <span className="md:hidden">問題・回答</span>
+              <span className="hidden md:inline">問題</span>
+            </th>
+            <th scope="col" className="hidden px-2 py-2 md:block">
+              あなたの回答
+            </th>
+            <th scope="col" className="hidden px-2 py-2 md:block">
+              正解
+            </th>
+            <th scope="col" className="hidden px-2 py-2 md:block">
+              Resource
+            </th>
+            <th scope="col" className="px-2 py-2">
+              回答日時
+            </th>
+            <th scope="col" className="hidden px-2 py-2 md:block">
+              詳細
+            </th>
+          </tr>
+        </thead>
+        <tbody className="block divide-y">
+          {items.map((item) => (
+            <AnswerRow
+              key={item.answer.answer_uid}
+              item={item}
+              resourceName={resourceNames.get(
+                item.resource_id.replaceAll("-", ""),
+              )}
+            />
+          ))}
+        </tbody>
+      </table>
 
       {total > pageSize && (
         <nav
@@ -209,7 +236,7 @@ export default function AnswerHistory() {
   );
 }
 
-function AnswerCard({
+function AnswerRow({
   item,
   resourceName,
 }: {
@@ -221,6 +248,12 @@ function AnswerCard({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
   const { answer, quiz } = item;
+  const selectedAnswer =
+    answer.selected.length > 0
+      ? answer.selected.map((id) => quiz.options[id] ?? id).join(" / ")
+      : "選択なし";
+  const correctAnswer =
+    quiz.correct.map((id) => quiz.options[id] ?? id).join(" / ") || "正解なし";
 
   async function toggleDetails() {
     if (isExpanded) {
@@ -245,78 +278,131 @@ function AnswerCard({
   }
 
   return (
-    <Card className="gap-0 py-0 shadow-none">
-      <CardHeader className="space-y-1 px-2 py-2">
-        <CardDescription className="flex flex-wrap items-center gap-1.5 text-xs">
-          <Badge variant={answer.is_correct ? "default" : "destructive"}>
-            {answer.is_correct ? "正解" : "不正解"}
+    <tr className={`${answerRowGrid} items-start hover:bg-muted/40`}>
+      <td className="px-2 py-2">
+        <Badge
+          className="px-1.5 text-[11px]"
+          variant={answer.is_correct ? "default" : "destructive"}
+        >
+          {answer.is_correct ? "正解" : "不正解"}
+        </Badge>
+      </td>
+      <td className="min-w-0 space-y-1 px-2 py-2 text-sm">
+        <div className="flex min-w-0 flex-wrap items-center gap-1">
+          <Badge variant="outline" className="px-1.5 text-[10px]">
+            {quizTypeLabels[item.quiz_type]}
           </Badge>
-          <Badge variant="outline">{quizTypeLabels[item.quiz_type]}</Badge>
           {resourceName && (
             <Link
-              className="hover:underline"
+              className="truncate text-xs text-muted-foreground hover:underline md:hidden"
               to={`/resource/${item.resource_id}`}
             >
               {resourceName}
             </Link>
           )}
-          <time>{new Date(answer.created).toLocaleString("ja-JP")}</time>
-        </CardDescription>
-        <CardTitle className="text-sm leading-snug">
-          <QuizPrompt quiz={quiz} compact />
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 px-2 pb-2">
-        <div className="grid gap-1 text-sm sm:grid-cols-2">
-          <p>
-            <span className="text-muted-foreground">あなたの回答: </span>
-            {answer.selected.length > 0
-              ? answer.selected.map((id) => quiz.options[id] ?? id).join(" / ")
-              : "選択なし"}
-          </p>
-          <p>
-            <span className="text-muted-foreground">正解: </span>
-            {quiz.correct.map((id) => quiz.options[id] ?? id).join(" / ") ||
-              "正解なし"}
-          </p>
         </div>
-        <Button type="button" variant="ghost" size="sm" onClick={toggleDetails}>
-          {isExpanded ? "詳細を閉じる" : "クイズ詳細を見る"}
-        </Button>
-        {isExpanded && isLoading && (
-          <p className="text-sm text-muted-foreground">
-            知識を読み込んでいます…
-          </p>
-        )}
-        {isExpanded && error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-        {isExpanded && chain && (
-          <div className="space-y-2 border-t pt-3">
-            {Object.entries(quiz.options).map(([id, label]) => {
-              const selected = answer.selected.includes(id);
-              const correct = quiz.correct.includes(id);
-              return (
-                <div
-                  key={id}
-                  className="flex flex-wrap items-baseline gap-2 rounded-md border p-2 text-sm"
-                >
-                  <ChainSentenceLink chain={chain} sentenceId={id}>
-                    {label}
-                  </ChainSentenceLink>
-                  <RelationAnnotation chain={chain} sentenceId={id} />
-                  {correct && <Badge>正解</Badge>}
-                  {selected && !correct && (
-                    <Badge variant="destructive">あなたの回答</Badge>
-                  )}
-                </div>
-              );
-            })}
+        <div className="break-words leading-snug">
+          <QuizPrompt quiz={quiz} compact />
+        </div>
+        <dl className="space-y-0.5 text-xs md:hidden">
+          <div className="flex gap-1">
+            <dt className="shrink-0 text-muted-foreground">回答:</dt>
+            <dd className="min-w-0 break-words">{selectedAnswer}</dd>
           </div>
+          <div className="flex gap-1">
+            <dt className="shrink-0 text-muted-foreground">正解:</dt>
+            <dd className="min-w-0 break-words">{correctAnswer}</dd>
+          </div>
+        </dl>
+      </td>
+      <td className="hidden min-w-0 break-words px-2 py-2 text-sm whitespace-normal md:block">
+        {selectedAnswer}
+      </td>
+      <td className="hidden min-w-0 break-words px-2 py-2 text-sm whitespace-normal md:block">
+        {correctAnswer}
+      </td>
+      <td className="hidden min-w-0 px-2 py-2 text-xs md:block">
+        {resourceName ? (
+          <Link
+            className="block truncate hover:underline"
+            title={resourceName}
+            to={`/resource/${item.resource_id}`}
+          >
+            {resourceName}
+          </Link>
+        ) : (
+          <span className="text-muted-foreground">—</span>
         )}
-      </CardContent>
-    </Card>
+      </td>
+      <td className="space-y-1 px-2 py-2 text-xs">
+        <time className="block leading-tight">
+          {new Date(answer.created).toLocaleString("ja-JP")}
+        </time>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-1.5 md:hidden"
+          aria-label={isExpanded ? "詳細を閉じる" : "クイズ詳細を見る"}
+          aria-expanded={isExpanded}
+          onClick={toggleDetails}
+        >
+          {isExpanded ? "閉じる" : "詳細"}
+        </Button>
+      </td>
+      <td className="hidden px-2 py-2 md:block">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 px-2"
+          aria-label={isExpanded ? "詳細を閉じる" : "クイズ詳細を見る"}
+          aria-expanded={isExpanded}
+          onClick={toggleDetails}
+        >
+          {isExpanded ? "閉じる" : "見る"}
+        </Button>
+      </td>
+      {isExpanded && (
+        <td
+          colSpan={7}
+          className="col-span-full space-y-2 border-t bg-muted/15 px-3 py-3"
+        >
+          {isLoading && (
+            <p className="text-sm text-muted-foreground">
+              知識を読み込んでいます…
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          {chain && (
+            <div className="space-y-2">
+              {Object.entries(quiz.options).map(([id, label]) => {
+                const selected = answer.selected.includes(id);
+                const correct = quiz.correct.includes(id);
+                return (
+                  <div
+                    key={id}
+                    className="flex flex-wrap items-baseline gap-2 rounded-md border bg-background p-2 text-sm"
+                  >
+                    <ChainSentenceLink chain={chain} sentenceId={id}>
+                      {label}
+                    </ChainSentenceLink>
+                    <RelationAnnotation chain={chain} sentenceId={id} />
+                    {correct && <Badge>正解</Badge>}
+                    {selected && !correct && (
+                      <Badge variant="destructive">あなたの回答</Badge>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </td>
+      )}
+    </tr>
   );
 }
