@@ -61,7 +61,13 @@ it("作成者が報告対象をまとめて削除する", async () => {
     "/resource/resource-1",
   );
   await user.click(screen.getByRole("checkbox", { name: "すべて選択" }));
-  await user.click(screen.getByRole("button", { name: "1件を削除" }));
+  await user.click(screen.getByRole("button", { name: "クイズを1件削除" }));
+  expect(
+    screen.getByText(
+      "クイズ本体と、その回答履歴・不備報告を削除します。元のResourceやTanbunは削除されません。",
+    ),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "クイズを削除する" }));
 
   expect(deleteQuizzes).toHaveBeenCalledWith(["quiz-1"]);
 });

@@ -1,6 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/shared/components/ui/alert-dialog";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import ReportedQuizDetailDialog from "./ReportedQuizDetailDialog";
@@ -57,15 +68,34 @@ export default function ReportedQuizManager() {
         <h2 className="font-semibold">不備が報告されたクイズ</h2>
         <Badge variant="destructive">{items.length}</Badge>
         {selected.size > 0 && (
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            className="ml-auto"
-            onClick={() => void removeSelected()}
-          >
-            {selected.size}件を削除
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="ml-auto"
+              >
+                クイズを{selected.size}件削除
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  選択した{selected.size}件のクイズを削除しますか？
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  クイズ本体と、その回答履歴・不備報告を削除します。元のResourceやTanbunは削除されません。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void removeSelected()}>
+                  クイズを削除する
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
       <label className="flex items-center gap-2 text-sm">
