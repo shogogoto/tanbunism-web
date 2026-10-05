@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { toast } from "sonner";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
+import ReportedQuizDetailDialog from "./ReportedQuizDetailDialog";
 import { type QuizReport, deleteQuizzes, listCreatedQuizReports } from "./api";
 
 const reasonLabels: Record<QuizReport["reason"], string> = {
@@ -84,9 +85,14 @@ export default function ReportedQuizManager() {
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="divide-y">
         {items.map((item) => (
-          <label key={item.quiz_id} className="flex gap-3 py-2 text-sm">
+          <div
+            key={item.quiz_id}
+            className="flex items-start gap-3 py-2 text-sm"
+          >
             <input
               type="checkbox"
+              className="mt-1"
+              aria-label={`クイズを選択: ${item.quiz.statement}`}
               checked={selected.has(item.quiz_id)}
               onChange={(event) =>
                 setSelected((current) => {
@@ -114,7 +120,8 @@ export default function ReportedQuizManager() {
                 </Link>
               )}
             </span>
-          </label>
+            <ReportedQuizDetailDialog report={item} />
+          </div>
         ))}
       </div>
     </section>
