@@ -168,6 +168,19 @@ export async function listCreatedQuizReports(): Promise<QuizReport[]> {
   return (await response.json()) as QuizReport[];
 }
 
+export async function dismissReportedQuiz(quizId: string): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/quiz/created/reports/${encodeURIComponent(quizId)}/dismiss`,
+    { method: "POST", credentials: "include" },
+  );
+  if (!response.ok) {
+    throw new QuizApiError(
+      "不備報告を対応済みにできませんでした。",
+      response.status,
+    );
+  }
+}
+
 export async function getQuizIssueSummary(): Promise<QuizIssueSummary> {
   const response = await fetch(`${API_BASE_URL}/quiz/created/issues/summary`, {
     credentials: "include",

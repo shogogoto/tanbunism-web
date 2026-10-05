@@ -15,7 +15,12 @@ import {
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import ReportedQuizDetailDialog from "./ReportedQuizDetailDialog";
-import { type QuizReport, deleteQuizzes, listCreatedQuizReports } from "./api";
+import {
+  type QuizReport,
+  deleteQuizzes,
+  dismissReportedQuiz,
+  listCreatedQuizReports,
+} from "./api";
 
 const reasonLabels: Record<QuizReport["reason"], string> = {
   undefined: "未定義",
@@ -53,6 +58,27 @@ export default function ReportedQuizManager() {
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "削除できませんでした。",
+      );
+    }
+  }
+
+  async function dismiss(item: QuizReport) {
+    try {
+      await dismissReportedQuiz(item.quiz_id);
+      setItems((current) =>
+        current.filter((candidate) => candidate.quiz_id !== item.quiz_id),
+      );
+      setSelected((current) => {
+        const next = new Set(current);
+        next.delete(item.quiz_id);
+        return next;
+      });
+      toast.success("クイズを変更せず、不備報告を対応済みにしました");
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "不備報告を対応済みにできませんでした。",
       );
     }
   }
@@ -150,19 +176,44 @@ export default function ReportedQuizManager() {
                 </Link>
               )}
             </span>
-            {item.quiz ? (
-              <ReportedQuizDetailDialog report={item} quiz={item.quiz} />
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled
-                title="backendの更新後に確認できます"
-              >
-                詳細
-              </Button>
-            )}
+            <div className="flex shrink-0 items-center gap-1">
+              {item.quiz ? (
+                <ReportedQuizDetailDialog report={item} quiz={item.quiz} />
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  title="backendの更新後に確認できます"
+                >
+                  詳細
+                </Button>
+              )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="outline" size="sm">
+                    問題なし
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      このクイズを問題なしとして閉じますか？
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      クイズは変更・削除せず、不備報告だけを対応済みにして一覧から除外します。再び報告された場合は要対応へ戻ります。
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => void dismiss(item)}>
+                      対応済みにする
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         ))}
       </div>

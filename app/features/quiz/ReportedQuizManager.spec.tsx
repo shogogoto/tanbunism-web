@@ -6,11 +6,13 @@ import ReportedQuizManager from "./ReportedQuizManager";
 import {
   type ReadableQuiz,
   deleteQuizzes,
+  dismissReportedQuiz,
   listCreatedQuizReports,
 } from "./api";
 
 vi.mock("./api", () => ({
   deleteQuizzes: vi.fn(),
+  dismissReportedQuiz: vi.fn(),
   listCreatedQuizReports: vi.fn(),
 }));
 
@@ -45,6 +47,28 @@ beforeEach(() => {
     deleted_answer_count: 0,
     skipped_count: 0,
   });
+  vi.mocked(dismissReportedQuiz).mockResolvedValue();
+});
+
+it("クイズを変更せず報告だけを対応済みにする", async () => {
+  const user = userEvent.setup();
+  render(
+    <MemoryRouter>
+      <ReportedQuizManager />
+    </MemoryRouter>,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "問題なし" }));
+  expect(
+    screen.getByText(
+      "クイズは変更・削除せず、不備報告だけを対応済みにして一覧から除外します。再び報告された場合は要対応へ戻ります。",
+    ),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "対応済みにする" }));
+
+  expect(dismissReportedQuiz).toHaveBeenCalledWith("quiz-1");
+  expect(screen.queryByText("undefinedが含まれる")).not.toBeInTheDocument();
+  expect(deleteQuizzes).not.toHaveBeenCalled();
 });
 
 it("作成者が報告対象をまとめて削除する", async () => {
