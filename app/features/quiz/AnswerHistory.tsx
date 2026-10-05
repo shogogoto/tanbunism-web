@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
@@ -13,9 +13,12 @@ import {
   type QuizType,
   type StudyResource,
   getQuizChain,
-  listAnswerHistory,
   listStudyResources,
 } from "./api";
+import {
+  type AnswerFilters,
+  useAnswerHistoryFeed,
+} from "./useAnswerHistoryFeed";
 
 const quizTypeLabels: Record<QuizType, string> = {
   term2sent: "用語 → 単文",
@@ -23,8 +26,6 @@ const quizTypeLabels: Record<QuizType, string> = {
   rel2pair: "関係 → 単文組",
   pair2rel: "単文組 → 関係",
 };
-
-type CorrectFilter = "" | "true" | "false";
 
 const answerRowGrid =
   "grid grid-cols-[4rem_4.5rem_minmax(0,1fr)_5rem] md:grid-cols-[4.5rem_7rem_minmax(0,3fr)_minmax(0,1fr)_7rem_4rem]";
@@ -46,54 +47,35 @@ function formatAnswerDate(value: string): string {
 }
 
 export default function AnswerHistory() {
-  const [items, setItems] = useState<AnswerHistoryItem[]>([]);
+  const {
+    feed,
+    setFeed,
+    loading,
+    error,
+    rootRef,
+    sentinelRef,
+    loadMore,
+    updateFilters,
+    save,
+    loadNextForKeyboard,
+  } = useAnswerHistoryFeed();
+  const {
+    items,
+    filters: { correct, quizType, resourceId },
+  } = feed;
+  const isLoading = loading || (!feed.loaded && !error);
   const [resources, setResources] = useState<StudyResource[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [correct, setCorrect] = useState<CorrectFilter>("");
-  const [quizType, setQuizType] = useState<QuizType | "">("");
-  const [resourceId, setResourceId] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string>();
-  const pageSize = 20;
-
-  useEffect(() => {
-    listStudyResources()
-      .then(setResources)
-      .catch(() => undefined);
-  }, []);
-
   useEffect(() => {
     let active = true;
-    setIsLoading(true);
-    setError(undefined);
-    listAnswerHistory({
-      is_correct: correct === "" ? undefined : correct === "true",
-      quiz_type: quizType || undefined,
-      resource_id: resourceId || undefined,
-      page,
-      size: pageSize,
-    })
+    listStudyResources()
       .then((result) => {
-        if (!active) return;
-        setItems(result.data);
-        setTotal(result.total);
+        if (active) setResources(result);
       })
-      .catch((loadError) => {
-        if (!active) return;
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "回答履歴を取得できませんでした。",
-        );
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+      .catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [correct, page, quizType, resourceId]);
+  }, []);
 
   const resourceNames = useMemo(
     () =>
@@ -105,15 +87,13 @@ export default function AnswerHistory() {
       ),
     [resources],
   );
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-  function updateFilter(update: () => void) {
-    setPage(1);
-    update();
-  }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-2 p-2 sm:p-3">
+    <div
+      ref={rootRef}
+      onClickCapture={save}
+      className="mx-auto w-full max-w-6xl space-y-2 p-2 sm:p-3"
+    >
       <Card className="sticky top-0 z-30 h-24 gap-0 bg-background py-0 shadow-sm md:h-13">
         <CardContent className="grid h-full grid-cols-2 items-center gap-2 p-2 md:flex">
           <label className="flex min-w-0 items-center gap-1.5 text-xs">
@@ -121,9 +101,9 @@ export default function AnswerHistory() {
             <select
               value={correct}
               onChange={(event) =>
-                updateFilter(() =>
-                  setCorrect(event.target.value as CorrectFilter),
-                )
+                updateFilters({
+                  correct: event.target.value as AnswerFilters["correct"],
+                })
               }
               className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm"
             >
@@ -137,9 +117,7 @@ export default function AnswerHistory() {
             <select
               value={quizType}
               onChange={(event) =>
-                updateFilter(() =>
-                  setQuizType(event.target.value as QuizType | ""),
-                )
+                updateFilters({ quizType: event.target.value as QuizType | "" })
               }
               className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm"
             >
@@ -156,7 +134,7 @@ export default function AnswerHistory() {
             <select
               value={resourceId}
               onChange={(event) =>
-                updateFilter(() => setResourceId(event.target.value))
+                updateFilters({ resourceId: event.target.value })
               }
               className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm"
             >
@@ -171,7 +149,7 @@ export default function AnswerHistory() {
         </CardContent>
       </Card>
 
-      {isLoading && <Loading />}
+      {isLoading && items.length === 0 && <Loading />}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
@@ -213,6 +191,35 @@ export default function AnswerHistory() {
             <AnswerRow
               key={item.answer.answer_uid}
               item={item}
+              isCurrent={feed.currentId === item.answer.answer_uid}
+              onCurrent={() =>
+                setFeed((current) => ({
+                  ...current,
+                  currentId: item.answer.answer_uid,
+                }))
+              }
+              isExpanded={feed.expanded[item.answer.answer_uid] ?? false}
+              onExpanded={(expanded) =>
+                setFeed((current) => ({
+                  ...current,
+                  expanded: {
+                    ...current.expanded,
+                    [item.answer.answer_uid]: expanded,
+                  },
+                }))
+              }
+              chain={feed.chains[item.quiz.quiz_id]}
+              onChain={(chain) =>
+                setFeed((current) => ({
+                  ...current,
+                  chains: { ...current.chains, [item.quiz.quiz_id]: chain },
+                }))
+              }
+              isFirst={item.answer.answer_uid === items[0]?.answer.answer_uid}
+              isLast={
+                item.answer.answer_uid === items.at(-1)?.answer.answer_uid
+              }
+              onLoadNext={loadNextForKeyboard}
               resourceName={resourceNames.get(
                 item.resource_id.replaceAll("-", ""),
               )}
@@ -221,30 +228,26 @@ export default function AnswerHistory() {
         </tbody>
       </table>
 
-      {total > pageSize && (
-        <nav
-          className="flex items-center justify-center gap-3"
-          aria-label="回答履歴のページ"
-        >
-          <Button
-            variant="outline"
-            disabled={page <= 1 || isLoading}
-            onClick={() => setPage((current) => current - 1)}
-          >
-            前へ
+      <div
+        ref={sentinelRef}
+        className="flex min-h-10 items-center justify-center py-2"
+      >
+        {loading && items.length > 0 ? (
+          <Loading />
+        ) : feed.hasMore && (!error || items.length > 0) ? (
+          <Button variant="ghost" onClick={() => void loadMore()}>
+            続きを読み込む
           </Button>
-          <span className="text-sm text-muted-foreground">
-            {page} / {totalPages}
+        ) : error ? (
+          <Button variant="outline" onClick={() => void loadMore()}>
+            再試行
+          </Button>
+        ) : items.length > 0 ? (
+          <span className="text-xs text-muted-foreground">
+            すべての回答を表示しました
           </span>
-          <Button
-            variant="outline"
-            disabled={page >= totalPages || isLoading}
-            onClick={() => setPage((current) => current + 1)}
-          >
-            次へ
-          </Button>
-        </nav>
-      )}
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -252,14 +255,32 @@ export default function AnswerHistory() {
 function AnswerRow({
   item,
   resourceName,
+  isCurrent,
+  onCurrent,
+  isExpanded,
+  onExpanded,
+  chain,
+  onChain,
+  isFirst,
+  isLast,
+  onLoadNext,
 }: {
   item: AnswerHistoryItem;
   resourceName?: string;
+  isCurrent: boolean;
+  onCurrent: () => void;
+  isExpanded: boolean;
+  onExpanded: (expanded: boolean) => void;
+  chain?: QuizChain;
+  onChain: (chain: QuizChain) => void;
+  isFirst: boolean;
+  isLast: boolean;
+  onLoadNext: () => void;
 }) {
-  const [chain, setChain] = useState<QuizChain>();
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const onChainRef = useRef(onChain);
+  onChainRef.current = onChain;
   const { answer, quiz } = item;
   const problemSentenceIds = new Set(
     chain?.links
@@ -275,41 +296,43 @@ function AnswerRow({
     problemSentenceIds.has(sentence.uid),
   );
 
-  async function toggleDetails() {
-    if (isExpanded) {
-      setIsExpanded(false);
-      return;
-    }
-    setIsExpanded(true);
-    if (chain) return;
+  useEffect(() => {
+    if (!isExpanded || chain) return;
+    let active = true;
     setIsLoading(true);
     setError(undefined);
-    try {
-      setChain(await getQuizChain(quiz.quiz_id));
-    } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "クイズ詳細を取得できませんでした。",
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    getQuizChain(quiz.quiz_id)
+      .then((result) => {
+        if (active) onChainRef.current(result);
+      })
+      .catch((reason) => {
+        if (active)
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : "クイズ詳細を取得できませんでした。",
+          );
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isExpanded, chain, quiz.quiz_id]);
+
+  function toggleDetails() {
+    onExpanded(!isExpanded);
   }
 
   return (
     <tr
       data-hotkey-item
+      data-answer-id={answer.answer_uid}
+      data-hotkey-active={isCurrent || undefined}
       tabIndex={-1}
       className={`${answerRowGrid} scroll-mt-44 items-center outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/70 data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary`}
-      onFocus={(event) => {
-        for (const row of event.currentTarget
-          .closest("table")
-          ?.querySelectorAll<HTMLElement>("[data-hotkey-item]") ?? []) {
-          row.removeAttribute("data-hotkey-active");
-        }
-        event.currentTarget.dataset.hotkeyActive = "true";
-      }}
+      onFocus={onCurrent}
       onKeyDown={(event) => {
         if (
           event.target !== event.currentTarget ||
@@ -319,7 +342,12 @@ function AnswerRow({
           event.altKey
         )
           return;
-        if (event.key === " " || event.key === "Enter") {
+        if (event.key === "j" && isLast) {
+          event.preventDefault();
+          onLoadNext();
+        } else if (event.key === "k" && isFirst) {
+          event.preventDefault();
+        } else if (event.key === " " || event.key === "Enter") {
           event.preventDefault();
           void toggleDetails();
         }

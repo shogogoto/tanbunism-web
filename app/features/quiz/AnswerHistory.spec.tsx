@@ -1,7 +1,13 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter, Route, Routes, useNavigate } from "react-router";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import GlobalHotkeys, {
   HotkeyProvider,
 } from "~/features/hotkeys/GlobalHotkeys";
@@ -57,8 +63,26 @@ const historyItem = {
   },
 };
 
+function BackToAnswers() {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(-1)}>
+      戻る
+    </button>
+  );
+}
+
+const historyRows = (count: number, start = 1) =>
+  Array.from({ length: count }, (_, index) => ({
+    ...historyItem,
+    answer: { ...historyItem.answer, answer_uid: `answer-${start + index}` },
+  }));
+
 describe("AnswerHistory", () => {
   beforeEach(() => {
+    sessionStorage.clear();
+    vi.mocked(listAnswerHistory).mockReset();
+    vi.mocked(getQuizChain).mockClear();
     vi.mocked(listAnswerHistory).mockResolvedValue({
       data: [historyItem],
       total: 1,
@@ -73,6 +97,8 @@ describe("AnswerHistory", () => {
       answers: [],
     });
   });
+
+  afterEach(() => vi.unstubAllGlobals());
 
   it("回答の正誤と選択内容を表示し、QuizChainを追加取得する", async () => {
     const user = userEvent.setup();
@@ -222,5 +248,144 @@ describe("AnswerHistory", () => {
     expect(screen.getByLabelText("正誤")).toHaveFocus();
     await user.keyboard("{Escape}?");
     expect(screen.getByText("回答履歴の行を移動")).toBeVisible();
+  });
+
+  it("末尾の表示で続きを追記し、取得に失敗しても表示済みの回答を保持して再試行できる", async () => {
+    const user = userEvent.setup();
+    let intersect: IntersectionObserverCallback | undefined;
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(callback: IntersectionObserverCallback) {
+          intersect = callback;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    vi.mocked(listAnswerHistory)
+      .mockResolvedValueOnce({ total: 21, data: historyRows(20) })
+      .mockRejectedValueOnce(new Error("一時的なエラー"))
+      .mockResolvedValueOnce({ total: 21, data: historyRows(1, 21) });
+    render(
+      <MemoryRouter>
+        <AnswerHistory />
+      </MemoryRouter>,
+    );
+    await screen.findByRole("button", { name: "続きを読み込む" });
+    await waitFor(() => {
+      expect(document.querySelectorAll("[data-answer-id]")).toHaveLength(20);
+      expect(intersect).toBeDefined();
+    });
+    await act(async () =>
+      intersect?.(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      ),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "一時的なエラー",
+    );
+    expect(document.querySelectorAll("[data-answer-id]")).toHaveLength(20);
+    await user.click(screen.getByRole("button", { name: "続きを読み込む" }));
+    await screen.findByText("すべての回答を表示しました");
+    expect(document.querySelectorAll("[data-answer-id]")).toHaveLength(21);
+    expect(listAnswerHistory).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2 }),
+    );
+  });
+
+  it("末尾でjを押すと次のページへ進み、最後の回答で先頭へ循環しない", async () => {
+    const user = userEvent.setup();
+    vi.mocked(listAnswerHistory)
+      .mockResolvedValueOnce({ total: 21, data: historyRows(20) })
+      .mockResolvedValueOnce({ total: 21, data: historyRows(1, 21) });
+    render(
+      <MemoryRouter>
+        <HistoryPanelProvider>
+          <HotkeyProvider>
+            <AnswerHistory />
+            <GlobalHotkeys />
+          </HotkeyProvider>
+        </HistoryPanelProvider>
+      </MemoryRouter>,
+    );
+    await screen.findByRole("button", { name: "続きを読み込む" });
+    await user.keyboard("j".repeat(20));
+    expect(document.activeElement).toHaveAttribute(
+      "data-answer-id",
+      "answer-20",
+    );
+    await user.keyboard("j");
+    await waitFor(() =>
+      expect(document.activeElement).toHaveAttribute(
+        "data-answer-id",
+        "answer-21",
+      ),
+    );
+    await user.keyboard("j");
+    expect(document.activeElement).toHaveAttribute(
+      "data-answer-id",
+      "answer-21",
+    );
+    expect(listAnswerHistory).toHaveBeenCalledTimes(2);
+  });
+
+  it("単文詳細から戻ると一覧・current・展開状態・スクロール位置を復元する", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getQuizChain).mockResolvedValue({
+      sentences: [
+        {
+          uid: "target",
+          sentence: "対象の単文",
+          resource_uid: "resource-1",
+          stats: {
+            n_detail: 0,
+            n_premise: 0,
+            n_conclusion: 0,
+            n_refer: 0,
+            n_referred: 0,
+          },
+        },
+      ],
+      quizzes: [],
+      links: [{ quiz_id: "quiz-1", sentence_id: "target", role: "target" }],
+    });
+    render(
+      <MemoryRouter initialEntries={["/answers"]}>
+        <div data-testid="scroller" style={{ overflowY: "auto", height: 200 }}>
+          <Routes>
+            <Route path="/answers" element={<AnswerHistory />} />
+            <Route path="/tanbun/:id" element={<BackToAnswers />} />
+          </Routes>
+        </div>
+      </MemoryRouter>,
+    );
+    await user.click(
+      (await screen.findAllByRole("button", { name: "クイズ詳細を見る" }))[0],
+    );
+    const link = await screen.findByRole("link", { name: "対象の単文" });
+    const container = screen.getByTestId("scroller");
+    container.scrollTop = 430;
+    fireEvent.scroll(container);
+    await user.click(link);
+    container.scrollTop = 0;
+    await user.click(screen.getByRole("button", { name: "戻る" }));
+    expect(
+      await screen.findByRole("link", { name: "対象の単文" }),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.activeElement).toHaveAttribute(
+        "data-answer-id",
+        "answer-1",
+      );
+      expect(container.scrollTop).toBe(430);
+    });
+    expect(document.activeElement).toHaveAttribute(
+      "data-hotkey-active",
+      "true",
+    );
+    expect(listAnswerHistory).toHaveBeenCalledTimes(1);
+    expect(getQuizChain).toHaveBeenCalledTimes(1);
   });
 });
