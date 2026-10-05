@@ -42,8 +42,8 @@ export default function HeaderXpProgress({
         "flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-[11px] tabular-nums text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className,
       )}
-      aria-label={`レベル${data.level}、累計${data.total_xp} XP、次のレベルまで${data.xp_to_next_level} XP`}
-      title={`Lv.${data.level} · ${data.total_xp} XP`}
+      aria-label={`レベル${data.level}、現在${data.current_level_xp} / ${data.xp_for_next_level} XP、累計${data.total_xp} XP`}
+      title={`Lv.${data.level} · ${data.current_level_xp} / ${data.xp_for_next_level} XP`}
     >
       <span className="font-semibold text-foreground">Lv.{data.level}</span>
       <span
@@ -58,7 +58,9 @@ export default function HeaderXpProgress({
           style={{ width: `${percentage}%` }}
         />
       </span>
-      <span>{data.total_xp} XP</span>
+      <span>
+        {data.current_level_xp} / {data.xp_for_next_level} XP
+      </span>
     </Link>
   );
 }

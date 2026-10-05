@@ -92,9 +92,9 @@ it("ログイン中はロゴからトップを明示的に開ける", () => {
     "/about",
   );
   const xp = screen.getByRole("link", {
-    name: "レベル3、累計270 XP、次のレベルまで180 XP",
+    name: "レベル3、現在70 / 250 XP、累計270 XP",
   });
   expect(xp).toHaveAttribute("href", "/user/learner");
   expect(xp).toHaveClass("hidden", "md:flex");
-  expect(screen.getByText("270 XP")).toBeVisible();
+  expect(screen.getByText("70 / 250 XP")).toBeVisible();
 });
