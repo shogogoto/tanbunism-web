@@ -290,9 +290,11 @@ function contextHotkeys(pathname: string, search: string): HotkeyDefinition[] {
     ];
   }
   if (pathname === "/study-plans") return studyPlanHotkeys;
+  if (pathname === "/answers") return answerHistoryHotkeys;
   if (pathname !== "/dashboard") return [];
   const view = new URLSearchParams(search).get("view") ?? "timeline";
   if (view === "study-plans") return studyPlanHotkeys;
+  if (view === "answers") return answerHistoryHotkeys;
   if (view === "quiz-timeline") {
     return [
       { keys: ["j", "k"], label: "クイズを移動" },
@@ -329,6 +331,11 @@ const studyPlanHotkeys: HotkeyDefinition[] = [
   { keys: ["a"], label: "currentへクイズを追加" },
   { keys: ["e"], label: "currentを編集" },
   { keys: ["Enter"], label: "currentのクイズを解く" },
+];
+
+const answerHistoryHotkeys: HotkeyDefinition[] = [
+  { keys: ["j", "k"], label: "回答履歴の行を移動" },
+  { keys: ["Space", "Enter"], label: "選択した回答の詳細を開閉" },
 ];
 
 function moveQuizTimeline(offset: -1 | 1): boolean {

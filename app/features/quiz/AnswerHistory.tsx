@@ -6,6 +6,7 @@ import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
 import { ChainSentenceLink, RelationAnnotation } from "./QuizKnowledge";
 import QuizPrompt, { QuizTypeBadge } from "./QuizPrompt";
+import QuizReportButton from "./QuizReportButton";
 import {
   type AnswerHistoryItem,
   type QuizChain,
@@ -26,7 +27,7 @@ const quizTypeLabels: Record<QuizType, string> = {
 type CorrectFilter = "" | "true" | "false";
 
 const answerRowGrid =
-  "grid grid-cols-[4rem_4.5rem_minmax(0,1fr)_5rem] md:grid-cols-[4.5rem_8rem_minmax(0,3fr)_minmax(0,1fr)_7rem_4rem]";
+  "grid grid-cols-[4rem_4.5rem_minmax(0,1fr)_5rem] md:grid-cols-[4.5rem_7rem_minmax(0,3fr)_minmax(0,1fr)_7rem_4rem]";
 
 function formatAnswerDate(value: string): string {
   const date = new Date(value);
@@ -260,6 +261,19 @@ function AnswerRow({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
   const { answer, quiz } = item;
+  const problemSentenceIds = new Set(
+    chain?.links
+      .filter(
+        (link) =>
+          link.quiz_id === quiz.quiz_id &&
+          (link.role === "target" ||
+            (item.quiz_type === "pair2rel" && link.role === "correct")),
+      )
+      .map((link) => link.sentence_id),
+  );
+  const problemSentences = chain?.sentences.filter((sentence) =>
+    problemSentenceIds.has(sentence.uid),
+  );
 
   async function toggleDetails() {
     if (isExpanded) {
@@ -284,7 +298,33 @@ function AnswerRow({
   }
 
   return (
-    <tr className={`${answerRowGrid} items-center hover:bg-muted/40`}>
+    <tr
+      data-hotkey-item
+      tabIndex={-1}
+      className={`${answerRowGrid} scroll-mt-44 items-center outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/70 data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary`}
+      onFocus={(event) => {
+        for (const row of event.currentTarget
+          .closest("table")
+          ?.querySelectorAll<HTMLElement>("[data-hotkey-item]") ?? []) {
+          row.removeAttribute("data-hotkey-active");
+        }
+        event.currentTarget.dataset.hotkeyActive = "true";
+      }}
+      onKeyDown={(event) => {
+        if (
+          event.target !== event.currentTarget ||
+          event.nativeEvent.isComposing ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.altKey
+        )
+          return;
+        if (event.key === " " || event.key === "Enter") {
+          event.preventDefault();
+          void toggleDetails();
+        }
+      }}
+    >
       <td className="px-2 py-2">
         <Badge
           className="px-1.5 text-[11px]"
@@ -377,6 +417,20 @@ function AnswerRow({
           )}
           {chain && (
             <div className="space-y-2">
+              {problemSentences && problemSentences.length > 0 && (
+                <div className="space-y-1 border-b pb-2 text-sm">
+                  <p className="text-xs text-muted-foreground">問題の単文</p>
+                  {problemSentences.map((sentence) => (
+                    <Link
+                      key={sentence.uid}
+                      to={`/tanbun/${sentence.uid}`}
+                      className="block text-primary underline underline-offset-2"
+                    >
+                      {sentence.sentence}
+                    </Link>
+                  ))}
+                </div>
+              )}
               {Object.entries(quiz.options).map(([id, label]) => {
                 const selected = answer.selected.includes(id);
                 const correct = quiz.correct.includes(id);
@@ -398,6 +452,7 @@ function AnswerRow({
               })}
             </div>
           )}
+          <QuizReportButton quizId={quiz.quiz_id} />
         </td>
       )}
     </tr>
