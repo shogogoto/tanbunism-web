@@ -12,8 +12,9 @@ import {
   PopoverTrigger,
 } from "~/shared/components/ui/popover";
 
-type Growth = {
+export type Growth = {
   resource_id: string;
+  resource_name?: string;
   total_xp: number;
   level: number;
   current_level_xp: number;
@@ -21,6 +22,10 @@ type Growth = {
   power: number;
   logic_count: number;
   reference_count: number;
+  last_reviewed_on?: string | null;
+  exposure_xp?: number;
+  answer_xp?: number;
+  correct_bonus_xp?: number;
   recent_xp: {
     source: string;
     xp: number;
@@ -28,7 +33,7 @@ type Growth = {
     earned_on: string;
   }[];
 };
-type GrowthResult = {
+export type GrowthResult = {
   resources: Growth[];
   rules: {
     exposure_xp: number;
@@ -43,15 +48,20 @@ const GrowthContext = createContext<
 export const RESOURCE_GROWTH_CACHE_KEY = "resource-growth";
 const api = import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
 
-export function ResourceGrowthProvider({
-  children,
-  active = true,
-}: PropsWithChildren<{ active?: boolean }>) {
+export function useResourceGrowth(userId?: string) {
   const { user, isAuthenticated } = useAuth();
-  const { data, error, isLoading, mutate } = useSWR<GrowthResult>(
-    isAuthenticated && user ? [RESOURCE_GROWTH_CACHE_KEY, user.uid] : null,
+  const targetId = (userId ?? (isAuthenticated ? user?.uid : undefined))
+    ?.replaceAll("-", "")
+    .toLowerCase();
+  const own =
+    isAuthenticated && user?.uid.replaceAll("-", "").toLowerCase() === targetId;
+  return useSWR<GrowthResult>(
+    targetId
+      ? [own ? RESOURCE_GROWTH_CACHE_KEY : "public-resource-growth", targetId]
+      : null,
     async () => {
-      const response = await fetch(`${api}/user/me/resource-growth`, {
+      const endpoint = own ? "me" : encodeURIComponent(targetId ?? "");
+      const response = await fetch(`${api}/user/${endpoint}/resource-growth`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Lv・Powerを取得できませんでした。");
@@ -59,6 +69,13 @@ export function ResourceGrowthProvider({
     },
     { revalidateOnFocus: true, dedupingInterval: 10_000 },
   );
+}
+
+export function ResourceGrowthProvider({
+  children,
+  active = true,
+}: PropsWithChildren<{ active?: boolean }>) {
+  const { data, error, isLoading, mutate } = useResourceGrowth();
   useEffect(() => {
     if (active) void mutate();
   }, [active, mutate]);
