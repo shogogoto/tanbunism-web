@@ -148,7 +148,6 @@ export default function UserDetail({
               </div>
             </section>
           </div>
-          <LearningSummary namespace={namespace} compact />
         </CardContent>
       </Card>
 

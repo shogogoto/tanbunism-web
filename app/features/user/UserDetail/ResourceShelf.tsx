@@ -46,6 +46,14 @@ export default function ResourceShelf({
 }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("recent");
+  const summary = useMemo(() => {
+    const stats = Object.values(namespace.stats ?? {});
+    return [
+      ["単文", stats.reduce((sum, item) => sum + item.n_sentence, 0)],
+      ["用語", stats.reduce((sum, item) => sum + item.n_term, 0)],
+      ["文字", stats.reduce((sum, item) => sum + item.n_char, 0)],
+    ] as const;
+  }, [namespace.stats]);
   const books = useMemo(() => {
     const progress = new Map(
       growth?.resources.map((item) => [uidKey(item.resource_id), item]),
@@ -76,15 +84,29 @@ export default function ResourceShelf({
       });
   }, [namespace, growth, query, sort]);
   return (
-    <section className="space-y-3" aria-label="育てている本棚">
+    <section className="space-y-3" aria-label="リソース一覧">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <BookOpen className="size-5" />
-          育てている本棚{" "}
-          <span className="text-sm font-normal text-muted-foreground">
-            {books.length}冊
-          </span>
-        </h2>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <BookOpen className="size-5" />
+            リソース一覧{" "}
+            <span className="text-sm font-normal text-muted-foreground">
+              {query.trim()
+                ? `${books.length} / ${shelfResources(namespace).length}冊`
+                : `${books.length}冊`}
+            </span>
+          </h2>
+          <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            {summary.map(([label, value]) => (
+              <div key={label} className="flex gap-1.5">
+                <dt>{label}</dt>
+                <dd className="font-medium tabular-nums text-foreground">
+                  {value.toLocaleString("ja-JP")}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value)}

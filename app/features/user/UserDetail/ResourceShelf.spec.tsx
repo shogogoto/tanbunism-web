@@ -43,6 +43,48 @@ it("所有本を成長順に並べ、内訳を開き、著者で絞れる", asyn
   expect(screen.getByRole("article")).toHaveTextContent("論理学入門");
 });
 
+it("リソース一覧の見出し横に件数と知識量をまとめる", async () => {
+  const user = userEvent.setup();
+  render(
+    <MemoryRouter>
+      <ResourceShelf
+        namespace={{
+          ...shelfFixture,
+          stats: {
+            sample: {
+              n_sentence: 11433,
+              n_term: 4155,
+              n_char: 277399,
+              average_degree: 0,
+              n_edge: 0,
+              n_isolation: 0,
+              n_axiom: 0,
+              n_unrefered: 0,
+              r_isolation: 0,
+              r_axiom: 0,
+              r_unrefered: 0,
+            },
+          },
+        }}
+        loading={false}
+        own
+        onRetry={vi.fn()}
+      />
+    </MemoryRouter>,
+  );
+  const heading = screen.getByRole("heading", { name: "リソース一覧 3冊" });
+  const summary = within(heading.parentElement as HTMLElement);
+  expect(summary.getByText("単文").nextSibling).toHaveTextContent("11,433");
+  expect(summary.getByText("用語").nextSibling).toHaveTextContent("4,155");
+  expect(summary.getByText("文字").nextSibling).toHaveTextContent("277,399");
+  expect(screen.queryByText("Resources")).not.toBeInTheDocument();
+  await user.type(screen.getByRole("textbox"), "野矢");
+  expect(
+    screen.getByRole("heading", { name: "リソース一覧 1 / 3冊" }),
+  ).toBeVisible();
+  expect(summary.getByText("11,433")).toBeVisible();
+});
+
 it("公開本棚には本人向けの活動ログや他人の本を載せない", async () => {
   const user = userEvent.setup();
   render(
