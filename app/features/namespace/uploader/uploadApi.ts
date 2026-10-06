@@ -1,4 +1,5 @@
 import { invalidateQuizCache } from "~/features/quiz/cache";
+import { invalidateTanbunDetails } from "~/features/tanbun/detail/cache";
 import {
   getPostTextResourceTextPostUrl,
   type postTextResourceTextPostResponse,
@@ -38,6 +39,10 @@ export async function saveResourceText(
     status: response.status,
     headers: response.headers,
   } as postTextResourceTextPostResponse;
-  if (response.ok) await invalidateQuizCache("study-resources");
+  if (response.ok)
+    await Promise.all([
+      invalidateQuizCache("study-resources", "quiz-chain"),
+      invalidateTanbunDetails().catch(() => undefined),
+    ]);
   return result;
 }

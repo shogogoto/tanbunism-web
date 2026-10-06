@@ -394,6 +394,42 @@ it("Ctrlと数字で指定位置のタブへ移動する", async () => {
   expect(selectThird).toHaveBeenCalledOnce();
 });
 
+it("プレビュー中は背後のクイズやタブをショートカットで変更しない", async () => {
+  const user = userEvent.setup();
+  const behind = vi.fn();
+  renderHotkeys(
+    <>
+      <div data-quiz-timeline>
+        <div data-quiz-timeline-card data-quiz-open="true">
+          <div data-hotkey-item data-hotkey-active="true">
+            背後のクイズ
+          </div>
+          <button type="button" data-quiz-option-index="1" onClick={behind}>
+            選択肢
+          </button>
+          <button type="button" data-quiz-submit onClick={behind}>
+            回答する
+          </button>
+        </div>
+        <button type="button" data-quiz-timeline-next onClick={behind}>
+          次のクイズ
+        </button>
+      </div>
+      <div role="tablist">
+        <button type="button" role="tab" onClick={behind}>
+          タブ
+        </button>
+      </div>
+      <dialog open aria-label="単文プレビュー">
+        <p>詳細</p>
+      </dialog>
+    </>,
+  );
+  await user.keyboard("j1{Enter}{Control>}1{/Control}gr");
+  expect(behind).not.toHaveBeenCalled();
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent("/");
+});
+
 it("クイズTLではjで次の問題へ移動しEnterで回答する", async () => {
   const user = userEvent.setup();
   const moveNext = vi.fn();

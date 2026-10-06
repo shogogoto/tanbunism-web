@@ -26,6 +26,9 @@ vi.mock("./api", () => ({
   markTanbunSeen: vi.fn(),
   addPersonalTanbuns: vi.fn(),
 }));
+vi.mock("~/features/tanbun/detail/index", () => ({
+  default: () => <div>プレビュー本文</div>,
+}));
 
 beforeEach(async () => {
   await genericCache.clear();
@@ -109,9 +112,13 @@ it("単文を見た日を一日一回だけ記録する", async () => {
   expect(screen.getByText("新しい知識")).toBeInTheDocument();
 
   fireEvent.keyDown(timelineItem as HTMLElement, { key: "Enter" });
-  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
-    "/tanbun/sentence-1",
-  );
+  expect(await screen.findByRole("dialog", { name: "単文詳細" })).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "閉じる" }));
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent("/");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "今日は記録済み、累計3日" }),
+  ).toBeDisabled();
 });
 
 it("記録に失敗したら表示を元に戻す", async () => {

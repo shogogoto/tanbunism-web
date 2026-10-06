@@ -3,9 +3,11 @@ import { MemoryRouter } from "react-router";
 import MainView from "./MainView";
 import { fixtureDetail1 } from "./fixture";
 
+const addHistory = vi.hoisted(() => vi.fn());
+
 vi.mock("~/shared/history/hooks", () => ({
   useHistory: () => ({
-    addHistory: vi.fn(),
+    addHistory,
     getTanbunTitle: vi.fn(() => "単文"),
   }),
 }));
@@ -61,6 +63,10 @@ describe("単文詳細", () => {
     expect(screen.getByRole("button", { name: "クイズを見る" })).toBeVisible();
     expect(screen.getByRole("button", { name: "＋ クイズ" })).toBeVisible();
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(addHistory).toHaveBeenCalledWith({
+      title: "単文",
+      url: `/tanbun/${fixtureDetail1.uid}`,
+    });
   });
 
   it("引用用語を置いた場所ごとの親経路を表示する", () => {

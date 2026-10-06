@@ -5,6 +5,7 @@ import { useSWRConfig } from "swr";
 import KnowledgeCard, {
   KnowledgeScore,
 } from "~/features/tanbun/components/KnowledgeCard";
+import { useTanbunPreview } from "~/features/tanbun/detail/Preview";
 import Loading from "~/shared/components/Loading";
 import { Button } from "~/shared/components/ui/button";
 import { usePersistentSWR } from "~/shared/hooks/swr/useCache";
@@ -31,6 +32,7 @@ export default function PersonalTimeline({
   profile = "default",
 }: { profile?: string }) {
   const { mutate: mutateGlobal } = useSWRConfig();
+  const { openPreview, preview } = useTanbunPreview();
   const day = useRecommendationDay();
   const cacheKey = `${PERSONAL_TIMELINE_CACHE_KEY}:${profile}:${day}`;
   const {
@@ -175,6 +177,7 @@ export default function PersonalTimeline({
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-2">
+      {preview}
       {error && (
         <p
           role="alert"
@@ -240,6 +243,7 @@ export default function PersonalTimeline({
                 <KnowledgeCard
                   compact
                   uid={item.uid}
+                  onPreview={() => openPreview({ sentenceId: item.uid })}
                   sentence={item.sentence}
                   termNames={item.term_names ?? []}
                   score={item.score ?? 0}

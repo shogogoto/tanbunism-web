@@ -8,6 +8,7 @@ import {
   listDailyQuizzes,
 } from "~/features/quiz/api";
 import { useQuizSWR } from "~/features/quiz/useQuizSWR";
+import { useTanbunPreview } from "~/features/tanbun/detail/Preview";
 import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
@@ -270,18 +271,51 @@ function QuizTimelineCard({
   hasSessionResult: boolean;
   onAnswered: (isCorrect: boolean) => void;
 }) {
+  const { openPreview, preview } = useTanbunPreview();
   return (
     <Card
       className="gap-0 border-0 py-0 shadow-none"
       data-quiz-timeline-card
       data-quiz-open="true"
     >
+      {preview}
       <div
         data-hotkey-item={isCurrent ? true : undefined}
         data-hotkey-active={isCurrent ? "true" : undefined}
         className="flex items-start gap-3 border-b p-4 outline-none data-[hotkey-active=true]:bg-accent/30"
       >
-        <QuizPrompt quiz={item.quiz} className="min-w-0 flex-1" />
+        <QuizPrompt
+          quiz={item.quiz}
+          className="min-w-0 flex-1"
+          renderSubject={(subject) => (
+            <button
+              type="button"
+              className="text-left hover:text-primary hover:underline"
+              title="単文詳細を開く"
+              onClick={() =>
+                openPreview({ quizId: item.quiz.quiz_id, role: "target" })
+              }
+            >
+              {subject}
+            </button>
+          )}
+          renderObject={(object) => (
+            <button
+              type="button"
+              className="text-left hover:text-primary hover:underline"
+              title="単文詳細を開く"
+              onClick={() =>
+                openPreview({
+                  quizId: item.quiz.quiz_id,
+                  role: "correct",
+                  sentence: object,
+                })
+              }
+            >
+              {object}
+            </button>
+          )}
+        />
         {hasSessionResult ? (
           <Badge variant={sessionResult ? "secondary" : "destructive"}>
             今回 {sessionResult ? "正解" : "不正解"}

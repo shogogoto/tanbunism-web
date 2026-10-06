@@ -15,6 +15,7 @@ type Props = {
   compact?: boolean;
   scorePosition?: "start" | "end" | "none";
   hotkeyItem?: boolean;
+  onPreview?: () => void;
 };
 
 export default function KnowledgeCard({
@@ -28,6 +29,7 @@ export default function KnowledgeCard({
   compact = false,
   scorePosition = "end",
   hotkeyItem = false,
+  onPreview,
 }: Props) {
   return (
     <Card
@@ -39,6 +41,19 @@ export default function KnowledgeCard({
         <Link
           to={`/tanbun/${uid}`}
           state={state}
+          onClick={(event) => {
+            if (
+              onPreview &&
+              event.button === 0 &&
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.altKey &&
+              !event.shiftKey
+            ) {
+              event.preventDefault();
+              onPreview();
+            }
+          }}
           data-hotkey-item={hotkeyItem || undefined}
           className={`block outline-none data-[hotkey-active=true]:rounded-sm data-[hotkey-active=true]:bg-accent/70 data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-primary ${compact ? "space-y-1" : "space-y-2"}`}
         >

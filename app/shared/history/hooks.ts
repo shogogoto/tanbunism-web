@@ -17,8 +17,12 @@ export function useHistory() {
   const location = useLocation();
 
   const addHistory = useCallback(
-    async (item: Omit<HistoryItemType, "id" | "timestamp" | "url">) => {
-      const url = location.pathname + location.search;
+    async (
+      item: Omit<HistoryItemType, "id" | "timestamp" | "url"> & {
+        url?: string;
+      },
+    ) => {
+      const url = item.url ?? location.pathname + location.search;
       if (url.includes("/dashboard")) return;
       await historyCache.add({ ...item, url });
       const newHistories = await historyCache.getAll();
@@ -28,7 +32,7 @@ export function useHistory() {
   );
 
   const getTanbunTitle = useCallback((k: Tanbun) => {
-    if (k.term?.names) return k.term?.names.join(", ");
+    if (k.term?.names?.length) return k.term.names.join(", ");
     return k.sentence;
   }, []);
 

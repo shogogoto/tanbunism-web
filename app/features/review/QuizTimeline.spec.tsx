@@ -6,6 +6,7 @@ import { expect, it, vi } from "vitest";
 import {
   addDailyQuizzes,
   answerQuiz,
+  getQuizChain,
   listDailyQuizzes,
 } from "~/features/quiz/api";
 import QuizTimeline from "./QuizTimeline";
@@ -14,7 +15,57 @@ vi.mock("~/features/quiz/api", () => ({
   answerQuiz: vi.fn(),
   listDailyQuizzes: vi.fn(),
   addDailyQuizzes: vi.fn(),
+  getQuizChain: vi.fn(),
 }));
+vi.mock("~/features/tanbun/detail/index", () => ({
+  default: () => <div>単文のプレビュー本文</div>,
+}));
+
+it("問題の単文を覗いて閉じても選択肢と現在地を維持する", async () => {
+  const user = userEvent.setup();
+  vi.mocked(listDailyQuizzes).mockResolvedValue({
+    total: 1,
+    data: [
+      {
+        quiz: {
+          quiz_id: "preview-quiz",
+          quiz_type: "sent2term",
+          prompt: { subject: "対象の単文", answer_kind: "term" },
+          statement: "対象の単文",
+          options: { a: "選択肢A", b: "選択肢B" },
+          correct: ["a"],
+          created: "2026-10-06T00:00:00Z",
+          no_correct_option: false,
+        },
+        attempts: 0,
+        corrects: 0,
+        accuracy: null,
+        last_attempted_at: null,
+      },
+    ],
+  });
+  vi.mocked(getQuizChain).mockResolvedValue({
+    sentences: [],
+    quizzes: [],
+    links: [
+      { quiz_id: "preview-quiz", sentence_id: "sentence-1", role: "target" },
+    ],
+  });
+  renderTimeline();
+  await user.click(await screen.findByRole("button", { name: "選択肢A" }));
+  await user.click(screen.getByRole("button", { name: "対象の単文" }));
+  expect(await screen.findByText("単文のプレビュー本文")).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "閉じる" }));
+  expect(screen.getByRole("button", { name: "選択肢A" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(screen.getByRole("button", { name: "1問目を表示" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  expect(answerQuiz).not.toHaveBeenCalled();
+});
 
 function renderTimeline() {
   return render(

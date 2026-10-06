@@ -41,6 +41,7 @@ type Props = {
   compact?: boolean;
   showTypeBadge?: boolean;
   renderSubject?: (subject: string) => ReactNode;
+  renderObject?: (object: string) => ReactNode;
 };
 
 export function QuizTypeBadge({
@@ -124,6 +125,7 @@ export default function QuizPrompt({
   compact = false,
   showTypeBadge = true,
   renderSubject = (subject) => subject,
+  renderObject = (object) => object,
 }: Props) {
   const prompt = quiz.prompt;
   const quizType = quiz.quiz_type;
@@ -132,7 +134,7 @@ export default function QuizPrompt({
   if (!prompt || !quizType || !(quizType in presentation)) {
     return (
       <p className={cn("whitespace-pre-line text-sm font-medium", className)}>
-        {quiz.statement}
+        {renderSubject(quiz.statement)}
       </p>
     );
   }
@@ -164,7 +166,7 @@ export default function QuizPrompt({
               <span className="mr-2 font-mono text-xs text-muted-foreground">
                 B
               </span>
-              <span className="font-medium">{prompt.object}</span>
+              <span className="font-medium">{renderObject(prompt.object)}</span>
               <TermNames terms={prompt.object_terms} />
             </p>
           )}

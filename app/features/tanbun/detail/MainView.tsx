@@ -27,6 +27,7 @@ import { cn } from "~/shared/lib/utils";
 import LocationView from "../components/LocationView";
 import TanbunCard, { TanbunCardContent } from "../components/TanbunCard";
 import { DetailContextProvider } from "./DetailContext";
+import { canonicalSentenceId } from "./cache";
 import { graphForView } from "./util";
 
 type PrefetchedState = {
@@ -262,9 +263,14 @@ function RelatedCards({
 type Props = {
   detail?: TanbunChain;
   prefetched?: PrefetchedState;
+  preview?: boolean;
 };
 
-export default function MainView({ detail, prefetched }: Props) {
+export default function MainView({
+  detail,
+  prefetched,
+  preview = false,
+}: Props) {
   const {
     headerTanbun,
     headerLocation,
@@ -316,7 +322,12 @@ export default function MainView({ detail, prefetched }: Props) {
   useEffect(() => {
     if (!kn || !rootId) return;
     if (addedRootIdRef.current === rootId) return;
-    addHistory({ title: getTanbunTitle(kn(rootId)) });
+    void Promise.resolve(
+      addHistory({
+        title: getTanbunTitle(kn(rootId)),
+        url: `/tanbun/${canonicalSentenceId(rootId)}`,
+      }),
+    ).catch(() => undefined);
     addedRootIdRef.current = rootId; // 今回処理したrootIdを記録
   }, [kn, rootId, addHistory, getTanbunTitle]);
 
@@ -432,7 +443,12 @@ export default function MainView({ detail, prefetched }: Props) {
           : null
       }
     >
-      <div className="flex flex-col min-h-screen max-w-3xl mx-auto">
+      <div
+        className={cn(
+          "flex flex-col max-w-3xl mx-auto",
+          !preview && "min-h-screen",
+        )}
+      >
         {headerLocation.user && headerLocation.resource && (
           <div className="border-b bg-card/40 p-3">
             <LocationView
@@ -448,13 +464,15 @@ export default function MainView({ detail, prefetched }: Props) {
             )}
             <div className="mt-2 rounded-lg border bg-card py-3 shadow-sm">
               <TanbunCardContent k={headerTanbun} />
-              <div className="mx-6 mt-3 border-t pt-3">
-                <SentenceQuizActions
-                  sentenceId={headerTanbun.uid}
-                  resourceId={headerLocation.resource.uid}
-                  className="ml-0"
-                />
-              </div>
+              {!preview && (
+                <div className="mx-6 mt-3 border-t pt-3">
+                  <SentenceQuizActions
+                    sentenceId={headerTanbun.uid}
+                    resourceId={headerLocation.resource.uid}
+                    className="ml-0"
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}

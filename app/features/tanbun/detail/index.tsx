@@ -2,6 +2,7 @@
 import { Suspense } from "react";
 import { useLocation } from "react-router";
 import Loading from "~/shared/components/Loading";
+import { Button } from "~/shared/components/ui/button";
 import type {
   MResource,
   Tanbun,
@@ -15,9 +16,11 @@ import {
 import { useCachedSWR } from "~/shared/hooks/swr/useCache";
 import { tanbunDetailCache } from "~/shared/lib/indexed";
 import MainView from "./MainView";
+import { canonicalSentenceId } from "./cache";
 
 type Props = {
   id: string;
+  preview?: boolean;
 };
 
 type PrefetchedState = {
@@ -27,33 +30,41 @@ type PrefetchedState = {
 };
 
 async function getCachedTanbunChains(cacheId: string) {
-  const cached = await tanbunDetailCache.get(cacheId);
+  const cached = await tanbunDetailCache.get(cacheId).catch(() => undefined);
   return cached ? [cached] : undefined;
 }
 
-export function _TanbunChainView({ id }: Props) {
+export function _TanbunChainView({ id: rawId, preview = false }: Props) {
+  const id = canonicalSentenceId(rawId);
   const location = useLocation();
   const prefetched = location.state as PrefetchedState | undefined;
   const validPrefetched =
-    prefetched?.tanbun.uid === id ? prefetched : undefined;
+    prefetched?.tanbun?.uid && canonicalSentenceId(prefetched.tanbun.uid) === id
+      ? prefetched
+      : undefined;
 
   const fallbackData = useCachedSWR<
     TanbunChains,
     detailTanbunSentenceSentenceIdGetResponse200 & { headers: Headers }
   >(id, getCachedTanbunChains);
 
-  const { data, isLoading } = useDetailTanbunSentenceSentenceIdGet(id, {
-    swr: {
-      keepPreviousData: false,
-      fallbackData,
-      // suspense: true, // suspenseは使わずisLoadingで制御
-      onSuccess: async (data) => {
-        if (data.status === 200 && data.data[0]) {
-          await tanbunDetailCache.set(data.data[0]);
-        }
+  const { data, error, isLoading, mutate } =
+    useDetailTanbunSentenceSentenceIdGet<Error>(id, {
+      fetch: { credentials: "include" },
+      swr: {
+        keepPreviousData: false,
+        fallbackData,
+        dedupingInterval: 5 * 60_000,
+        revalidateOnFocus: false,
+        shouldRetryOnError: false,
+        // suspense: true, // suspenseは使わずisLoadingで制御
+        onSuccess: async (data) => {
+          if (data.status === 200 && data.data[0]) {
+            await tanbunDetailCache.set(data.data[0]).catch(() => undefined);
+          }
+        },
       },
-    },
-  });
+    });
 
   const fullDetail =
     data?.status === 200 ? data.data[0] : fallbackData?.data[0];
@@ -61,9 +72,11 @@ export function _TanbunChainView({ id }: Props) {
   if (isLoading && !fullDetail) {
     if (validPrefetched) {
       return (
-        <div className="flex flex-col md:flex-row h-screen">
+        <div
+          className={preview ? "min-w-0" : "flex flex-col md:flex-row h-screen"}
+        >
           <div className="flex-1 overflow-y-auto">
-            <MainView prefetched={validPrefetched} />
+            <MainView prefetched={validPrefetched} preview={preview} />
           </div>
         </div>
       );
@@ -73,9 +86,11 @@ export function _TanbunChainView({ id }: Props) {
 
   if (fullDetail) {
     return (
-      <div className="flex flex-col md:flex-row h-screen">
+      <div
+        className={preview ? "min-w-0" : "flex flex-col md:flex-row h-screen"}
+      >
         <div className="flex-1 overflow-y-auto">
-          <MainView detail={fullDetail} />
+          <MainView detail={fullDetail} preview={preview} />
         </div>
 
         {/* <div className="w-1/4 bg-gray-100 p-4 border-l hidden md:block overflow-y-auto"> */}
@@ -88,14 +103,24 @@ export function _TanbunChainView({ id }: Props) {
     );
   }
 
-  // TODO: エラーハンドリング
-  return <div>{JSON.stringify(data)}</div>;
+  return (
+    <div className="space-y-3 p-3">
+      <p role="alert">単文詳細を取得できませんでした。{error?.message}</p>
+      <Button variant="outline" onClick={() => void mutate()}>
+        再読み込み
+      </Button>
+    </div>
+  );
 }
 
-export default function TanbunChainView({ id }: Props) {
+export default function TanbunChainView({ id, preview }: Props) {
   return (
     <Suspense fallback={<Loading type="center-x" />}>
-      <_TanbunChainView id={id} />
+      <_TanbunChainView
+        key={canonicalSentenceId(id)}
+        id={id}
+        preview={preview}
+      />
     </Suspense>
   );
 }

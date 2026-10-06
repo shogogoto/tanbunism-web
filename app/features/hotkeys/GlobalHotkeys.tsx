@@ -140,7 +140,19 @@ export default function GlobalHotkeys() {
       }
 
       const key = event.key.toLowerCase();
-      const dialogOpen = document.querySelector('[role="dialog"]');
+      const dialogOpen = document.querySelector(
+        '[role="dialog"], dialog[open]',
+      );
+
+      // プレビュー中は背後の問題・タブを変更しない。項目移動もdialog内のみ。
+      if (dialogOpen) {
+        if (!event.ctrlKey && (key === "j" || key === "k")) {
+          if (moveActiveItem(key === "j" ? 1 : -1, dialogOpen))
+            event.preventDefault();
+        }
+        resetChord();
+        return;
+      }
 
       if (event.ctrlKey) {
         if (/^[1-9]$/.test(key) && activateTabByIndex(Number(key) - 1)) {
@@ -150,7 +162,7 @@ export default function GlobalHotkeys() {
         return;
       }
 
-      if (key === "?" && !dialogOpen) {
+      if (key === "?") {
         event.preventDefault();
         resetChord();
         openHelp();
@@ -193,11 +205,6 @@ export default function GlobalHotkeys() {
 
       if (!waitingForDestination.current && /^[1-9]$/.test(key)) {
         if (toggleActiveQuizOption(key)) event.preventDefault();
-        resetChord();
-        return;
-      }
-
-      if (dialogOpen) {
         resetChord();
         return;
       }
