@@ -7,25 +7,13 @@ import { LearningLevel, LearningSummary } from ".";
 const learningProgress = {
   activity: { n_tanbun_exposure: 2 },
   xp: {
-    knowledge: 12,
-    quiz_creation: 3,
+    knowledge: 0,
+    quiz_creation: 0,
     quiz_answer: 25,
     correct_bonus: 4,
     tanbun_exposure: 2,
   },
   xp_details: [
-    {
-      source: "knowledge" as const,
-      activity_count: 12,
-      xp_per_activity: 1,
-      earned_xp: 12,
-    },
-    {
-      source: "quiz_creation" as const,
-      activity_count: 3,
-      xp_per_activity: 1,
-      earned_xp: 3,
-    },
     {
       source: "quiz_answer" as const,
       activity_count: 5,
@@ -45,11 +33,11 @@ const learningProgress = {
       earned_xp: 2,
     },
   ],
-  total_xp: 46,
+  total_xp: 31,
   level: 1,
-  current_level_xp: 46,
+  current_level_xp: 31,
   xp_for_next_level: 50,
-  xp_to_next_level: 4,
+  xp_to_next_level: 19,
 };
 
 describe("LearningSummary", () => {
@@ -84,20 +72,20 @@ describe("LearningLevel", () => {
     render(<LearningLevel progress={learningProgress} />);
 
     expect(screen.getByText("Lv. 1")).toBeInTheDocument();
-    expect(screen.getByText("累計 46 XP")).toBeInTheDocument();
-    expect(screen.getByText("次のレベルまで 4 XP")).toBeInTheDocument();
+    expect(screen.getByText("累計 31 XP")).toBeInTheDocument();
+    expect(screen.getByText("次のレベルまで 19 XP")).toBeInTheDocument();
     expect(screen.getByText("Lv. 1：累計 0 XP以上")).toBeInTheDocument();
     expect(screen.getByText("Lv. 2：累計 50 XP")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-label",
-      "レベル進捗 92%",
+      "レベル進捗 62%",
     );
 
     await user.click(
       screen.getByRole("button", { name: "XPの加点ルールと獲得内訳" }),
     );
-    expect(screen.getByText("知識の整理")).toBeVisible();
-    expect(screen.getByText("12文 × 1 XP")).toBeVisible();
+    expect(screen.queryByText("知識の整理")).not.toBeInTheDocument();
+    expect(screen.queryByText("クイズ作成")).not.toBeInTheDocument();
     expect(screen.getByText("+25 XP")).toBeVisible();
     expect(screen.getByText("見たよ")).toBeVisible();
   });

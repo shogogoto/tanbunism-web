@@ -105,7 +105,7 @@ export default function UserDetail({
                       <DialogTitle>ユーザーLvの根拠</DialogTitle>
                     </DialogHeader>
                     <p className="text-xs leading-relaxed text-muted-foreground">
-                      ユーザーLvには知識の整理・クイズ作成・過去の回答も含みます。本棚の各Lvは、記録開始後の復習XPで育ちます。
+                      Lv・XPは「見たよ・クイズ回答・正解」の復習実績だけで決まります。知識量やクイズ作成数、Powerは加算しません。ユーザーXPには過去の回答履歴も含み、本棚のXPはリソース別の記録開始後の実績です。
                     </p>
                     <LearningLevel
                       progress={learningProgress}
