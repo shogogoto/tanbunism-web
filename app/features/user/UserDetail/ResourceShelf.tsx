@@ -1,4 +1,4 @@
-import { BookOpen, Search, Zap } from "lucide-react";
+import { BookOpen, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import type {
@@ -16,8 +16,11 @@ import {
 import { Input } from "~/shared/components/ui/input";
 import { Progress } from "~/shared/components/ui/progress";
 import type { MResource, NameSpace } from "~/shared/generated/fastAPI.schemas";
+import { formatRelativeDate } from "~/shared/lib/formatRelativeDate";
 
 const uidKey = (id: string) => id.replaceAll("-", "").toLowerCase();
+const rowLayout =
+  "grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_2.75rem_minmax(0,1fr)_3.75rem_5.25rem_5.25rem] items-center gap-x-3";
 
 export function shelfResources(namespace: NameSpace): MResource[] {
   const resources = new Map<string, MResource>();
@@ -79,7 +82,18 @@ export default function ResourceShelf({
                 ? (b.growth?.last_reviewed_on ?? "").localeCompare(
                     a.growth?.last_reviewed_on ?? "",
                   )
-                : 0;
+                : sort === "updated"
+                  ? (b.resource.updated ?? "").localeCompare(
+                      a.resource.updated ?? "",
+                    )
+                  : sort === "author"
+                    ? (a.resource.authors?.join("・") ?? "").localeCompare(
+                        b.resource.authors?.join("・") ?? "",
+                        "ja",
+                      )
+                    : sort === "level"
+                      ? (b.growth?.level ?? -1) - (a.growth?.level ?? -1)
+                      : 0;
         return primary || a.resource.name.localeCompare(b.resource.name, "ja");
       });
   }, [namespace, growth, query, sort]);
@@ -117,6 +131,9 @@ export default function ResourceShelf({
           <option value="xp">復習XP順</option>
           <option value="power">Power順</option>
           <option value="title">タイトル順</option>
+          <option value="author">著者順</option>
+          <option value="level">Lv順</option>
+          <option value="updated">更新日順</option>
         </select>
       </div>
       <div className="relative">
@@ -137,18 +154,56 @@ export default function ResourceShelf({
           </Button>
         </p>
       )}
-      <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {books.map(({ resource, growth: item }) => (
-          <ResourceBook
-            key={resource.uid}
-            resource={resource}
-            growth={item}
-            rules={growth?.rules}
-            loading={loading}
-            own={own}
-          />
-        ))}
-      </div>
+      <table className="block w-full border text-sm" aria-label="リソース一覧">
+        <thead className="sticky top-0 z-10 hidden border-b bg-background text-xs text-muted-foreground md:block">
+          <tr className={`${rowLayout} px-3 py-2`}>
+            {(
+              [
+                ["リソース", "title"],
+                ["著者", "author"],
+                ["Lv", "level"],
+                ["XP", "xp"],
+                ["Power", "power"],
+                ["復習日", "recent"],
+                ["更新日", "updated"],
+              ] as const
+            ).map(([label, key]) => (
+              <th
+                key={key}
+                scope="col"
+                className="min-w-0 text-left font-medium"
+                aria-sort={
+                  sort === key
+                    ? key === "title" || key === "author"
+                      ? "ascending"
+                      : "descending"
+                    : "none"
+                }
+              >
+                <button
+                  type="button"
+                  onClick={() => setSort(key)}
+                  className="hover:text-foreground"
+                >
+                  {label}
+                </button>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="block divide-y">
+          {books.map(({ resource, growth: item }) => (
+            <ResourceBook
+              key={resource.uid}
+              resource={resource}
+              growth={item}
+              rules={growth?.rules}
+              loading={loading}
+              own={own}
+            />
+          ))}
+        </tbody>
+      </table>
       {books.length === 0 && (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {query ? "一致する本はありません。" : "まだリソースがありません。"}
@@ -179,140 +234,163 @@ function ResourceBook({
           : 100,
       )
     : 0;
+  const title = resource.name.replace(/^#+\s*/, "");
+  const authors = resource.authors?.join("・") || "—";
   return (
-    <article className="overflow-hidden rounded-lg border bg-card">
-      <Dialog>
-        <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-3 text-xs text-muted-foreground">
+    <Dialog>
+      <tr className={`${rowLayout} gap-y-2 px-3 py-2 hover:bg-accent/30`}>
+        <td className="min-w-0 md:col-auto">
           <Link
             to={`/resource/${resource.uid}`}
-            aria-label={`${resource.name}の読書メモを開く`}
-            title="読書メモを開く"
-            className="flex size-9 items-center justify-center rounded-md hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            title={title}
+            className="flex min-w-0 items-center gap-2 font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <BookOpen className="size-5" />
+            <BookOpen className="size-4 shrink-0" />
+            <span className="truncate">{title}</span>
           </Link>
-          <span className="flex items-center gap-1">
-            <Zap className="size-3.5" />
-            Power {growth?.power.toLocaleString("ja-JP") ?? "—"}
-          </span>
-        </div>
-        <DialogTrigger asChild>
-          <button
-            type="button"
-            disabled={!growth}
-            aria-label={`${resource.name}の成長を見る`}
-            className="block w-full px-4 pb-4 text-left transition-colors hover:bg-accent/40 disabled:cursor-default"
-          >
-            <h3 className="line-clamp-2 min-h-12 text-base font-semibold leading-6">
-              {resource.name.replace(/^#+\s*/, "")}
-            </h3>
-            <p className="mt-1 truncate text-xs text-muted-foreground">
-              {resource.authors?.join("・") || "著者未設定"}
-            </p>
-            <div className="mt-4 flex items-baseline justify-between gap-2">
-              <span className="text-xl font-semibold tabular-nums">
-                {growth ? `Lv. ${growth.level}` : loading ? "Lv…" : "Lv. —"}
-              </span>
+        </td>
+        <td
+          className="col-start-1 row-start-2 min-w-0 truncate text-xs text-muted-foreground md:col-auto md:row-auto"
+          title={authors}
+        >
+          {authors}
+        </td>
+        <td className="col-start-2 row-start-1 text-right tabular-nums md:col-auto md:row-auto md:text-left">
+          <DialogTrigger asChild>
+            <button
+              type="button"
+              disabled={!growth}
+              aria-label={`${resource.name}のLv内訳を見る`}
+              className="rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
+            >
+              <span className="md:hidden">Lv. </span>
+              {growth ? growth.level : loading ? "…" : "—"}
+            </button>
+          </DialogTrigger>
+        </td>
+        <td className="col-span-2 min-w-0 md:col-span-1">
+          <DialogTrigger asChild>
+            <button
+              type="button"
+              disabled={!growth}
+              aria-label={`${resource.name}のXP内訳を見る`}
+              className="block w-full rounded-sm text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
+            >
               <span className="text-xs tabular-nums text-muted-foreground">
                 {growth
                   ? `${growth.current_level_xp} / ${growth.xp_for_next_level} XP`
-                  : ""}
+                  : "—"}
               </span>
-            </div>
-            <Progress
-              value={percentage}
-              className="mt-2 h-1.5"
-              aria-label={`${resource.name}のレベル進捗`}
-            />
-            {growth?.last_reviewed_on && (
-              <time
-                dateTime={growth.last_reviewed_on}
-                title="最終復習日"
-                className="mt-2 block text-xs text-muted-foreground"
-              >
-                {growth.last_reviewed_on}
-              </time>
-            )}
-          </button>
-        </DialogTrigger>
-        {growth && (
-          <DialogContent
-            className="max-h-[85dvh] overflow-y-auto sm:max-w-lg"
-            aria-describedby={undefined}
-          >
-            <DialogHeader>
-              <DialogTitle className="pr-6 leading-relaxed">
-                {resource.name.replace(/^#+\s*/, "")}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-semibold">Lv. {growth.level}</span>
-              <span className="text-sm">累計 {growth.total_xp} XP</span>
-            </div>
-            <Progress value={percentage} aria-label="リソースのレベル進捗" />
+              <Progress
+                value={percentage}
+                className="mt-1 h-1"
+                aria-label={`${resource.name}のレベル進捗`}
+              />
+            </button>
+          </DialogTrigger>
+        </td>
+        <td className="col-span-2 text-xs tabular-nums md:col-span-1">
+          <span className="text-muted-foreground md:hidden">Power </span>
+          {growth?.power.toLocaleString("ja-JP") ?? "—"}
+        </td>
+        <td className="min-w-0 text-xs tabular-nums text-muted-foreground">
+          <span className="md:hidden">復習日 </span>
+          <ResourceDate value={growth?.last_reviewed_on} label="復習日" />
+        </td>
+        <td className="min-w-0 text-right text-xs tabular-nums text-muted-foreground md:text-left">
+          <span className="md:hidden">更新日 </span>
+          <ResourceDate value={resource.updated} label="更新日" />
+        </td>
+      </tr>
+      {growth && (
+        <DialogContent
+          className="max-h-[85dvh] overflow-y-auto sm:max-w-lg"
+          aria-describedby={undefined}
+        >
+          <DialogHeader>
+            <DialogTitle className="pr-6 leading-relaxed">
+              {resource.name.replace(/^#+\s*/, "")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex items-baseline justify-between">
+            <span className="text-2xl font-semibold">Lv. {growth.level}</span>
+            <span className="text-sm">累計 {growth.total_xp} XP</span>
+          </div>
+          <Progress value={percentage} aria-label="リソースのレベル進捗" />
+          <p className="text-xs text-muted-foreground">
+            次のLvまで {growth.xp_for_next_level - growth.current_level_xp} XP
+          </p>
+          <dl className="grid grid-cols-[1fr_auto] gap-2 rounded border p-3 text-sm">
+            <dt>見たよ</dt>
+            <dd>+{growth.exposure_xp ?? "—"} XP</dd>
+            <dt>クイズ回答</dt>
+            <dd>+{growth.answer_xp ?? "—"} XP</dd>
+            <dt>正解ボーナス</dt>
+            <dd>+{growth.correct_bonus_xp ?? "—"} XP</dd>
+          </dl>
+          {rules && (
             <p className="text-xs text-muted-foreground">
-              次のLvまで {growth.xp_for_next_level - growth.current_level_xp} XP
+              見たよ +{rules.exposure_xp} ／ 回答 +{rules.answer_xp} ／ 正解 +
+              {rules.correct_bonus_xp} XP。同じ対象・種別は1日1回。
             </p>
-            <dl className="grid grid-cols-[1fr_auto] gap-2 rounded border p-3 text-sm">
-              <dt>見たよ</dt>
-              <dd>+{growth.exposure_xp ?? "—"} XP</dd>
-              <dt>クイズ回答</dt>
-              <dd>+{growth.answer_xp ?? "—"} XP</dd>
-              <dt>正解ボーナス</dt>
-              <dd>+{growth.correct_bonus_xp ?? "—"} XP</dd>
-            </dl>
-            {rules && (
-              <p className="text-xs text-muted-foreground">
-                見たよ +{rules.exposure_xp} ／ 回答 +{rules.answer_xp} ／ 正解 +
-                {rules.correct_bonus_xp} XP。同じ対象・種別は1日1回。
-              </p>
-            )}
-            <div className="rounded border p-3 text-sm">
-              <p className="font-semibold">Power {growth.power}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                論理 {growth.logic_count} ＋ 参照 {growth.reference_count}
-              </p>
+          )}
+          <div className="rounded border p-3 text-sm">
+            <p className="font-semibold">Power {growth.power}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              論理 {growth.logic_count} ＋ 参照 {growth.reference_count}
+            </p>
+          </div>
+          {own && (
+            <div>
+              <h4 className="mb-2 text-sm font-semibold">最近の成長</h4>
+              {growth.recent_xp.length ? (
+                <ul className="divide-y">
+                  {growth.recent_xp.map((event, index) => (
+                    <li
+                      key={`${event.earned_on}-${event.source}-${index}`}
+                      className="py-2 text-xs"
+                    >
+                      <div className="flex justify-between gap-2 text-muted-foreground">
+                        <span>
+                          {event.earned_on} ·{" "}
+                          {(
+                            {
+                              tanbun_exposure: "見たよ",
+                              quiz_answer: "回答",
+                              correct_bonus: "正解",
+                            } as Record<string, string>
+                          )[event.source] ?? event.source}
+                        </span>
+                        <span>+{event.xp} XP</span>
+                      </div>
+                      <p className="mt-1 break-words">{event.subject}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  まだ復習の記録はありません。
+                </p>
+              )}
             </div>
-            {own && (
-              <div>
-                <h4 className="mb-2 text-sm font-semibold">最近の成長</h4>
-                {growth.recent_xp.length ? (
-                  <ul className="divide-y">
-                    {growth.recent_xp.map((event, index) => (
-                      <li
-                        key={`${event.earned_on}-${event.source}-${index}`}
-                        className="py-2 text-xs"
-                      >
-                        <div className="flex justify-between gap-2 text-muted-foreground">
-                          <span>
-                            {event.earned_on} ·{" "}
-                            {(
-                              {
-                                tanbun_exposure: "見たよ",
-                                quiz_answer: "回答",
-                                correct_bonus: "正解",
-                              } as Record<string, string>
-                            )[event.source] ?? event.source}
-                          </span>
-                          <span>+{event.xp} XP</span>
-                        </div>
-                        <p className="mt-1 break-words">{event.subject}</p>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    まだ復習の記録はありません。
-                  </p>
-                )}
-              </div>
-            )}
-            <Button asChild>
-              <Link to={`/resource/${resource.uid}`}>読書メモを開く</Link>
-            </Button>
-          </DialogContent>
-        )}
-      </Dialog>
-    </article>
+          )}
+          <Button asChild>
+            <Link to={`/resource/${resource.uid}`}>読書メモを開く</Link>
+          </Button>
+        </DialogContent>
+      )}
+    </Dialog>
+  );
+}
+
+function ResourceDate({
+  value,
+  label,
+}: { value?: string | null; label: string }) {
+  if (!value) return <>—</>;
+  return (
+    <time dateTime={value} title={`${label}: ${value}`}>
+      {formatRelativeDate(value)}
+    </time>
   );
 }

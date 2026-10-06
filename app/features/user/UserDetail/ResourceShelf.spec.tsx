@@ -18,15 +18,12 @@ it("所有本を成長順に並べ、内訳を開き、著者で絞れる", asyn
       />
     </MemoryRouter>,
   );
-  expect(screen.getAllByRole("article")[0]).toHaveTextContent(
-    "リーダブルコード",
-  );
+  expect(screen.getAllByRole("row")[1]).toHaveTextContent("リーダブルコード");
   expect(screen.getByRole("option", { name: "復習日順" })).toBeInTheDocument();
-  expect(screen.getByText("2026-10-08")).toHaveAttribute(
+  expect(screen.getByTitle("復習日: 2026-10-08")).toHaveAttribute(
     "dateTime",
     "2026-10-08",
   );
-  expect(screen.getByText("2026-10-08")).toHaveAttribute("title", "最終復習日");
   expect(
     screen.queryByText(/に成長|復習すると育ちます/),
   ).not.toBeInTheDocument();
@@ -34,9 +31,9 @@ it("所有本を成長順に並べ、内訳を開き、著者で絞れる", asyn
     screen.getByRole("combobox", { name: "本棚の並び順" }),
     "power",
   );
-  expect(screen.getAllByRole("article")[0]).toHaveTextContent("神は数学者か？");
+  expect(screen.getAllByRole("row")[1]).toHaveTextContent("神は数学者か？");
   await user.click(
-    screen.getByRole("button", { name: "# リーダブルコードの成長を見る" }),
+    screen.getByRole("button", { name: "# リーダブルコードのXP内訳を見る" }),
   );
   const dialog = within(screen.getByRole("dialog"));
   expect(dialog.getByText("累計 80 XP")).toBeVisible();
@@ -48,8 +45,8 @@ it("所有本を成長順に並べ、内訳を開き、著者で絞れる", asyn
     screen.getByRole("textbox", { name: "本棚を絞り込む" }),
     "野矢",
   );
-  expect(screen.getAllByRole("article")).toHaveLength(1);
-  expect(screen.getByRole("article")).toHaveTextContent("論理学入門");
+  expect(screen.getAllByRole("row")).toHaveLength(2);
+  expect(screen.getAllByRole("row")[1]).toHaveTextContent("論理学入門");
 });
 
 it("リソース一覧の見出し横に件数と知識量をまとめる", async () => {
@@ -117,9 +114,9 @@ it("公開本棚には本人向けの活動ログや他人の本を載せない"
       />
     </MemoryRouter>,
   );
-  expect(screen.getAllByRole("article")).toHaveLength(3);
+  expect(screen.getAllByRole("row")).toHaveLength(4);
   await user.click(
-    screen.getByRole("button", { name: "# リーダブルコードの成長を見る" }),
+    screen.getByRole("button", { name: "# リーダブルコードのXP内訳を見る" }),
   );
   expect(screen.queryByText("順番を一貫させる")).not.toBeInTheDocument();
   expect(screen.queryByText("最近の成長")).not.toBeInTheDocument();
@@ -137,15 +134,16 @@ it("集計が未取得ならLv1やPower0を捏造せず本のリンクを残す"
       />
     </MemoryRouter>,
   );
-  expect(screen.getAllByText("Lv. —")).toHaveLength(3);
-  expect(screen.queryByText("Lv. 1")).not.toBeInTheDocument();
   expect(
-    screen.getAllByRole("link", { name: /の読書メモを開く/ }),
-  ).toHaveLength(3);
+    screen
+      .getAllByRole("button", { name: /のXP内訳を見る/ })
+      .every((button) => button.hasAttribute("disabled")),
+  ).toBe(true);
+  expect(screen.getAllByRole("link")).toHaveLength(3);
   expect(screen.getByRole("button", { name: "再試行" })).toBeVisible();
 });
 
-it("本アイコンから詳細へ移動し、成長ダイアログとは干渉しない", async () => {
+it("リソース名から詳細へ移動し、XPダイアログとは干渉しない", async () => {
   const user = userEvent.setup();
   render(
     <MemoryRouter>
@@ -171,10 +169,56 @@ it("本アイコンから詳細へ移動し、成長ダイアログとは干渉�
   );
   expect(screen.queryByText("読書メモを開く")).not.toBeInTheDocument();
   const link = screen.getByRole("link", {
-    name: "# リーダブルコードの読書メモを開く",
+    name: "リーダブルコード",
   });
   expect(link.closest("button")).toBeNull();
   await user.click(link);
   expect(screen.getByText("リソース詳細")).toBeVisible();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("タイトル・著者を別列で省略し、更新日と復習日を区別して並べ替える", async () => {
+  const user = userEvent.setup();
+  const namespace = structuredClone(shelfFixture);
+  const first = namespace.g?.nodes[0].id as unknown as {
+    name: string;
+    authors: string[];
+    updated: string;
+  };
+  first.name = "# とても長いリソース名".repeat(8);
+  first.authors = ["とても長い著者名".repeat(8)];
+  first.updated = "2026-10-09T12:30:00Z";
+  render(
+    <MemoryRouter>
+      <ResourceShelf
+        namespace={namespace}
+        growth={growthFixture}
+        own
+        loading={false}
+        onRetry={vi.fn()}
+      />
+    </MemoryRouter>,
+  );
+  expect(
+    screen.getAllByRole("columnheader").map((cell) => cell.textContent),
+  ).toEqual(["リソース", "著者", "Lv", "XP", "Power", "復習日", "更新日"]);
+  const link = screen.getByRole("link", {
+    name: first.name.replace(/^#+\s*/, ""),
+  });
+  expect(link).toHaveAttribute(
+    "href",
+    "/resource/10000000-0000-0000-0000-000000000001",
+  );
+  expect(link.querySelector("span")).toHaveClass("truncate");
+  expect(screen.getByTitle(first.authors[0])).toHaveClass("truncate");
+  expect(screen.getByTitle("更新日: 2026-10-09T12:30:00Z")).toHaveAttribute(
+    "datetime",
+    first.updated,
+  );
+  await user.click(screen.getByRole("button", { name: "更新日" }));
+  expect(screen.getAllByRole("row")[1]).toContainElement(link);
+  expect(screen.getByRole("columnheader", { name: "更新日" })).toHaveAttribute(
+    "aria-sort",
+    "descending",
+  );
 });
