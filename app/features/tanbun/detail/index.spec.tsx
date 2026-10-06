@@ -31,18 +31,29 @@ describe("単文詳細", () => {
     expect(screen.getByRole("heading", { name: "詳細" })).toBeVisible();
     expect(
       screen.getByRole("navigation", { name: "保存場所" }),
-    ).toHaveTextContent("@GTOphilos# 神は数学者か？アルキメデス");
+    ).toHaveTextContent("@GTOphilos# 神は数学者か？");
     expect(
       screen.queryByRole("heading", { name: "論理" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "参照" })).toBeVisible();
     const definitionPath = screen.getByRole("navigation", {
-      name: "定義元の経路",
+      name: "保存場所",
     });
     expect(definitionPath).toBeVisible();
-    expect(within(definitionPath).getAllByRole("link")[0]).toHaveTextContent(
-      "アリストテレスの運動法則",
+    expect(
+      within(definitionPath).getByRole("link", {
+        name: "ものは自分に相応しい居場所に向う",
+      }),
+    ).toBeVisible();
+    expect(definitionPath).toHaveTextContent(
+      fixtureDetail1.location.headers[0].val,
     );
+    expect(
+      within(definitionPath).queryByText("アルキメデス", { exact: true }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("navigation", { name: "定義元の経路" }),
+    ).not.toBeInTheDocument();
     expect(
       within(definitionPath).queryByText("定義元"),
     ).not.toBeInTheDocument();

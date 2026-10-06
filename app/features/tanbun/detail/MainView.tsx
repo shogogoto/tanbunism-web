@@ -1,6 +1,6 @@
 import { ChevronRight } from "lucide-react";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router";
+import type React from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SentenceQuizActions from "~/features/resource/detail/SentenceQuizActions";
 import Loading from "~/shared/components/Loading";
 import {
@@ -12,7 +12,6 @@ import type {
   MResource,
   Tanbun,
   TanbunChain,
-  TanbunContext,
   TanbunLocation,
   UserReadPublic,
 } from "~/shared/generated/fastAPI.schemas";
@@ -115,82 +114,6 @@ function RelationSection({
   );
 }
 
-function tanbunLabel(tanbun: Tanbun) {
-  return (
-    tanbun.term?.names?.[0] ??
-    (tanbun.sentence === "<<<not defined>>>" ? "名称未設定" : tanbun.sentence)
-  );
-}
-
-function Breadcrumb({
-  label,
-  parents,
-  current,
-  context,
-  showResource = false,
-  showLabel = true,
-}: {
-  label: string;
-  parents: Tanbun[];
-  current: Tanbun;
-  context: TanbunContext;
-  showResource?: boolean;
-  showLabel?: boolean;
-}) {
-  return (
-    <nav aria-label={`${label}の経路`} className="overflow-x-auto pb-1">
-      <ol className="flex min-w-max items-center gap-1 text-sm text-muted-foreground">
-        {showLabel && (
-          <li className="mr-1 text-xs font-medium text-foreground">{label}</li>
-        )}
-        {showResource && (
-          <>
-            <li>
-              <Link
-                to={`/resource/${context.resource.uid}`}
-                className="block max-w-48 truncate rounded px-1.5 py-1 hover:bg-muted hover:text-foreground"
-                title={context.resource.name}
-              >
-                {context.resource.name}
-              </Link>
-            </li>
-            <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
-          </>
-        )}
-        {parents.map((parent) => {
-          const label = tanbunLabel(parent);
-          return (
-            <React.Fragment key={parent.uid}>
-              <li>
-                <Link
-                  to={`/tanbun/${parent.uid}`}
-                  state={{
-                    tanbun: parent,
-                    user: context.user,
-                    resource: context.resource,
-                  }}
-                  title={label}
-                  className="block max-w-48 truncate rounded px-1.5 py-1 hover:bg-muted hover:text-foreground"
-                >
-                  {label}
-                </Link>
-              </li>
-              <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
-            </React.Fragment>
-          );
-        })}
-        <li
-          aria-current="page"
-          title={tanbunLabel(current)}
-          className="max-w-48 truncate px-1.5 py-1 font-medium text-foreground"
-        >
-          {tanbunLabel(current)}
-        </li>
-      </ol>
-    </nav>
-  );
-}
-
 function ContextBreadcrumbs({
   location,
   current,
@@ -199,16 +122,10 @@ function ContextBreadcrumbs({
   current: Tanbun;
 }) {
   const quoteContexts = location.quote_contexts ?? [];
+  if (quoteContexts.length === 0) return null;
 
   return (
     <div className="mt-3 space-y-1" aria-label="単文の文脈">
-      <Breadcrumb
-        label="定義元"
-        parents={location.parents}
-        current={current}
-        context={location}
-        showLabel={false}
-      />
       {quoteContexts.length > 0 && (
         <details open className="group rounded-md bg-muted/40 px-2 py-1">
           <summary className="flex cursor-pointer list-none items-center gap-1 text-sm text-muted-foreground">
@@ -217,13 +134,13 @@ function ContextBreadcrumbs({
           </summary>
           <div className="mt-1 space-y-1 border-l pl-2">
             {quoteContexts.map((context, index) => (
-              <Breadcrumb
+              <LocationView
                 key={`${context.resource.uid}-${index}`}
-                label={`引用先 ${index + 1}`}
-                parents={context.parents}
+                ariaLabel={`引用先 ${index + 1}の経路`}
+                loc={context}
+                resourceHref={`/resource/${context.resource.uid}`}
+                tanbunId={current.uid}
                 current={current}
-                context={context}
-                showResource
               />
             ))}
           </div>
@@ -463,7 +380,10 @@ export default function MainView({
               />
             )}
             <div className="mt-2 rounded-lg border bg-card py-3 shadow-sm">
-              <TanbunCardContent k={headerTanbun} />
+              <TanbunCardContent
+                k={headerTanbun}
+                className="border border-green-500/30 bg-green-500/10 px-2 py-0.5 text-xs font-medium"
+              />
               {!preview && (
                 <div className="mx-6 mt-3 border-t pt-3">
                   <SentenceQuizActions

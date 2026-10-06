@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import { Link } from "react-router";
 import {
   Breadcrumb,
@@ -23,6 +23,9 @@ type Props = {
   resource?: MResource;
   currentLabel?: string;
   resourceHref?: string;
+  children?: ReactNode;
+  ariaLabel?: string;
+  wrap?: boolean;
 };
 
 function folderInfo(folder: FolderCrumb) {
@@ -55,13 +58,18 @@ export default function EntryBreadcrumb({
   resource,
   currentLabel,
   resourceHref,
+  children,
+  ariaLabel = "保存場所",
+  wrap = false,
 }: Props) {
   const username = user.username || user.uid;
   const folderItems = breadcrumbFolders(folders ?? []);
 
   return (
-    <Breadcrumb className="overflow-x-auto pb-2" aria-label="保存場所">
-      <BreadcrumbList className="!m-0 min-w-max flex-nowrap !list-none !p-0">
+    <Breadcrumb className="overflow-x-auto pb-2" aria-label={ariaLabel}>
+      <BreadcrumbList
+        className={`!m-0 !list-none !p-0 ${wrap ? "min-w-0 flex-wrap" : "min-w-max flex-nowrap"}`}
+      >
         <BreadcrumbItem>
           <BreadcrumbLink
             asChild
@@ -112,7 +120,7 @@ export default function EntryBreadcrumb({
           <>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              {currentLabel ? (
+              {currentLabel || children || resourceHref ? (
                 <BreadcrumbLink
                   asChild
                   className="!text-muted-foreground !no-underline"
@@ -136,6 +144,7 @@ export default function EntryBreadcrumb({
             </BreadcrumbItem>
           </>
         )}
+        {children}
         {currentLabel && (
           <>
             <BreadcrumbSeparator />

@@ -18,3 +18,13 @@ export const Default: Story = {
     current: fixtureDetail1.knowdes[fixtureDetail1.uid.replaceAll("-", "")],
   },
 };
+
+export const ShortPath: Story = {
+  args: {
+    ...Default.args,
+    loc: {
+      ...fixtureDetail1.location,
+      parents: fixtureDetail1.location.parents.slice(0, 2),
+    },
+  },
+};
