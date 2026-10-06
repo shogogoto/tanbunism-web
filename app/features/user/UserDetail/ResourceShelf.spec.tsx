@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { expect, it, vi } from "vitest";
 import ResourceShelf from "./ResourceShelf";
 import { growthFixture, shelfFixture } from "./ResourceShelf.fixture";
@@ -130,8 +130,42 @@ it("集計が未取得ならLv1やPower0を捏造せず本のリンクを残す"
   );
   expect(screen.getAllByText("Lv. —")).toHaveLength(3);
   expect(screen.queryByText("Lv. 1")).not.toBeInTheDocument();
-  expect(screen.getAllByRole("link", { name: "読書メモを開く" })).toHaveLength(
-    3,
-  );
+  expect(
+    screen.getAllByRole("link", { name: /の読書メモを開く/ }),
+  ).toHaveLength(3);
   expect(screen.getByRole("button", { name: "再試行" })).toBeVisible();
+});
+
+it("本アイコンから詳細へ移動し、成長ダイアログとは干渉しない", async () => {
+  const user = userEvent.setup();
+  render(
+    <MemoryRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <ResourceShelf
+              namespace={shelfFixture}
+              growth={growthFixture}
+              own
+              loading={false}
+              onRetry={vi.fn()}
+            />
+          }
+        />
+        <Route
+          path="/resource/10000000-0000-0000-0000-000000000001"
+          element={<p>リソース詳細</p>}
+        />
+      </Routes>
+    </MemoryRouter>,
+  );
+  expect(screen.queryByText("読書メモを開く")).not.toBeInTheDocument();
+  const link = screen.getByRole("link", {
+    name: "# リーダブルコードの読書メモを開く",
+  });
+  expect(link.closest("button")).toBeNull();
+  await user.click(link);
+  expect(screen.getByText("リソース詳細")).toBeVisible();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });

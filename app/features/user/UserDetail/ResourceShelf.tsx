@@ -182,20 +182,27 @@ function ResourceBook({
   return (
     <article className="overflow-hidden rounded-lg border bg-card">
       <Dialog>
+        <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-3 text-xs text-muted-foreground">
+          <Link
+            to={`/resource/${resource.uid}`}
+            aria-label={`${resource.name}の読書メモを開く`}
+            title="読書メモを開く"
+            className="flex size-9 items-center justify-center rounded-md hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <BookOpen className="size-5" />
+          </Link>
+          <span className="flex items-center gap-1">
+            <Zap className="size-3.5" />
+            Power {growth?.power.toLocaleString("ja-JP") ?? "—"}
+          </span>
+        </div>
         <DialogTrigger asChild>
           <button
             type="button"
             disabled={!growth}
             aria-label={`${resource.name}の成長を見る`}
-            className="block w-full p-4 text-left transition-colors hover:bg-accent/40 disabled:cursor-default"
+            className="block w-full px-4 pb-4 text-left transition-colors hover:bg-accent/40 disabled:cursor-default"
           >
-            <div className="mb-3 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-              <BookOpen className="size-5" />
-              <span className="flex items-center gap-1">
-                <Zap className="size-3.5" />
-                Power {growth?.power.toLocaleString("ja-JP") ?? "—"}
-              </span>
-            </div>
             <h3 className="line-clamp-2 min-h-12 text-base font-semibold leading-6">
               {resource.name.replace(/^#+\s*/, "")}
             </h3>
@@ -309,14 +316,6 @@ function ResourceBook({
           </DialogContent>
         )}
       </Dialog>
-      <div className="border-t px-4 py-2 text-xs">
-        <Link
-          to={`/resource/${resource.uid}`}
-          className="text-muted-foreground hover:text-foreground hover:underline"
-        >
-          読書メモを開く
-        </Link>
-      </div>
     </article>
   );
 }
