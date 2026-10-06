@@ -9,7 +9,12 @@ import SignInForm, { UserSignInAction } from ".";
 import { AuthProvider } from "../AuthProvider";
 import * as AuthMock from "../AuthProvider";
 
-const server = setupServer(...getUserMock(), ...getAuthMock());
+const server = setupServer(
+  // ログイン前にcurrent-userの成功mockで認証済みになることを防ぐ。
+  http.get("*/user/me", () => new HttpResponse(null, { status: 401 })),
+  ...getUserMock(),
+  ...getAuthMock(),
+);
 beforeAll(() => server.listen());
 afterEach(() => {
   server.resetHandlers();
