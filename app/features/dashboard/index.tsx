@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
+import { ResourceGrowthProvider } from "~/features/gamification/ResourceGrowth";
 import NamespaceExplorer from "~/features/namespace/components/NamespaceExplorer";
 import AnswerHistory from "~/features/quiz/AnswerHistory";
 import QuizList from "~/features/quiz/QuizList";
@@ -138,7 +139,9 @@ export default function Dashboard() {
               >
                 <Card>
                   <CardContent className="p-4 sm:p-6">
-                    <NamespaceExplorer nsprops={namespace} />
+                    <ResourceGrowthProvider active={activeSection === "notes"}>
+                      <NamespaceExplorer nsprops={namespace} />
+                    </ResourceGrowthProvider>
                   </CardContent>
                 </Card>
                 <Button

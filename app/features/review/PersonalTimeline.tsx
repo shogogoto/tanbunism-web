@@ -114,7 +114,8 @@ export default function PersonalTimeline() {
         (key) =>
           Array.isArray(key) &&
           typeof key[0] === "string" &&
-          key[0].endsWith("/learning-progress"),
+          (key[0].endsWith("/learning-progress") ||
+            key[0] === "resource-growth"),
       );
     } catch (reason) {
       updateTimeline((current) => ({
