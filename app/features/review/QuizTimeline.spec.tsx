@@ -3,12 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
 import { expect, it, vi } from "vitest";
-import { answerQuiz, listDailyQuizzes } from "~/features/quiz/api";
+import {
+  addDailyQuizzes,
+  answerQuiz,
+  listDailyQuizzes,
+} from "~/features/quiz/api";
 import QuizTimeline from "./QuizTimeline";
 
 vi.mock("~/features/quiz/api", () => ({
   answerQuiz: vi.fn(),
   listDailyQuizzes: vi.fn(),
+  addDailyQuizzes: vi.fn(),
 }));
 
 function renderTimeline() {
@@ -20,6 +25,48 @@ function renderTimeline() {
     </SWRConfig>,
   );
 }
+
+it("消化後の追加復習では新しく追加した問題へ移動する", async () => {
+  const user = userEvent.setup();
+  const first = {
+    quiz: {
+      quiz_id: "first",
+      quiz_type: "term2sent" as const,
+      prompt: { subject: "最初の問題", answer_kind: "sentence" as const },
+      statement: "最初の問題",
+      options: {},
+      correct: [],
+      created: "2026-10-06T00:00:00Z",
+      no_correct_option: false,
+    },
+    attempts: 1,
+    corrects: 1,
+    accuracy: 1,
+    last_attempted_at: null,
+    answered_today: true,
+  };
+  const next = {
+    ...first,
+    quiz: {
+      ...first.quiz,
+      quiz_id: "next",
+      prompt: { ...first.quiz.prompt, subject: "追加の問題" },
+    },
+    answered_today: false,
+  };
+  vi.mocked(listDailyQuizzes).mockResolvedValue({ total: 1, data: [first] });
+  vi.mocked(addDailyQuizzes).mockResolvedValue({
+    total: 2,
+    data: [first, next],
+  });
+  renderTimeline();
+  await user.click(
+    await screen.findByRole("button", { name: "もう少し復習する" }),
+  );
+  expect(await screen.findByText("追加の問題")).toBeVisible();
+  expect(screen.getByText("最初の問題")).not.toBeVisible();
+  expect(addDailyQuizzes).toHaveBeenCalledWith("default");
+});
 
 it("全ユーザー版では専用feedを取得する", async () => {
   vi.mocked(listDailyQuizzes).mockResolvedValue({
@@ -56,7 +103,7 @@ it("全ユーザー版では専用feedを取得する", async () => {
   );
 
   expect(await screen.findByText("みんなの問題")).toBeVisible();
-  expect(listDailyQuizzes).toHaveBeenCalledWith(false, undefined);
+  expect(listDailyQuizzes).toHaveBeenCalledWith(false, undefined, "default");
 });
 
 it("日替わりセットの順序を維持し1問ずつ表示する", async () => {

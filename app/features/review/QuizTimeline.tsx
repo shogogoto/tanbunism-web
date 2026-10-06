@@ -2,7 +2,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
 import QuizPrompt from "~/features/quiz/QuizPrompt";
-import { type ManagedQuiz, listDailyQuizzes } from "~/features/quiz/api";
+import {
+  type ManagedQuiz,
+  addDailyQuizzes,
+  listDailyQuizzes,
+} from "~/features/quiz/api";
 import { useQuizSWR } from "~/features/quiz/useQuizSWR";
 import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
@@ -15,33 +19,49 @@ const REVIEW_ACCURACY_THRESHOLD = 0.8;
 
 export default function QuizTimeline({
   scope = "personal",
+  profile = "default",
 }: {
   scope?: "personal" | "global";
+  profile?: string;
 }) {
   const day = useRecommendationDay();
-  return <DailyQuizTimeline key={`${scope}:${day}`} scope={scope} day={day} />;
+  return (
+    <DailyQuizTimeline
+      key={`${scope}:${profile}:${day}`}
+      scope={scope}
+      day={day}
+      profile={profile}
+    />
+  );
 }
 
 function DailyQuizTimeline({
   scope,
   day,
+  profile,
 }: {
   scope: "personal" | "global";
   day: string;
+  profile: string;
 }) {
   const [sessionResults, setSessionResults] = useState<Record<string, boolean>>(
     {},
   );
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const [exhausted, setExhausted] = useState(false);
+  const [actionError, setActionError] = useState<string>();
   const {
     data: quizzes = [],
     error,
     isLoading,
     mutate,
   } = useQuizSWR<ManagedQuiz[]>(
-    ["daily-quiz-timeline", scope, day],
+    ["daily-quiz-timeline", scope, profile, day],
     async (cacheOptions) => {
-      return (await listDailyQuizzes(scope === "personal", cacheOptions)).data;
+      return (
+        await listDailyQuizzes(scope === "personal", cacheOptions, profile)
+      ).data;
     },
     {
       dedupingInterval: 30_000,
@@ -56,6 +76,25 @@ function DailyQuizTimeline({
     (item) => item.answered_today || item.quiz.quiz_id in sessionResults,
   ).length;
 
+  async function addMore() {
+    setAdding(true);
+    setActionError(undefined);
+    try {
+      const result = await addDailyQuizzes(profile);
+      setExhausted(
+        result.data.length === sorted.length || result.data.length >= 500,
+      );
+      await mutate(result.data, { revalidate: false });
+      if (result.data.length > sorted.length) setCurrentIndex(sorted.length);
+    } catch (reason) {
+      setActionError(
+        reason instanceof Error ? reason.message : "追加できませんでした。",
+      );
+    } finally {
+      setAdding(false);
+    }
+  }
+
   useEffect(() => {
     setCurrentIndex((current) =>
       Math.min(current, Math.max(0, sorted.length - 1)),
@@ -68,6 +107,11 @@ function DailyQuizTimeline({
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-2" data-quiz-timeline>
+      {actionError && (
+        <p role="alert" className="text-sm text-destructive">
+          {actionError}
+        </p>
+      )}
       {error && (
         <p
           role="alert"
@@ -78,11 +122,28 @@ function DailyQuizTimeline({
             : "クイズTLを取得できませんでした。"}
         </p>
       )}
+      {scope === "personal" &&
+        sorted.length > 0 &&
+        completed === sorted.length && (
+          <div className="py-2 text-center">
+            <Button
+              variant="outline"
+              disabled={adding || exhausted}
+              onClick={() => void addMore()}
+            >
+              {exhausted
+                ? "今日の追加候補はありません"
+                : adding
+                  ? "選んでいます…"
+                  : "もう少し復習する"}
+            </Button>
+          </div>
+        )}
       {sorted.length === 0 && !error && (
         <p className="border p-2 text-sm text-muted-foreground">
           {scope === "global"
             ? "回答できるクイズはまだありません。"
-            : "学習計画でクイズを準備すると、ここに表示されます。"}
+            : "この設定に合うクイズはありません。対象リソースを見直すか、学習計画でクイズを準備してください。"}
         </p>
       )}
       {sorted.length > 0 && (

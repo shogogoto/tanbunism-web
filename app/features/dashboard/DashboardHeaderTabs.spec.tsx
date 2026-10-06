@@ -11,13 +11,13 @@ it("Ctrl+数字で選べる番号を各タブへ表示する", () => {
     </MemoryRouter>,
   );
 
-  const timeline = screen.getByRole("tab", { name: "回答履歴" });
+  const timeline = screen.getByRole("tab", { name: "復習管理" });
   const notes = screen.getByRole("tab", { name: "リソース" });
 
   expect(timeline).toHaveAttribute("title", "Ctrl+1");
   expect(timeline.querySelector("kbd")).toHaveTextContent("1");
-  expect(notes).toHaveAttribute("title", "Ctrl+4");
-  expect(notes.querySelector("kbd")).toHaveTextContent("4");
+  expect(notes).toHaveAttribute("title", "Ctrl+5");
+  expect(notes.querySelector("kbd")).toHaveTextContent("5");
 });
 
 it("選択したタブへ下線indicatorを移動する", async () => {
@@ -29,7 +29,7 @@ it("選択したタブへ下線indicatorを移動する", async () => {
   );
 
   const indicator = container.querySelector("[data-dashboard-tab-indicator]");
-  expect(indicator).toHaveAttribute("data-active-tab", "answers");
+  expect(indicator).toHaveAttribute("data-active-tab", "review-settings");
 
   await user.click(screen.getByRole("tab", { name: "学習計画" }));
 

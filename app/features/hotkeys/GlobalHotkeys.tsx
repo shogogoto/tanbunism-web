@@ -296,8 +296,13 @@ function contextHotkeys(pathname: string, search: string): HotkeyDefinition[] {
   if (pathname !== "/dashboard" && pathname !== "/review") return [];
   const view =
     new URLSearchParams(search).get("view") ??
-    (pathname === "/review" ? "knowledge" : "answers");
+    (pathname === "/review" ? "knowledge" : "review-settings");
   if (view === "study-plans") return studyPlanHotkeys;
+  if (view === "review-settings")
+    return [
+      { keys: ["j", "k"], label: "復習設定を移動" },
+      { keys: ["Enter"], label: "選んだ設定で復習する" },
+    ];
   if (view === "answers") return answerHistoryHotkeys;
   if (pathname === "/review" && view === "quiz") {
     return [

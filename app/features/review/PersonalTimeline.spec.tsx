@@ -9,6 +9,7 @@ import PersonalTimeline, {
   PERSONAL_TIMELINE_CACHE_KEY,
 } from "./PersonalTimeline";
 import {
+  addPersonalTanbuns,
   getTodayTanbunExposureCount,
   listPersonalTanbuns,
   markTanbunSeen,
@@ -23,6 +24,7 @@ vi.mock("./api", () => ({
   listPersonalTanbuns: vi.fn(),
   getTodayTanbunExposureCount: vi.fn(),
   markTanbunSeen: vi.fn(),
+  addPersonalTanbuns: vi.fn(),
 }));
 
 beforeEach(async () => {
@@ -161,7 +163,7 @@ it("記録に失敗したら表示を元に戻す", async () => {
 
 it("更新中も永続cacheのTLを表示する", async () => {
   await genericCache.set(
-    `${PERSONAL_TIMELINE_CACHE_KEY}:${recommendationDay()}`,
+    `${PERSONAL_TIMELINE_CACHE_KEY}:default:${recommendationDay()}`,
     {
       items: [
         {
@@ -190,4 +192,38 @@ it("更新中も永続cacheのTLを表示する", async () => {
   expect(await screen.findByText("キャッシュされた単文")).toBeVisible();
   expect(screen.getByText("3件")).toBeVisible();
   expect(screen.queryByLabelText("読み込み中")).toBeNull();
+});
+
+it("今日のセットを消化したら、現在の設定で追加復習できる", async () => {
+  const user = (await import("@testing-library/user-event")).default.setup();
+  const first = {
+    uid: "first",
+    sentence: "最初の単文",
+    term_names: [],
+    resource_uid: "r",
+    resource_name: "本",
+    updated_at: null,
+    exposure_count: 1,
+    seen_today: true,
+  };
+  const next = {
+    ...first,
+    uid: "next",
+    sentence: "追加の単文",
+    seen_today: false,
+  };
+  vi.mocked(listPersonalTanbuns).mockResolvedValue([first]);
+  vi.mocked(getTodayTanbunExposureCount).mockResolvedValue({
+    count: 1,
+    seen_on: "today",
+  });
+  vi.mocked(addPersonalTanbuns).mockResolvedValue([first, next]);
+  renderTimeline();
+  await user.click(
+    await screen.findByRole("button", { name: "もう少し復習する" }),
+  );
+  expect(await screen.findByText("追加の単文")).toBeVisible();
+  expect(screen.getByText("最初の単文")).toBeVisible();
+  expect(addPersonalTanbuns).toHaveBeenCalledWith("default");
+  expect(screen.queryByRole("button", { name: "もう少し復習する" })).toBeNull();
 });

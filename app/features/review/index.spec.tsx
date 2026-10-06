@@ -8,6 +8,10 @@ import ReviewHeaderTabs from "./ReviewHeaderTabs";
 vi.mock("~/features/auth/AuthGuard", () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
 }));
+vi.mock("~/features/auth/AuthProvider", () => ({
+  useAuth: () => ({ user: { uid: "review-test" } }),
+}));
+vi.mock("./ReviewSettingsSelector", () => ({ default: () => null }));
 vi.mock("./PersonalTimeline", () => ({
   default: () => <input aria-label="知識の状態" defaultValue="初期値" />,
 }));

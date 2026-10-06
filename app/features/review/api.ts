@@ -25,13 +25,26 @@ export type TodayTanbunExposureCount = {
   count: number;
 };
 
-export async function listPersonalTanbuns(): Promise<PersonalTanbunItem[]> {
-  return request<PersonalTanbunItem[]>("/dashboard/tanbuns");
+export async function listPersonalTanbuns(
+  profile = "default",
+): Promise<PersonalTanbunItem[]> {
+  return request<PersonalTanbunItem[]>(
+    `/dashboard/tanbuns?profile=${encodeURIComponent(profile)}`,
+  );
 }
 
 export async function getTodayTanbunExposureCount(): Promise<TodayTanbunExposureCount> {
   return request<TodayTanbunExposureCount>(
     "/dashboard/tanbuns/exposures/today",
+  );
+}
+
+export async function addPersonalTanbuns(
+  profile: string,
+): Promise<PersonalTanbunItem[]> {
+  return request(
+    `/dashboard/tanbuns/more?profile=${encodeURIComponent(profile)}`,
+    { method: "POST" },
   );
 }
 

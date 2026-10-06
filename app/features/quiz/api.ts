@@ -669,14 +669,15 @@ export async function listQuizFeed(
 export async function listDailyQuizzes(
   personal: boolean,
   options: QuizCacheOptions = {},
+  profile = "default",
 ): Promise<{ data: ManagedQuiz[]; total: number }> {
   return withQuizCache(
     "daily-quizzes",
-    { personal, day: recommendationDay() },
+    { personal, profile, day: recommendationDay() },
     quizCachePolicy.live,
     async () => {
       const response = await fetch(
-        `${API_BASE_URL}/quiz/daily?personal=${personal}`,
+        `${API_BASE_URL}/quiz/daily?personal=${personal}&profile=${encodeURIComponent(profile)}`,
         { credentials: "include" },
       );
       if (!response.ok) {
@@ -689,6 +690,23 @@ export async function listDailyQuizzes(
     },
     options,
   );
+}
+
+export async function addDailyQuizzes(
+  profile: string,
+): Promise<ManagedQuizResult> {
+  const response = await fetch(
+    `${API_BASE_URL}/quiz/daily/more?profile=${encodeURIComponent(profile)}`,
+    { method: "POST", credentials: "include" },
+  );
+  if (!response.ok)
+    throw new QuizApiError(
+      "追加のクイズを取得できませんでした。",
+      response.status,
+    );
+  const result = (await response.json()) as ManagedQuizResult;
+  await invalidateQuizCache("daily-quizzes");
+  return result;
 }
 
 export async function createSentenceQuiz(

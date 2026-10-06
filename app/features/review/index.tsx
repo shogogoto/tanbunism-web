@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
+import { useAuth } from "~/features/auth/AuthProvider";
 import QuizSession from "~/features/quiz/QuizSession";
 import {
   type SwipeGesture,
@@ -10,9 +11,31 @@ import {
 } from "~/shared/lib/swipe";
 import PersonalTimeline from "./PersonalTimeline";
 import QuizTimeline from "./QuizTimeline";
+import ReviewSettingsSelector from "./ReviewSettingsSelector";
+import { presetStorageKey } from "./settings";
 
 export default function Review() {
   const [params, setParams] = useSearchParams();
+  const { user } = useAuth();
+  let storedPreset = "default";
+  try {
+    if (user && typeof localStorage !== "undefined")
+      storedPreset =
+        localStorage.getItem(presetStorageKey(user.uid)) ?? "default";
+  } catch {
+    /* localStorageが無効でも標準設定を使う */
+  }
+  const preset = params.get("preset") ?? storedPreset;
+  function selectPreset(id: string) {
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        next.set("preset", id);
+        return next;
+      },
+      { replace: true },
+    );
+  }
   const active = params.get("view") === "quiz" ? "quiz" : "knowledge";
   const [visited, setVisited] = useState(new Set([active]));
   const rendered = new Set(visited).add(active);
@@ -71,9 +94,12 @@ export default function Review() {
           gesture.current = undefined;
         }}
       >
+        {!(active === "quiz" && params.has("plan")) && (
+          <ReviewSettingsSelector selected={preset} onSelect={selectPreset} />
+        )}
         {rendered.has("knowledge") && (
           <div hidden={active !== "knowledge"}>
-            <PersonalTimeline />
+            <PersonalTimeline key={preset} profile={preset} />
           </div>
         )}
         {rendered.has("quiz") && (
@@ -89,7 +115,7 @@ export default function Review() {
                 <QuizSession />
               </>
             ) : (
-              <QuizTimeline />
+              <QuizTimeline profile={preset} />
             )}
           </div>
         )}

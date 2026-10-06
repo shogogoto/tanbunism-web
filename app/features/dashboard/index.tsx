@@ -7,6 +7,7 @@ import NamespaceExplorer from "~/features/namespace/components/NamespaceExplorer
 import AnswerHistory from "~/features/quiz/AnswerHistory";
 import QuizList from "~/features/quiz/QuizList";
 import StudyPlanManager from "~/features/quiz/StudyPlanManager";
+import ReviewSettingsManager from "~/features/review/ReviewSettingsManager";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
 import { useGetNamaspaceNamespaceGet } from "~/shared/generated/entry/entry";
@@ -30,7 +31,7 @@ export default function Dashboard() {
   const requestedSection = searchParams.get("view");
   const activeSection = isDashboardSection(requestedSection)
     ? requestedSection
-    : "answers";
+    : "review-settings";
   const [mountedSections, setMountedSections] = useState<Set<DashboardSection>>(
     () => new Set([activeSection]),
   );
@@ -54,7 +55,7 @@ export default function Dashboard() {
     );
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
-      if (section === "answers") next.delete("view");
+      if (section === "review-settings") next.delete("view");
       else next.set("view", section);
       return next;
     });
@@ -120,6 +121,11 @@ export default function Dashboard() {
           }}
         >
           <div className="relative">
+            {renderedSections.has("review-settings") && (
+              <div hidden={activeSection !== "review-settings"}>
+                <ReviewSettingsManager />
+              </div>
+            )}
             {renderedSections.has("answers") && (
               <div
                 hidden={activeSection !== "answers"}

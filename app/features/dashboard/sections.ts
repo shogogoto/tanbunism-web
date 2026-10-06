@@ -1,4 +1,5 @@
 export const dashboardSections = [
+  { id: "review-settings", label: "復習管理" },
   { id: "answers", label: "回答履歴" },
   { id: "study-plans", label: "学習計画" },
   { id: "quiz-management", label: "クイズ管理" },

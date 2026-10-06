@@ -12,6 +12,7 @@ import { genericCache } from "~/shared/lib/indexed";
 import { useRecommendationDay } from "~/shared/lib/recommendationDay";
 import {
   type PersonalTanbunItem,
+  addPersonalTanbuns,
   getTodayTanbunExposureCount,
   listPersonalTanbuns,
   markTanbunSeen,
@@ -26,20 +27,22 @@ export const PERSONAL_TIMELINE_CACHE_KEY =
   "private:dashboard:personal-timeline";
 const PERSONAL_TIMELINE_CACHE_TTL = 24 * 60 * 60_000;
 
-export default function PersonalTimeline() {
+export default function PersonalTimeline({
+  profile = "default",
+}: { profile?: string }) {
   const { mutate: mutateGlobal } = useSWRConfig();
   const day = useRecommendationDay();
-  const cacheKey = `${PERSONAL_TIMELINE_CACHE_KEY}:${day}`;
+  const cacheKey = `${PERSONAL_TIMELINE_CACHE_KEY}:${profile}:${day}`;
   const {
     data,
     error: loadError,
     isLoading,
     mutate,
   } = usePersistentSWR<PersonalTimelineData>(
-    ["dashboard-personal-timeline", day],
+    ["dashboard-personal-timeline", profile, day],
     async () => {
       const [items, today] = await Promise.all([
-        listPersonalTanbuns(),
+        listPersonalTanbuns(profile),
         getTodayTanbunExposureCount(),
       ]);
       return { items, seenTodayCount: today.count };
@@ -61,6 +64,8 @@ export default function PersonalTimeline() {
   const items = data?.items ?? [];
   const seenTodayCount = data?.seenTodayCount ?? 0;
   const [actionError, setActionError] = useState<string>();
+  const [adding, setAdding] = useState(false);
+  const [exhausted, setExhausted] = useState(false);
   const pendingExposureIds = useRef(new Set<string>());
 
   function updateTimeline(
@@ -140,6 +145,22 @@ export default function PersonalTimeline() {
     }
   }
 
+  async function addMore() {
+    setAdding(true);
+    setActionError(undefined);
+    try {
+      const next = await addPersonalTanbuns(profile);
+      setExhausted(next.length === items.length || next.length >= 500);
+      updateTimeline((current) => ({ ...current, items: next }));
+    } catch (reason) {
+      setActionError(
+        reason instanceof Error ? reason.message : "追加できませんでした。",
+      );
+    } finally {
+      setAdding(false);
+    }
+  }
+
   if (isLoading) {
     return <Loading />;
   }
@@ -164,7 +185,7 @@ export default function PersonalTimeline() {
       )}
       {items.length === 0 && !error && (
         <p className="border p-2 text-sm text-muted-foreground">
-          リソースをインポートすると、ここに新しい単文が並びます。
+          この設定に合う単文はありません。対象リソースを見直すか、読書メモをインポートしてください。
         </p>
       )}
       {items.length > 0 && (
@@ -178,6 +199,21 @@ export default function PersonalTimeline() {
               {items.length}
             </span>
           </div>
+          {items.every((item) => item.seen_today) && (
+            <div className="py-2 text-center">
+              <Button
+                variant="outline"
+                disabled={adding || exhausted}
+                onClick={() => void addMore()}
+              >
+                {exhausted
+                  ? "今日の追加候補はありません"
+                  : adding
+                    ? "選んでいます…"
+                    : "もう少し復習する"}
+              </Button>
+            </div>
+          )}
           <div className="divide-y border-y sm:border-x">
             {items.map((item) => (
               <div
