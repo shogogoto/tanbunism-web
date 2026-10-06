@@ -156,8 +156,11 @@ export async function reportQuizIssue(
   }
 }
 
-export async function listCreatedQuizReports(): Promise<QuizReport[]> {
-  const response = await fetch(`${API_BASE_URL}/quiz/created/reports`, {
+export async function listCreatedQuizReports(
+  reportStatus: "open" | "resolved" = "open",
+): Promise<QuizReport[]> {
+  const query = reportStatus === "resolved" ? "?status=resolved" : "";
+  const response = await fetch(`${API_BASE_URL}/quiz/created/reports${query}`, {
     credentials: "include",
   });
   if (!response.ok) {

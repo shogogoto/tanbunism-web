@@ -113,3 +113,64 @@ it("報告対象の問題文・選択肢・正解を詳細表示する", async (
   expect(dialog.getByText("正解")).toBeVisible();
   expect(dialog.getByText("undefinedが含まれる")).toBeVisible();
 });
+
+it("対応済みの報告も切り替えて詳細を開ける", async () => {
+  const user = userEvent.setup();
+  const reports = await listCreatedQuizReports();
+  vi.mocked(listCreatedQuizReports).mockImplementation(async (status) =>
+    status === "resolved" ? reports : [],
+  );
+  render(
+    <MemoryRouter>
+      <ReportedQuizManager />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByText("未対応の報告はありません。")).toBeVisible();
+
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "報告の状態" }),
+    "resolved",
+  );
+  await user.click(await screen.findByRole("button", { name: "詳細" }));
+  const dialog = within(screen.getByRole("dialog"));
+  expect(dialog.getByText("対応済")).toBeVisible();
+  expect(dialog.getByText("構造言語学")).toBeVisible();
+  expect(dialog.getByText("言語を関係の体系として捉える")).toBeVisible();
+  expect(dialog.getByText("正解")).toBeVisible();
+  expect(dialog.getByText("undefinedが含まれる")).toBeVisible();
+  expect(listCreatedQuizReports).toHaveBeenLastCalledWith("resolved");
+  expect(
+    screen.queryByRole("button", { name: "問題なし" }),
+  ).not.toBeInTheDocument();
+});
+
+it("表示状態を切り替えると一括削除の選択を引き継がない", async () => {
+  const user = userEvent.setup();
+  const reports = await listCreatedQuizReports();
+  vi.mocked(listCreatedQuizReports).mockImplementation(async (status) =>
+    status === "resolved" ? [] : reports,
+  );
+  render(
+    <MemoryRouter>
+      <ReportedQuizManager />
+    </MemoryRouter>,
+  );
+  await user.click(await screen.findByRole("checkbox", { name: "すべて選択" }));
+  expect(screen.getByRole("button", { name: "クイズを1件削除" })).toBeVisible();
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "報告の状態" }),
+    "resolved",
+  );
+  expect(await screen.findByText("対応済みの報告はありません。")).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "クイズを1件削除" }),
+  ).not.toBeInTheDocument();
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "報告の状態" }),
+    "open",
+  );
+  expect(await screen.findByRole("button", { name: "問題なし" })).toBeVisible();
+  expect(
+    screen.getByRole("checkbox", { name: "すべて選択" }),
+  ).not.toBeChecked();
+});

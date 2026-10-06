@@ -29,23 +29,37 @@ const reasonLabels: Record<QuizReport["reason"], string> = {
 };
 
 export default function ReportedQuizManager() {
+  const [reportStatus, setReportStatus] = useState<"open" | "resolved">("open");
   const [items, setItems] = useState<QuizReport[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    listCreatedQuizReports()
-      .then(setItems)
-      .catch((caught) =>
-        setError(
-          caught instanceof Error
-            ? caught.message
-            : "不備報告を取得できませんでした。",
-        ),
-      )
-      .finally(() => setLoading(false));
-  }, []);
+    let active = true;
+    setLoading(true);
+    setError(undefined);
+    setItems([]);
+    setSelected(new Set());
+    listCreatedQuizReports(reportStatus)
+      .then((reports) => {
+        if (active) setItems(reports);
+      })
+      .catch((caught) => {
+        if (active)
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : "不備報告を取得できませんでした。",
+          );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [reportStatus]);
 
   async function removeSelected() {
     try {
@@ -83,16 +97,26 @@ export default function ReportedQuizManager() {
     }
   }
 
-  if (loading || (items.length === 0 && !error)) return null;
-  if (error && items.length === 0) {
-    return <p className="text-sm text-destructive">{error}</p>;
-  }
-
   return (
-    <section className="space-y-3 border border-destructive/40 bg-destructive/5 p-3">
-      <div className="flex items-center gap-2">
+    <section
+      className={`space-y-3 border p-3 ${reportStatus === "open" ? "border-destructive/40 bg-destructive/5" : ""}`}
+    >
+      <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-semibold">不備が報告されたクイズ</h2>
-        <Badge variant="destructive">{items.length}</Badge>
+        <Badge variant={reportStatus === "open" ? "destructive" : "secondary"}>
+          {items.length}
+        </Badge>
+        <select
+          aria-label="報告の状態"
+          value={reportStatus}
+          onChange={(event) =>
+            setReportStatus(event.target.value as "open" | "resolved")
+          }
+          className="rounded border bg-background px-2 py-1 text-sm"
+        >
+          <option value="open">未対応</option>
+          <option value="resolved">対応済</option>
+        </select>
         {selected.size > 0 && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -124,20 +148,34 @@ export default function ReportedQuizManager() {
           </AlertDialog>
         )}
       </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={items.every((item) => selected.has(item.quiz_id))}
-          onChange={(event) =>
-            setSelected(
-              event.target.checked
-                ? new Set(items.map((item) => item.quiz_id))
-                : new Set(),
-            )
-          }
-        />
-        すべて選択
-      </label>
+      {items.length > 0 && (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={items.every((item) => selected.has(item.quiz_id))}
+            onChange={(event) =>
+              setSelected(
+                event.target.checked
+                  ? new Set(items.map((item) => item.quiz_id))
+                  : new Set(),
+              )
+            }
+          />
+          すべて選択
+        </label>
+      )}
+      {loading && (
+        <output className="block text-sm text-muted-foreground">
+          報告を読み込み中…
+        </output>
+      )}
+      {!loading && !error && items.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          {reportStatus === "resolved"
+            ? "対応済みの報告はありません。"
+            : "未対応の報告はありません。"}
+        </p>
+      )}
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="divide-y">
         {items.map((item) => (
@@ -178,7 +216,11 @@ export default function ReportedQuizManager() {
             </span>
             <div className="flex shrink-0 items-center gap-1">
               {item.quiz ? (
-                <ReportedQuizDetailDialog report={item} quiz={item.quiz} />
+                <ReportedQuizDetailDialog
+                  report={item}
+                  quiz={item.quiz}
+                  resolved={reportStatus === "resolved"}
+                />
               ) : (
                 <Button
                   type="button"
@@ -190,29 +232,31 @@ export default function ReportedQuizManager() {
                   詳細
                 </Button>
               )}
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" variant="outline" size="sm">
-                    問題なし
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      このクイズを問題なしとして閉じますか？
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      クイズは変更・削除せず、不備報告だけを対応済みにして一覧から除外します。再び報告された場合は要対応へ戻ります。
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => void dismiss(item)}>
-                      対応済みにする
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              {reportStatus === "open" && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="outline" size="sm">
+                      問題なし
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        このクイズを問題なしとして閉じますか？
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        クイズは変更・削除せず、不備報告だけを対応済みにして一覧から除外します。再び報告された場合は要対応へ戻ります。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => void dismiss(item)}>
+                        対応済みにする
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </div>
         ))}

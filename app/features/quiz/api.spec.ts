@@ -13,7 +13,7 @@ vi.mock("./generated/api", async (importOriginal) => ({
   listAnswerHistoryApiQuizAnswersGet: generated.listAnswerHistory,
 }));
 
-import { answerQuiz, listAnswerHistory } from "./api";
+import { answerQuiz, listAnswerHistory, listCreatedQuizReports } from "./api";
 
 beforeEach(async () => {
   localStorage.clear();
@@ -42,4 +42,28 @@ it("回答履歴を再利用し、新しい回答後には取得し直す", asyn
   await listAnswerHistory({ page: 1, size: 5 });
 
   expect(generated.listAnswerHistory).toHaveBeenCalledTimes(2);
+});
+
+it("対応済みの報告は専用の状態フィルタで取得する", async () => {
+  const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(
+    async () =>
+      new Response("[]", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+  );
+  try {
+    await listCreatedQuizReports("resolved");
+    expect(fetch).toHaveBeenLastCalledWith(
+      expect.stringContaining("/quiz/created/reports?status=resolved"),
+      { credentials: "include" },
+    );
+    await listCreatedQuizReports();
+    expect(fetch).toHaveBeenLastCalledWith(
+      expect.stringMatching(/\/quiz\/created\/reports$/),
+      { credentials: "include" },
+    );
+  } finally {
+    fetch.mockRestore();
+  }
 });

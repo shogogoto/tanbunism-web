@@ -23,9 +23,11 @@ const reasonLabels: Record<QuizReport["reason"], string> = {
 export default function ReportedQuizDetailDialog({
   report,
   quiz,
+  resolved = false,
 }: {
   report: QuizReport;
   quiz: ReadableQuiz;
+  resolved?: boolean;
 }) {
   return (
     <Dialog>
@@ -37,7 +39,10 @@ export default function ReportedQuizDetailDialog({
       <DialogContent className="max-h-[90dvh] gap-0 overflow-y-auto p-0 sm:max-w-2xl">
         <DialogHeader className="border-b p-4 pr-12">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="destructive">{reasonLabels[report.reason]}</Badge>
+            <Badge variant={resolved ? "secondary" : "destructive"}>
+              {reasonLabels[report.reason]}
+            </Badge>
+            {resolved && <Badge variant="outline">対応済</Badge>}
             <span className="text-xs text-muted-foreground">
               {report.report_count}件の報告
             </span>
