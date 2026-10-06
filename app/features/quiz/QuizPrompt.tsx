@@ -1,8 +1,8 @@
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge } from "~/shared/components/ui/badge";
 import { cn } from "~/shared/lib/utils";
 import type { ReadableQuiz } from "./api";
+import { relationQuestion } from "./relationPresentation";
 
 type PromptQuiz = ReadableQuiz & {
   prompt?: ReadableQuiz["prompt"];
@@ -23,13 +23,13 @@ const presentation = {
   },
   rel2pair: {
     label: "関係 → 単文",
-    instruction: "関係先にある単文を選ぶ",
+    instruction: "Aとの関係から単文を選ぶ",
     badge:
       "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
   },
   pair2rel: {
     label: "単文組 → 関係",
-    instruction: "2つの単文を結ぶ関係を選ぶ",
+    instruction: "Aから見たBとの関係は？",
     badge:
       "border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-300",
   },
@@ -76,46 +76,14 @@ function TermNames({ terms = [] }: { terms?: string[] }) {
   );
 }
 
-function RelationPath({ quiz }: { quiz: PromptQuiz }) {
+function RelationQuestion({ quiz }: { quiz: PromptQuiz }) {
   const prompt = quiz.prompt;
   if (!prompt) return null;
-  const relations = prompt.relations ?? [];
-  const destination = quiz.quiz_type === "pair2rel" ? "B" : "?";
-
+  if (quiz.quiz_type === "pair2rel") return null;
   return (
-    <div
-      className="flex flex-wrap items-center gap-1 font-mono text-xs font-medium"
-      aria-label="関係の経路"
-    >
-      <span className="rounded bg-muted px-1.5 py-0.5">A</span>
-      {relations.map((relation, index) => (
-        <span
-          // The relation order itself is part of the prompt, so its index is stable.
-          key={`${relation.name ?? "unknown"}-${index}`}
-          className="contents"
-        >
-          {!relation.is_forward && (
-            <ArrowLeft
-              className="size-5 shrink-0 text-foreground"
-              aria-label="左向き"
-            />
-          )}
-          <span className="rounded-md border bg-background px-2 py-0.5 text-foreground shadow-sm">
-            {relation.name ?? "?"}
-          </span>
-          {relation.is_forward && (
-            <ArrowRight
-              className="size-5 shrink-0 text-foreground"
-              aria-label="右向き"
-            />
-          )}
-          {index < relations.length - 1 && (
-            <span className="rounded bg-muted px-1.5 py-0.5">…</span>
-          )}
-        </span>
-      ))}
-      <span className="rounded bg-muted px-1.5 py-0.5">{destination}</span>
-    </div>
+    <p className="text-sm font-medium" aria-label="問う関係">
+      {relationQuestion(prompt.relations)}
+    </p>
   );
 }
 
@@ -170,7 +138,7 @@ export default function QuizPrompt({
               <TermNames terms={prompt.object_terms} />
             </p>
           )}
-          <RelationPath quiz={quiz} />
+          <RelationQuestion quiz={quiz} />
         </div>
       ) : (
         <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed">

@@ -47,6 +47,7 @@ import {
   emptyQuizFilters,
   toQuizSearchParams,
 } from "./quizFilters";
+import { quizOptionLabel } from "./relationPresentation";
 import { useQuizSWR } from "./useQuizSWR";
 
 type LoadState =
@@ -320,7 +321,7 @@ function QuizCard({
             className="flex items-start gap-2 border p-2 text-sm"
           >
             {quiz.correct.includes(optionId) && <Badge>正解</Badge>}
-            <span>{option}</span>
+            <span>{quizOptionLabel(quiz, option)}</span>
           </div>
         ))}
         <p className="text-xs text-muted-foreground">

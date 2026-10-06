@@ -15,6 +15,7 @@ import {
   getQuizChain,
   listStudyResources,
 } from "./api";
+import { quizOptionLabel } from "./relationPresentation";
 import {
   type AnswerFilters,
   useAnswerHistoryFeed,
@@ -468,7 +469,7 @@ function AnswerRow({
                     className="flex flex-wrap items-baseline gap-2 rounded-md border bg-background p-2 text-sm"
                   >
                     <ChainSentenceLink chain={chain} sentenceId={id}>
-                      {label}
+                      {quizOptionLabel(quiz, label)}
                     </ChainSentenceLink>
                     <RelationAnnotation chain={chain} sentenceId={id} />
                     {correct && <Badge>正解</Badge>}

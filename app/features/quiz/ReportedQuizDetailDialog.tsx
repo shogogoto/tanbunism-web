@@ -12,6 +12,7 @@ import {
 } from "~/shared/components/ui/dialog";
 import QuizPrompt from "./QuizPrompt";
 import type { QuizReport, ReadableQuiz } from "./api";
+import { quizOptionLabel } from "./relationPresentation";
 
 const reasonLabels: Record<QuizReport["reason"], string> = {
   undefined: "未定義",
@@ -58,7 +59,9 @@ export default function ReportedQuizDetailDialog({
                 <span className="w-5 shrink-0 text-muted-foreground">
                   {index + 1}
                 </span>
-                <span className="min-w-0 flex-1">{option}</span>
+                <span className="min-w-0 flex-1">
+                  {quizOptionLabel(quiz, option)}
+                </span>
                 {quiz.correct.includes(optionId) && <Badge>正解</Badge>}
               </div>
             ))}

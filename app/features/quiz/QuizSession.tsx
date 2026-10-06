@@ -32,6 +32,7 @@ import {
   prepareAdditionalStudyPlanQuizzes,
   recommendQuizzes,
 } from "./api";
+import { quizOptionLabel } from "./relationPresentation";
 
 type LoadState =
   | { status: "loading" }
@@ -565,7 +566,7 @@ function QuizQuestion({
                 <span className="flex items-center justify-between gap-2">
                   <span className="flex min-w-0 items-baseline gap-2">
                     <ChainSentenceLink chain={result?.chain} sentenceId={id}>
-                      {optionIndex + 1}. {label}
+                      {optionIndex + 1}. {quizOptionLabel(quiz, label)}
                     </ChainSentenceLink>
                     {result && recommendation.quiz_type !== "pair2rel" && (
                       <RelationAnnotation

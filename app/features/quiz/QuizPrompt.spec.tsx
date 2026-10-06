@@ -47,8 +47,10 @@ describe("QuizPrompt", () => {
     expect(screen.getByText("関係 → 単文")).toBeInTheDocument();
     expect(screen.getByText("動物は分類される")).toBeInTheDocument();
     expect(screen.getByText("動物分類")).toBeInTheDocument();
-    expect(screen.getByLabelText("関係の経路")).toHaveTextContent("ABELOW?");
-    expect(screen.getByLabelText("右向き")).toBeInTheDocument();
+    expect(screen.getByLabelText("問う関係")).toHaveTextContent(
+      "Aの詳細にあたる単文は？",
+    );
+    expect(screen.queryByLabelText("右向き")).not.toBeInTheDocument();
   });
 
   it("単文組から関係を問うときは関係名を隠して両方の単文を示す", () => {
@@ -72,8 +74,9 @@ describe("QuizPrompt", () => {
     expect(screen.getByText("犬は哺乳類である")).toBeInTheDocument();
     expect(screen.getByText("哺乳類")).toBeInTheDocument();
     expect(screen.getByText("犬")).toBeInTheDocument();
-    expect(screen.getByLabelText("関係の経路")).toHaveTextContent("A?B");
-    expect(screen.getByLabelText("左向き")).toBeInTheDocument();
+    expect(screen.getByText("Aから見たBとの関係は？")).toBeInTheDocument();
+    expect(screen.queryByLabelText("関係の経路")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("左向き")).not.toBeInTheDocument();
   });
 
   it("古いAPIレスポンスでは従来の問題文へフォールバックする", () => {

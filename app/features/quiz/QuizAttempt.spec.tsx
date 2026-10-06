@@ -1,0 +1,46 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
+import { expect, it, vi } from "vitest";
+import QuizAttempt from "./QuizAttempt";
+import { answerQuiz } from "./api";
+
+vi.mock("./api", () => ({ answerQuiz: vi.fn() }));
+
+it("関係を文章で表示しても元の選択肢IDで回答する", async () => {
+  const user = userEvent.setup();
+  vi.mocked(answerQuiz).mockResolvedValue({
+    quizzes: [],
+    sentences: [],
+    links: [],
+  });
+  render(
+    <MemoryRouter>
+      <QuizAttempt
+        quiz={{
+          quiz_id: "reference-quiz",
+          quiz_type: "pair2rel",
+          prompt: {
+            subject: "Aの単文",
+            object: "Bの単文",
+            relations: [{ name: null, is_forward: true }],
+            answer_kind: "relation",
+          },
+          statement: "旧問題文",
+          options: { refer: "用語参照", referred: "被参照" },
+          correct: ["referred"],
+          created: "2026-10-06T00:00:00Z",
+          no_correct_option: false,
+        }}
+      />
+    </MemoryRouter>,
+  );
+  await user.click(
+    screen.getByRole("button", { name: "AはBから参照されている" }),
+  );
+  expect(
+    screen.getByRole("button", { name: "AはBから参照されている" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await user.click(screen.getByRole("button", { name: "回答する" }));
+  expect(answerQuiz).toHaveBeenCalledWith("reference-quiz", ["referred"]);
+});

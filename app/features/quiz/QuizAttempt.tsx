@@ -15,6 +15,7 @@ import {
 import QuizPrompt from "./QuizPrompt";
 import QuizReportButton from "./QuizReportButton";
 import { type QuizChain, type ReadableQuiz, answerQuiz } from "./api";
+import { quizOptionLabel } from "./relationPresentation";
 
 type Props = {
   quiz: ReadableQuiz;
@@ -79,6 +80,7 @@ export default function QuizAttempt({
       )}
       <div className="space-y-1">
         {Object.entries(quiz.options).map(([optionId, option], index) => {
+          const label = quizOptionLabel(quiz, option);
           const isSelected = selected.includes(optionId);
           const isCorrect = Boolean(answer) && quiz.correct.includes(optionId);
           const isSelectedWrong = Boolean(answer) && isSelected && !isCorrect;
@@ -102,7 +104,7 @@ export default function QuizAttempt({
                   {index + 1}
                 </kbd>
                 <ChainSentenceLink chain={chain} sentenceId={optionId}>
-                  {option}
+                  {label}
                 </ChainSentenceLink>
                 {chain && quizType !== "pair2rel" && (
                   <RelationAnnotation chain={chain} sentenceId={optionId} />
@@ -122,7 +124,7 @@ export default function QuizAttempt({
               key={optionId}
               type="button"
               data-quiz-option-index={index + 1}
-              aria-label={option}
+              aria-label={label}
               aria-pressed={isSelected}
               onClick={() => toggle(optionId)}
               className={className}
