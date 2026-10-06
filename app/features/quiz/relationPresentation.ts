@@ -2,16 +2,9 @@ import type { ReadableQuiz } from "./api";
 
 type Relation = NonNullable<ReadableQuiz["prompt"]["relations"]>[number];
 
-const descriptions: Record<string, string> = {
-  親: "BはAの親にあたる",
-  詳細: "BはAの詳細にあたる",
-  同階層: "BはAと同じ階層にある",
-  前提: "BはAの前提となる",
-  結論: "BはAから導かれる結論である",
-  用語参照: "AがBを参照している",
-  被参照: "AはBから参照されている",
-  一般: "BはAを一般化した内容である",
-  具体例: "BはAの具体例である",
+const referenceLabels: Record<string, string> = {
+  用語参照: "用語参照（AがBを参照）",
+  被参照: "被参照（BがAを参照）",
 };
 
 function targetPhrase(from: string, relation: string): string | undefined {
@@ -42,15 +35,13 @@ function relationTarget(relations: string[]): string | undefined {
   return relations.length ? current : undefined;
 }
 
-/** DBの選択肢ID・正解判定を変えず、関係名だけを文章にする。 */
+/** 関係名は短く保ち、単一の参照関係だけ向きを補足する。 */
 export function quizOptionLabel(
   quiz: Pick<ReadableQuiz, "quiz_type">,
   option: string,
 ) {
   if (quiz.quiz_type !== "pair2rel") return option;
-  if (descriptions[option]) return descriptions[option];
-  const target = relationTarget(option.split("の"));
-  return target ? `Bは${target}にあたる` : option;
+  return referenceLabels[option] ?? option;
 }
 
 function relationName({ name, is_forward }: Relation): string | undefined {

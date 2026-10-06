@@ -7,7 +7,7 @@ import { answerQuiz } from "./api";
 
 vi.mock("./api", () => ({ answerQuiz: vi.fn() }));
 
-it("関係を文章で表示しても元の選択肢IDで回答する", async () => {
+it("参照方向を補足しても元の選択肢IDで回答する", async () => {
   const user = userEvent.setup();
   vi.mocked(answerQuiz).mockResolvedValue({
     quizzes: [],
@@ -36,10 +36,10 @@ it("関係を文章で表示しても元の選択肢IDで回答する", async ()
     </MemoryRouter>,
   );
   await user.click(
-    screen.getByRole("button", { name: "AはBから参照されている" }),
+    screen.getByRole("button", { name: "被参照（BがAを参照）" }),
   );
   expect(
-    screen.getByRole("button", { name: "AはBから参照されている" }),
+    screen.getByRole("button", { name: "被参照（BがAを参照）" }),
   ).toHaveAttribute("aria-pressed", "true");
   await user.click(screen.getByRole("button", { name: "回答する" }));
   expect(answerQuiz).toHaveBeenCalledWith("reference-quiz", ["referred"]);
