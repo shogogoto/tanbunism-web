@@ -1,4 +1,4 @@
-import { BookOpen, Search, Sparkles, Zap } from "lucide-react";
+import { BookOpen, Search, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import type {
@@ -113,7 +113,7 @@ export default function ResourceShelf({
           aria-label="本棚の並び順"
           className="rounded border bg-background px-2 py-1 text-sm"
         >
-          <option value="recent">最近育った順</option>
+          <option value="recent">復習日順</option>
           <option value="xp">復習XP順</option>
           <option value="power">Power順</option>
           <option value="title">タイトル順</option>
@@ -224,18 +224,15 @@ function ResourceBook({
               className="mt-2 h-1.5"
               aria-label={`${resource.name}のレベル進捗`}
             />
-            <p className="mt-2 flex min-h-4 items-center gap-1 text-xs text-muted-foreground">
-              {growth?.last_reviewed_on ? (
-                <>
-                  <Sparkles className="size-3" />
-                  {growth.last_reviewed_on}に成長
-                </>
-              ) : growth ? (
-                "復習すると育ちます"
-              ) : (
-                ""
-              )}
-            </p>
+            {growth?.last_reviewed_on && (
+              <time
+                dateTime={growth.last_reviewed_on}
+                title="最終復習日"
+                className="mt-2 block text-xs text-muted-foreground"
+              >
+                {growth.last_reviewed_on}
+              </time>
+            )}
           </button>
         </DialogTrigger>
         {growth && (

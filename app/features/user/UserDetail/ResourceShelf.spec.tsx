@@ -21,6 +21,15 @@ it("所有本を成長順に並べ、内訳を開き、著者で絞れる", asyn
   expect(screen.getAllByRole("article")[0]).toHaveTextContent(
     "リーダブルコード",
   );
+  expect(screen.getByRole("option", { name: "復習日順" })).toBeInTheDocument();
+  expect(screen.getByText("2026-10-08")).toHaveAttribute(
+    "dateTime",
+    "2026-10-08",
+  );
+  expect(screen.getByText("2026-10-08")).toHaveAttribute("title", "最終復習日");
+  expect(
+    screen.queryByText(/に成長|復習すると育ちます/),
+  ).not.toBeInTheDocument();
   await user.selectOptions(
     screen.getByRole("combobox", { name: "本棚の並び順" }),
     "power",
