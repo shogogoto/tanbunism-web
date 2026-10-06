@@ -50,7 +50,7 @@ const meta = {
                 {
                   id: {
                     uid: "11111111-1111-4111-8111-111111111111",
-                    name: "科学哲学の冒険",
+                    name: "科学哲学の冒険 — 科学的な知識と推論の関係を整理して復習するための長い読書メモタイトル",
                     authors: ["戸田山和久"],
                     published: null,
                   },
@@ -103,6 +103,11 @@ export const Edit: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: "哲学を少しずつを編集" }),
     );
-    await expect(within(document.body).getByRole("dialog")).toBeVisible();
+    const dialog = within(document.body).getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await within(dialog).findByRole("checkbox", {
+      name: /科学哲学の冒険 — 科学的な知識/,
+    });
+    await expect(dialog.scrollWidth).toBeLessThanOrEqual(dialog.clientWidth);
   },
 };

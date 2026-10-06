@@ -21,7 +21,25 @@ vi.mock("~/features/auth/AuthProvider", () => ({
 }));
 vi.mock("~/shared/generated/entry/entry", () => ({
   useGetNamaspaceNamespaceGet: () => ({
-    data: { data: { g: { nodes: [], edges: [] }, stats: {}, roots_: {} } },
+    data: {
+      data: {
+        g: {
+          nodes: [
+            {
+              id: {
+                uid: "11111111-1111-4111-8111-111111111111",
+                name: "長いリソースタイトル".repeat(12),
+                authors: [],
+                published: null,
+              },
+            },
+          ],
+          edges: [],
+        },
+        stats: {},
+        roots_: {},
+      },
+    },
     isLoading: false,
   }),
 }));
@@ -73,6 +91,24 @@ function wrap(element: React.ReactNode) {
     </SWRConfig>,
   );
 }
+
+it("長いリソース名は選択欄内で折り返し、選択して保存できる", async () => {
+  const user = userEvent.setup();
+  wrap(<ReviewSettingsManager />);
+  await user.click(await screen.findByRole("button", { name: "標準を編集" }));
+  await user.click(screen.getByRole("checkbox", { name: "すべて" }));
+  const title = "長いリソースタイトル".repeat(12);
+  const checkbox = screen.getByRole("checkbox", { name: title });
+  const text = screen.getByText(title);
+  expect(text).toHaveClass("min-w-0", "[overflow-wrap:anywhere]");
+  expect(text.closest("fieldset")).toHaveClass("min-w-0");
+  expect(screen.getByRole("dialog")).toHaveClass("sm:max-w-2xl");
+  await user.click(checkbox);
+  expect(checkbox).toBeChecked();
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByRole("status");
+  expect(saved?.resource_ids).toEqual(["11111111-1111-4111-8111-111111111111"]);
+});
 
 it("標準設定の件数・方針を編集でき、今日のセットは勝手に作り直さない", async () => {
   const user = userEvent.setup();

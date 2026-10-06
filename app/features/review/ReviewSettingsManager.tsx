@@ -217,7 +217,7 @@ export default function ReviewSettingsManager() {
         }}
       >
         <DialogContent
-          className="max-h-[85dvh] overflow-y-auto"
+          className="max-h-[85dvh] min-w-0 overflow-y-auto p-4 sm:max-w-2xl sm:p-6"
           data-dashboard-swipe-ignore
         >
           <DialogHeader>
@@ -230,7 +230,7 @@ export default function ReviewSettingsManager() {
           </DialogHeader>
           {draft && (
             <form
-              className="space-y-4"
+              className="min-w-0 space-y-4"
               onSubmit={async (event) => {
                 event.preventDefault();
                 const { id, ...body } = draft;
@@ -321,7 +321,7 @@ export default function ReviewSettingsManager() {
               <p className="text-xs text-muted-foreground">
                 リソースを分散して選びます。「苦手・久しぶり」はクイズの不正解・低正答率、知識では接触が少なく間隔の空いた単文を優先します。件数は上限で、候補が少なければ少なくなります。
               </p>
-              <fieldset className="space-y-2">
+              <fieldset className="min-w-0 space-y-2">
                 <legend className="text-sm">対象リソース</legend>
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -347,14 +347,15 @@ export default function ReviewSettingsManager() {
                     {namespace.error && (
                       <p role="alert">リソースを取得できませんでした。</p>
                     )}
-                    <div className="max-h-48 space-y-2 overflow-y-auto rounded border p-2">
+                    <div className="max-h-64 min-w-0 space-y-2 overflow-y-auto rounded border p-2">
                       {filtered.map((r) => (
                         <label
                           key={r.id}
-                          className="flex items-center gap-2 text-sm"
+                          className="flex min-w-0 items-start gap-2 text-sm"
                         >
                           <input
                             type="checkbox"
+                            className="mt-1 shrink-0"
                             checked={draft.resource_ids?.includes(r.id)}
                             onChange={(e) =>
                               setDraft({
@@ -367,7 +368,7 @@ export default function ReviewSettingsManager() {
                               })
                             }
                           />
-                          <span className="truncate" title={r.name}>
+                          <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                             {r.name}
                           </span>
                         </label>
