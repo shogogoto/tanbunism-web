@@ -1,8 +1,22 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { MemoryRouter } from "react-router";
+import { describe, expect, it, vi } from "vitest";
 import type { NameSpace } from "~/shared/generated/fastAPI.schemas";
-import { LearningLevel, LearningSummary } from ".";
+import UserDetail, { LearningLevel, LearningSummary } from ".";
+import { growthFixture, shelfFixture } from "./ResourceShelf.fixture";
+
+vi.mock("~/features/auth/AuthProvider", () => ({
+  useAuth: () => ({ user: undefined }),
+}));
+vi.mock("~/features/gamification/ResourceGrowth", () => ({
+  useResourceGrowth: () => ({
+    data: growthFixture,
+    isLoading: false,
+    mutate: vi.fn(),
+  }),
+}));
+vi.mock("../UserProfile", () => ({ default: () => null }));
 
 const learningProgress = {
   activity: { n_tanbun_exposure: 2 },
@@ -39,6 +53,26 @@ const learningProgress = {
   xp_for_next_level: 50,
   xp_to_next_level: 19,
 };
+
+it("Powerと今日のXPだけを簡潔に表示し、累計XPとは区別する", () => {
+  render(
+    <MemoryRouter>
+      <UserDetail
+        user={undefined}
+        namespace={shelfFixture}
+        learningProgress={{ ...learningProgress, today_xp: 7 }}
+      />
+    </MemoryRouter>,
+  );
+  const stats = within(
+    screen.getByRole("region", { name: "プロフィールのステータス" }),
+  );
+  expect(stats.getByText("Power").nextSibling).toHaveTextContent("102");
+  expect(stats.getByText("今日のXP").nextSibling).toHaveTextContent("7");
+  expect(screen.queryByText("本棚のPower")).not.toBeInTheDocument();
+  expect(screen.queryByText("記録開始後の合計")).not.toBeInTheDocument();
+  expect(screen.queryByText("論理・参照の整理")).not.toBeInTheDocument();
+});
 
 describe("LearningSummary", () => {
   it("公開Resourceの統計をユーザー単位で集計する", () => {

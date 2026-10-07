@@ -31,7 +31,7 @@ import ResourceShelf, { shelfResources } from "./ResourceShelf";
 type Props = UserProps &
   React.PropsWithChildren & {
     namespace: NameSpace;
-    learningProgress: LearningProgress;
+    learningProgress: LearningProgress & { today_xp?: number };
   };
 
 export default function UserDetail({
@@ -55,10 +55,6 @@ export default function UserDetail({
     ownedIds.has(resource.resource_id.replaceAll("-", "").toLowerCase()),
   );
   const power = ownedGrowth?.reduce((sum, resource) => sum + resource.power, 0);
-  const reviewXp = ownedGrowth?.reduce(
-    (sum, resource) => sum + resource.total_xp,
-    0,
-  );
 
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
@@ -105,7 +101,7 @@ export default function UserDetail({
                       <DialogTitle>ユーザーLvの根拠</DialogTitle>
                     </DialogHeader>
                     <p className="text-xs leading-relaxed text-muted-foreground">
-                      Lv・XPは「見たよ・クイズ回答・正解」の復習実績だけで決まります。知識量やクイズ作成数、Powerは加算しません。ユーザーXPには過去の回答履歴も含み、本棚のXPはリソース別の記録開始後の実績です。
+                      ユーザーXPは各リソースで得た本人の復習XPの合計です。同じ対象・種別は1日1回加算します。知識量やクイズ作成数、Powerは加算しません。
                     </p>
                     <LearningLevel
                       progress={learningProgress}
@@ -128,21 +124,15 @@ export default function UserDetail({
               </p>
               <div className="grid grid-cols-2 gap-3 border-t pt-3">
                 <div>
-                  <p className="text-xs text-muted-foreground">本棚のPower</p>
+                  <p className="text-xs text-muted-foreground">Power</p>
                   <p className="text-2xl font-semibold tabular-nums">
                     {power?.toLocaleString("ja-JP") ?? "—"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    論理・参照の整理
-                  </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">本棚の復習XP</p>
+                  <p className="text-xs text-muted-foreground">今日のXP</p>
                   <p className="text-2xl font-semibold tabular-nums">
-                    {reviewXp?.toLocaleString("ja-JP") ?? "—"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    記録開始後の合計
+                    {learningProgress.today_xp?.toLocaleString("ja-JP") ?? "—"}
                   </p>
                 </div>
               </div>
