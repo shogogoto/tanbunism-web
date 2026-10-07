@@ -1,4 +1,4 @@
-import { BookOpen, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import PowerBreakdown from "~/features/gamification/PowerBreakdown";
@@ -20,6 +20,11 @@ import type { MResource, NameSpace } from "~/shared/generated/fastAPI.schemas";
 import { formatRelativeDate } from "~/shared/lib/formatRelativeDate";
 
 const uidKey = (id: string) => id.replaceAll("-", "").toLowerCase();
+type ShelfSort = "recent" | "updated" | "xp" | "power" | "level";
+const dateValue = (value?: string | null) => {
+  const timestamp = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(timestamp) ? timestamp : undefined;
+};
 const rowLayout =
   "grid grid-cols-[2.75rem_3.75rem_minmax(0,1fr)] md:grid-cols-[2.75rem_3.75rem_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_5.25rem_5.25rem] items-center gap-x-3";
 
@@ -49,7 +54,16 @@ export default function ResourceShelf({
   onRetry: () => void;
 }) {
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState("recent");
+  const [sort, setSort] = useState<ShelfSort>("recent");
+  const [ascending, setAscending] = useState(false);
+  const selectSort = (key: ShelfSort) => {
+    setSort(key);
+    setAscending(false);
+  };
+  const toggleSort = (key: ShelfSort) => {
+    setAscending(sort === key ? !ascending : false);
+    setSort(key);
+  };
   const summary = useMemo(() => {
     const stats = Object.values(namespace.stats ?? {});
     return [
@@ -74,23 +88,34 @@ export default function ResourceShelf({
           .includes(query.trim().toLocaleLowerCase()),
       )
       .sort((a, b) => {
-        const primary =
+        const value = (book: typeof a) =>
           sort === "power"
-            ? (b.growth?.power ?? -1) - (a.growth?.power ?? -1)
+            ? book.growth?.power
             : sort === "xp"
-              ? (b.growth?.total_xp ?? -1) - (a.growth?.total_xp ?? -1)
+              ? book.growth?.total_xp
               : sort === "recent"
-                ? (b.growth?.last_reviewed_on ?? "").localeCompare(
-                    a.growth?.last_reviewed_on ?? "",
-                  )
-                : (b.growth?.level ?? -1) - (a.growth?.level ?? -1);
+                ? dateValue(book.growth?.last_reviewed_on)
+                : sort === "updated"
+                  ? dateValue(book.resource.updated)
+                  : book.growth?.level;
+        const av = value(a);
+        const bv = value(b);
+        // 未取得・未復習の項目は昇順でも末尾に置く。
+        const primary =
+          av === undefined
+            ? bv === undefined
+              ? 0
+              : 1
+            : bv === undefined
+              ? -1
+              : (av - bv) * (ascending ? 1 : -1);
         return (
           primary ||
           (b.resource.updated ?? "").localeCompare(a.resource.updated ?? "") ||
           a.resource.name.localeCompare(b.resource.name, "ja")
         );
       });
-  }, [namespace, growth, query, sort]);
+  }, [namespace, growth, query, sort, ascending]);
   return (
     <section className="space-y-3" aria-label="リソース一覧">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -117,11 +142,12 @@ export default function ResourceShelf({
         </div>
         <select
           value={sort}
-          onChange={(e) => setSort(e.target.value)}
+          onChange={(e) => selectSort(e.target.value as ShelfSort)}
           aria-label="本棚の並び順"
           className="rounded border bg-background px-2 py-1 text-sm"
         >
           <option value="recent">復習日順</option>
+          <option value="updated">更新日順</option>
           <option value="xp">復習XP順</option>
           <option value="power">Power順</option>
           <option value="level">Lv順</option>
@@ -164,17 +190,29 @@ export default function ResourceShelf({
                 key={key}
                 scope="col"
                 className="min-w-0 text-left font-medium"
-                aria-sort={sort === key ? "descending" : "none"}
+                aria-sort={
+                  sort === key
+                    ? ascending
+                      ? "ascending"
+                      : "descending"
+                    : "none"
+                }
               >
-                {key === "title" || key === "author" || key === "updated" ? (
+                {key === "title" || key === "author" ? (
                   label
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setSort(key)}
-                    className="hover:text-foreground"
+                    onClick={() => toggleSort(key)}
+                    className="inline-flex items-center gap-1 hover:text-foreground"
                   >
                     {label}
+                    {sort === key &&
+                      (ascending ? (
+                        <ArrowUp className="size-3" aria-hidden="true" />
+                      ) : (
+                        <ArrowDown className="size-3" aria-hidden="true" />
+                      ))}
                   </button>
                 )}
               </th>

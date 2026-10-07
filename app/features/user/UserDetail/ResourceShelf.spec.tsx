@@ -233,9 +233,7 @@ it("タイトル・著者を別列で省略し、更新日と復習日を区別�
     "datetime",
     first.updated,
   );
-  expect(
-    screen.queryByRole("button", { name: "更新日" }),
-  ).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "更新日" })).toBeInTheDocument();
 });
 
 it("復習日を優先し、同日は更新日降順・タイトル順で安定して並べる", () => {
@@ -282,7 +280,7 @@ it("復習日を優先し、同日は更新日降順・タイトル順で安定�
       );
   expect(titles()).toEqual(["Alpha", "Beta", "Old"]);
   expect(screen.getAllByRole("option").map((item) => item.textContent)).toEqual(
-    ["復習日順", "復習XP順", "Power順", "Lv順"],
+    ["復習日順", "更新日順", "復習XP順", "Power順", "Lv順"],
   );
   expect(
     screen.queryByRole("button", { name: "リソース" }),
@@ -300,4 +298,61 @@ it("復習日を優先し、同日は更新日降順・タイトル順で安定�
     }),
   );
   expect(titles()).toEqual(["Old", "Alpha", "Beta"]);
+});
+
+it("更新日順を選択でき、列名で昇降順を切り替えて未設定の日付は末尾に置く", async () => {
+  const user = userEvent.setup();
+  const namespace = structuredClone(shelfFixture);
+  const resources = namespace.g?.nodes.map((node) => node.id) as unknown as {
+    updated: string | null;
+  }[];
+  resources[0].updated = "2026-10-01T00:00:00Z";
+  resources[1].updated = "2026-10-06T00:00:00Z";
+  resources[2].updated = null;
+  render(
+    <MemoryRouter>
+      <ResourceShelf
+        namespace={namespace}
+        growth={growthFixture}
+        own
+        loading={false}
+        onRetry={vi.fn()}
+      />
+    </MemoryRouter>,
+  );
+  const titles = () =>
+    screen
+      .getAllByRole("row")
+      .slice(1)
+      .map(
+        (row) =>
+          within(row)
+            .getAllByRole("link")
+            .find((link) => link.getAttribute("href")?.startsWith("/resource/"))
+            ?.textContent,
+      );
+  const selector = screen.getByRole("combobox", { name: "本棚の並び順" });
+  const header = screen.getByRole("columnheader", { name: "更新日" });
+  await user.selectOptions(selector, "updated");
+  expect(titles()).toEqual([
+    "神は数学者か？",
+    "リーダブルコード",
+    "論理学入門",
+  ]);
+  expect(header).toHaveAttribute("aria-sort", "descending");
+  await user.click(within(header).getByRole("button"));
+  expect(titles()).toEqual([
+    "リーダブルコード",
+    "神は数学者か？",
+    "論理学入門",
+  ]);
+  expect(header).toHaveAttribute("aria-sort", "ascending");
+  await user.keyboard("{Enter}");
+  expect(header).toHaveAttribute("aria-sort", "descending");
+  await user.click(screen.getByRole("button", { name: "Power" }));
+  expect(selector).toHaveValue("power");
+  expect(header).toHaveAttribute("aria-sort", "none");
+  await user.click(screen.getByRole("button", { name: "更新日" }));
+  expect(selector).toHaveValue("updated");
+  expect(header).toHaveAttribute("aria-sort", "descending");
 });
