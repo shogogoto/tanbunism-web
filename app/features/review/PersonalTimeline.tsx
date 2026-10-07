@@ -2,6 +2,7 @@ import { Eye } from "lucide-react";
 import { useRef, useState } from "react";
 import { Link } from "react-router";
 import { useSWRConfig } from "swr";
+import { invalidateGamification } from "~/features/gamification/invalidate";
 import KnowledgeCard, {
   KnowledgeScore,
 } from "~/features/tanbun/components/KnowledgeCard";
@@ -104,6 +105,9 @@ export default function PersonalTimeline({
     }));
     try {
       const result = await markTanbunSeen(item.uid);
+      void invalidateGamification(mutateGlobal, { preserveData: true }).catch(
+        () => undefined,
+      );
       const today = await getTodayTanbunExposureCount().catch(() => undefined);
       updateTimeline((current) => ({
         seenTodayCount: today?.count ?? current.seenTodayCount,
@@ -117,13 +121,6 @@ export default function PersonalTimeline({
             : candidate,
         ),
       }));
-      void mutateGlobal(
-        (key) =>
-          Array.isArray(key) &&
-          typeof key[0] === "string" &&
-          (key[0].endsWith("/learning-progress") ||
-            key[0] === "resource-growth"),
-      );
     } catch (reason) {
       updateTimeline((current) => ({
         seenTodayCount: Math.max(0, current.seenTodayCount - 1),

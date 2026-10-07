@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useSWRConfig } from "swr";
+import { invalidateGamification } from "~/features/gamification/invalidate";
 import {
   Alert,
   AlertDescription,
@@ -30,6 +32,7 @@ export default function QuizAttempt({
   showStatement = true,
   onAnswered,
 }: Props) {
+  const { mutate } = useSWRConfig();
   const [selected, setSelected] = useState<string[]>([]);
   const [chain, setChain] = useState<QuizChain>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,6 +55,9 @@ export default function QuizAttempt({
     try {
       const answeredChain = await answerQuiz(quiz.quiz_id, selected);
       setChain(answeredChain);
+      void invalidateGamification(mutate, { preserveData: true }).catch(
+        () => undefined,
+      );
       const answered = answeredChain.answers?.at(-1);
       if (answered) onAnswered?.(answered.is_correct);
     } catch (cause) {

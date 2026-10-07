@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import { useSWRConfig } from "swr";
+import { invalidateGamification } from "~/features/gamification/invalidate";
 import {
   Alert,
   AlertDescription,
@@ -45,6 +47,7 @@ type QuizResult = {
 };
 
 export default function QuizSession() {
+  const { mutate } = useSWRConfig();
   const [searchParams] = useSearchParams();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [planId, setPlanId] = useState("");
@@ -220,6 +223,11 @@ export default function QuizSession() {
       };
     }
     setResults((current) => ({ ...current, ...succeeded }));
+    if (Object.keys(succeeded).length > 0) {
+      void invalidateGamification(mutate, { preserveData: true }).catch(
+        () => undefined,
+      );
+    }
     if (failed > 0) {
       setSubmitError(
         `${failed}問の回答を送信できませんでした。未送信の問題だけ再実行できます。`,
