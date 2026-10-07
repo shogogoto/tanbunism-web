@@ -72,6 +72,14 @@ it("主要機能をヘッダーに表示しない", () => {
     screen.queryByRole("link", { name: "作成済み" }),
   ).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "履歴" })).toBeVisible();
+  const login = screen.getByRole("link", { name: "ログイン" });
+  expect(login).toHaveAttribute("href", "/login");
+  expect(screen.getByRole("link", { name: "新規作成" })).toHaveAttribute(
+    "href",
+    "/register",
+  );
+  expect(login.closest("nav")).toHaveClass("hidden", "md:flex");
+  expect(login.closest(".md\\:hidden")).toBeNull();
 });
 
 it("ログイン中はロゴからトップを明示的に開ける", () => {
@@ -97,4 +105,10 @@ it("ログイン中はロゴからトップを明示的に開ける", () => {
   expect(xp).toHaveAttribute("href", "/user/learner");
   expect(xp).toHaveClass("hidden", "md:flex");
   expect(screen.getByText("70 / 250 XP")).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: "ログイン" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "新規作成" }),
+  ).not.toBeInTheDocument();
 });

@@ -54,6 +54,12 @@ it("ログイン中は個人用画面を含む主要導線を表示する", () =
   expect(
     screen.queryByRole("link", { name: "ドキュメント" }),
   ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "ログイン" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "新規作成" }),
+  ).not.toBeInTheDocument();
 });
 
 it("未ログインではダッシュボードを表示しない", () => {
@@ -74,4 +80,11 @@ it("未ログインではダッシュボードを表示しない", () => {
     screen.queryByRole("link", { name: "プロフィール" }),
   ).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "通知" })).not.toBeInTheDocument();
+  const login = screen.getByRole("link", { name: "ログイン" });
+  const register = screen.getByRole("link", { name: "新規作成" });
+  expect(login).toHaveAttribute("href", "/login");
+  expect(register).toHaveAttribute("href", "/register");
+  expect(login).toHaveAttribute("title", "ログイン");
+  expect(register.querySelector("svg")).toBeInTheDocument();
+  expect(login).not.toHaveTextContent("ログイン");
 });

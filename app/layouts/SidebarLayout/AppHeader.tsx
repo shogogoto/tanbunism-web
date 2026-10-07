@@ -40,19 +40,21 @@ export default function AppHeader() {
             buttonClassName="inline-flex size-9 items-center justify-center hover:bg-accent"
             iconClassName="size-4"
           />
-          {isAuthenticated ? (
-            <UserNavi user={user} side="bottom" />
-          ) : (
-            <>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/login">ログイン</Link>
-              </Button>
-              <Button asChild size="sm" className="hidden sm:inline-flex">
-                <Link to="/register">登録</Link>
-              </Button>
-            </>
-          )}
+          {isAuthenticated && <UserNavi user={user} side="bottom" />}
         </div>
+        {!isAuthenticated && (
+          <nav
+            aria-label="アカウント"
+            className="ml-auto hidden items-center gap-2 md:flex"
+          >
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/login">ログイン</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link to="/register">新規作成</Link>
+            </Button>
+          </nav>
+        )}
       </div>
       {pathname === "/dashboard" && <DashboardHeaderTabs />}
       {pathname === "/review" && <ReviewHeaderTabs />}

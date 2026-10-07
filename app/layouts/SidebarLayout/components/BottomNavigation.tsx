@@ -3,7 +3,9 @@ import {
   BookOpen,
   CircleUserRound,
   LayoutDashboard,
+  LogIn,
   Search,
+  UserPlus,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router";
@@ -24,6 +26,12 @@ export default function BottomNavigation() {
         />
       )}
       <NavigationItem to="/search" label="検索" icon={<Search />} />
+      {!isAuthenticated && (
+        <>
+          <NavigationItem to="/login" label="ログイン" icon={<LogIn />} />
+          <NavigationItem to="/register" label="新規作成" icon={<UserPlus />} />
+        </>
+      )}
       {isAuthenticated && (
         <NavigationItem to="/review" label="復習" icon={<BookOpen />} />
       )}
@@ -61,6 +69,7 @@ function NavigationItem({
     <NavLink
       to={to}
       aria-label={label}
+      title={label}
       className={({ isActive }) =>
         `flex size-10 items-center justify-center rounded-md transition-colors ${
           isActive
