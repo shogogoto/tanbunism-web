@@ -82,19 +82,12 @@ export default function ResourceShelf({
                 ? (b.growth?.last_reviewed_on ?? "").localeCompare(
                     a.growth?.last_reviewed_on ?? "",
                   )
-                : sort === "updated"
-                  ? (b.resource.updated ?? "").localeCompare(
-                      a.resource.updated ?? "",
-                    )
-                  : sort === "author"
-                    ? (a.resource.authors?.join("・") ?? "").localeCompare(
-                        b.resource.authors?.join("・") ?? "",
-                        "ja",
-                      )
-                    : sort === "level"
-                      ? (b.growth?.level ?? -1) - (a.growth?.level ?? -1)
-                      : 0;
-        return primary || a.resource.name.localeCompare(b.resource.name, "ja");
+                : (b.growth?.level ?? -1) - (a.growth?.level ?? -1);
+        return (
+          primary ||
+          (b.resource.updated ?? "").localeCompare(a.resource.updated ?? "") ||
+          a.resource.name.localeCompare(b.resource.name, "ja")
+        );
       });
   }, [namespace, growth, query, sort]);
   return (
@@ -130,10 +123,7 @@ export default function ResourceShelf({
           <option value="recent">復習日順</option>
           <option value="xp">復習XP順</option>
           <option value="power">Power順</option>
-          <option value="title">タイトル順</option>
-          <option value="author">著者順</option>
           <option value="level">Lv順</option>
-          <option value="updated">更新日順</option>
         </select>
       </div>
       <div className="relative">
@@ -172,21 +162,19 @@ export default function ResourceShelf({
                 key={key}
                 scope="col"
                 className="min-w-0 text-left font-medium"
-                aria-sort={
-                  sort === key
-                    ? key === "title" || key === "author"
-                      ? "ascending"
-                      : "descending"
-                    : "none"
-                }
+                aria-sort={sort === key ? "descending" : "none"}
               >
-                <button
-                  type="button"
-                  onClick={() => setSort(key)}
-                  className="hover:text-foreground"
-                >
-                  {label}
-                </button>
+                {key === "title" || key === "author" || key === "updated" ? (
+                  label
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSort(key)}
+                    className="hover:text-foreground"
+                  >
+                    {label}
+                  </button>
+                )}
               </th>
             ))}
           </tr>

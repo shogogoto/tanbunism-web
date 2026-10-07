@@ -177,8 +177,7 @@ it("リソース名から詳細へ移動し、XPダイアログとは干渉し�
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
 
-it("タイトル・著者を別列で省略し、更新日と復習日を区別して並べ替える", async () => {
-  const user = userEvent.setup();
+it("タイトル・著者を別列で省略し、更新日と復習日を区別する", () => {
   const namespace = structuredClone(shelfFixture);
   const first = namespace.g?.nodes[0].id as unknown as {
     name: string;
@@ -215,10 +214,65 @@ it("タイトル・著者を別列で省略し、更新日と復習日を区別�
     "datetime",
     first.updated,
   );
-  await user.click(screen.getByRole("button", { name: "更新日" }));
-  expect(screen.getAllByRole("row")[1]).toContainElement(link);
-  expect(screen.getByRole("columnheader", { name: "更新日" })).toHaveAttribute(
-    "aria-sort",
-    "descending",
+  expect(
+    screen.queryByRole("button", { name: "更新日" }),
+  ).not.toBeInTheDocument();
+});
+
+it("復習日を優先し、同日は更新日降順・タイトル順で安定して並べる", () => {
+  const namespace = structuredClone(shelfFixture);
+  const resources = namespace.g?.nodes.map((node) => node.id) as unknown as {
+    name: string;
+    updated: string;
+  }[];
+  resources[0].name = "Old";
+  resources[0].updated = "2026-10-01";
+  resources[1].name = "Beta";
+  resources[1].updated = "2026-10-06";
+  resources[2].name = "Alpha";
+  resources[2].updated = "2026-10-06";
+  const growth = {
+    ...growthFixture,
+    resources: growthFixture.resources.map((item) => ({
+      ...item,
+      last_reviewed_on: "2026-10-07",
+    })),
+  };
+  const ui = (data: typeof growth) => (
+    <MemoryRouter>
+      <ResourceShelf
+        namespace={namespace}
+        growth={data}
+        own
+        loading={false}
+        onRetry={vi.fn()}
+      />
+    </MemoryRouter>
   );
+  const { rerender } = render(ui(growth));
+  const titles = () =>
+    screen
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getByRole("link").textContent);
+  expect(titles()).toEqual(["Alpha", "Beta", "Old"]);
+  expect(screen.getAllByRole("option").map((item) => item.textContent)).toEqual(
+    ["復習日順", "復習XP順", "Power順", "Lv順"],
+  );
+  expect(
+    screen.queryByRole("button", { name: "リソース" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "著者" }),
+  ).not.toBeInTheDocument();
+  rerender(
+    ui({
+      ...growth,
+      resources: growth.resources.map((item, index) => ({
+        ...item,
+        last_reviewed_on: index === 0 ? "2026-10-08" : item.last_reviewed_on,
+      })),
+    }),
+  );
+  expect(titles()).toEqual(["Old", "Alpha", "Beta"]);
 });
