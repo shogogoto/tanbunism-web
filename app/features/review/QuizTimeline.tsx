@@ -246,6 +246,25 @@ function QuizTimelinePager({
   onChange: (index: number) => void;
 }) {
   const count = quizIds.length;
+  const dotsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const container = dotsRef.current;
+    const selected =
+      container?.querySelectorAll<HTMLElement>("button")[currentIndex];
+    if (!container || !selected) return;
+    const bounds = container.getBoundingClientRect();
+    const dot = selected.getBoundingClientRect();
+    if (dot.left < bounds.left || dot.right > bounds.right) {
+      container.scrollTo?.({
+        left:
+          container.scrollLeft +
+          dot.left -
+          bounds.left -
+          (bounds.width - dot.width) / 2,
+        behavior: "smooth",
+      });
+    }
+  }, [currentIndex]);
   return (
     <nav
       className="flex items-center gap-2 border-b px-2 py-3 sm:px-4"
@@ -263,27 +282,32 @@ function QuizTimelinePager({
       >
         <ChevronLeft />
       </Button>
-      <div className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto py-1">
-        {quizIds.map((quizId, index) => (
-          <button
-            key={quizId}
-            type="button"
-            className="flex size-7 shrink-0 items-center justify-center rounded-full"
-            onClick={() => onChange(index)}
-            aria-label={`${index + 1}問目を表示`}
-            title={completedIds.has(quizId) ? "回答済み" : "未回答"}
-            aria-current={index === currentIndex ? "true" : undefined}
-          >
-            <span
-              className={cn(
-                "block size-1.5 rounded-full bg-muted-foreground/35 transition-[width,height,background-color]",
-                completedIds.has(quizId) && "bg-emerald-500",
-                index === currentIndex && "size-2.5 bg-primary",
-              )}
-              aria-hidden="true"
-            />
-          </button>
-        ))}
+      <div ref={dotsRef} className="min-w-0 flex-1 overflow-x-auto py-1">
+        <div className="mx-auto flex w-max items-center gap-0.5">
+          {quizIds.map((quizId, index) => (
+            <button
+              key={quizId}
+              type="button"
+              className="flex size-7 shrink-0 items-center justify-center rounded-full"
+              onClick={() => onChange(index)}
+              aria-label={`${index + 1}問目を表示`}
+              title={completedIds.has(quizId) ? "回答済み" : "未回答"}
+              aria-current={index === currentIndex ? "true" : undefined}
+            >
+              <span
+                className={cn(
+                  "block size-2 rounded-full transition-[width,height,background-color]",
+                  completedIds.has(quizId)
+                    ? "bg-emerald-500"
+                    : "bg-muted-foreground/35",
+                  index === currentIndex &&
+                    "size-2.5 ring-2 ring-primary ring-offset-2 ring-offset-background",
+                )}
+                aria-hidden="true"
+              />
+            </button>
+          ))}
+        </div>
       </div>
       <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
         {currentIndex + 1} / {count}

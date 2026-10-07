@@ -435,6 +435,11 @@ it("再訪しても今日の回答済み件数を表示する", async () => {
     "title",
     "回答済み",
   );
+  const answeredDot = screen
+    .getByRole("button", { name: "1問目を表示" })
+    .querySelector("span");
+  expect(answeredDot).toHaveClass("bg-emerald-500", "ring-2");
+  expect(answeredDot).not.toHaveClass("bg-primary", "bg-muted-foreground/35");
   await userEvent.click(screen.getByRole("button", { name: "もう一度解く" }));
   expect(screen.getByRole("button", { name: "回答する" })).toBeInTheDocument();
 });
