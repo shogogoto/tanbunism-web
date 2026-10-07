@@ -107,6 +107,8 @@ export default function GlobalHotkeys() {
       if (
         event.key !== "Escape" ||
         event.isComposing ||
+        (event.target instanceof HTMLElement &&
+          event.target.closest("[data-search-settings-panel]")) ||
         !isEditableTarget(event.target)
       )
         return;

@@ -1,5 +1,5 @@
 import { ChevronRight, RotateCcw, Settings } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { Button } from "~/shared/components/ui/button";
 import {
   Collapsible,
@@ -28,6 +28,7 @@ export default function SearchSettingsPanel({
   onChange: (settings: SearchSettings) => void;
   onReset: () => void;
 }) {
+  const contentRef = useRef<HTMLDivElement>(null);
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -44,9 +45,61 @@ export default function SearchSettingsPanel({
         </Button>
       </PopoverTrigger>
       <PopoverContent
+        ref={contentRef}
+        data-search-settings-panel
+        aria-label="検索設定"
         align="end"
+        onOpenAutoFocus={(event) => {
+          const input =
+            contentRef.current?.querySelector<HTMLElement>("input, select");
+          if (input) {
+            event.preventDefault();
+            input.focus();
+          }
+        }}
+        onKeyDownCapture={(event) => {
+          if (
+            event.defaultPrevented ||
+            event.nativeEvent.isComposing ||
+            event.altKey ||
+            event.metaKey
+          )
+            return;
+          const key = event.key.toLowerCase();
+          const tab = key === "tab" && !event.ctrlKey;
+          const jump = event.ctrlKey && (key === "j" || key === "k");
+          if (!tab && !jump) return;
+          const controls = Array.from(
+            event.currentTarget.querySelectorAll<HTMLElement>(
+              "input:not(:disabled), select:not(:disabled), button:not(:disabled), a[href]",
+            ),
+          )
+            .filter((control) => !control.closest("[hidden]"))
+            .sort((a, b) =>
+              a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING
+                ? -1
+                : 1,
+            );
+          if (!controls.length) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const direction = (tab ? event.shiftKey : key === "k") ? -1 : 1;
+          const index = controls.indexOf(document.activeElement as HTMLElement);
+          const next =
+            index < 0
+              ? direction > 0
+                ? 0
+                : controls.length - 1
+              : (index + direction + controls.length) % controls.length;
+          controls[next].focus();
+          controls[next].scrollIntoView?.({ block: "nearest" });
+        }}
         className="max-h-[calc(100dvh-8rem)] w-[min(42rem,calc(100vw-2rem))] touch-pan-y space-y-3 overflow-y-auto overscroll-contain"
       >
+        <p className="text-xs text-muted-foreground">
+          Tab / Shift+Tab（Ctrl+j / Ctrl+k）で移動 · ↑↓で選択 · Spaceで切替 ·
+          Escで閉じる
+        </p>
         {currentType === "knowledge" && (
           <KnowledgeSettings settings={settings} onChange={onChange} />
         )}

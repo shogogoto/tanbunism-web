@@ -142,6 +142,59 @@ function renderSearch(initialEntry = "/search?q=数学") {
 }
 
 describe("統合検索", () => {
+  it("検索設定内をキーで移動し、変更後にEscで閉じる", async () => {
+    const ui = userEvent.setup();
+    renderSearch();
+    await screen.findByText("1件の検索結果");
+    await ui.keyboard("s");
+    const query = screen.getByPlaceholderText("リソース名で探す");
+    expect(query).toHaveFocus();
+    await ui.keyboard("jk");
+    expect(query).toHaveValue("jk");
+    await ui.keyboard("{Tab}");
+    expect(screen.getByLabelText("知識の対象リソース")).toHaveFocus();
+    await ui.keyboard("{Control>}j{/Control}");
+    expect(screen.getByLabelText("知識の並び順")).toHaveFocus();
+    await ui.keyboard("{Control>}j{/Control}{Tab}");
+    const descending = screen.getByLabelText("重要度の高い順");
+    expect(descending).toHaveFocus();
+    expect(descending).toBeChecked();
+    await ui.keyboard(" ");
+    expect(descending).not.toBeChecked();
+    await waitFor(() =>
+      expect(
+        knowledgeRequests.some(
+          (request) => request.searchParams.get("desc") === "false",
+        ),
+      ).toBe(true),
+    );
+    await ui.keyboard("{Control>}k{/Control}");
+    expect(screen.getByLabelText("一致方法")).toHaveFocus();
+    await ui.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "検索設定" })).toBeNull();
+    expect(screen.getByRole("button", { name: "詳細設定" })).toHaveFocus();
+    expect(document.querySelector("[data-hotkey-active=true]")).toBeNull();
+  });
+
+  it("検索設定のTab移動はパネル内で循環し、閉じた項目を飛ばす", async () => {
+    const ui = userEvent.setup();
+    renderSearch();
+    await screen.findByText("1件の検索結果");
+    await ui.keyboard("s");
+    await ui.keyboard("{Shift>}{Tab}{/Shift}");
+    const section = screen.getByRole("button", { name: "知識の検索条件" });
+    expect(section).toHaveFocus();
+    await ui.keyboard("{Shift>}{Tab}{/Shift}");
+    expect(screen.getByRole("button", { name: "初期値に戻す" })).toHaveFocus();
+    await ui.keyboard("{Tab}");
+    expect(section).toHaveFocus();
+    await ui.keyboard("{Enter}");
+    await ui.keyboard("{Control>}j{/Control}");
+    expect(screen.getByRole("button", { name: "初期値に戻す" })).toHaveFocus();
+    await ui.keyboard("{Escape}");
+    expect(screen.queryByLabelText("知識の並び順")).not.toBeInTheDocument();
+  });
+
   it("知識カード全体を選択し、Enterで単文詳細へ移動する", async () => {
     const ui = userEvent.setup();
     renderSearch();
