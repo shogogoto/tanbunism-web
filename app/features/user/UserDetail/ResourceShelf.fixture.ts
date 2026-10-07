@@ -45,7 +45,13 @@ export const growthFixture: GrowthResult = {
     answer_xp: 5,
     correct_bonus_xp: 2,
     level_xp_coefficient: 10,
-    power_weights: { sentence: 1, term: 1, logic: 3, reference: 2 },
+    power_weights: {
+      sentence: 1,
+      term: 1,
+      logic: 3,
+      reference: 2,
+      abstraction: 2,
+    },
   },
   resources: [
     {
@@ -59,6 +65,7 @@ export const growthFixture: GrowthResult = {
       term_count: 10,
       logic_count: 10,
       reference_count: 16,
+      abstraction_count: 0,
       exposure_xp: 10,
       answer_xp: 50,
       correct_bonus_xp: 20,
@@ -83,6 +90,7 @@ export const growthFixture: GrowthResult = {
       term_count: 20,
       logic_count: 20,
       reference_count: 44,
+      abstraction_count: 0,
       exposure_xp: 15,
       answer_xp: 100,
       correct_bonus_xp: 40,
@@ -100,6 +108,7 @@ export const growthFixture: GrowthResult = {
       term_count: 1,
       logic_count: 9,
       reference_count: 3,
+      abstraction_count: 0,
       exposure_xp: 0,
       answer_xp: 0,
       correct_bonus_xp: 0,

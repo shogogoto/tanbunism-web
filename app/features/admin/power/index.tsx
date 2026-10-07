@@ -13,6 +13,7 @@ const labels = {
   term: "用語",
   logic: "論理関係",
   reference: "参照関係",
+  abstraction: "具体・抽象関係",
 } as const;
 type Inputs = Record<keyof PowerWeights, string>;
 const toInputs = (weights: PowerWeights) =>
@@ -29,7 +30,10 @@ export default function PowerSettingsManager() {
     let active = true;
     requestPowerWeights().then(
       (weights) => {
-        if (active) setInputs(toInputs(weights));
+        if (active)
+          setInputs(
+            toInputs({ ...weights, abstraction: weights.abstraction ?? 2 }),
+          );
       },
       () => {
         if (active) setError("Power設定を取得できませんでした。");
@@ -71,7 +75,7 @@ export default function PowerSettingsManager() {
     <div className="mx-auto max-w-xl space-y-4 p-4 sm:p-6">
       <h2 className="text-lg font-semibold">Power設定</h2>
       <p className="text-sm text-muted-foreground">
-        Powerは単文・用語・論理関係・参照関係の件数に、それぞれの重みを掛けた合計です。
+        Powerは単文・用語・論理関係・参照関係・具体と抽象の関係の件数に、それぞれの重みを掛けた合計です。
         変更してもLv・XPには影響しません。
       </p>
       {error && (

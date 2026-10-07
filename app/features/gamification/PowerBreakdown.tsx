@@ -3,6 +3,7 @@ export type PowerWeights = {
   term: number;
   logic: number;
   reference: number;
+  abstraction: number;
 };
 
 export default function PowerBreakdown({
@@ -14,6 +15,7 @@ export default function PowerBreakdown({
     term_count: number;
     logic_count: number;
     reference_count: number;
+    abstraction_count?: number;
   };
   weights?: PowerWeights;
 }) {
@@ -28,6 +30,7 @@ export default function PowerBreakdown({
     ["用語", counts.term_count, weights.term],
     ["論理", counts.logic_count, weights.logic],
     ["参照", counts.reference_count, weights.reference],
+    ["具体・抽象", counts.abstraction_count ?? 0, weights.abstraction ?? 2],
   ] as const;
   return (
     <div className="space-y-2 text-xs text-muted-foreground">

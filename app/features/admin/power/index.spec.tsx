@@ -10,7 +10,13 @@ const deletePrefix = vi.fn().mockResolvedValue(1);
 vi.mock("~/shared/lib/indexed", () => ({
   genericCache: { deletePrefix: (...args: unknown[]) => deletePrefix(...args) },
 }));
-const weights = { sentence: 1, term: 1, logic: 3, reference: 2 };
+const weights = {
+  sentence: 1,
+  term: 1,
+  logic: 3,
+  reference: 2,
+  abstraction: 2,
+};
 const saved = vi.fn();
 const server = setupServer(
   http.get("*/admin/settings/resource-power", () => HttpResponse.json(weights)),
@@ -38,7 +44,7 @@ function renderSettings() {
   return cache;
 }
 
-it("4項目の重みを保存し、既存Powerのキャッシュを更新する。0も指定可能", async () => {
+it("5項目の重みを保存し、既存Powerのキャッシュを更新する。0も指定可能", async () => {
   const user = userEvent.setup();
   const cache = renderSettings();
   const sentence = await screen.findByLabelText("単文の重み");
@@ -48,9 +54,17 @@ it("4項目の重みを保存し、既存Powerのキャッシュを更新する�
   const logic = screen.getByLabelText("論理関係の重み");
   await user.clear(logic);
   await user.type(logic, "5");
+  const abstraction = screen.getByLabelText("具体・抽象関係の重み");
+  await user.clear(abstraction);
+  await user.type(abstraction, "3");
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() =>
-    expect(saved).toHaveBeenCalledWith({ ...weights, sentence: 0, logic: 5 }),
+    expect(saved).toHaveBeenCalledWith({
+      ...weights,
+      sentence: 0,
+      logic: 5,
+      abstraction: 3,
+    }),
   );
   expect(deletePrefix).toHaveBeenCalledWith("public:profile-detail:");
   await waitFor(() =>

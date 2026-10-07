@@ -23,6 +23,7 @@ export type Growth = {
   power: number;
   logic_count: number;
   reference_count: number;
+  abstraction_count: number;
   sentence_count: number;
   term_count: number;
   last_reviewed_on?: string | null;
