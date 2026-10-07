@@ -320,6 +320,7 @@ export default function ReviewSettingsManager() {
               </label>
               <p className="text-xs text-muted-foreground">
                 リソースを分散して選びます。「苦手・久しぶり」はクイズの不正解・低正答率、知識では接触が少なく間隔の空いた単文を優先します。件数は上限で、候補が少なければ少なくなります。
+                「PageRank」は知識TLの参照先・推論の前提を優先します。未計算・更新分は関連数スコア、クイズはバランス方式になります。
               </p>
               <fieldset className="min-w-0 space-y-2">
                 <legend className="text-sm">対象リソース</legend>

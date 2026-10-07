@@ -6,7 +6,8 @@ export type AppNotification = {
   kind:
     | "quiz_preparation_complete"
     | "quiz_preparation_failed"
-    | "quiz_issue_reported";
+    | "quiz_issue_reported"
+    | "pagerank_complete";
   title: string;
   description: string | null;
   href: string | null;

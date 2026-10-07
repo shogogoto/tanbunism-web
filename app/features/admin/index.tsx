@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import {
   Tabs,
@@ -8,12 +10,19 @@ import {
 import BrokenQuizManager from "./brokenQuizzes";
 import LevelSettingsManager from "./levels";
 import OrphanedTanbunManager from "./orphanedTanbuns";
+import PageRankManager from "./pagerank";
 import PowerSettingsManager from "./power";
 import AdminUserManager from "./users";
 import WorkloadSettingsManager from "./workload";
 
 export default function Admin() {
   const { user, isLoading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const view = searchParams.get("view");
+  const [tab, setTab] = useState(view === "pagerank" ? "pagerank" : "orphans");
+  useEffect(() => {
+    if (view === "pagerank") setTab("pagerank");
+  }, [view]);
 
   if (isLoading) {
     return <p className="p-6 text-sm text-muted-foreground">確認中…</p>;
@@ -28,7 +37,7 @@ export default function Admin() {
     );
   }
   return (
-    <Tabs defaultValue="orphans" className="gap-0">
+    <Tabs value={tab} onValueChange={setTab} className="gap-0">
       <div className="border-b px-4 py-2 sm:px-6">
         <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="orphans">孤立Tanbun</TabsTrigger>
@@ -38,6 +47,7 @@ export default function Admin() {
           <TabsTrigger value="workload">負荷制御</TabsTrigger>
           <TabsTrigger value="levels">レベル</TabsTrigger>
           <TabsTrigger value="power">Power</TabsTrigger>
+          <TabsTrigger value="pagerank">PageRank</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="orphans" className="mt-0">
@@ -60,6 +70,9 @@ export default function Admin() {
       </TabsContent>
       <TabsContent value="power" className="mt-0">
         <PowerSettingsManager />
+      </TabsContent>
+      <TabsContent value="pagerank" className="mt-0">
+        <PageRankManager />
       </TabsContent>
     </Tabs>
   );

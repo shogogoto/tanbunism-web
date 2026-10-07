@@ -7,13 +7,14 @@ export type ReviewSettings = {
   resource_ids: string[] | null;
   tanbun_count: number;
   quiz_count: number;
-  priority: "balanced" | "unseen" | "weak" | "score";
+  priority: "balanced" | "unseen" | "weak" | "score" | "pagerank";
 };
 export const reviewPriorities = {
   balanced: "バランス",
   unseen: "未閲覧・未回答",
   weak: "苦手・久しぶり",
   score: "高スコア",
+  pagerank: "PageRank（知識）",
 };
 export const defaultSettings: ReviewSettings = {
   id: "default",

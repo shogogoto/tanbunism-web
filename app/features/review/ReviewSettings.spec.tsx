@@ -181,6 +181,17 @@ function Selector() {
   return <ReviewSettingsSelector selected={selected} onSelect={setSelected} />;
 }
 
+it("PageRankの知識向け優先方針を保存でき、フォールバックを説明する", async () => {
+  wrap(<ReviewSettingsManager />);
+  await userEvent.click(
+    await screen.findByRole("button", { name: "標準を編集" }),
+  );
+  await userEvent.selectOptions(screen.getByLabelText("優先方針"), "pagerank");
+  expect(screen.getByText(/クイズはバランス方式/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved?.priority).toBe("pagerank"));
+});
+
 function RemovedSelector() {
   const [selected, setSelected] = useState("removed-setting");
   return <ReviewSettingsSelector selected={selected} onSelect={setSelected} />;
