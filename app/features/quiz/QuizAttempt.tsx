@@ -14,6 +14,7 @@ import {
   RelationAnnotation,
   findTargetSentenceId,
 } from "./QuizKnowledge";
+import QuizOptionTerms from "./QuizOptionTerms";
 import QuizPrompt from "./QuizPrompt";
 import QuizReportButton from "./QuizReportButton";
 import { type QuizChain, type ReadableQuiz, answerQuiz } from "./api";
@@ -90,7 +91,7 @@ export default function QuizAttempt({
           const isSelected = selected.includes(optionId);
           const isCorrect = Boolean(answer) && quiz.correct.includes(optionId);
           const isSelectedWrong = Boolean(answer) && isSelected && !isCorrect;
-          const className = `flex w-full items-start gap-2 border p-2 text-left text-xs ${
+          const className = `flex w-full items-start gap-2 border p-3 text-left text-base leading-relaxed ${
             isCorrect
               ? "border-green-600 bg-green-500/10"
               : isSelectedWrong
@@ -109,9 +110,12 @@ export default function QuizAttempt({
                 <kbd className="shrink-0 font-mono text-muted-foreground">
                   {index + 1}
                 </kbd>
-                <ChainSentenceLink chain={chain} sentenceId={optionId}>
-                  {label}
-                </ChainSentenceLink>
+                <span className="min-w-0 break-words">
+                  <ChainSentenceLink chain={chain} sentenceId={optionId}>
+                    {label}
+                  </ChainSentenceLink>
+                  <QuizOptionTerms quiz={quiz} optionId={optionId} />
+                </span>
                 {chain && quizType !== "pair2rel" && (
                   <RelationAnnotation chain={chain} sentenceId={optionId} />
                 )}

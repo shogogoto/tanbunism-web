@@ -21,6 +21,7 @@ import {
   RelationAnnotation,
   findTargetSentenceId,
 } from "./QuizKnowledge";
+import QuizOptionTerms from "./QuizOptionTerms";
 import QuizPrompt from "./QuizPrompt";
 import {
   type QuizChain,
@@ -577,7 +578,7 @@ function QuizQuestion({
                 result !== undefined && quiz.correct.includes(id);
               const isSelectedWrong =
                 result !== undefined && isSelected && !isAnswerCorrect;
-              const className = `w-full border p-3 text-left transition-colors ${
+              const className = `w-full border p-3 text-left text-base leading-relaxed transition-colors ${
                 isAnswerCorrect
                   ? "border-green-600 bg-green-500/10"
                   : isSelectedWrong
@@ -589,9 +590,12 @@ function QuizQuestion({
               const content = (
                 <span className="flex items-center justify-between gap-2">
                   <span className="flex min-w-0 items-baseline gap-2">
-                    <ChainSentenceLink chain={result?.chain} sentenceId={id}>
-                      {optionIndex + 1}. {quizOptionLabel(quiz, label)}
-                    </ChainSentenceLink>
+                    <span className="min-w-0 break-words">
+                      <ChainSentenceLink chain={result?.chain} sentenceId={id}>
+                        {optionIndex + 1}. {quizOptionLabel(quiz, label)}
+                      </ChainSentenceLink>
+                      <QuizOptionTerms quiz={quiz} optionId={id} />
+                    </span>
                     {result && recommendation.quiz_type !== "pair2rel" && (
                       <RelationAnnotation
                         chain={result.chain}

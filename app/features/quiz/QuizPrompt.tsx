@@ -67,7 +67,7 @@ function TermNames({ terms = [] }: { terms?: string[] }) {
         <Badge
           key={term}
           variant="secondary"
-          className="px-1.5 py-0 text-[11px] font-medium"
+          className="px-1.5 py-0 text-sm font-medium"
         >
           {term}
         </Badge>
@@ -122,7 +122,12 @@ export default function QuizPrompt({
       </div>
       {isRelation ? (
         <div className={cn("space-y-1.5", !compact && "rounded border p-2")}>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">
+          <p
+            className={cn(
+              "whitespace-pre-wrap leading-relaxed",
+              compact ? "text-sm" : "text-base md:text-lg",
+            )}
+          >
             <span className="mr-2 font-mono text-xs text-muted-foreground">
               A
             </span>
@@ -130,7 +135,12 @@ export default function QuizPrompt({
             <TermNames terms={prompt.subject_terms} />
           </p>
           {prompt.object && (
-            <p className="whitespace-pre-wrap text-sm leading-relaxed">
+            <p
+              className={cn(
+                "whitespace-pre-wrap leading-relaxed",
+                compact ? "text-sm" : "text-base md:text-lg",
+              )}
+            >
               <span className="mr-2 font-mono text-xs text-muted-foreground">
                 B
               </span>
@@ -141,7 +151,12 @@ export default function QuizPrompt({
           <RelationQuestion quiz={quiz} />
         </div>
       ) : (
-        <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed">
+        <p
+          className={cn(
+            "whitespace-pre-wrap font-semibold leading-relaxed",
+            compact ? "text-sm" : "text-base md:text-lg",
+          )}
+        >
           {renderSubject(prompt.subject)}
         </p>
       )}
