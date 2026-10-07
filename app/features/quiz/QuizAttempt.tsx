@@ -25,6 +25,7 @@ type Props = {
   className?: string;
   showStatement?: boolean;
   onAnswered?: (isCorrect: boolean) => void;
+  completed?: boolean;
 };
 
 export default function QuizAttempt({
@@ -32,17 +33,20 @@ export default function QuizAttempt({
   className,
   showStatement = true,
   onAnswered,
+  completed = false,
 }: Props) {
   const { mutate } = useSWRConfig();
   const [selected, setSelected] = useState<string[]>([]);
   const [chain, setChain] = useState<QuizChain>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>();
+  const [reviewAgain, setReviewAgain] = useState(false);
   const answer = chain?.answers?.at(-1);
+  const readOnly = completed && !answer && !reviewAgain;
   const quizType = chain?.quizzes[0]?.quiz_type;
 
   function toggle(optionId: string) {
-    if (answer) return;
+    if (answer || readOnly) return;
     setSelected((current) =>
       current.includes(optionId)
         ? current.filter((id) => id !== optionId)
@@ -51,6 +55,7 @@ export default function QuizAttempt({
   }
 
   async function submit() {
+    if (readOnly || isSubmitting) return;
     setIsSubmitting(true);
     setError(undefined);
     try {
@@ -122,7 +127,7 @@ export default function QuizAttempt({
               </span>
             </>
           );
-          if (answer) {
+          if (answer || readOnly) {
             return (
               <div key={optionId} className={className}>
                 {content}
@@ -154,6 +159,19 @@ export default function QuizAttempt({
           </AlertDescription>
         </Alert>
       )}
+      {readOnly && (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <p>回答済み</p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setReviewAgain(true)}
+          >
+            もう一度解く
+          </Button>
+        </div>
+      )}
       {error && (
         <p role="alert" className="text-xs text-destructive">
           {error}
@@ -161,7 +179,7 @@ export default function QuizAttempt({
       )}
       <div className="flex items-center justify-between gap-2">
         <QuizReportButton quizId={quiz.quiz_id} />
-        {!answer && (
+        {!answer && !readOnly && (
           <Button
             type="button"
             size="sm"

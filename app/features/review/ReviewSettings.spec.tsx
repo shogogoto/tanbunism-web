@@ -139,7 +139,7 @@ function wrap(element: React.ReactNode) {
 it("長いリソース名は選択欄内で折り返し、選択して保存できる", async () => {
   const user = userEvent.setup();
   wrap(<ReviewSettingsManager />);
-  await user.click(await screen.findByRole("button", { name: "標準を編集" }));
+  await user.click(await screen.findByRole("button", { name: "今日を編集" }));
   await user.click(screen.getByRole("checkbox", { name: "すべて" }));
   const title = "長いリソースタイトル".repeat(12);
   const checkbox = screen.getByRole("checkbox", { name: title });
@@ -157,7 +157,7 @@ it("長いリソース名は選択欄内で折り返し、選択して保存で�
 it("標準設定の件数・方針を編集でき、今日のセットは勝手に作り直さない", async () => {
   const user = userEvent.setup();
   wrap(<ReviewSettingsManager />);
-  await user.click(await screen.findByRole("button", { name: "標準を編集" }));
+  await user.click(await screen.findByRole("button", { name: "今日を編集" }));
   fireEvent.change(screen.getByRole("spinbutton", { name: "一日の知識件数" }), {
     target: { value: "12" },
   });
@@ -194,7 +194,7 @@ it("自作設定を追加・削除でき、標準設定の削除は出さない"
     "href",
     "/review?preset=new-setting",
   );
-  expect(screen.queryByRole("button", { name: "標準を削除" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "今日を削除" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "短い復習を削除" }));
   await waitFor(() =>
     expect(screen.queryByRole("link", { name: /短い復習/ })).toBeNull(),
@@ -269,11 +269,11 @@ it("復習対象を名前で絞り込み、現在の選択を維持する", asyn
   expect(
     screen.queryByRole("option", { name: "苦手の本" }),
   ).not.toBeInTheDocument();
-  expect(screen.getByLabelText("復習設定を切り替え")).toHaveTextContent("標準");
+  expect(screen.getByLabelText("復習設定を切り替え")).toHaveTextContent("今日");
   await user.clear(search);
   await user.type(search, "存在しない対象");
   expect(screen.getByText("該当する対象はありません")).toBeInTheDocument();
-  expect(screen.getByLabelText("復習設定を切り替え")).toHaveTextContent("標準");
+  expect(screen.getByLabelText("復習設定を切り替え")).toHaveTextContent("今日");
   await user.clear(search);
   expect(screen.getByRole("option", { name: "論理学" })).toBeInTheDocument();
   expect(screen.getByRole("option", { name: "苦手の本" })).toBeInTheDocument();
@@ -295,7 +295,7 @@ it("復習対象を名前で絞り込み、現在の選択を維持する", asyn
 it("PageRankの知識向け優先方針を保存でき、フォールバックを説明する", async () => {
   wrap(<ReviewSettingsManager />);
   await userEvent.click(
-    await screen.findByRole("button", { name: "標準を編集" }),
+    await screen.findByRole("button", { name: "今日を編集" }),
   );
   await userEvent.selectOptions(screen.getByLabelText("優先方針"), "pagerank");
   expect(screen.getByText(/クイズはバランス方式/)).toBeInTheDocument();
@@ -312,7 +312,7 @@ it("記憶した設定が削除されていたら標準へ戻る", async () => {
   wrap(<RemovedSelector />);
   await waitFor(() =>
     expect(screen.getByLabelText("復習設定を切り替え")).toHaveTextContent(
-      "標準",
+      "今日",
     ),
   );
   await waitFor(() =>

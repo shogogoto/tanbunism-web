@@ -9,7 +9,60 @@ import {
   getQuizChain,
   listDailyQuizzes,
 } from "~/features/quiz/api";
+import { recommendationDay } from "~/shared/lib/recommendationDay";
 import QuizTimeline from "./QuizTimeline";
+
+it("過去セットの回答済みを引き継ぎ、過去への候補追加は出さない", async () => {
+  const today = recommendationDay();
+  const date = new Date(`${today}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - 1);
+  const day = date.toISOString().slice(0, 10);
+  vi.mocked(listDailyQuizzes).mockResolvedValue({
+    total: 1,
+    data: [
+      {
+        quiz: {
+          quiz_id: "past-quiz",
+          quiz_type: "term2sent",
+          prompt: { subject: "過去の問題", answer_kind: "sentence" },
+          statement: "過去の問題",
+          options: { a: "選択肢" },
+          correct: ["a"],
+          created: day,
+          no_correct_option: false,
+        },
+        attempts: 1,
+        corrects: 1,
+        accuracy: 1,
+        last_attempted_at: day,
+        answered_today: false,
+        answered_in_set: true,
+      },
+    ],
+  });
+  render(
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <MemoryRouter>
+        <QuizTimeline selectedDay={day} />
+      </MemoryRouter>
+    </SWRConfig>,
+  );
+  expect(await screen.findByText("過去の問題")).toBeVisible();
+  expect(listDailyQuizzes).toHaveBeenCalledWith(
+    true,
+    undefined,
+    "default",
+    day,
+  );
+  expect(screen.getByText(`${day}のセット`)).toBeVisible();
+  expect(screen.getByText("1 / 1問 回答済み")).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "回答する" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "もう少し復習する" }),
+  ).not.toBeInTheDocument();
+});
 
 vi.mock("~/features/quiz/api", () => ({
   answerQuiz: vi.fn(),
@@ -154,7 +207,12 @@ it("全ユーザー版では専用feedを取得する", async () => {
   );
 
   expect(await screen.findByText("みんなの問題")).toBeVisible();
-  expect(listDailyQuizzes).toHaveBeenCalledWith(false, undefined, "default");
+  expect(listDailyQuizzes).toHaveBeenCalledWith(
+    false,
+    undefined,
+    "default",
+    recommendationDay(),
+  );
 });
 
 it("日替わりセットの順序を維持し1問ずつ表示する", async () => {
@@ -358,4 +416,13 @@ it("再訪しても今日の回答済み件数を表示する", async () => {
   expect(await screen.findByText("Aの文")).toBeVisible();
   expect(screen.getByText("1 / 1問 回答済み")).toBeVisible();
   expect(screen.queryByRole("alert")).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "回答する" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "1問目を表示" })).toHaveAttribute(
+    "title",
+    "回答済み",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "もう一度解く" }));
+  expect(screen.getByRole("button", { name: "回答する" })).toBeInTheDocument();
 });

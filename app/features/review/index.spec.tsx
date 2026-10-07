@@ -48,17 +48,53 @@ vi.mock("./ReviewSettingsSelector", () => ({
   ),
 }));
 vi.mock("./PersonalTimeline", () => ({
-  default: ({ profile }: { profile: string }) => (
+  default: ({
+    profile,
+    selectedDay,
+  }: { profile: string; selectedDay?: string }) => (
     <input
       aria-label="知識の状態"
       data-profile={profile}
+      data-day={selectedDay}
       defaultValue="初期値"
     />
   ),
 }));
 vi.mock("./QuizTimeline", () => ({
-  default: () => <p>個人の日替わりクイズ</p>,
+  default: ({ selectedDay }: { selectedDay?: string }) => (
+    <p data-day={selectedDay}>個人の日替わりクイズ</p>
+  ),
 }));
+
+it("復習日を知識・クイズで共有し、今日を含む7日を選べる", async () => {
+  const user = userEvent.setup();
+  render(
+    <MemoryRouter initialEntries={["/review"]}>
+      <ReviewHeaderTabs />
+      <Review />
+    </MemoryRouter>,
+  );
+  const days = screen.getByRole("combobox", { name: "復習日" });
+  const options = Array.from(days.querySelectorAll("option"));
+  expect(options).toHaveLength(7);
+  expect(options[0]).toHaveTextContent("今日");
+  const yesterday = options[1].value;
+  await user.selectOptions(days, yesterday);
+  expect(screen.getByLabelText("知識の状態")).toHaveAttribute(
+    "data-day",
+    yesterday,
+  );
+  await user.click(screen.getByRole("tab", { name: "クイズ" }));
+  expect(screen.getByText("個人の日替わりクイズ")).toHaveAttribute(
+    "data-day",
+    yesterday,
+  );
+  await user.selectOptions(days, options[0].value);
+  expect(screen.getByText("個人の日替わりクイズ")).toHaveAttribute(
+    "data-day",
+    options[0].value,
+  );
+});
 vi.mock("~/features/quiz/QuizSession", () => ({
   default: ({ planId }: { planId: string }) => (
     <p data-plan={planId}>計画の準備済みクイズ</p>

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
 import { useAuth } from "~/features/auth/AuthProvider";
 import QuizSession from "~/features/quiz/QuizSession";
+import { useRecommendationDay } from "~/shared/lib/recommendationDay";
 import {
   type SwipeGesture,
   finishSwipeGesture,
@@ -64,6 +65,17 @@ export default function Review() {
     );
   }
   const profile = planId ? `plan:${planId}` : preset;
+  const today = useRecommendationDay();
+  const recentDays = Array.from({ length: 7 }, (_, index) => {
+    const value = new Date(`${today}T00:00:00Z`);
+    value.setUTCDate(value.getUTCDate() - index);
+    return value.toISOString().slice(0, 10);
+  });
+  const requestedDay = params.get("day");
+  const selectedDay =
+    !planId && requestedDay && recentDays.includes(requestedDay)
+      ? requestedDay
+      : today;
   const targetPending = !!requestedResource && !plans && !plansError;
   const targetMissing =
     (!!requestedResource && !!plans && !planId) ||
@@ -161,6 +173,41 @@ export default function Review() {
           }
         >
           <ReviewSettingsSelector selected={profile} onSelect={selectPreset} />
+          {!planId && (
+            <label
+              className="mx-auto mb-2 flex max-w-3xl items-center gap-2 text-sm"
+              data-dashboard-swipe-ignore
+            >
+              復習日
+              <select
+                aria-label="復習日"
+                value={selectedDay}
+                className="h-8 rounded border bg-background px-2"
+                onChange={(event) => {
+                  const day = event.target.value;
+                  setParams(
+                    (previous) => {
+                      const next = new URLSearchParams(previous);
+                      if (day === today) next.delete("day");
+                      else next.set("day", day);
+                      return next;
+                    },
+                    { replace: true },
+                  );
+                }}
+              >
+                {recentDays.map((day, index) => (
+                  <option key={day} value={day}>
+                    {index === 0
+                      ? "今日"
+                      : index === 1
+                        ? `昨日（${day}）`
+                        : day}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
         {plan && <PlanReviewProgress plan={plan} />}
         {targetPending && <output>学習計画を読み込み中…</output>}
@@ -174,7 +221,11 @@ export default function Review() {
           !(requestedResource && plansError) &&
           rendered.has("knowledge") && (
             <div hidden={active !== "knowledge"}>
-              <PersonalTimeline key={profile} profile={profile} />
+              <PersonalTimeline
+                key={`${profile}:${selectedDay}`}
+                profile={profile}
+                selectedDay={selectedDay}
+              />
             </div>
           )}
         {!targetPending &&
@@ -185,7 +236,7 @@ export default function Review() {
               {planId ? (
                 <QuizSession key={planId} planId={planId} />
               ) : (
-                <QuizTimeline profile={preset} />
+                <QuizTimeline profile={preset} selectedDay={selectedDay} />
               )}
             </div>
           )}

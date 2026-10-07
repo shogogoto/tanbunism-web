@@ -11,6 +11,7 @@ export type PersonalTanbunItem = {
   score?: number;
   exposure_count: number;
   seen_today: boolean;
+  seen_in_set?: boolean;
 };
 
 export type TanbunExposureResult = {
@@ -27,9 +28,10 @@ export type TodayTanbunExposureCount = {
 
 export async function listPersonalTanbuns(
   profile = "default",
+  day?: string,
 ): Promise<PersonalTanbunItem[]> {
   return request<PersonalTanbunItem[]>(
-    `/dashboard/tanbuns?profile=${encodeURIComponent(profile)}`,
+    `/dashboard/tanbuns?profile=${encodeURIComponent(profile)}${day ? `&day=${encodeURIComponent(day)}` : ""}`,
   );
 }
 

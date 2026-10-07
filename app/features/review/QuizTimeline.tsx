@@ -21,17 +21,21 @@ const REVIEW_ACCURACY_THRESHOLD = 0.8;
 export default function QuizTimeline({
   scope = "personal",
   profile = "default",
+  selectedDay,
 }: {
   scope?: "personal" | "global";
   profile?: string;
+  selectedDay?: string;
 }) {
-  const day = useRecommendationDay();
+  const today = useRecommendationDay();
+  const day = selectedDay ?? today;
   return (
     <DailyQuizTimeline
       key={`${scope}:${profile}:${day}`}
       scope={scope}
       day={day}
       profile={profile}
+      historical={day !== today}
     />
   );
 }
@@ -40,10 +44,12 @@ function DailyQuizTimeline({
   scope,
   day,
   profile,
+  historical,
 }: {
   scope: "personal" | "global";
   day: string;
   profile: string;
+  historical: boolean;
 }) {
   const [sessionResults, setSessionResults] = useState<Record<string, boolean>>(
     {},
@@ -61,7 +67,7 @@ function DailyQuizTimeline({
     ["daily-quiz-timeline", scope, profile, day],
     async (cacheOptions) => {
       return (
-        await listDailyQuizzes(scope === "personal", cacheOptions, profile)
+        await listDailyQuizzes(scope === "personal", cacheOptions, profile, day)
       ).data;
     },
     {
@@ -74,7 +80,10 @@ function DailyQuizTimeline({
 
   const sorted = quizzes;
   const completed = sorted.filter(
-    (item) => item.answered_today || item.quiz.quiz_id in sessionResults,
+    (item) =>
+      item.answered_in_set ||
+      item.answered_today ||
+      item.quiz.quiz_id in sessionResults,
   ).length;
 
   async function addMore() {
@@ -124,6 +133,7 @@ function DailyQuizTimeline({
         </p>
       )}
       {scope === "personal" &&
+        !historical &&
         sorted.length > 0 &&
         completed === sorted.length && (
           <div className="py-2 text-center">
@@ -142,15 +152,17 @@ function DailyQuizTimeline({
         )}
       {sorted.length === 0 && !error && (
         <p className="border p-2 text-sm text-muted-foreground">
-          {scope === "global"
-            ? "回答できるクイズはまだありません。"
-            : "この設定に合うクイズはありません。対象リソースを見直すか、学習計画でクイズを準備してください。"}
+          {historical
+            ? "この日のクイズセットは保存されていません。"
+            : scope === "global"
+              ? "回答できるクイズはまだありません。"
+              : "この設定に合うクイズはありません。対象リソースを見直すか、学習計画でクイズを準備してください。"}
         </p>
       )}
       {sorted.length > 0 && (
         <div className="border-y sm:border-x">
           <div className="flex items-center justify-between border-b px-4 py-2 text-sm">
-            <span>今日のおすすめ</span>
+            <span>{historical ? `${day}のセット` : "今日のセット"}</span>
             <span className="tabular-nums text-muted-foreground">
               {completed} / {sorted.length}問 回答済み
             </span>
@@ -158,6 +170,18 @@ function DailyQuizTimeline({
           <QuizTimelinePager
             currentIndex={currentIndex}
             quizIds={sorted.map((item) => item.quiz.quiz_id)}
+            completedIds={
+              new Set(
+                sorted
+                  .filter(
+                    (item) =>
+                      item.answered_in_set ||
+                      item.answered_today ||
+                      item.quiz.quiz_id in sessionResults,
+                  )
+                  .map((item) => item.quiz.quiz_id),
+              )
+            }
             onChange={setCurrentIndex}
           />
           <div>
@@ -196,10 +220,12 @@ function DailyQuizTimeline({
 function QuizTimelinePager({
   currentIndex,
   quizIds,
+  completedIds,
   onChange,
 }: {
   currentIndex: number;
   quizIds: string[];
+  completedIds: Set<string>;
   onChange: (index: number) => void;
 }) {
   const count = quizIds.length;
@@ -228,11 +254,13 @@ function QuizTimelinePager({
             className="flex size-7 shrink-0 items-center justify-center rounded-full"
             onClick={() => onChange(index)}
             aria-label={`${index + 1}問目を表示`}
+            title={completedIds.has(quizId) ? "回答済み" : "未回答"}
             aria-current={index === currentIndex ? "true" : undefined}
           >
             <span
               className={cn(
                 "block size-1.5 rounded-full bg-muted-foreground/35 transition-[width,height,background-color]",
+                completedIds.has(quizId) && "bg-emerald-500",
                 index === currentIndex && "size-2.5 bg-primary",
               )}
               aria-hidden="true"
@@ -330,11 +358,13 @@ function QuizTimelineCard({
                   : "secondary"
             }
           >
-            {item.attempts === 0
-              ? "未回答"
-              : needsReview(item)
-                ? `復習 ${Math.round((item.accuracy ?? 0) * 100)}%`
-                : `${item.attempts}回答`}
+            {item.answered_in_set || item.answered_today
+              ? "回答済み"
+              : item.attempts === 0
+                ? "未回答"
+                : needsReview(item)
+                  ? `復習 ${Math.round((item.accuracy ?? 0) * 100)}%`
+                  : `${item.attempts}回答`}
           </Badge>
         )}
       </div>
@@ -345,6 +375,7 @@ function QuizTimelineCard({
           showStatement={false}
           className="border-0 p-4"
           onAnswered={onAnswered}
+          completed={item.answered_in_set || item.answered_today}
         />
         {item.accuracy !== null && (
           <p className="border-t px-4 py-3 text-xs text-muted-foreground">

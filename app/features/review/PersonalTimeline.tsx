@@ -8,6 +8,7 @@ import KnowledgeCard, {
 } from "~/features/tanbun/components/KnowledgeCard";
 import { useTanbunPreview } from "~/features/tanbun/detail/Preview";
 import Loading from "~/shared/components/Loading";
+import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import { usePersistentSWR } from "~/shared/hooks/swr/useCache";
 import { genericCache } from "~/shared/lib/indexed";
@@ -31,10 +32,13 @@ const PERSONAL_TIMELINE_CACHE_TTL = 24 * 60 * 60_000;
 
 export default function PersonalTimeline({
   profile = "default",
-}: { profile?: string }) {
+  selectedDay,
+}: { profile?: string; selectedDay?: string }) {
   const { mutate: mutateGlobal } = useSWRConfig();
   const { openPreview, preview } = useTanbunPreview();
-  const day = useRecommendationDay();
+  const today = useRecommendationDay();
+  const day = selectedDay ?? today;
+  const historical = day !== today;
   const cacheKey = `${PERSONAL_TIMELINE_CACHE_KEY}:${profile}:${day}`;
   const {
     data,
@@ -45,7 +49,7 @@ export default function PersonalTimeline({
     ["dashboard-personal-timeline", profile, day],
     async () => {
       const [items, today] = await Promise.all([
-        listPersonalTanbuns(profile),
+        listPersonalTanbuns(profile, selectedDay),
         getTodayTanbunExposureCount(),
       ]);
       return { items, seenTodayCount: today.count };
@@ -98,6 +102,7 @@ export default function PersonalTimeline({
           ? {
               ...candidate,
               seen_today: true,
+              seen_in_set: true,
               exposure_count: candidate.exposure_count + 1,
             }
           : candidate,
@@ -116,6 +121,7 @@ export default function PersonalTimeline({
             ? {
                 ...candidate,
                 seen_today: true,
+                seen_in_set: true,
                 exposure_count: result.exposure_count,
               }
             : candidate,
@@ -129,6 +135,7 @@ export default function PersonalTimeline({
             ? {
                 ...candidate,
                 seen_today: false,
+                seen_in_set: item.seen_in_set,
                 exposure_count: item.exposure_count,
               }
             : candidate,
@@ -185,7 +192,9 @@ export default function PersonalTimeline({
       )}
       {items.length === 0 && !error && (
         <p className="border p-2 text-sm text-muted-foreground">
-          この設定に合う単文はありません。対象リソースを見直すか、読書メモをインポートしてください。
+          {historical
+            ? "この日の知識セットは保存されていません。"
+            : "この設定に合う単文はありません。対象リソースを見直すか、読書メモをインポートしてください。"}
         </p>
       )}
       {items.length > 0 && (
@@ -199,13 +208,19 @@ export default function PersonalTimeline({
             </span>
             <strong className="tabular-nums">{seenTodayCount}件</strong>
             <span className="ml-auto text-muted-foreground tabular-nums">
-              {profile.startsWith("plan:")
-                ? "この計画の知識"
-                : "今日のおすすめ"}{" "}
-              {items.filter((item) => item.seen_today).length} / {items.length}
+              {historical
+                ? `${day}のセット`
+                : profile.startsWith("plan:")
+                  ? "この計画の知識"
+                  : "今日のセット"}{" "}
+              {
+                items.filter((item) => item.seen_in_set || item.seen_today)
+                  .length
+              }{" "}
+              / {items.length}
             </span>
           </div>
-          {items.every((item) => item.seen_today) && (
+          {!historical && items.every((item) => item.seen_today) && (
             <div className="py-2 text-center">
               <Button
                 variant="outline"
@@ -253,6 +268,9 @@ export default function PersonalTimeline({
                   scorePosition="none"
                   metadata={
                     <>
+                      {historical && item.seen_in_set && (
+                        <Badge variant="secondary">閲覧済み</Badge>
+                      )}
                       <Button
                         type="button"
                         variant={item.seen_today ? "ghost" : "outline"}

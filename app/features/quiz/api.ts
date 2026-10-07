@@ -50,7 +50,10 @@ export type {
   StudyPlanDraft,
 };
 export type QuizType = StudyPlanDraft["quiz_types"][number];
-export type ManagedQuiz = GeneratedManagedQuiz & { answered_today?: boolean };
+export type ManagedQuiz = GeneratedManagedQuiz & {
+  answered_today?: boolean;
+  answered_in_set?: boolean;
+};
 export type QuizRecommendation = QuizRecommendationResponse & {
   quiz_type: QuizType;
 };
@@ -673,14 +676,15 @@ export async function listDailyQuizzes(
   personal: boolean,
   options: QuizCacheOptions = {},
   profile = "default",
+  day = recommendationDay(),
 ): Promise<{ data: ManagedQuiz[]; total: number }> {
   return withQuizCache(
     "daily-quizzes",
-    { personal, profile, day: recommendationDay() },
+    { personal, profile, day },
     quizCachePolicy.live,
     async () => {
       const response = await fetch(
-        `${API_BASE_URL}/quiz/daily?personal=${personal}&profile=${encodeURIComponent(profile)}`,
+        `${API_BASE_URL}/quiz/daily?personal=${personal}&profile=${encodeURIComponent(profile)}&day=${encodeURIComponent(day)}`,
         { credentials: "include" },
       );
       if (!response.ok) {

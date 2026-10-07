@@ -18,7 +18,7 @@ export const reviewPriorities = {
 };
 export const defaultSettings: ReviewSettings = {
   id: "default",
-  name: "標準",
+  name: "今日",
   resource_ids: null,
   tanbun_count: 30,
   quiz_count: 20,
@@ -50,7 +50,12 @@ export function useReviewSettings() {
   const { user, isAuthenticated } = useAuth();
   return useSWR<ReviewSettings[]>(
     isAuthenticated && user ? ["review-settings", user.uid] : null,
-    () => settingsRequest<ReviewSettings[]>(),
+    async () =>
+      (await settingsRequest<ReviewSettings[]>()).map((setting) =>
+        setting.id === "default" && setting.name === "標準"
+          ? { ...setting, name: "今日" }
+          : setting,
+      ),
     { dedupingInterval: 30_000 },
   );
 }
