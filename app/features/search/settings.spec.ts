@@ -6,6 +6,23 @@ import {
 } from "./settings";
 
 describe("検索詳細設定", () => {
+  it("PageRank順と対象リソースを保存し、対象なしではスコア順に戻す", () => {
+    const settings = {
+      ...defaultSearchSettings,
+      knowledge: {
+        ...defaultSearchSettings.knowledge,
+        order: "pagerank" as const,
+        resourceId: "resource-1",
+      },
+    };
+    expect(
+      readSearchSettings(writeSearchSettings(new URLSearchParams(), settings)),
+    ).toEqual(settings);
+    expect(
+      readSearchSettings(new URLSearchParams("knowledge_order=pagerank"))
+        .knowledge.order,
+    ).toBe("score");
+  });
   it("URLに設定がなければ初期値を使う", () => {
     expect(readSearchSettings(new URLSearchParams())).toEqual(
       defaultSearchSettings,

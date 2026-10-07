@@ -4,6 +4,7 @@ import {
   List,
   LoaderCircle,
   type LucideIcon,
+  Network,
   TextInitial,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -38,6 +39,7 @@ type SearchType = Exclude<AllSearchType, "quiz">;
 const PAGE_SIZE = 20;
 
 type SearchState = {
+  pagerankScores: Record<string, number | null>;
   knowledge: Tanbun[];
   resources: ResourceInfo[];
   users: UserSearchRow[];
@@ -51,11 +53,13 @@ type SearchSlice =
       data: Tanbun[];
       resourceInfos: TanbunSearchResult["resource_infos"];
       total: number;
+      pagerankScores?: Record<string, number | null>;
     }
   | { type: "resource"; data: ResourceInfo[]; total: number }
   | { type: "user"; data: UserSearchRow[]; total: number };
 
 const emptyState = (): SearchState => ({
+  pagerankScores: {},
   knowledge: [],
   resources: [],
   users: [],
@@ -242,6 +246,8 @@ function StandardSearch() {
           if (result.type === "knowledge") {
             return (
               <KnowledgeResult
+                showPageRank={settings.knowledge.order === "pagerank"}
+                pageRank={state.pagerankScores[result.value.uid]}
                 key={`knowledge:${result.value.uid}`}
                 value={result.value}
                 info={state.resourceInfos[result.value.resource_uid]}
@@ -326,29 +332,32 @@ async function searchType(
   signal: AbortSignal,
 ): Promise<SearchSlice> {
   if (type === "knowledge") {
-    const response = await searchByTextTanbunGet(
-      {
-        q: query,
-        type: settings.knowledge.matchType,
-        page,
-        size: PAGE_SIZE,
-        n_detail: settings.knowledge.weights.detail,
-        n_premise: settings.knowledge.weights.premise,
-        n_conclusion: settings.knowledge.weights.conclusion,
-        n_refer: settings.knowledge.weights.refer,
-        n_referred: settings.knowledge.weights.referred,
-        desc: settings.knowledge.desc,
-      },
-      { signal },
-    );
+    const requestParams = {
+      sort: settings.knowledge.order,
+      resource_id: settings.knowledge.resourceId || undefined,
+      q: query,
+      type: settings.knowledge.matchType,
+      page,
+      size: PAGE_SIZE,
+      n_detail: settings.knowledge.weights.detail,
+      n_premise: settings.knowledge.weights.premise,
+      n_conclusion: settings.knowledge.weights.conclusion,
+      n_refer: settings.knowledge.weights.refer,
+      n_referred: settings.knowledge.weights.referred,
+      desc: settings.knowledge.desc,
+    };
+    const response = await searchByTextTanbunGet(requestParams, { signal });
     if (response.status !== 200)
       throw new Error("知識を検索できませんでした。");
-    const result = response.data as TanbunSearchResult;
+    const result = response.data as TanbunSearchResult & {
+      pagerank_scores?: Record<string, number | null>;
+    };
     return {
       type,
       data: result.data,
       resourceInfos: result.resource_infos,
       total: result.total,
+      pagerankScores: result.pagerank_scores,
     };
   }
   if (type === "resource") {
@@ -403,6 +412,9 @@ function mergeSearchSlice(
   if (slice.type === "knowledge") {
     return {
       ...current,
+      pagerankScores: append
+        ? { ...current.pagerankScores, ...slice.pagerankScores }
+        : (slice.pagerankScores ?? {}),
       knowledge: append
         ? mergeUnique(current.knowledge, slice.data, (value) => value.uid)
         : slice.data,
@@ -460,10 +472,14 @@ function KnowledgeResult({
   value,
   info,
   query,
+  showPageRank,
+  pageRank,
 }: {
   value: Tanbun;
   info?: ResourceInfo;
   query: string;
+  showPageRank: boolean;
+  pageRank?: number | null;
 }) {
   return (
     <KnowledgeCard
@@ -474,14 +490,28 @@ function KnowledgeResult({
       query={query}
       state={{ tanbun: value, ...info }}
       metadata={
-        info?.resource ? (
-          <Link
-            to={`/resource/${info.resource.uid}#${value.uid}`}
-            className="truncate hover:text-foreground hover:underline"
-          >
-            {info.resource.name}
-          </Link>
-        ) : undefined
+        <>
+          {showPageRank && (
+            <span
+              className="flex shrink-0 items-center gap-1"
+              title="PageRank（リソース内の平均を1とした値）。未計算・更新後は再計算が必要です。"
+              aria-label={`PageRank: ${pageRank == null ? "未計算・要再計算" : pageRank.toFixed(2)}`}
+            >
+              <Network className="size-3.5" aria-hidden="true" />
+              <span className="font-mono tabular-nums">
+                {pageRank == null ? "—" : pageRank.toFixed(2)}
+              </span>
+            </span>
+          )}
+          {info?.resource ? (
+            <Link
+              to={`/resource/${info.resource.uid}#${value.uid}`}
+              className="truncate hover:text-foreground hover:underline"
+            >
+              {info.resource.name}
+            </Link>
+          ) : undefined}
+        </>
       }
       compact
       scorePosition="start"

@@ -67,6 +67,7 @@ const server = setupServer(
         },
       ],
       resource_infos: { [resource.uid]: resourceInfo },
+      pagerank_scores: { "sentence-1": 2.345 },
     });
   }),
   http.post("*/resource/search", async ({ request }) => {
@@ -121,6 +122,63 @@ function renderSearch(initialEntry = "/search?q=数学") {
 }
 
 describe("統合検索", () => {
+  it("PageRankは対象リソース選択後のPageRank順でだけ表示する", async () => {
+    const ui = userEvent.setup();
+    renderSearch();
+    await screen.findByText("1件の検索結果");
+    expect(screen.queryByLabelText(/PageRank:/)).not.toBeInTheDocument();
+    await ui.click(screen.getByRole("button", { name: "詳細設定" }));
+    expect(screen.getByRole("option", { name: "PageRank順" })).toBeDisabled();
+    await screen.findByRole("option", { name: "数学ノート（@reader）" });
+    await ui.selectOptions(
+      screen.getByLabelText("知識の対象リソース"),
+      resource.uid,
+    );
+    expect(
+      screen.getByRole("option", { name: "PageRank順" }),
+    ).not.toBeDisabled();
+    await ui.selectOptions(screen.getByLabelText("知識の並び順"), "pagerank");
+    expect(await screen.findByLabelText("PageRank: 2.35")).toBeVisible();
+    expect(screen.getByLabelText("スコア: 12")).toBeVisible();
+    expect(
+      knowledgeRequests.some(
+        (request) =>
+          request.searchParams.get("sort") === "pagerank" &&
+          request.searchParams.get("resource_id") === resource.uid,
+      ),
+    ).toBe(true);
+    await ui.selectOptions(screen.getByLabelText("知識の対象リソース"), "");
+    await waitFor(() =>
+      expect(screen.queryByLabelText(/PageRank:/)).not.toBeInTheDocument(),
+    );
+    expect(screen.getByLabelText("知識の並び順")).toHaveValue("score");
+  });
+
+  it("PageRank未計算・古い結果は0ではなくダッシュで表示する", async () => {
+    server.use(
+      http.get("*/tanbun/", () =>
+        HttpResponse.json({
+          total: 1,
+          data: [
+            {
+              uid: "sentence-1",
+              sentence: "未計算の知識",
+              stats: { score: 12 },
+              resource_uid: resource.uid,
+            },
+          ],
+          resource_infos: { [resource.uid]: resourceInfo },
+          pagerank_scores: { "sentence-1": null },
+        }),
+      ),
+    );
+    renderSearch(
+      "/search?knowledge_order=pagerank&knowledge_resource=resource-1",
+    );
+    const rank = await screen.findByLabelText("PageRank: 未計算・要再計算");
+    expect(rank).toHaveTextContent("—");
+  });
+
   it("知識・リソース・ユーザーをタブで切り替える", async () => {
     const ui = userEvent.setup();
     renderSearch();

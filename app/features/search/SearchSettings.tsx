@@ -14,6 +14,7 @@ import {
   PopoverTrigger,
 } from "~/shared/components/ui/popover";
 import { SearchByTextTanbunGetType } from "~/shared/generated/fastAPI.schemas";
+import KnowledgeResourceFilter from "./KnowledgeResourceFilter";
 import type { SearchSettings, SearchType } from "./settings";
 
 export default function SearchSettingsPanel({
@@ -76,6 +77,41 @@ function KnowledgeSettings({ settings, onChange }: SettingsSectionProps) {
   );
   return (
     <SettingsSection title="知識の検索条件" borderClass="border-l-blue-500">
+      <KnowledgeResourceFilter
+        value={settings.knowledge.resourceId}
+        onChange={(resourceId) =>
+          onChange({
+            ...settings,
+            knowledge: {
+              ...settings.knowledge,
+              resourceId,
+              order: resourceId ? settings.knowledge.order : "score",
+            },
+          })
+        }
+      />
+      <div className="space-y-1">
+        <Label htmlFor="knowledge-order">知識の並び順</Label>
+        <select
+          id="knowledge-order"
+          value={settings.knowledge.order}
+          onChange={(event) =>
+            onChange({
+              ...settings,
+              knowledge: {
+                ...settings.knowledge,
+                order: event.target.value as "score" | "pagerank",
+              },
+            })
+          }
+          className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+        >
+          <option value="score">スコア順</option>
+          <option value="pagerank" disabled={!settings.knowledge.resourceId}>
+            PageRank順
+          </option>
+        </select>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <SelectField
           id="knowledge-match"

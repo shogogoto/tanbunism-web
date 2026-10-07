@@ -11,6 +11,8 @@ export type UserOrder = NonNullable<UserSearchBody["order_by"]>[number];
 
 export type SearchSettings = {
   knowledge: {
+    order: "score" | "pagerank";
+    resourceId: string;
     matchType: SearchByTextTanbunGetType;
     desc: boolean;
     weights: {
@@ -34,6 +36,8 @@ export type SearchSettings = {
 
 export const defaultSearchSettings: SearchSettings = {
   knowledge: {
+    order: "score",
+    resourceId: "",
     matchType: SearchByTextTanbunGetType.CONTAINS,
     desc: true,
     weights: {
@@ -49,6 +53,8 @@ export const defaultSearchSettings: SearchSettings = {
 };
 
 const settingParamNames = [
+  "knowledge_order",
+  "knowledge_resource",
   "match",
   "knowledge_desc",
   "weight_detail",
@@ -69,6 +75,12 @@ export function readSearchSettings(params: URLSearchParams): SearchSettings {
   const userOrder = params.get("user_order");
   return {
     knowledge: {
+      order:
+        params.get("knowledge_order") === "pagerank" &&
+        params.get("knowledge_resource")
+          ? "pagerank"
+          : "score",
+      resourceId: params.get("knowledge_resource") ?? "",
       matchType: Object.values(SearchByTextTanbunGetType).includes(
         match as SearchByTextTanbunGetType,
       )
@@ -103,6 +115,13 @@ export function writeSearchSettings(
   for (const name of settingParamNames) next.delete(name);
 
   setUnlessDefault(next, "match", settings.knowledge.matchType, "CONTAINS");
+  setUnlessDefault(next, "knowledge_order", settings.knowledge.order, "score");
+  setUnlessDefault(
+    next,
+    "knowledge_resource",
+    settings.knowledge.resourceId,
+    "",
+  );
   setUnlessDefault(next, "knowledge_desc", settings.knowledge.desc, true);
   setUnlessDefault(next, "weight_detail", settings.knowledge.weights.detail, 1);
   setUnlessDefault(
