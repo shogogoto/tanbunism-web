@@ -76,10 +76,7 @@ export function readSearchSettings(params: URLSearchParams): SearchSettings {
   return {
     knowledge: {
       order:
-        params.get("knowledge_order") === "pagerank" &&
-        params.get("knowledge_resource")
-          ? "pagerank"
-          : "score",
+        params.get("knowledge_order") === "pagerank" ? "pagerank" : "score",
       resourceId: params.get("knowledge_resource") ?? "",
       matchType: Object.values(SearchByTextTanbunGetType).includes(
         match as SearchByTextTanbunGetType,

@@ -80,7 +80,7 @@ export default function KnowledgeResourceFilter({
         </p>
       )}
       <p className="text-xs text-muted-foreground">
-        PageRank順はリソースを1つ選択すると使えます。
+        PageRankは各リソース内の平均を1とした値で並べます。
       </p>
     </div>
   );

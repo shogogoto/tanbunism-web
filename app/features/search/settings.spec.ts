@@ -6,7 +6,7 @@ import {
 } from "./settings";
 
 describe("検索詳細設定", () => {
-  it("PageRank順と対象リソースを保存し、対象なしではスコア順に戻す", () => {
+  it("PageRank順を対象リソースの指定有無にかかわらず保存する", () => {
     const settings = {
       ...defaultSearchSettings,
       knowledge: {
@@ -21,7 +21,7 @@ describe("検索詳細設定", () => {
     expect(
       readSearchSettings(new URLSearchParams("knowledge_order=pagerank"))
         .knowledge.order,
-    ).toBe("score");
+    ).toBe("pagerank");
   });
   it("URLに設定がなければ初期値を使う", () => {
     expect(readSearchSettings(new URLSearchParams())).toEqual(

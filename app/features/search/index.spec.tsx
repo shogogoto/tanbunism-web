@@ -122,13 +122,24 @@ function renderSearch(initialEntry = "/search?q=数学") {
 }
 
 describe("統合検索", () => {
-  it("PageRankは対象リソース選択後のPageRank順でだけ表示する", async () => {
+  it("全リソースでもPageRank順を使え、スコア順では値を隠す", async () => {
     const ui = userEvent.setup();
     renderSearch();
     await screen.findByText("1件の検索結果");
     expect(screen.queryByLabelText(/PageRank:/)).not.toBeInTheDocument();
     await ui.click(screen.getByRole("button", { name: "詳細設定" }));
-    expect(screen.getByRole("option", { name: "PageRank順" })).toBeDisabled();
+    expect(
+      screen.getByRole("option", { name: "PageRank順" }),
+    ).not.toBeDisabled();
+    await ui.selectOptions(screen.getByLabelText("知識の並び順"), "pagerank");
+    expect(await screen.findByLabelText("PageRank: 2.35")).toBeVisible();
+    expect(
+      knowledgeRequests.some(
+        (request) =>
+          request.searchParams.get("sort") === "pagerank" &&
+          !request.searchParams.has("resource_id"),
+      ),
+    ).toBe(true);
     await screen.findByRole("option", { name: "数学ノート（@reader）" });
     await ui.selectOptions(
       screen.getByLabelText("知識の対象リソース"),
@@ -148,6 +159,9 @@ describe("統合検索", () => {
       ),
     ).toBe(true);
     await ui.selectOptions(screen.getByLabelText("知識の対象リソース"), "");
+    expect(screen.getByLabelText("知識の並び順")).toHaveValue("pagerank");
+    expect(screen.getByLabelText("PageRank: 2.35")).toBeVisible();
+    await ui.selectOptions(screen.getByLabelText("知識の並び順"), "score");
     await waitFor(() =>
       expect(screen.queryByLabelText(/PageRank:/)).not.toBeInTheDocument(),
     );

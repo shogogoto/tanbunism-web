@@ -85,7 +85,6 @@ function KnowledgeSettings({ settings, onChange }: SettingsSectionProps) {
             knowledge: {
               ...settings.knowledge,
               resourceId,
-              order: resourceId ? settings.knowledge.order : "score",
             },
           })
         }
@@ -107,9 +106,7 @@ function KnowledgeSettings({ settings, onChange }: SettingsSectionProps) {
           className="h-9 w-full rounded-md border bg-background px-3 text-sm"
         >
           <option value="score">スコア順</option>
-          <option value="pagerank" disabled={!settings.knowledge.resourceId}>
-            PageRank順
-          </option>
+          <option value="pagerank">PageRank順</option>
         </select>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
