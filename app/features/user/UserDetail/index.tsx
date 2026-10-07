@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import { useResourceGrowth } from "~/features/gamification/ResourceGrowth";
+import ReviewXpProgress from "~/features/gamification/ReviewXpProgress";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
 import {
@@ -17,7 +18,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/shared/components/ui/dialog";
-import { Progress } from "~/shared/components/ui/progress";
 import type {
   LearningProgress,
   NameSpace,
@@ -111,12 +111,11 @@ export default function UserDetail({
                   </DialogContent>
                 </Dialog>
               </div>
-              <Progress
-                value={
-                  (100 * learningProgress.current_level_xp) /
-                  Math.max(1, learningProgress.xp_for_next_level)
-                }
-                aria-label="ユーザーのレベル進捗"
+              <ReviewXpProgress
+                currentXp={learningProgress.current_level_xp}
+                requiredXp={learningProgress.xp_for_next_level}
+                todayXp={learningProgress.today_xp}
+                label="ユーザーのレベル進捗"
               />
               <p className="text-right text-xs tabular-nums text-muted-foreground">
                 {learningProgress.current_level_xp.toLocaleString("ja-JP")} /{" "}
@@ -131,7 +130,7 @@ export default function UserDetail({
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">今日のXP</p>
-                  <p className="text-2xl font-semibold tabular-nums">
+                  <p className="text-2xl font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
                     {learningProgress.today_xp?.toLocaleString("ja-JP") ?? "—"}
                   </p>
                 </div>
@@ -158,7 +157,7 @@ export function LearningLevel({
   embedded = false,
   defaultDetailsOpen = false,
 }: {
-  progress: LearningProgress;
+  progress: LearningProgress & { today_xp?: number };
   embedded?: boolean;
   defaultDetailsOpen?: boolean;
 }) {
@@ -184,7 +183,12 @@ export function LearningLevel({
           Lv. {progress.level}
         </p>
       </div>
-      <Progress value={percentage} aria-label={`レベル進捗 ${percentage}%`} />
+      <ReviewXpProgress
+        currentXp={progress.current_level_xp}
+        requiredXp={progress.xp_for_next_level}
+        todayXp={progress.today_xp}
+        label={`レベル進捗 ${percentage}%`}
+      />
       <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
         <span className="tabular-nums">
           累計 {progress.total_xp.toLocaleString("ja-JP")} XP

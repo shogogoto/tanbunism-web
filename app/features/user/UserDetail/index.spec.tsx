@@ -69,6 +69,13 @@ it("Powerと今日のXPだけを簡潔に表示し、累計XPとは区別する"
   );
   expect(stats.getByText("Power").nextSibling).toHaveTextContent("102");
   expect(stats.getByText("今日のXP").nextSibling).toHaveTextContent("7");
+  expect(stats.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuetext",
+    "31 / 50 XP · 今日 +7 XP",
+  );
+  expect(
+    stats.getByRole("progressbar").querySelector('[data-xp-segment="today"]'),
+  ).toHaveClass("bg-emerald-500");
   expect(screen.queryByText("本棚のPower")).not.toBeInTheDocument();
   expect(screen.queryByText("記録開始後の合計")).not.toBeInTheDocument();
   expect(screen.queryByText("論理・参照の整理")).not.toBeInTheDocument();
