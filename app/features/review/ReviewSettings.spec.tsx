@@ -107,19 +107,20 @@ it("既存StudyPlanも選択でき、今日の設定の記憶を上書きしな�
     );
   }
   wrap(<Selector />);
+  await user.click(screen.getByRole("button", { name: "復習設定を切り替え" }));
   await screen.findByRole("option", { name: "育てたい本" });
   await waitFor(() =>
     expect(localStorage.getItem(presetStorageKey("settings-user"))).toBe(
       "custom",
     ),
   );
-  await user.selectOptions(
-    screen.getByLabelText("復習設定を切り替え"),
-    "plan:plan-1",
+  await user.click(screen.getByRole("option", { name: "育てたい本" }));
+  expect(screen.getByLabelText("復習設定を切り替え")).toHaveTextContent(
+    "育てたい本",
   );
-  expect(screen.getByLabelText("復習設定を切り替え")).toHaveValue(
-    "plan:plan-1",
-  );
+  expect(
+    screen.queryByRole("combobox", { name: "復習対象を絞り込む" }),
+  ).not.toBeInTheDocument();
   expect(localStorage.getItem(presetStorageKey("settings-user"))).toBe(
     "custom",
   );
@@ -251,8 +252,13 @@ it("復習対象を名前で絞り込み、現在の選択を維持する", asyn
     ),
   );
   wrap(<Selector />);
+  expect(
+    screen.queryByRole("combobox", { name: "復習対象を絞り込む" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "復習設定を切り替え" }));
   await screen.findByRole("option", { name: "TCP/IP入門" });
-  const search = screen.getByRole("searchbox", { name: "復習対象を絞り込む" });
+  const search = screen.getByRole("combobox", { name: "復習対象を絞り込む" });
+  expect(search).toHaveFocus();
   await user.type(search, "ｔｃｐ");
   expect(
     screen.getByRole("option", { name: "TCP/IP入門" }),
@@ -263,14 +269,27 @@ it("復習対象を名前で絞り込み、現在の選択を維持する", asyn
   expect(
     screen.queryByRole("option", { name: "苦手の本" }),
   ).not.toBeInTheDocument();
-  expect(screen.getByLabelText("復習設定を切り替え")).toHaveValue("default");
+  expect(screen.getByLabelText("復習設定を切り替え")).toHaveTextContent("標準");
   await user.clear(search);
   await user.type(search, "存在しない対象");
   expect(screen.getByText("該当する対象はありません")).toBeInTheDocument();
-  expect(screen.getByLabelText("復習設定を切り替え")).toHaveValue("default");
+  expect(screen.getByLabelText("復習設定を切り替え")).toHaveTextContent("標準");
   await user.clear(search);
   expect(screen.getByRole("option", { name: "論理学" })).toBeInTheDocument();
   expect(screen.getByRole("option", { name: "苦手の本" })).toBeInTheDocument();
+  await user.type(search, "論理");
+  await user.keyboard("{ArrowDown}{Enter}");
+  expect(screen.getByLabelText("復習設定を切り替え")).toHaveTextContent(
+    "論理学",
+  );
+  await user.click(screen.getByRole("button", { name: "復習設定を切り替え" }));
+  expect(
+    screen.getByRole("combobox", { name: "復習対象を絞り込む" }),
+  ).toHaveValue("");
+  await user.keyboard("{Escape}");
+  expect(
+    screen.getByRole("button", { name: "復習設定を切り替え" }),
+  ).toHaveFocus();
 });
 
 it("PageRankの知識向け優先方針を保存でき、フォールバックを説明する", async () => {
@@ -292,7 +311,9 @@ function RemovedSelector() {
 it("記憶した設定が削除されていたら標準へ戻る", async () => {
   wrap(<RemovedSelector />);
   await waitFor(() =>
-    expect(screen.getByRole("combobox")).toHaveValue("default"),
+    expect(screen.getByLabelText("復習設定を切り替え")).toHaveTextContent(
+      "標準",
+    ),
   );
   await waitFor(() =>
     expect(localStorage.getItem(presetStorageKey("settings-user"))).toBe(
@@ -303,12 +324,12 @@ it("記憶した設定が削除されていたら標準へ戻る", async () => {
 it("復習画面で設定を切り替え、最後の選択をユーザー別に記憶する", async () => {
   const user = userEvent.setup();
   wrap(<Selector />);
+  await user.click(screen.getByRole("button", { name: "復習設定を切り替え" }));
   await screen.findByRole("option", { name: "苦手の本" });
-  await user.selectOptions(
-    screen.getByRole("combobox", { name: "復習設定を切り替え" }),
-    "custom",
+  await user.click(screen.getByRole("option", { name: "苦手の本" }));
+  expect(screen.getByLabelText("復習設定を切り替え")).toHaveTextContent(
+    "苦手の本",
   );
-  expect(screen.getByRole("combobox")).toHaveValue("custom");
   expect(localStorage.getItem(presetStorageKey("settings-user"))).toBe(
     "custom",
   );

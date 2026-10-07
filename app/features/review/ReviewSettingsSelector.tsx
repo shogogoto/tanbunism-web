@@ -1,6 +1,21 @@
+import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
+import { Button } from "~/shared/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "~/shared/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/shared/components/ui/popover";
 import {
   defaultSettings,
   presetStorageKey,
@@ -16,18 +31,25 @@ export default function ReviewSettingsSelector({
   const { data, error } = useReviewSettings();
   const { data: plans, error: plansError } = useReviewPlans();
   const [query, setQuery] = useState("");
-  const normalizedQuery = query.trim().normalize("NFKC").toLocaleLowerCase();
-  const matches = (name: string) =>
-    name.normalize("NFKC").toLocaleLowerCase().includes(normalizedQuery);
+  const [open, setOpen] = useState(false);
   const settings = data ?? [
     defaultSettings,
     ...(selected !== "default" && !selected.startsWith("plan:")
       ? [{ id: selected, name: "読み込み中…" }]
       : []),
   ];
-  const matchCount =
-    settings.filter((setting) => matches(setting.name)).length +
-    (plans?.filter((plan) => matches(plan.name)).length ?? 0);
+  const groups = [
+    { name: "今日・自作設定", items: settings },
+    {
+      name: "StudyPlan（リソース別）",
+      items:
+        plans?.map((plan) => ({ id: `plan:${plan.uid}`, name: plan.name })) ??
+        [],
+    },
+  ];
+  const selectedName =
+    groups.flatMap((group) => group.items).find((item) => item.id === selected)
+      ?.name ?? (plansError ? "計画を取得できません" : "読み込み中…");
   useEffect(() => {
     if (
       !selected.startsWith("plan:") &&
@@ -49,57 +71,88 @@ export default function ReviewSettingsSelector({
       className="mx-auto flex max-w-3xl flex-wrap items-center gap-2 py-2 text-sm"
       data-dashboard-swipe-ignore
     >
-      <label className="flex min-w-0 max-w-full items-center gap-2">
-        復習対象
-        <select
-          aria-label="復習設定を切り替え"
-          className="h-8 min-w-0 max-w-60 rounded border bg-background px-2"
-          value={selected}
-          onChange={(e) => onSelect(e.target.value)}
+      <span className="shrink-0">復習対象</span>
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          setQuery("");
+        }}
+      >
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="復習設定を切り替え"
+            className="h-8 min-w-0 max-w-60 gap-2"
+            title={selectedName}
+          >
+            <span className="truncate">{selectedName}</span>
+            <ChevronsUpDown
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="w-96 max-w-[calc(100vw-2rem)] p-0"
+          data-dashboard-swipe-ignore
         >
-          <optgroup label="今日・自作設定">
-            {settings
-              .filter(
-                (setting) => setting.id === selected || matches(setting.name),
+          <Command
+            label="復習対象を絞り込む"
+            defaultValue={selected}
+            filter={(_value, search, keywords) => {
+              const normalize = (text: string) =>
+                text.normalize("NFKC").toLocaleLowerCase();
+              return normalize(keywords?.join(" ") ?? "").includes(
+                normalize(search.trim()),
               )
-              .map((setting) => (
-                <option key={setting.id} value={setting.id}>
-                  {setting.name}
-                </option>
+                ? 1
+                : 0;
+            }}
+          >
+            <CommandInput
+              aria-label="復習対象を絞り込む"
+              placeholder="名前で絞り込む"
+              value={query}
+              onValueChange={setQuery}
+            />
+            <CommandList className="max-h-[min(300px,calc(var(--radix-popover-content-available-height)-3rem))]">
+              <CommandEmpty>該当する対象はありません</CommandEmpty>
+              {groups.map((group) => (
+                <CommandGroup key={group.name} heading={group.name}>
+                  {group.items.map((item) => (
+                    <CommandItem
+                      key={item.id}
+                      value={item.id}
+                      keywords={[item.name]}
+                      onSelect={() => {
+                        onSelect(item.id);
+                        setOpen(false);
+                        setQuery("");
+                      }}
+                      className="items-start"
+                    >
+                      <Check
+                        aria-hidden="true"
+                        className={
+                          item.id === selected
+                            ? "mt-0.5 size-4"
+                            : "mt-0.5 size-4 opacity-0"
+                        }
+                      />
+                      <span className="min-w-0 whitespace-normal break-words">
+                        {item.name}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
               ))}
-          </optgroup>
-          <optgroup label="StudyPlan（リソース別）">
-            {plans
-              ?.filter(
-                (plan) => `plan:${plan.uid}` === selected || matches(plan.name),
-              )
-              .map((plan) => (
-                <option key={plan.uid} value={`plan:${plan.uid}`}>
-                  {plan.name}
-                </option>
-              ))}
-            {selected.startsWith("plan:") &&
-              !plans?.some((plan) => `plan:${plan.uid}` === selected) && (
-                <option value={selected}>
-                  {plansError ? "計画を取得できません" : "計画を読み込み中…"}
-                </option>
-              )}
-          </optgroup>
-        </select>
-      </label>
-      <input
-        type="search"
-        aria-label="復習対象を絞り込む"
-        placeholder="名前で絞り込む"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        className="h-8 min-w-0 w-40 flex-1 rounded border bg-background px-2 sm:max-w-52"
-      />
-      {normalizedQuery && matchCount === 0 && (
-        <output className="text-xs text-muted-foreground">
-          該当する対象はありません
-        </output>
-      )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
       <Link
         to={
           selected.startsWith("plan:")
