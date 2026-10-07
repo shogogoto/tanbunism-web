@@ -38,7 +38,10 @@ it("所有本を成長順に並べ、内訳を開き、著者で絞れる", asyn
   const dialog = within(screen.getByRole("dialog"));
   expect(dialog.getByText("累計 80 XP")).toBeVisible();
   expect(dialog.getByText("+50 XP")).toBeVisible();
-  expect(dialog.getByText("論理 10 ＋ 参照 16")).toBeVisible();
+  expect(dialog.getByText("Power 102")).toBeVisible();
+  expect(dialog.getByText("30 × 1 = 30")).toBeVisible();
+  expect(dialog.getByText("10 × 3 = 30")).toBeVisible();
+  expect(dialog.getByText("16 × 2 = 32")).toBeVisible();
   expect(dialog.getByText("順番を一貫させる")).toBeVisible();
   await user.keyboard("{Escape}");
   await user.type(
@@ -204,7 +207,7 @@ it("タイトル・著者を別列で省略し、更新日と復習日を区別�
   const cells = within(screen.getAllByRole("row")[1]).getAllByRole("cell");
   expect(cells[0]).toHaveTextContent("Lv. 4");
   expect(cells[0]).toHaveClass("font-semibold", "col-start-1");
-  expect(cells[1]).toHaveTextContent("Power26");
+  expect(cells[1]).toHaveTextContent("Power102");
   expect(cells[1]).toHaveClass("text-muted-foreground", "col-start-2");
   expect(within(cells[2]).getByRole("link")).toHaveAttribute(
     "href",

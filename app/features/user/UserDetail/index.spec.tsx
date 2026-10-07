@@ -68,7 +68,7 @@ it("Powerと今日のXPだけを簡潔に表示し、累計XPとは区別する"
   const stats = within(
     screen.getByRole("region", { name: "プロフィールのステータス" }),
   );
-  expect(stats.getByText("Power").nextSibling).toHaveTextContent("102");
+  expect(stats.getByText("Power").nextSibling).toHaveTextContent("360");
   expect(stats.getByText("今日のXP").nextSibling).toHaveTextContent("7");
   expect(stats.getByRole("progressbar")).toHaveAttribute(
     "aria-valuetext",

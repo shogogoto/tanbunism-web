@@ -8,6 +8,7 @@ import {
 import BrokenQuizManager from "./brokenQuizzes";
 import LevelSettingsManager from "./levels";
 import OrphanedTanbunManager from "./orphanedTanbuns";
+import PowerSettingsManager from "./power";
 import AdminUserManager from "./users";
 import WorkloadSettingsManager from "./workload";
 
@@ -29,13 +30,14 @@ export default function Admin() {
   return (
     <Tabs defaultValue="orphans" className="gap-0">
       <div className="border-b px-4 py-2 sm:px-6">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="orphans">孤立Tanbun</TabsTrigger>
           <TabsTrigger value="misplaced">配置切れTanbun</TabsTrigger>
           <TabsTrigger value="broken-quizzes">参照切れQuiz</TabsTrigger>
           <TabsTrigger value="users">ユーザー</TabsTrigger>
           <TabsTrigger value="workload">負荷制御</TabsTrigger>
           <TabsTrigger value="levels">レベル</TabsTrigger>
+          <TabsTrigger value="power">Power</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="orphans" className="mt-0">
@@ -55,6 +57,9 @@ export default function Admin() {
       </TabsContent>
       <TabsContent value="levels" className="mt-0">
         <LevelSettingsManager />
+      </TabsContent>
+      <TabsContent value="power" className="mt-0">
+        <PowerSettingsManager />
       </TabsContent>
     </Tabs>
   );

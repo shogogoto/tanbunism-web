@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/shared/components/ui/popover";
+import PowerBreakdown, { type PowerWeights } from "./PowerBreakdown";
 
 export type Growth = {
   resource_id: string;
@@ -22,6 +23,8 @@ export type Growth = {
   power: number;
   logic_count: number;
   reference_count: number;
+  sentence_count: number;
+  term_count: number;
   last_reviewed_on?: string | null;
   exposure_xp?: number;
   answer_xp?: number;
@@ -40,6 +43,7 @@ export type GrowthResult = {
     answer_xp: number;
     correct_bonus_xp: number;
     level_xp_coefficient: number;
+    power_weights: PowerWeights;
   };
 };
 const GrowthContext = createContext<
@@ -152,10 +156,7 @@ export default function ResourceGrowthBadge({
         </div>
         <div>
           <p>Power {growth.power}</p>
-          <p className="text-xs text-muted-foreground">
-            論理 {growth.logic_count} ＋ 参照 {growth.reference_count}
-            。詳細・文字数は加点しません。
-          </p>
+          <PowerBreakdown counts={growth} weights={rules.power_weights} />
         </div>
         <div className="text-xs text-muted-foreground">
           <p>

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
+import { invalidateGamification } from "~/features/gamification/invalidate";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
-import { genericCache } from "~/shared/lib/indexed";
 import { requestLevelSettings } from "./api";
 
 export default function LevelSettingsManager() {
@@ -38,17 +38,7 @@ export default function LevelSettingsManager() {
         level_xp_coefficient: value,
       });
       setCoefficient(String(settings.level_xp_coefficient));
-      await genericCache.deletePrefix("public:profile-detail:");
-      await mutate(
-        (key) => {
-          const text = typeof key === "string" ? key : JSON.stringify(key);
-          return /learning-progress|resource-growth|profile-detail/.test(
-            text ?? "",
-          );
-        },
-        undefined,
-        { revalidate: true },
-      );
+      await invalidateGamification(mutate);
       toast.success("レベル設定を更新しました");
     } catch {
       setError(

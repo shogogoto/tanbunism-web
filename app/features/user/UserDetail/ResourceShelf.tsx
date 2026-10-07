@@ -1,6 +1,7 @@
 import { BookOpen, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
+import PowerBreakdown from "~/features/gamification/PowerBreakdown";
 import type {
   Growth,
   GrowthResult,
@@ -326,9 +327,7 @@ function ResourceBook({
           )}
           <div className="rounded border p-3 text-sm">
             <p className="font-semibold">Power {growth.power}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              論理 {growth.logic_count} ＋ 参照 {growth.reference_count}
-            </p>
+            <PowerBreakdown counts={growth} weights={rules?.power_weights} />
           </div>
           {own && (
             <div>
