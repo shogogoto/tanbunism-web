@@ -23,6 +23,8 @@ it("参照方向を補足しても元の選択肢IDで回答する", async () =>
           prompt: {
             subject: "Aの単文",
             object: "Bの単文",
+            subject_terms: ["Aの用語"],
+            object_terms: ["Bの用語"],
             relations: [{ name: null, is_forward: true }],
             answer_kind: "relation",
           },

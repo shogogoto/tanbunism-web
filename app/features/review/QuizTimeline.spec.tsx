@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
@@ -278,6 +278,18 @@ it("日替わりセットの順序を維持し1問ずつ表示する", async () 
   expect(screen.getByRole("button", { name: "回答候補" })).toBeVisible();
   expect(screen.getByText("1 / 2")).toBeVisible();
 
+  fireEvent.touchStart(answered, {
+    touches: [{ clientX: 200, clientY: 300 }],
+  });
+  fireEvent.touchMove(answered, {
+    touches: [{ clientX: 200, clientY: 150 }],
+  });
+  fireEvent.touchEnd(answered, {
+    changedTouches: [{ clientX: 200, clientY: 150 }],
+  });
+  expect(unanswered).toBeVisible();
+  expect(screen.getByText("2 / 2")).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "前のクイズ" }));
   await user.click(screen.getByRole("button", { name: "次のクイズ" }));
 
   expect(unanswered).toBeVisible();

@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -142,6 +148,38 @@ function renderSearch(initialEntry = "/search?q=数学") {
 }
 
 describe("統合検索", () => {
+  it("左右スワイプでタブを切り替え検索文字列を保持する", async () => {
+    renderSearch();
+    const swipeLeft = (element: HTMLElement) => {
+      fireEvent.touchStart(element, {
+        touches: [{ clientX: 220, clientY: 200 }],
+      });
+      fireEvent.touchMove(element, {
+        touches: [{ clientX: 50, clientY: 200 }],
+      });
+      fireEvent.touchEnd(element, {
+        changedTouches: [{ clientX: 50, clientY: 200 }],
+      });
+    };
+    const knowledge = await screen.findByRole("link", { name: /数学の知識/ });
+    swipeLeft(knowledge);
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: "リソース" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      ),
+    );
+    expect(screen.getByRole("searchbox", { name: "検索" })).toHaveValue("数学");
+    const resource = await screen.findByRole("link", { name: /数学ノート/ });
+    swipeLeft(resource);
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: "ユーザー" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      ),
+    );
+    expect(screen.getByRole("searchbox", { name: "検索" })).toHaveValue("数学");
+  });
   it("検索設定内をキーで移動し、変更後にEscで閉じる", async () => {
     const ui = userEvent.setup();
     renderSearch();

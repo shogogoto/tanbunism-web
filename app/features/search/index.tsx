@@ -25,6 +25,7 @@ import type {
 import { searchUserUserSearchPost } from "~/shared/generated/public-user/public-user";
 import { searchByTextTanbunGet } from "~/shared/generated/tanbun/tanbun";
 import { createCacheKey } from "~/shared/hooks/swr/useCache";
+import { useTouchNavigation } from "~/shared/hooks/useTouchNavigation";
 import { genericCache } from "~/shared/lib/indexed";
 import QuizSearch from "./QuizSearch";
 import {
@@ -68,11 +69,29 @@ const emptyState = (): SearchState => ({
 });
 
 export default function UnifiedSearch() {
-  const [params] = useSearchParams();
-  return params.get("type") === "quiz" ? (
-    <QuizSearch key={params.get("q") ?? ""} query={params.get("q") ?? ""} />
-  ) : (
-    <StandardSearch />
+  const [params, setParams] = useSearchParams();
+  const touchNavigation = useTouchNavigation((direction) => {
+    const index = searchTypes.indexOf(
+      (params.get("type") ?? "knowledge") as AllSearchType,
+    );
+    const next =
+      searchTypes[Math.max(0, index) + (direction === "left" ? 1 : -1)];
+    if (!next) return;
+    setParams((current) => {
+      const updated = new URLSearchParams(current);
+      updated.set("type", next);
+      updated.delete("page");
+      return updated;
+    });
+  });
+  return (
+    <div {...touchNavigation}>
+      {params.get("type") === "quiz" ? (
+        <QuizSearch key={params.get("q") ?? ""} query={params.get("q") ?? ""} />
+      ) : (
+        <StandardSearch />
+      )}
+    </div>
   );
 }
 

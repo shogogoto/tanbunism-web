@@ -21,7 +21,6 @@ import {
   RelationAnnotation,
   findTargetSentenceId,
 } from "./QuizKnowledge";
-import QuizOptionTerms from "./QuizOptionTerms";
 import QuizPrompt from "./QuizPrompt";
 import {
   type QuizChain,
@@ -594,7 +593,6 @@ function QuizQuestion({
                       <ChainSentenceLink chain={result?.chain} sentenceId={id}>
                         {optionIndex + 1}. {quizOptionLabel(quiz, label)}
                       </ChainSentenceLink>
-                      <QuizOptionTerms quiz={quiz} optionId={id} />
                     </span>
                     {result && recommendation.quiz_type !== "pair2rel" && (
                       <RelationAnnotation

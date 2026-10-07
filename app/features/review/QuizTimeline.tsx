@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
 import QuizPrompt from "~/features/quiz/QuizPrompt";
 import {
@@ -13,6 +13,7 @@ import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
+import { useBottomSwipe } from "~/shared/hooks/useTouchNavigation";
 import { useRecommendationDay } from "~/shared/lib/recommendationDay";
 import { cn } from "~/shared/lib/utils";
 
@@ -79,6 +80,17 @@ function DailyQuizTimeline({
   );
 
   const sorted = quizzes;
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const bottomSwipe = useBottomSwipe(
+    () => {
+      setCurrentIndex((current) => Math.min(current + 1, sorted.length - 1));
+      timelineRef.current?.scrollIntoView?.({
+        block: "start",
+        behavior: "smooth",
+      });
+    },
+    currentIndex < sorted.length - 1,
+  );
   const completed = sorted.filter(
     (item) =>
       item.answered_in_set ||
@@ -116,7 +128,12 @@ function DailyQuizTimeline({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-2" data-quiz-timeline>
+    <div
+      ref={timelineRef}
+      {...bottomSwipe}
+      className="mx-auto w-full max-w-3xl space-y-2"
+      data-quiz-timeline
+    >
       {actionError && (
         <p role="alert" className="text-sm text-destructive">
           {actionError}
