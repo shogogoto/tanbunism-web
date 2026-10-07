@@ -1,6 +1,15 @@
-import { Ban, Database, KeyRound, RotateCcw, Trash2 } from "lucide-react";
+import {
+  ArrowRightLeft,
+  Ban,
+  Database,
+  KeyRound,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useSWRConfig } from "swr";
+import { invalidateGamification } from "~/features/gamification/invalidate";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/shared/components/ui/table";
+import UserDataTransfer from "./UserDataTransfer";
 import {
   type AdminResourceItem,
   type AdminUserItem,
@@ -43,6 +53,7 @@ import {
 } from "./api";
 
 export default function AdminUserManager() {
+  const { mutate } = useSWRConfig();
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -51,6 +62,7 @@ export default function AdminUserManager() {
   const [resourceOwner, setResourceOwner] = useState<AdminUserItem>();
   const [passwordTarget, setPasswordTarget] = useState<AdminUserItem>();
   const [deleteTarget, setDeleteTarget] = useState<AdminUserItem>();
+  const [transferSource, setTransferSource] = useState<AdminUserItem>();
   const [newPassword, setNewPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [userDeleteConfirmation, setUserDeleteConfirmation] = useState("");
@@ -276,6 +288,15 @@ export default function AdminUserManager() {
                         type="button"
                         variant="outline"
                         size="sm"
+                        aria-label={`${user.email}のデータを移行`}
+                        onClick={() => setTransferSource(user)}
+                      >
+                        <ArrowRightLeft /> データ移行
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => void openResources(user)}
                       >
                         <Database />
@@ -320,6 +341,18 @@ export default function AdminUserManager() {
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {transferSource && (
+        <UserDataTransfer
+          source={transferSource}
+          users={users}
+          onClose={() => setTransferSource(undefined)}
+          onTransferred={async () => {
+            await invalidateGamification(mutate);
+            setUsers(await listAdminUsers());
+          }}
+        />
       )}
 
       <AlertDialog

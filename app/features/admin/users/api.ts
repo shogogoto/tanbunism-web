@@ -45,6 +45,41 @@ export type DeleteAdminUserResult = {
   deleted_answer_count: number;
 };
 
+export type UserTransferPreview = {
+  source_id: string;
+  target_id: string;
+  source_email: string;
+  target_email: string;
+  counts: Record<string, number>;
+  blockers: string[];
+  preview_token: string;
+};
+
+export function previewUserTransfer(
+  sourceId: string,
+  targetId: string,
+): Promise<UserTransferPreview> {
+  return request(
+    `/admin/users/${encodeURIComponent(sourceId)}/transfer-preview?target_id=${encodeURIComponent(targetId)}`,
+  );
+}
+
+export function transferUserData(
+  sourceId: string,
+  body: {
+    target_id: string;
+    source_confirmation: string;
+    target_confirmation: string;
+    preview_token: string;
+  },
+): Promise<UserTransferPreview> {
+  return request(`/admin/users/${encodeURIComponent(sourceId)}/transfer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export function listAdminUsers(): Promise<AdminUserItem[]> {
   return request("/admin/users");
 }
