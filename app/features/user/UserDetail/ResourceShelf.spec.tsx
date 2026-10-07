@@ -200,7 +200,17 @@ it("タイトル・著者を別列で省略し、更新日と復習日を区別�
   );
   expect(
     screen.getAllByRole("columnheader").map((cell) => cell.textContent),
-  ).toEqual(["リソース", "著者", "Lv", "XP", "Power", "復習日", "更新日"]);
+  ).toEqual(["Lv", "Power", "リソース", "著者", "XP", "復習日", "更新日"]);
+  const cells = within(screen.getAllByRole("row")[1]).getAllByRole("cell");
+  expect(cells[0]).toHaveTextContent("Lv. 4");
+  expect(cells[0]).toHaveClass("font-semibold", "col-start-1");
+  expect(cells[1]).toHaveTextContent("Power26");
+  expect(cells[1]).toHaveClass("text-muted-foreground", "col-start-2");
+  expect(within(cells[2]).getByRole("link")).toHaveAttribute(
+    "href",
+    "/resource/10000000-0000-0000-0000-000000000001",
+  );
+  expect(cells[3]).toHaveAttribute("title", first.authors[0]);
   const link = screen.getByRole("link", {
     name: first.name.replace(/^#+\s*/, ""),
   });

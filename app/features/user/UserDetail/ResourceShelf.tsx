@@ -20,7 +20,7 @@ import { formatRelativeDate } from "~/shared/lib/formatRelativeDate";
 
 const uidKey = (id: string) => id.replaceAll("-", "").toLowerCase();
 const rowLayout =
-  "grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_2.75rem_minmax(0,1fr)_3.75rem_5.25rem_5.25rem] items-center gap-x-3";
+  "grid grid-cols-[2.75rem_3.75rem_minmax(0,1fr)] md:grid-cols-[2.75rem_3.75rem_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_5.25rem_5.25rem] items-center gap-x-3";
 
 export function shelfResources(namespace: NameSpace): MResource[] {
   const resources = new Map<string, MResource>();
@@ -150,11 +150,11 @@ export default function ResourceShelf({
           <tr className={`${rowLayout} px-3 py-2`}>
             {(
               [
+                ["Lv", "level"],
+                ["Power", "power"],
                 ["リソース", "title"],
                 ["著者", "author"],
-                ["Lv", "level"],
                 ["XP", "xp"],
-                ["Power", "power"],
                 ["復習日", "recent"],
                 ["更新日", "updated"],
               ] as const
@@ -228,23 +228,7 @@ function ResourceBook({
   return (
     <Dialog>
       <tr className={`${rowLayout} gap-y-2 px-3 py-2 hover:bg-accent/30`}>
-        <td className="min-w-0 md:col-auto">
-          <Link
-            to={`/resource/${resource.uid}`}
-            title={title}
-            className="flex min-w-0 items-center gap-2 font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <BookOpen className="size-4 shrink-0" />
-            <span className="truncate">{title}</span>
-          </Link>
-        </td>
-        <td
-          className="col-start-1 row-start-2 min-w-0 truncate text-xs text-muted-foreground md:col-auto md:row-auto"
-          title={authors}
-        >
-          {authors}
-        </td>
-        <td className="col-start-2 row-start-1 text-right tabular-nums md:col-auto md:row-auto md:text-left">
+        <td className="col-start-1 row-start-1 font-semibold tabular-nums md:col-auto md:row-auto">
           <DialogTrigger asChild>
             <button
               type="button"
@@ -257,7 +241,27 @@ function ResourceBook({
             </button>
           </DialogTrigger>
         </td>
-        <td className="col-span-2 min-w-0 md:col-span-1">
+        <td className="col-start-2 row-start-1 text-xs tabular-nums text-muted-foreground md:col-auto md:row-auto">
+          <span className="block md:hidden">Power</span>
+          {growth?.power.toLocaleString("ja-JP") ?? "—"}
+        </td>
+        <td className="col-start-3 row-start-1 min-w-0 md:col-auto md:row-auto">
+          <Link
+            to={`/resource/${resource.uid}`}
+            title={title}
+            className="flex min-w-0 items-center gap-2 font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <BookOpen className="size-4 shrink-0" />
+            <span className="truncate">{title}</span>
+          </Link>
+        </td>
+        <td
+          className="col-start-3 row-start-2 min-w-0 truncate text-xs text-muted-foreground md:col-auto md:row-auto"
+          title={authors}
+        >
+          {authors}
+        </td>
+        <td className="col-span-3 row-start-3 min-w-0 md:col-span-1 md:row-auto">
           <DialogTrigger asChild>
             <button
               type="button"
@@ -278,15 +282,11 @@ function ResourceBook({
             </button>
           </DialogTrigger>
         </td>
-        <td className="col-span-2 text-xs tabular-nums md:col-span-1">
-          <span className="text-muted-foreground md:hidden">Power </span>
-          {growth?.power.toLocaleString("ja-JP") ?? "—"}
-        </td>
-        <td className="min-w-0 text-xs tabular-nums text-muted-foreground">
+        <td className="col-span-2 row-start-4 min-w-0 text-xs tabular-nums text-muted-foreground md:col-span-1 md:row-auto">
           <span className="md:hidden">復習日 </span>
           <ResourceDate value={growth?.last_reviewed_on} label="復習日" />
         </td>
-        <td className="min-w-0 text-right text-xs tabular-nums text-muted-foreground md:text-left">
+        <td className="col-start-3 row-start-4 min-w-0 text-right text-xs tabular-nums text-muted-foreground md:col-auto md:row-auto md:text-left">
           <span className="md:hidden">更新日 </span>
           <ResourceDate value={resource.updated} label="更新日" />
         </td>
