@@ -46,5 +46,5 @@ export default function SignInForm() {
     return <Navigate to="/review" replace />;
   }
 
-  return <AuthForm lastResult={lastResult} title="ログイン" />;
+  return <AuthForm lastResult={lastResult} mode="login" />;
 }

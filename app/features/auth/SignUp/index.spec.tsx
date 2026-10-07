@@ -18,6 +18,7 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 const routesFixture = [
+  { path: "/login", Component: () => <div>ログイン画面</div> },
   {
     path: "/register",
     action: UserRegisterAction,
@@ -30,6 +31,19 @@ const routesFixture = [
 ];
 
 describe("ユーザー作成", () => {
+  it("送信ボタンの下からログイン画面へ切り替えられる", async () => {
+    const router = createMemoryRouter(routesFixture, {
+      initialEntries: ["/register"],
+    });
+    render(<RouterProvider router={router} />);
+    const user = userEvent.setup();
+    expect(screen.getByRole("button", { name: "新規作成" })).toBeVisible();
+    const link = screen.getByRole("link", { name: "ログイン" });
+    expect(link.closest("form")).toBeNull();
+    await user.click(link);
+    expect(router.state.location.pathname).toBe("/login");
+    expect(screen.getByText("ログイン画面")).toBeVisible();
+  });
   it("成功したらログイン済ませて復習へ", async () => {
     // ログインAPIのモックが期待通り204を返すように上書き
     server.use(
@@ -45,7 +59,7 @@ describe("ユーザー作成", () => {
     const user = userEvent.setup();
     const emailInput = screen.getByLabelText("メールアドレス");
     const passwordInput = screen.getByLabelText("パスワード");
-    const submitButton = screen.getByRole("button", { name: "送信" });
+    const submitButton = screen.getByRole("button", { name: "新規作成" });
 
     await user.type(emailInput, "test@example.com");
     await user.type(passwordInput, "password123");
@@ -75,7 +89,7 @@ describe("ユーザー作成", () => {
     const user = userEvent.setup();
     const emailInput = screen.getByLabelText("メールアドレス");
     const passwordInput = screen.getByLabelText("パスワード");
-    const submitButton = screen.getByRole("button", { name: "送信" });
+    const submitButton = screen.getByRole("button", { name: "新規作成" });
 
     await user.type(emailInput, "test@example.com");
     await user.type(passwordInput, "password123");
@@ -83,6 +97,8 @@ describe("ユーザー作成", () => {
 
     const errorMsg = await screen.findByText(/REGISTER_USER_ALREADY_EXISTS/);
     expect(errorMsg).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "送信" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "新規作成" }),
+    ).toBeInTheDocument();
   });
 });

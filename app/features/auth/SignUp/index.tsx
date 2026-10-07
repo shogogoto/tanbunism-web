@@ -35,5 +35,5 @@ export async function UserRegisterAction({ request }: ActionFunctionArgs) {
 
 export default function SignUpForm() {
   const lastResult = useActionData<typeof UserRegisterAction>();
-  return <AuthForm lastResult={lastResult} title="ユーザー登録" />;
+  return <AuthForm lastResult={lastResult} mode="register" />;
 }

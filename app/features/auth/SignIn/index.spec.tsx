@@ -23,6 +23,7 @@ afterEach(() => {
 afterAll(() => server.close());
 
 const routesFixture = [
+  { path: "/register", Component: () => <div>新規作成画面</div> },
   {
     path: "/login",
     action: UserSignInAction,
@@ -43,6 +44,19 @@ const routesFixture = [
 ];
 
 describe("ログイン", () => {
+  it("送信ボタンの下から新規作成画面へ切り替えられる", async () => {
+    const router = createMemoryRouter(routesFixture, {
+      initialEntries: ["/login"],
+    });
+    render(<RouterProvider router={router} />);
+    const user = userEvent.setup();
+    expect(screen.getByRole("button", { name: "ログイン" })).toBeVisible();
+    const link = screen.getByRole("link", { name: "新規作成" });
+    expect(link.closest("form")).toBeNull();
+    await user.click(link);
+    expect(router.state.location.pathname).toBe("/register");
+    expect(screen.getByText("新規作成画面")).toBeVisible();
+  });
   it("ログイン済みは復習へリダイレクト", async () => {
     const useAuthSpy = vi
       .spyOn(AuthMock, "useAuth")
@@ -71,14 +85,14 @@ describe("ログイン", () => {
     const user = userEvent.setup();
     const emailInput = screen.getByLabelText("メールアドレス");
     const passwordInput = screen.getByLabelText("パスワード");
-    const submitButton = screen.getByRole("button", { name: "送信" });
+    const submitButton = screen.getByRole("button", { name: "ログイン" });
 
     await user.type(emailInput, "test@example.com");
     await user.type(passwordInput, "password123");
     await user.click(submitButton);
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "送信中..." }),
+        screen.getByRole("button", { name: "ログイン中..." }),
       ).toBeInTheDocument();
       // 送信中はdisable
       expect(submitButton).toBeDisabled();
@@ -105,7 +119,7 @@ describe("ログイン", () => {
       });
       render(<RouterProvider router={router} />);
 
-      const submitButton = screen.getByRole("button", { name: "送信" });
+      const submitButton = screen.getByRole("button", { name: "ログイン" });
       await user.click(submitButton);
       await waitFor(() => {
         const emailInvaild = screen.getByText("メールアドレスは必須です");

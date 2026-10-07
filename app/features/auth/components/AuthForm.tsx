@@ -1,6 +1,6 @@
 import { type SubmissionResult, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod";
-import { Form, useNavigation } from "react-router";
+import { Form, Link, useNavigation } from "react-router";
 import { z } from "zod";
 import { Button } from "~/shared/components/ui/button";
 import {
@@ -30,10 +30,12 @@ export const authSchema = RegisterRegisterAuthRegisterPostBody.pick({
 
 type Props = {
   lastResult: SubmissionResult<string[]> | undefined;
-  title: string;
+  mode: "login" | "register";
 };
 
-export default function AuthForm({ lastResult, title }: Props) {
+export default function AuthForm({ lastResult, mode }: Props) {
+  const title = mode === "login" ? "ログイン" : "ユーザー登録";
+  const submitLabel = mode === "login" ? "ログイン" : "新規作成";
   const { show, ShowToggleIcon } = useShowToggle();
   const navigation = useNavigation();
   const isSending = navigation.state === "submitting";
@@ -109,10 +111,20 @@ export default function AuthForm({ lastResult, title }: Props) {
               </div>
             </div>
             <Button type="submit" className="w-full" disabled={isSending}>
-              {isSending ? "送信中..." : "送信"}
+              {isSending ? `${submitLabel}中...` : submitLabel}
             </Button>
             <div className="text-sm text-red-500">{form.errors?.[0]}</div>
           </Form>
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            {mode === "login" ? "アカウントを作成" : "アカウントをお持ちの方"}
+            {" → "}
+            <Link
+              to={mode === "login" ? "/register" : "/login"}
+              className="rounded-sm font-medium text-foreground underline underline-offset-4 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {mode === "login" ? "新規作成" : "ログイン"}
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>
