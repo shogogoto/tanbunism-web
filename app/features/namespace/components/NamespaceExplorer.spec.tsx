@@ -155,7 +155,10 @@ describe("NamespaceExplorer", () => {
     const search = screen.getByRole("textbox", {
       name: "リソースを絞り込む",
     });
-    expect(search.parentElement).toHaveClass("sticky", "top-0");
+    expect(search.closest("[data-dashboard-swipe-ignore]")).toHaveClass(
+      "sticky",
+      "top-0",
+    );
     await user.type(search, "アリストテレス");
 
     expect(screen.getByText("ニコマコス倫理学")).toBeInTheDocument();

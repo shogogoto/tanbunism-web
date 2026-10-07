@@ -6,7 +6,7 @@ import {
   ListChecks,
   Search,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { Link } from "react-router";
 import ResourceGrowthBadge from "~/features/gamification/ResourceGrowth";
 import Loading from "~/shared/components/Loading";
@@ -28,9 +28,14 @@ import type { ExplorerTreeDataItem } from "./types";
 type Props = {
   updater?: () => void;
   nsprops: ReturnType<typeof useGetNamaspaceNamespaceGet>;
+  toolbarAction?: ReactNode;
 };
 
-export default function NamespaceExplorer({ updater, nsprops }: Props) {
+export default function NamespaceExplorer({
+  updater,
+  nsprops,
+  toolbarAction,
+}: Props) {
   const [query, setQuery] = useState("");
   const { data: fetchedData, error, isLoading, mutate } = nsprops;
   const data = fetchedData?.data;
@@ -39,10 +44,6 @@ export default function NamespaceExplorer({ updater, nsprops }: Props) {
     [data, query],
   );
 
-  if (isLoading) return <Loading type="center-x" />;
-  if (error) return <div>リソースを取得できませんでした。</div>;
-  if (!data) return <div>リソースはありません。</div>;
-
   function refresh() {
     mutate();
     updater?.();
@@ -50,18 +51,30 @@ export default function NamespaceExplorer({ updater, nsprops }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="sticky top-0 z-30 bg-background pb-2">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          data-page-input-priority
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="リソースを絞り込む"
-          aria-label="リソースを絞り込む"
-          className="h-9 pl-8"
-        />
+      <div
+        className="sticky top-0 z-30 flex items-center gap-2 bg-background pb-2"
+        data-dashboard-swipe-ignore
+      >
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            data-page-input-priority
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="リソースを絞り込む"
+            aria-label="リソースを絞り込む"
+            className="h-9 pl-8"
+          />
+        </div>
+        {toolbarAction}
       </div>
-      {tree.length > 0 ? (
+      {isLoading ? (
+        <Loading type="center-x" />
+      ) : error ? (
+        <p>リソースを取得できませんでした。</p>
+      ) : !data ? (
+        <p>リソースはありません。</p>
+      ) : tree.length > 0 ? (
         <NamespaceTreeItems items={tree} refresh={refresh} />
       ) : (
         <p className="px-2 py-4 text-sm text-muted-foreground">

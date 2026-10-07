@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { FileUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
@@ -146,19 +146,28 @@ export default function Dashboard() {
                 <Card>
                   <CardContent className="p-4 sm:p-6">
                     <ResourceGrowthProvider active={activeSection === "notes"}>
-                      <NamespaceExplorer nsprops={namespace} />
+                      <NamespaceExplorer
+                        nsprops={namespace}
+                        toolbarAction={
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="icon"
+                            className="size-9 shrink-0"
+                          >
+                            <Link
+                              to="/import"
+                              aria-label="読書メモimport"
+                              title="読書メモimport"
+                            >
+                              <FileUp className="size-4" aria-hidden="true" />
+                            </Link>
+                          </Button>
+                        }
+                      />
                     </ResourceGrowthProvider>
                   </CardContent>
                 </Card>
-                <Button
-                  asChild
-                  size="icon"
-                  className="fixed bottom-20 right-4 z-30 size-12 rounded-full shadow-xl ring-4 ring-background transition-transform hover:scale-105 md:bottom-6 md:right-6"
-                >
-                  <Link to="/import" aria-label="インポート" title="インポート">
-                    <Plus className="size-6" />
-                  </Link>
-                </Button>
               </div>
             )}
             {renderedSections.has("study-plans") && (
