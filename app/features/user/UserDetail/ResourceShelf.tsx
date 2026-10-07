@@ -255,6 +255,15 @@ function ResourceBook({
             <BookOpen className="size-4 shrink-0" />
             <span className="truncate">{title}</span>
           </Link>
+          {own && (
+            <Link
+              to={`/review?resource=${resource.uid}`}
+              aria-label={`${title}を復習`}
+              className="mt-1 inline-block text-xs text-muted-foreground hover:text-foreground hover:underline"
+            >
+              復習
+            </Link>
+          )}
         </td>
         <td
           className="col-start-3 row-start-2 min-w-0 truncate text-xs text-muted-foreground md:col-auto md:row-auto"

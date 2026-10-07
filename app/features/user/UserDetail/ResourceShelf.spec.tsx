@@ -142,7 +142,12 @@ it("集計が未取得ならLv1やPower0を捏造せず本のリンクを残す"
       .getAllByRole("button", { name: /のXP内訳を見る/ })
       .every((button) => button.hasAttribute("disabled")),
   ).toBe(true);
-  expect(screen.getAllByRole("link")).toHaveLength(3);
+  expect(
+    screen
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("href")?.startsWith("/resource/")),
+  ).toHaveLength(3);
+  expect(screen.getAllByRole("link", { name: /を復習$/ })).toHaveLength(3);
   expect(screen.getByRole("button", { name: "再試行" })).toBeVisible();
 });
 
@@ -209,10 +214,11 @@ it("タイトル・著者を別列で省略し、更新日と復習日を区別�
   expect(cells[0]).toHaveClass("font-semibold", "col-start-1");
   expect(cells[1]).toHaveTextContent("Power102");
   expect(cells[1]).toHaveClass("text-muted-foreground", "col-start-2");
-  expect(within(cells[2]).getByRole("link")).toHaveAttribute(
-    "href",
-    "/resource/10000000-0000-0000-0000-000000000001",
-  );
+  expect(
+    within(cells[2])
+      .getAllByRole("link")
+      .find((link) => link.getAttribute("href")?.startsWith("/resource/")),
+  ).toHaveAttribute("href", "/resource/10000000-0000-0000-0000-000000000001");
   expect(cells[3]).toHaveAttribute("title", first.authors[0]);
   const link = screen.getByRole("link", {
     name: first.name.replace(/^#+\s*/, ""),
@@ -267,7 +273,13 @@ it("復習日を優先し、同日は更新日降順・タイトル順で安定�
     screen
       .getAllByRole("row")
       .slice(1)
-      .map((row) => within(row).getByRole("link").textContent);
+      .map(
+        (row) =>
+          within(row)
+            .getAllByRole("link")
+            .find((link) => link.getAttribute("href")?.startsWith("/resource/"))
+            ?.textContent,
+      );
   expect(titles()).toEqual(["Alpha", "Beta", "Old"]);
   expect(screen.getAllByRole("option").map((item) => item.textContent)).toEqual(
     ["復習日順", "復習XP順", "Power順", "Lv順"],

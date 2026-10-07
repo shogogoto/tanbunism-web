@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
 import { useAuth } from "~/features/auth/AuthProvider";
 import QuizSession from "~/features/quiz/QuizSession";
@@ -10,13 +10,33 @@ import {
   startSwipeGesture,
 } from "~/shared/lib/swipe";
 import PersonalTimeline from "./PersonalTimeline";
+import PlanReviewProgress from "./PlanReviewProgress";
 import QuizTimeline from "./QuizTimeline";
 import ReviewSettingsSelector from "./ReviewSettingsSelector";
 import { presetStorageKey } from "./settings";
+import { normalizeResourceId, useReviewPlans } from "./useReviewPlans";
 
 export default function Review() {
   const [params, setParams] = useSearchParams();
   const { user } = useAuth();
+  const { data: plans, error: plansError } = useReviewPlans();
+  const requestedResource = params.get("resource");
+  const requestedPlan = params.get("plan");
+  const resourcePlans = requestedResource
+    ? plans?.filter((plan) =>
+        plan.resource_ids.some(
+          (id) =>
+            normalizeResourceId(id) === normalizeResourceId(requestedResource),
+        ),
+      )
+    : undefined;
+  const planId =
+    requestedPlan ??
+    (
+      resourcePlans?.find((plan) => plan.resource_ids.length === 1) ??
+      resourcePlans?.[0]
+    )?.uid;
+  const plan = plans?.find((candidate) => candidate.uid === planId);
   let storedPreset = "default";
   try {
     if (user && typeof localStorage !== "undefined")
@@ -30,12 +50,24 @@ export default function Review() {
     setParams(
       (previous) => {
         const next = new URLSearchParams(previous);
-        next.set("preset", id);
+        next.delete("resource");
+        if (id.startsWith("plan:")) {
+          next.set("plan", id.slice(5));
+          next.delete("preset");
+        } else {
+          next.delete("plan");
+          next.set("preset", id);
+        }
         return next;
       },
       { replace: true },
     );
   }
+  const profile = planId ? `plan:${planId}` : preset;
+  const targetPending = !!requestedResource && !plans && !plansError;
+  const targetMissing =
+    (!!requestedResource && !!plans && !planId) ||
+    (!!requestedPlan && !!plans && !plan);
   const active = params.get("view") === "quiz" ? "quiz" : "knowledge";
   const [visited, setVisited] = useState(new Set([active]));
   const rendered = new Set(visited).add(active);
@@ -94,31 +126,34 @@ export default function Review() {
           gesture.current = undefined;
         }}
       >
-        {!(active === "quiz" && params.has("plan")) && (
-          <ReviewSettingsSelector selected={preset} onSelect={selectPreset} />
+        <ReviewSettingsSelector selected={profile} onSelect={selectPreset} />
+        {plan && <PlanReviewProgress plan={plan} />}
+        {targetPending && <output>学習計画を読み込み中…</output>}
+        {(targetMissing || (requestedResource && plansError)) && (
+          <p role="alert">
+            このリソースの学習計画を取得できませんでした。復習対象を選び直してください。
+          </p>
         )}
-        {rendered.has("knowledge") && (
-          <div hidden={active !== "knowledge"}>
-            <PersonalTimeline key={preset} profile={preset} />
-          </div>
-        )}
-        {rendered.has("quiz") && (
-          <div hidden={active !== "quiz"}>
-            {params.has("plan") ? (
-              <>
-                <Link
-                  to="/review?view=quiz"
-                  className="mb-2 inline-block text-sm text-muted-foreground hover:underline"
-                >
-                  日替わりの復習へ戻る
-                </Link>
-                <QuizSession />
-              </>
-            ) : (
-              <QuizTimeline profile={preset} />
-            )}
-          </div>
-        )}
+        {!targetPending &&
+          !targetMissing &&
+          !(requestedResource && plansError) &&
+          rendered.has("knowledge") && (
+            <div hidden={active !== "knowledge"}>
+              <PersonalTimeline key={profile} profile={profile} />
+            </div>
+          )}
+        {!targetPending &&
+          !targetMissing &&
+          !(requestedResource && plansError) &&
+          rendered.has("quiz") && (
+            <div hidden={active !== "quiz"}>
+              {planId ? (
+                <QuizSession key={planId} planId={planId} />
+              ) : (
+                <QuizTimeline profile={preset} />
+              )}
+            </div>
+          )}
       </section>
     </AuthGuard>
   );

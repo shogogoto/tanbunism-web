@@ -46,9 +46,12 @@ type QuizResult = {
   chain: QuizChain;
 };
 
-export default function QuizSession() {
+export default function QuizSession({
+  planId: selectedPlanId,
+}: { planId?: string } = {}) {
   const { mutate } = useSWRConfig();
   const [searchParams] = useSearchParams();
+  const requestedPlanId = selectedPlanId ?? searchParams.get("plan");
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [planId, setPlanId] = useState("");
   const [recommendations, setRecommendations] = useState<QuizRecommendation[]>(
@@ -77,7 +80,16 @@ export default function QuizSession() {
         const loadedPlans = await listStudyPlans();
         if (!active) return;
         setPlans(loadedPlans);
-        const requestedPlanId = searchParams.get("plan");
+        if (
+          requestedPlanId &&
+          !loadedPlans.some(({ uid }) => uid === requestedPlanId)
+        ) {
+          setLoadState({
+            status: "error",
+            message: "選択した学習計画が見つかりません。",
+          });
+          return;
+        }
         setPlanId(
           loadedPlans.some(({ uid }) => uid === requestedPlanId)
             ? (requestedPlanId ?? "")
@@ -100,7 +112,7 @@ export default function QuizSession() {
     return () => {
       active = false;
     };
-  }, [searchParams]);
+  }, [requestedPlanId]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey explicitly reloads recommendations.
   useEffect(() => {
@@ -379,7 +391,9 @@ export default function QuizSession() {
   if (recommendations.length === 0 && !isPreparingRecommendations) {
     return (
       <div className="mx-auto max-w-2xl p-6 space-y-4">
-        <PlanToolbar plans={plans} planId={planId} onChange={setPlanId} />
+        {!selectedPlanId && (
+          <PlanToolbar plans={plans} planId={planId} onChange={setPlanId} />
+        )}
         <EmptyState
           title="準備済みのクイズがありません"
           description="ダッシュボードでこのStudyPlanのクイズを準備してください。"
@@ -414,7 +428,9 @@ export default function QuizSession() {
         </Button>
       </header>
 
-      <PlanToolbar plans={plans} planId={planId} onChange={setPlanId} />
+      {!selectedPlanId && (
+        <PlanToolbar plans={plans} planId={planId} onChange={setPlanId} />
+      )}
 
       {isPreparingRecommendations && (
         <Card className="border">

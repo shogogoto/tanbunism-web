@@ -58,6 +58,7 @@ beforeEach(async () => {
   localStorage.clear();
   await genericCache.clear();
   server.use(
+    http.get("*/quiz/study-plans", () => HttpResponse.json([])),
     http.get("*/review/settings", () => HttpResponse.json(settings)),
     http.put("*/review/settings/:id", async ({ request, params }) => {
       saved = (await request.json()) as Omit<ReviewSettings, "id">;
@@ -79,6 +80,48 @@ beforeEach(async () => {
       settings = settings.filter((s) => s.id !== params.id);
       return new HttpResponse(null, { status: 204 });
     }),
+  );
+});
+
+it("既存StudyPlanも選択でき、今日の設定の記憶を上書きしない", async () => {
+  const user = userEvent.setup();
+  server.use(
+    http.get("*/quiz/study-plans", () =>
+      HttpResponse.json([
+        {
+          uid: "plan-1",
+          name: "育てたい本",
+          resource_ids: ["resource-1"],
+          quiz_types: ["term2sent"],
+          n_quiz: 5,
+          n_option: 4,
+          created: "2026-10-07",
+        },
+      ]),
+    ),
+  );
+  function Selector() {
+    const [selected, setSelected] = useState("custom");
+    return (
+      <ReviewSettingsSelector selected={selected} onSelect={setSelected} />
+    );
+  }
+  wrap(<Selector />);
+  await screen.findByRole("option", { name: "育てたい本" });
+  await waitFor(() =>
+    expect(localStorage.getItem(presetStorageKey("settings-user"))).toBe(
+      "custom",
+    ),
+  );
+  await user.selectOptions(
+    screen.getByLabelText("復習設定を切り替え"),
+    "plan:plan-1",
+  );
+  expect(screen.getByLabelText("復習設定を切り替え")).toHaveValue(
+    "plan:plan-1",
+  );
+  expect(localStorage.getItem(presetStorageKey("settings-user"))).toBe(
+    "custom",
   );
 });
 afterEach(() => server.resetHandlers());

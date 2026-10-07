@@ -162,6 +162,15 @@ function renderQuizSession(initialEntry = "/quiz") {
 }
 
 describe("QuizSession", () => {
+  it("存在しないPlanを別のPlanへ勝手に切り替えない", async () => {
+    renderQuizSession("/review?view=quiz&plan=missing");
+    expect(
+      await screen.findByText("選択した学習計画が見つかりません。"),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("「可換」とはどのような性質ですか？"),
+    ).not.toBeInTheDocument();
+  });
   it("URLで指定されたStudyPlanを選んで開始する", async () => {
     const requestedPlans: string[] = [];
     server.use(

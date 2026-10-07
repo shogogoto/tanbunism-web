@@ -192,11 +192,17 @@ export default function PersonalTimeline({
         <>
           <div className="flex items-center gap-2 border-x border-t px-3 py-2 text-sm">
             <Eye className="size-4 text-primary" aria-hidden="true" />
-            <span className="text-muted-foreground">今日の見たよ</span>
+            <span className="text-muted-foreground">
+              {profile.startsWith("plan:")
+                ? "今日の見たよ（全体）"
+                : "今日の見たよ"}
+            </span>
             <strong className="tabular-nums">{seenTodayCount}件</strong>
             <span className="ml-auto text-muted-foreground tabular-nums">
-              今日のおすすめ {items.filter((item) => item.seen_today).length} /{" "}
-              {items.length}
+              {profile.startsWith("plan:")
+                ? "この計画の知識"
+                : "今日のおすすめ"}{" "}
+              {items.filter((item) => item.seen_today).length} / {items.length}
             </span>
           </div>
           {items.every((item) => item.seen_today) && (
