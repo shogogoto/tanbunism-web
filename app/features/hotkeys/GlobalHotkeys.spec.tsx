@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { MemoryRouter, useLocation } from "react-router";
 import { vi } from "vitest";
+import ResourceShelf from "~/features/user/UserDetail/ResourceShelf";
+import { shelfFixture } from "~/features/user/UserDetail/ResourceShelf.fixture";
 import { HistoryPanelProvider } from "~/shared/history/HistoryPanel";
 import GlobalHotkeys, {
   HotkeyHelpButton,
@@ -51,6 +53,26 @@ function renderHotkeys(children?: ReactNode, initialEntry = "/") {
     </MemoryRouter>,
   );
 }
+
+it("プロフィールでは / でリソースの絞り込みへ優先的にフォーカスし、入力中は干渉しない", async () => {
+  const user = userEvent.setup();
+  renderHotkeys(
+    <ResourceShelf
+      namespace={shelfFixture}
+      own
+      loading={false}
+      onRetry={vi.fn()}
+    />,
+    "/user/reader",
+  );
+  const input = screen.getByRole("textbox", { name: "本棚を絞り込む" });
+  await user.keyboard("/");
+  expect(input).toHaveFocus();
+  expect(input).toHaveValue("");
+  await user.keyboard("/");
+  expect(input).toHaveValue("/");
+  expect(screen.getByRole("textbox", { name: "入力欄" })).not.toHaveFocus();
+});
 
 it("gから始まるショートカットで主要画面へ移動する", async () => {
   const user = userEvent.setup();

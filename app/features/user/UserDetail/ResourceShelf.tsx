@@ -133,6 +133,7 @@ export default function ResourceShelf({
           onChange={(e) => setQuery(e.target.value)}
           placeholder="タイトル・著者で探す"
           aria-label="本棚を絞り込む"
+          data-page-input-priority
           className="pl-9"
         />
       </div>
