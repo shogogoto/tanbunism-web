@@ -289,6 +289,13 @@ function ContextHotkeySection({
 type HotkeyDefinition = { keys: string[]; label: string };
 
 function contextHotkeys(pathname: string, search: string): HotkeyDefinition[] {
+  if (pathname.startsWith("/user/")) {
+    return [
+      { keys: ["j", "k"], label: "リソースの行を移動" },
+      { keys: ["Enter"], label: "選択したリソースの詳細を開く" },
+      { keys: ["Space"], label: "選択した自分のリソースを復習" },
+    ];
+  }
   if (pathname === "/import") {
     return [{ keys: ["Enter"], label: "選択したファイルをインポート" }];
   }

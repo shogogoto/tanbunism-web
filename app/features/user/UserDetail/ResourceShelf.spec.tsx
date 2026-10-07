@@ -208,7 +208,16 @@ it("タイトル・著者を別列で省略し、更新日と復習日を区別�
   );
   expect(
     screen.getAllByRole("columnheader").map((cell) => cell.textContent),
-  ).toEqual(["Lv", "Power", "リソース", "著者", "XP", "復習日", "更新日"]);
+  ).toEqual([
+    "Lv",
+    "Power",
+    "リソース",
+    "著者",
+    "XP",
+    "復習日",
+    "更新日",
+    "復習",
+  ]);
   const cells = within(screen.getAllByRole("row")[1]).getAllByRole("cell");
   expect(cells[0]).toHaveTextContent("Lv. 4");
   expect(cells[0]).toHaveClass("font-semibold", "col-start-1");
@@ -228,6 +237,15 @@ it("タイトル・著者を別列で省略し、更新日と復習日を区別�
     "/resource/10000000-0000-0000-0000-000000000001",
   );
   expect(link.querySelector("span")).toHaveClass("truncate");
+  expect(
+    within(cells[2]).queryByRole("link", { name: /を復習$/ }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(cells[7]).getByRole("link", { name: /を復習$/ }),
+  ).toHaveAttribute(
+    "href",
+    "/review?resource=10000000-0000-0000-0000-000000000001",
+  );
   expect(screen.getByTitle(first.authors[0])).toHaveClass("truncate");
   expect(screen.getByTitle("更新日: 2026-10-09T12:30:00Z")).toHaveAttribute(
     "datetime",

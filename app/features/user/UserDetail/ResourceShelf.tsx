@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, BookOpen, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import PowerBreakdown from "~/features/gamification/PowerBreakdown";
 import type {
   Growth,
@@ -25,8 +25,8 @@ const dateValue = (value?: string | null) => {
   const timestamp = value ? Date.parse(value) : Number.NaN;
   return Number.isFinite(timestamp) ? timestamp : undefined;
 };
-const rowLayout =
-  "grid grid-cols-[2.75rem_3.75rem_minmax(0,1fr)] md:grid-cols-[2.75rem_3.75rem_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_5.25rem_5.25rem] items-center gap-x-3";
+const rowLayout = (own: boolean) =>
+  `grid grid-cols-[2.75rem_3.75rem_minmax(0,1fr)] ${own ? "md:grid-cols-[2.75rem_3.75rem_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_5.25rem_5.25rem_3.5rem]" : "md:grid-cols-[2.75rem_3.75rem_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_5.25rem_5.25rem]"} items-center gap-x-3`;
 
 export function shelfResources(namespace: NameSpace): MResource[] {
   const resources = new Map<string, MResource>();
@@ -174,7 +174,7 @@ export default function ResourceShelf({
       )}
       <table className="block w-full border text-sm" aria-label="リソース一覧">
         <thead className="sticky top-0 z-10 hidden border-b bg-background text-xs text-muted-foreground md:block">
-          <tr className={`${rowLayout} px-3 py-2`}>
+          <tr className={`${rowLayout(own)} px-3 py-2`}>
             {(
               [
                 ["Lv", "level"],
@@ -217,6 +217,11 @@ export default function ResourceShelf({
                 )}
               </th>
             ))}
+            {own && (
+              <th scope="col" className="text-right font-medium">
+                復習
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="block divide-y">
@@ -254,6 +259,7 @@ function ResourceBook({
   loading: boolean;
   own: boolean;
 }) {
+  const navigate = useNavigate();
   const percentage = growth
     ? Math.min(
         100,
@@ -266,7 +272,29 @@ function ResourceBook({
   const authors = resource.authors?.join("・") || "—";
   return (
     <Dialog>
-      <tr className={`${rowLayout} gap-y-2 px-3 py-2 hover:bg-accent/30`}>
+      <tr
+        data-hotkey-item
+        tabIndex={-1}
+        onKeyDown={(event) => {
+          if (
+            event.target !== event.currentTarget ||
+            event.nativeEvent.isComposing ||
+            event.ctrlKey ||
+            event.metaKey ||
+            event.altKey
+          )
+            return;
+          if (event.key === "Enter" || (own && event.key === " ")) {
+            event.preventDefault();
+            navigate(
+              event.key === "Enter"
+                ? `/resource/${resource.uid}`
+                : `/review?resource=${resource.uid}`,
+            );
+          }
+        }}
+        className={`${rowLayout(own)} scroll-mt-10 gap-y-2 px-3 py-2 outline-none hover:bg-accent/30 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:bg-accent/70 data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary`}
+      >
         <td className="col-start-1 row-start-1 font-semibold tabular-nums md:col-auto md:row-auto">
           <DialogTrigger asChild>
             <button
@@ -293,15 +321,6 @@ function ResourceBook({
             <BookOpen className="size-4 shrink-0" />
             <span className="truncate">{title}</span>
           </Link>
-          {own && (
-            <Link
-              to={`/review?resource=${resource.uid}`}
-              aria-label={`${title}を復習`}
-              className="mt-1 inline-block text-xs text-muted-foreground hover:text-foreground hover:underline"
-            >
-              復習
-            </Link>
-          )}
         </td>
         <td
           className="col-start-3 row-start-2 min-w-0 truncate text-xs text-muted-foreground md:col-auto md:row-auto"
@@ -338,6 +357,23 @@ function ResourceBook({
           <span className="md:hidden">更新日 </span>
           <ResourceDate value={resource.updated} label="更新日" />
         </td>
+        {own && (
+          <td className="col-start-3 row-start-5 text-right md:col-auto md:row-auto">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+            >
+              <Link
+                to={`/review?resource=${resource.uid}`}
+                aria-label={`${title}を復習`}
+              >
+                復習
+              </Link>
+            </Button>
+          </td>
+        )}
       </tr>
       {growth && (
         <DialogContent

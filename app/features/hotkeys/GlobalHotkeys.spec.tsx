@@ -85,6 +85,62 @@ it("gから始まるショートカットで主要画面へ移動する", async 
   );
 });
 
+it("プロフィールの行をj kで移動してEnterで詳細、Spaceで復習を開く", async () => {
+  const user = userEvent.setup();
+  renderHotkeys(
+    <ResourceShelf
+      namespace={shelfFixture}
+      own
+      loading={false}
+      onRetry={vi.fn()}
+    />,
+    "/user/reader",
+  );
+  const rows = screen.getAllByRole("row").slice(1);
+  await user.keyboard("j");
+  expect(rows[0]).toHaveFocus();
+  expect(rows[0]).toHaveAttribute("data-hotkey-active", "true");
+  await user.keyboard("j");
+  expect(rows[1]).toHaveFocus();
+  await user.keyboard("k");
+  expect(rows[0]).toHaveFocus();
+  await user.keyboard("{Enter}");
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
+    "/resource/10000000-0000-0000-0000-000000000001",
+  );
+  await user.keyboard(" ");
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
+    "/review?resource=10000000-0000-0000-0000-000000000001",
+  );
+});
+
+it("公開プロフィールには復習操作を出さず、入力中に行を移動しない", async () => {
+  const user = userEvent.setup();
+  renderHotkeys(
+    <ResourceShelf
+      namespace={shelfFixture}
+      own={false}
+      loading={false}
+      onRetry={vi.fn()}
+    />,
+    "/user/another",
+  );
+  expect(
+    screen.queryByRole("link", { name: /を復習$/ }),
+  ).not.toBeInTheDocument();
+  const rows = screen.getAllByRole("row").slice(1);
+  await user.keyboard("j ");
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
+    "/user/another",
+  );
+  await user.keyboard("/");
+  await user.keyboard("jk");
+  expect(screen.getByRole("textbox", { name: "本棚を絞り込む" })).toHaveValue(
+    "jk",
+  );
+  expect(rows[0]).not.toHaveFocus();
+});
+
 it("g rで復習、g qで全ユーザーのクイズ検索へ移動する", async () => {
   const user = userEvent.setup();
   renderHotkeys();
