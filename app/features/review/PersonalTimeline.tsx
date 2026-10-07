@@ -190,7 +190,7 @@ export default function PersonalTimeline({
       )}
       {items.length > 0 && (
         <>
-          <div className="flex items-center gap-2 border-x border-t px-3 py-2 text-sm">
+          <div className="sticky top-[var(--review-controls-height,0px)] z-10 flex flex-wrap items-center gap-2 border bg-background px-3 py-2 text-sm">
             <Eye className="size-4 text-primary" aria-hidden="true" />
             <span className="text-muted-foreground">
               {profile.startsWith("plan:")
@@ -226,7 +226,7 @@ export default function PersonalTimeline({
                 key={item.uid}
                 data-hotkey-item
                 tabIndex={-1}
-                className="relative outline-none transition-colors after:pointer-events-none after:absolute after:inset-y-0 after:left-0 after:z-10 after:w-1.5 after:bg-transparent after:transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary data-[hotkey-active=true]:after:bg-primary data-[hotkey-active=true]:[&>[data-slot=card]]:bg-accent/70"
+                className="relative scroll-mt-[calc(var(--review-controls-height,0px)+4rem)] outline-none transition-colors after:pointer-events-none after:absolute after:inset-y-0 after:left-0 after:z-10 after:w-1.5 after:bg-transparent after:transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary data-[hotkey-active=true]:after:bg-primary data-[hotkey-active=true]:[&>[data-slot=card]]:bg-accent/70"
                 onKeyDown={(event) => {
                   if (event.target !== event.currentTarget) return;
                   if (event.key === " ") {

@@ -224,6 +224,55 @@ function Selector() {
   return <ReviewSettingsSelector selected={selected} onSelect={setSelected} />;
 }
 
+it("復習対象を名前で絞り込み、現在の選択を維持する", async () => {
+  const user = userEvent.setup();
+  server.use(
+    http.get("*/quiz/study-plans", () =>
+      HttpResponse.json([
+        {
+          uid: "tcp",
+          name: "TCP/IP入門",
+          resource_ids: ["tcp"],
+          quiz_types: ["term2sent"],
+          n_quiz: 5,
+          n_option: 4,
+          created: "2026-10-07",
+        },
+        {
+          uid: "logic",
+          name: "論理学",
+          resource_ids: ["logic"],
+          quiz_types: ["term2sent"],
+          n_quiz: 5,
+          n_option: 4,
+          created: "2026-10-07",
+        },
+      ]),
+    ),
+  );
+  wrap(<Selector />);
+  await screen.findByRole("option", { name: "TCP/IP入門" });
+  const search = screen.getByRole("searchbox", { name: "復習対象を絞り込む" });
+  await user.type(search, "ｔｃｐ");
+  expect(
+    screen.getByRole("option", { name: "TCP/IP入門" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("option", { name: "論理学" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("option", { name: "苦手の本" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByLabelText("復習設定を切り替え")).toHaveValue("default");
+  await user.clear(search);
+  await user.type(search, "存在しない対象");
+  expect(screen.getByText("該当する対象はありません")).toBeInTheDocument();
+  expect(screen.getByLabelText("復習設定を切り替え")).toHaveValue("default");
+  await user.clear(search);
+  expect(screen.getByRole("option", { name: "論理学" })).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: "苦手の本" })).toBeInTheDocument();
+});
+
 it("PageRankの知識向け優先方針を保存でき、フォールバックを説明する", async () => {
   wrap(<ReviewSettingsManager />);
   await userEvent.click(

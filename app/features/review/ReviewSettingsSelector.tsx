@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import {
@@ -15,6 +15,19 @@ export default function ReviewSettingsSelector({
   const { user } = useAuth();
   const { data, error } = useReviewSettings();
   const { data: plans, error: plansError } = useReviewPlans();
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().normalize("NFKC").toLocaleLowerCase();
+  const matches = (name: string) =>
+    name.normalize("NFKC").toLocaleLowerCase().includes(normalizedQuery);
+  const settings = data ?? [
+    defaultSettings,
+    ...(selected !== "default" && !selected.startsWith("plan:")
+      ? [{ id: selected, name: "読み込み中…" }]
+      : []),
+  ];
+  const matchCount =
+    settings.filter((setting) => matches(setting.name)).length +
+    (plans?.filter((plan) => matches(plan.name)).length ?? 0);
   useEffect(() => {
     if (
       !selected.startsWith("plan:") &&
@@ -33,10 +46,10 @@ export default function ReviewSettingsSelector({
   }, [user, selected]);
   return (
     <div
-      className="mx-auto mb-3 flex max-w-3xl items-center gap-2 text-sm"
+      className="mx-auto flex max-w-3xl flex-wrap items-center gap-2 py-2 text-sm"
       data-dashboard-swipe-ignore
     >
-      <label className="flex min-w-0 items-center gap-2">
+      <label className="flex min-w-0 max-w-full items-center gap-2">
         復習対象
         <select
           aria-label="復習設定を切り替え"
@@ -45,25 +58,26 @@ export default function ReviewSettingsSelector({
           onChange={(e) => onSelect(e.target.value)}
         >
           <optgroup label="今日・自作設定">
-            {(
-              data ?? [
-                defaultSettings,
-                ...(selected !== "default" && !selected.startsWith("plan:")
-                  ? [{ id: selected, name: "読み込み中…" }]
-                  : []),
-              ]
-            ).map((setting) => (
-              <option key={setting.id} value={setting.id}>
-                {setting.name}
-              </option>
-            ))}
+            {settings
+              .filter(
+                (setting) => setting.id === selected || matches(setting.name),
+              )
+              .map((setting) => (
+                <option key={setting.id} value={setting.id}>
+                  {setting.name}
+                </option>
+              ))}
           </optgroup>
           <optgroup label="StudyPlan（リソース別）">
-            {plans?.map((plan) => (
-              <option key={plan.uid} value={`plan:${plan.uid}`}>
-                {plan.name}
-              </option>
-            ))}
+            {plans
+              ?.filter(
+                (plan) => `plan:${plan.uid}` === selected || matches(plan.name),
+              )
+              .map((plan) => (
+                <option key={plan.uid} value={`plan:${plan.uid}`}>
+                  {plan.name}
+                </option>
+              ))}
             {selected.startsWith("plan:") &&
               !plans?.some((plan) => `plan:${plan.uid}` === selected) && (
                 <option value={selected}>
@@ -73,6 +87,19 @@ export default function ReviewSettingsSelector({
           </optgroup>
         </select>
       </label>
+      <input
+        type="search"
+        aria-label="復習対象を絞り込む"
+        placeholder="名前で絞り込む"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        className="h-8 min-w-0 w-40 flex-1 rounded border bg-background px-2 sm:max-w-52"
+      />
+      {normalizedQuery && matchCount === 0 && (
+        <output className="text-xs text-muted-foreground">
+          該当する対象はありません
+        </output>
+      )}
       <Link
         to={
           selected.startsWith("plan:")

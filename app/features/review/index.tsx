@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import AuthGuard from "~/features/auth/AuthGuard";
 import { useAuth } from "~/features/auth/AuthProvider";
@@ -69,6 +69,27 @@ export default function Review() {
     (!!requestedResource && !!plans && !planId) ||
     (!!requestedPlan && !!plans && !plan);
   const active = params.get("view") === "quiz" ? "quiz" : "knowledge";
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const [controlsHeight, setControlsHeight] = useState(0);
+  const userId = user?.uid;
+  useEffect(() => {
+    if (!userId || active !== "knowledge") return;
+    const controls = controlsRef.current;
+    if (!controls) return;
+    const measure = () =>
+      setControlsHeight(controls.getBoundingClientRect().height);
+    measure();
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? undefined
+        : new ResizeObserver(measure);
+    observer?.observe(controls);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [userId, active]);
   const [visited, setVisited] = useState(new Set([active]));
   const rendered = new Set(visited).add(active);
   const gesture = useRef<SwipeGesture | undefined>(undefined);
@@ -81,6 +102,11 @@ export default function Review() {
     <AuthGuard>
       <section
         className="mx-auto min-h-[65vh] w-full max-w-5xl p-2 pb-8 sm:p-3"
+        style={
+          {
+            "--review-controls-height": `${active === "knowledge" ? controlsHeight : 0}px`,
+          } as CSSProperties
+        }
         onTouchStart={(event) => {
           const touch = event.touches[0];
           gesture.current =
@@ -126,7 +152,16 @@ export default function Review() {
           gesture.current = undefined;
         }}
       >
-        <ReviewSettingsSelector selected={profile} onSelect={selectPreset} />
+        <div
+          ref={controlsRef}
+          className={
+            active === "knowledge"
+              ? "sticky top-0 z-20 border-b bg-background"
+              : "mb-3"
+          }
+        >
+          <ReviewSettingsSelector selected={profile} onSelect={selectPreset} />
+        </div>
         {plan && <PlanReviewProgress plan={plan} />}
         {targetPending && <output>学習計画を読み込み中…</output>}
         {(targetMissing || (requestedResource && plansError)) && (
