@@ -4,11 +4,18 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
+import GlobalHotkeys, {
+  HotkeyProvider,
+} from "~/features/hotkeys/GlobalHotkeys";
+import { HistoryPanelProvider } from "~/shared/history/HistoryPanel";
 import UnifiedSearch from ".";
 import SearchHeaderControls from "./SearchHeaderControls";
 
 vi.mock("~/features/auth/AuthProvider", () => ({
   useAuth: () => ({ isAuthenticated: false }),
+}));
+vi.mock("~/shared/history/hooks", () => ({
+  useHistory: () => ({ histories: [] }),
 }));
 let requested: URL[] = [];
 const server = setupServer(
@@ -48,8 +55,13 @@ afterAll(() => server.close());
 it("検索のクイズタブから匿名でも対象スコアとResource・作成者を確認できる", async () => {
   render(
     <MemoryRouter initialEntries={["/search?type=quiz&q=推論"]}>
-      <SearchHeaderControls />
-      <UnifiedSearch />
+      <HistoryPanelProvider>
+        <HotkeyProvider>
+          <SearchHeaderControls />
+          <UnifiedSearch />
+          <GlobalHotkeys />
+        </HotkeyProvider>
+      </HistoryPanelProvider>
     </MemoryRouter>,
   );
   expect(screen.getByRole("tab", { name: "クイズ" })).toHaveAttribute(
@@ -67,8 +79,19 @@ it("検索のクイズタブから匿名でも対象スコアとResource・作�
     "/user/reader",
   );
   const question = screen.getByRole("button", { name: /推論/ });
-  expect(question).toHaveAttribute("data-hotkey-item");
-  await userEvent.click(question);
+  const card = question.closest("article");
+  expect(card).toHaveAttribute("data-hotkey-item");
+  expect(card).not.toHaveAttribute("data-hotkey-active");
+  expect(question).not.toHaveAttribute("data-hotkey-item");
+  const keyboard = userEvent.setup();
+  await keyboard.click(question);
+  expect(card).not.toHaveAttribute("data-hotkey-active");
+  await keyboard.click(question);
+  await keyboard.keyboard("j");
+  expect(card).toHaveAttribute("data-hotkey-active", "true");
+  expect(card).toHaveFocus();
+  expect(card).toHaveClass("data-[hotkey-active=true]:ring-2");
+  await keyboard.keyboard("{Enter}");
   expect(
     screen.getByRole("link", { name: "ログインして回答する" }),
   ).toHaveAttribute("href", "/login");

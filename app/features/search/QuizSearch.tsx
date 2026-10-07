@@ -75,7 +75,27 @@ export default function QuizSearch({ query }: { query: string }) {
         対象単文のスコアが高い順 · {total}件
       </p>
       {items.map((item) => (
-        <article key={item.quiz.quiz_id} className="border-b p-2">
+        <article
+          key={item.quiz.quiz_id}
+          data-hotkey-item
+          tabIndex={-1}
+          className="relative border-b p-2 outline-none data-[hotkey-active=true]:z-10 data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-inset data-[hotkey-active=true]:ring-primary"
+          onKeyDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              event.key === "Enter" &&
+              !event.nativeEvent.isComposing &&
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.altKey
+            ) {
+              event.preventDefault();
+              event.currentTarget
+                .querySelector<HTMLButtonElement>("[data-search-result-open]")
+                ?.click();
+            }
+          }}
+        >
           <div className="mb-1 flex gap-2 text-xs text-muted-foreground">
             <span>スコア {item.target_score}</span>
             <Link
@@ -93,8 +113,8 @@ export default function QuizSearch({ query }: { query: string }) {
           </div>
           <button
             type="button"
-            data-hotkey-item
-            className="w-full text-left outline-none data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-primary focus-visible:ring-2 focus-visible:ring-primary"
+            data-search-result-open
+            className="w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-expanded={expanded === item.quiz.quiz_id}
             onClick={() =>
               setExpanded((previous) =>

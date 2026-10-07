@@ -2,11 +2,15 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
+import GlobalHotkeys, {
+  HotkeyProvider,
+} from "~/features/hotkeys/GlobalHotkeys";
 import type {
   ResourceSearchBody,
   UserSearchBody,
 } from "~/shared/generated/fastAPI.schemas";
+import { HistoryPanelProvider } from "~/shared/history/HistoryPanel";
 import { createCacheKey } from "~/shared/hooks/swr/useCache";
 import { genericCache } from "~/shared/lib/indexed";
 import UnifiedSearch from ".";
@@ -14,6 +18,12 @@ import SearchHeaderControls from "./SearchHeaderControls";
 import { defaultSearchSettings } from "./settings";
 
 const originalIntersectionObserver = globalThis.IntersectionObserver;
+vi.mock("~/features/auth/AuthProvider", () => ({
+  useAuth: () => ({ isAuthenticated: false }),
+}));
+vi.mock("~/shared/history/hooks", () => ({
+  useHistory: () => ({ histories: [] }),
+}));
 
 const user = {
   uid: "user-1",
@@ -112,16 +122,56 @@ afterEach(async () => {
 });
 afterAll(() => server.close());
 
+function CurrentLocation() {
+  return <output aria-label="現在地">{useLocation().pathname}</output>;
+}
+
 function renderSearch(initialEntry = "/search?q=数学") {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
-      <SearchHeaderControls />
-      <UnifiedSearch />
+      <HistoryPanelProvider>
+        <HotkeyProvider>
+          <SearchHeaderControls />
+          <UnifiedSearch />
+          <GlobalHotkeys />
+          <CurrentLocation />
+        </HotkeyProvider>
+      </HistoryPanelProvider>
     </MemoryRouter>,
   );
 }
 
 describe("統合検索", () => {
+  it("知識カード全体を選択し、Enterで単文詳細へ移動する", async () => {
+    const ui = userEvent.setup();
+    renderSearch();
+    const link = await screen.findByRole("link", { name: /数学の知識/ });
+    const card = link.closest("[data-hotkey-item]");
+    expect(card).not.toHaveAttribute("data-hotkey-active");
+    await ui.keyboard("j");
+    expect(card).toHaveAttribute("data-hotkey-active", "true");
+    expect(card?.contains(screen.getByLabelText("PageRank: 2.35"))).toBe(true);
+    await ui.keyboard("{Enter}");
+    expect(screen.getByLabelText("現在地")).toHaveTextContent(
+      "/tanbun/sentence-1",
+    );
+  });
+  it("sで検索設定を開き、入力中のsやg sとは競合しない", async () => {
+    const ui = userEvent.setup();
+    renderSearch();
+    await screen.findByText("1件の検索結果");
+    await ui.keyboard("s");
+    expect(await screen.findByLabelText("知識の並び順")).toBeVisible();
+    await ui.keyboard("{Escape}");
+    const input = screen.getByRole("searchbox", { name: "検索" });
+    await ui.click(input);
+    await ui.type(input, "s");
+    expect(input).toHaveValue("数学s");
+    expect(screen.queryByLabelText("知識の並び順")).not.toBeInTheDocument();
+    await ui.keyboard("{Escape}");
+    await ui.keyboard("gs");
+    expect(screen.queryByLabelText("知識の並び順")).not.toBeInTheDocument();
+  });
   it("全リソースでもPageRank順を使え、スコア順でも両方の値を表示する", async () => {
     const ui = userEvent.setup();
     renderSearch();
@@ -205,10 +255,15 @@ describe("統合検索", () => {
     expect(screen.getByRole("tab", { name: "知識" })).toHaveTextContent("1");
     expect(screen.getByRole("tab", { name: "知識" })).toHaveClass("ring-1");
     const knowledgeLink = screen.getByRole("link", { name: /数学の知識/ });
+    const knowledgeCard = knowledgeLink.closest("[data-hotkey-item]");
+    expect(knowledgeCard).not.toHaveAttribute("data-hotkey-active");
+    expect(knowledgeCard).not.toHaveFocus();
+    await ui.keyboard("j");
     await waitFor(() => {
-      expect(knowledgeLink).toHaveAttribute("data-hotkey-active", "true");
-      expect(knowledgeLink).toHaveFocus();
+      expect(knowledgeCard).toHaveAttribute("data-hotkey-active", "true");
+      expect(knowledgeCard).toHaveFocus();
     });
+    expect(knowledgeLink).not.toHaveAttribute("data-hotkey-item");
     await ui.click(screen.getByRole("tab", { name: "リソース" }));
     await waitFor(() => expect(requestedTypes).toContain("resource"));
     await waitFor(() => expect(document.body).toHaveTextContent("数学ノート"));
@@ -221,6 +276,8 @@ describe("統合検索", () => {
       "2",
     );
     const resourceLink = screen.getByRole("link", { name: /数学ノート/ });
+    expect(resourceLink).not.toHaveAttribute("data-hotkey-active");
+    await ui.keyboard("j");
     await waitFor(() =>
       expect(resourceLink).toHaveAttribute("data-hotkey-active", "true"),
     );
@@ -234,6 +291,8 @@ describe("統合検索", () => {
     await ui.click(screen.getByRole("tab", { name: "ユーザー" }));
     expect(await screen.findByText("Lv. 7")).toBeVisible();
     const userLink = screen.getByRole("link", { name: /読書家/ });
+    expect(userLink).not.toHaveAttribute("data-hotkey-active");
+    await ui.keyboard("k");
     await waitFor(() =>
       expect(userLink).toHaveAttribute("data-hotkey-active", "true"),
     );
@@ -249,8 +308,9 @@ describe("統合検索", () => {
       name: /数学の知識/,
     });
     await waitFor(() => {
-      expect(returnedKnowledge).toHaveFocus();
-      expect(returnedKnowledge).toHaveAttribute("data-hotkey-active", "true");
+      expect(
+        returnedKnowledge.closest("[data-hotkey-item]"),
+      ).not.toHaveAttribute("data-hotkey-active");
     });
   });
 
@@ -284,6 +344,8 @@ describe("統合検索", () => {
 
     await ui.click(screen.getByRole("tab", { name: "リソース" }));
     const cachedLink = await screen.findByRole("link", { name: /古いノート/ });
+    expect(cachedLink).not.toHaveAttribute("data-hotkey-active");
+    await ui.keyboard("j");
     await waitFor(() => {
       expect(cachedLink).toHaveFocus();
       expect(cachedLink).toHaveAttribute("data-hotkey-active", "true");

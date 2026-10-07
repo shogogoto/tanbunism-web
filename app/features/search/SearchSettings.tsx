@@ -36,6 +36,7 @@ export default function SearchSettingsPanel({
           variant="ghost"
           size="icon"
           aria-label="詳細設定"
+          data-search-settings-trigger
           title="詳細設定"
           className="size-8"
         >

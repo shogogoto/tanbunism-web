@@ -174,6 +174,17 @@ export default function GlobalHotkeys() {
         if (focusPageInput()) event.preventDefault();
         return;
       }
+      if (!waitingForDestination.current && key === "s") {
+        const settings = document.querySelector<HTMLButtonElement>(
+          "[data-search-settings-trigger]",
+        );
+        if (settings && !settings.closest("[hidden]")) {
+          event.preventDefault();
+          settings.click();
+        }
+        resetChord();
+        return;
+      }
 
       if (!waitingForDestination.current && (key === "j" || key === "k")) {
         if (
@@ -303,6 +314,7 @@ function contextHotkeys(pathname: string, search: string): HotkeyDefinition[] {
     return [
       { keys: ["j", "k"], label: "検索結果を移動" },
       { keys: ["Enter"], label: "検索結果を開く" },
+      { keys: ["s"], label: "検索設定を開く" },
     ];
   }
   if (pathname === "/study-plans") return studyPlanHotkeys;

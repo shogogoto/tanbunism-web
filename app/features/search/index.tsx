@@ -95,8 +95,9 @@ function StandardSearch() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const previousSearchRef = useRef("");
-  const focusedTypeRef = useRef(enabledKey);
-  const shouldFocusResultsRef = useRef(true);
+  const keyboardSelectionRef = useRef<{ type: string; id: string } | null>(
+    null,
+  );
 
   const searchKey = `${queryParam}:${enabledKey}:${settingsKey}`;
 
@@ -195,9 +196,11 @@ function StandardSearch() {
   const total = enabledTypes.reduce((sum, type) => sum + state.totals[type], 0);
 
   useLayoutEffect(() => {
-    if (focusedTypeRef.current !== enabledKey) {
-      focusedTypeRef.current = enabledKey;
-      shouldFocusResultsRef.current = true;
+    const selection = keyboardSelectionRef.current;
+    if (!selection) return;
+    if (selection.type !== enabledKey) {
+      keyboardSelectionRef.current = null;
+      return;
     }
 
     if (!resultIdentity) return;
@@ -206,23 +209,22 @@ function StandardSearch() {
     const items = Array.from(
       results.querySelectorAll<HTMLElement>("[data-hotkey-item]"),
     );
-    const shouldRestore = shouldFocusResultsRef.current;
     const marked = items.find((item) => item.dataset.hotkeyActive === "true");
-    const current = shouldRestore ? items[0] : (marked ?? items[0]);
+    if (marked) return;
+    const current =
+      items.find(
+        (item) =>
+          (item.dataset.hotkeyId ?? item.getAttribute("href")) === selection.id,
+      ) ?? items[0];
     if (!current) return;
-    if (shouldRestore) {
-      for (const item of items) item.removeAttribute("data-hotkey-active");
-    }
     current.dataset.hotkeyActive = "true";
     const active = document.activeElement;
     if (
-      (shouldRestore || !marked) &&
-      (!(active instanceof HTMLElement) ||
-        !active.matches("input, textarea, select, [contenteditable=true]"))
+      !(active instanceof HTMLElement) ||
+      !active.matches("input, textarea, select, [contenteditable=true]")
     ) {
       current.focus({ preventScroll: true });
     }
-    if (shouldRestore) shouldFocusResultsRef.current = false;
   }, [enabledKey, resultIdentity]);
 
   return (
@@ -241,7 +243,18 @@ function StandardSearch() {
         </p>
       )}
 
-      <div ref={resultsRef} className="divide-y border-y sm:border-x">
+      <div
+        ref={resultsRef}
+        className="divide-y border-y sm:border-x"
+        onFocusCapture={(event) => {
+          const item = (event.target as HTMLElement).closest<HTMLElement>(
+            "[data-hotkey-item]",
+          );
+          const id = item?.dataset.hotkeyId ?? item?.getAttribute("href");
+          if (item?.dataset.hotkeyActive === "true" && id)
+            keyboardSelectionRef.current = { type: enabledKey, id };
+        }}
+      >
         {mixedResults.map((result) => {
           if (result.type === "knowledge") {
             return (
