@@ -76,6 +76,22 @@ export default function Review() {
     !planId && requestedDay && recentDays.includes(requestedDay)
       ? requestedDay
       : today;
+  function selectDay(day: string) {
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (planId) {
+          next.delete("plan");
+          next.delete("resource");
+          next.set("preset", "default");
+        }
+        if (day === today) next.delete("day");
+        else next.set("day", day);
+        return next;
+      },
+      { replace: true },
+    );
+  }
   const targetPending = !!requestedResource && !plans && !plansError;
   const targetMissing =
     (!!requestedResource && !!plans && !planId) ||
@@ -172,42 +188,13 @@ export default function Review() {
               : "mb-3"
           }
         >
-          <ReviewSettingsSelector selected={profile} onSelect={selectPreset} />
-          {!planId && (
-            <label
-              className="mx-auto mb-2 flex max-w-3xl items-center gap-2 text-sm"
-              data-dashboard-swipe-ignore
-            >
-              復習日
-              <select
-                aria-label="復習日"
-                value={selectedDay}
-                className="h-8 rounded border bg-background px-2"
-                onChange={(event) => {
-                  const day = event.target.value;
-                  setParams(
-                    (previous) => {
-                      const next = new URLSearchParams(previous);
-                      if (day === today) next.delete("day");
-                      else next.set("day", day);
-                      return next;
-                    },
-                    { replace: true },
-                  );
-                }}
-              >
-                {recentDays.map((day, index) => (
-                  <option key={day} value={day}>
-                    {index === 0
-                      ? "今日"
-                      : index === 1
-                        ? `昨日（${day}）`
-                        : day}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+          <ReviewSettingsSelector
+            selected={profile}
+            onSelect={selectPreset}
+            recentDays={recentDays}
+            selectedDay={selectedDay}
+            onSelectDay={selectDay}
+          />
         </div>
         {plan && <PlanReviewProgress plan={plan} />}
         {targetPending && <output>学習計画を読み込み中…</output>}

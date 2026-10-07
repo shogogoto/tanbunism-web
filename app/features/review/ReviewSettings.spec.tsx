@@ -225,6 +225,48 @@ function Selector() {
   return <ReviewSettingsSelector selected={selected} onSelect={setSelected} />;
 }
 
+it("復習対象のポップアップで日付と自作設定を選択できる", async () => {
+  const user = userEvent.setup();
+  const recentDays = Array.from(
+    { length: 7 },
+    (_, index) => `2026-10-${String(7 - index).padStart(2, "0")}`,
+  );
+  function DatedSelector() {
+    const [selected, setSelected] = useState("default");
+    const [selectedDay, setSelectedDay] = useState(recentDays[0]);
+    return (
+      <ReviewSettingsSelector
+        selected={selected}
+        onSelect={setSelected}
+        recentDays={recentDays}
+        selectedDay={selectedDay}
+        onSelectDay={setSelectedDay}
+      />
+    );
+  }
+  wrap(<DatedSelector />);
+  const trigger = screen.getByRole("button", { name: "復習設定を切り替え" });
+  expect(trigger).toHaveTextContent("今日");
+  await user.click(trigger);
+  expect(screen.getAllByRole("option", { name: "今日" })).toHaveLength(1);
+  for (const day of recentDays.slice(2))
+    expect(screen.getByRole("option", { name: day })).toBeVisible();
+  await user.click(screen.getByRole("option", { name: "昨日（2026-10-06）" }));
+  expect(trigger).toHaveTextContent("昨日（2026-10-06）");
+  expect(screen.queryByRole("combobox")).toBeNull();
+  await user.click(trigger);
+  await user.click(await screen.findByRole("option", { name: "苦手の本" }));
+  expect(trigger).toHaveTextContent("苦手の本 · 昨日（2026-10-06）");
+  await user.click(trigger);
+  const search = screen.getByRole("combobox", { name: "復習対象を絞り込む" });
+  await user.type(search, "2026-10-03");
+  await user.keyboard("{ArrowDown}{Enter}");
+  expect(trigger).toHaveTextContent("苦手の本 · 2026-10-03");
+  await user.click(trigger);
+  await user.click(screen.getByRole("option", { name: "日替わりの推薦" }));
+  expect(trigger).toHaveTextContent("2026-10-03");
+});
+
 it("復習対象を名前で絞り込み、現在の選択を維持する", async () => {
   const user = userEvent.setup();
   server.use(

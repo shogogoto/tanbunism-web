@@ -36,13 +36,31 @@ vi.mock("./ReviewSettingsSelector", () => ({
   default: ({
     selected,
     onSelect,
-  }: { selected: string; onSelect: (id: string) => void }) => (
+    recentDays,
+    selectedDay,
+    onSelectDay,
+  }: {
+    selected: string;
+    onSelect: (id: string) => void;
+    recentDays: string[];
+    selectedDay: string;
+    onSelectDay: (day: string) => void;
+  }) => (
     <select
       aria-label="復習対象"
-      value={selected}
-      onChange={(event) => onSelect(event.target.value)}
+      value={selected.startsWith("plan:") ? selected : `day:${selectedDay}`}
+      onChange={(event) => {
+        const value = event.target.value;
+        if (value.startsWith("day:")) onSelectDay(value.slice(4));
+        else onSelect(value);
+      }}
     >
       <option value="default">今日</option>
+      {recentDays.map((day, index) => (
+        <option key={day} value={`day:${day}`}>
+          {index === 0 ? "今日" : day}
+        </option>
+      ))}
       <option value="plan:plan-1">対象の本</option>
     </select>
   ),
@@ -74,12 +92,15 @@ it("復習日を知識・クイズで共有し、今日を含む7日を選べる
       <Review />
     </MemoryRouter>,
   );
-  const days = screen.getByRole("combobox", { name: "復習日" });
-  const options = Array.from(days.querySelectorAll("option"));
+  expect(screen.queryByLabelText("復習日")).toBeNull();
+  const days = screen.getByRole("combobox", { name: "復習対象" });
+  const options = Array.from(
+    days.querySelectorAll<HTMLOptionElement>('option[value^="day:"]'),
+  );
   expect(options).toHaveLength(7);
   expect(options[0]).toHaveTextContent("今日");
-  const yesterday = options[1].value;
-  await user.selectOptions(days, yesterday);
+  const yesterday = options[1].value.slice(4);
+  await user.selectOptions(days, options[1].value);
   expect(screen.getByLabelText("知識の状態")).toHaveAttribute(
     "data-day",
     yesterday,
@@ -92,7 +113,7 @@ it("復習日を知識・クイズで共有し、今日を含む7日を選べる
   await user.selectOptions(days, options[0].value);
   expect(screen.getByText("個人の日替わりクイズ")).toHaveAttribute(
     "data-day",
-    options[0].value,
+    options[0].value.slice(4),
   );
 });
 vi.mock("~/features/quiz/QuizSession", () => ({
@@ -161,6 +182,26 @@ it("リソース一覧のリンクから既存Planを選んで知識復習を開
     "plan:plan-1",
   );
   expect(screen.getByText("対象リソースのLv・XP")).toBeVisible();
+});
+
+it("計画の復習から同じ選択欄で過去の日替わりへ戻れる", async () => {
+  const user = userEvent.setup();
+  render(
+    <MemoryRouter initialEntries={["/review?resource=resource-1&view=quiz"]}>
+      <Review />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText("計画の準備済みクイズ")).toBeVisible();
+  const target = screen.getByLabelText("復習対象");
+  const days = target.querySelectorAll<HTMLOptionElement>(
+    'option[value^="day:"]',
+  );
+  await user.selectOptions(target, days[1].value);
+  expect(screen.getByText("個人の日替わりクイズ")).toHaveAttribute(
+    "data-day",
+    days[1].value.slice(4),
+  );
+  expect(screen.queryByText("計画の準備済みクイズ")).toBeNull();
 });
 
 it("存在しないPlanや対象Resourceで全リソースの復習を始めない", () => {

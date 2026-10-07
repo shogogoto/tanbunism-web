@@ -26,7 +26,16 @@ import { useReviewPlans } from "./useReviewPlans";
 export default function ReviewSettingsSelector({
   selected,
   onSelect,
-}: { selected: string; onSelect: (id: string) => void }) {
+  recentDays = [],
+  selectedDay,
+  onSelectDay,
+}: {
+  selected: string;
+  onSelect: (id: string) => void;
+  recentDays?: string[];
+  selectedDay?: string;
+  onSelectDay?: (day: string) => void;
+}) {
   const { user } = useAuth();
   const { data, error } = useReviewSettings();
   const { data: plans, error: plansError } = useReviewPlans();
@@ -39,7 +48,27 @@ export default function ReviewSettingsSelector({
       : []),
   ];
   const groups = [
-    { name: "今日・自作設定", items: settings },
+    ...(onSelectDay && recentDays.length
+      ? [
+          {
+            name: "復習日",
+            items: recentDays.map((day, index) => ({
+              id: `day:${day}`,
+              name: index === 0 ? "今日" : index === 1 ? `昨日（${day}）` : day,
+            })),
+          },
+        ]
+      : []),
+    {
+      name: "今日・自作設定",
+      items: settings.map((setting) => ({
+        ...setting,
+        name:
+          recentDays.length && setting.id === "default"
+            ? "日替わりの推薦"
+            : setting.name,
+      })),
+    },
     {
       name: "StudyPlan（リソース別）",
       items:
@@ -47,9 +76,20 @@ export default function ReviewSettingsSelector({
         [],
     },
   ];
-  const selectedName =
+  const presetName =
     groups.flatMap((group) => group.items).find((item) => item.id === selected)
       ?.name ?? (plansError ? "計画を取得できません" : "読み込み中…");
+  const dayName = groups
+    .flatMap((group) => group.items)
+    .find((item) => item.id === `day:${selectedDay}`)?.name;
+  const selectedName =
+    selected.startsWith("plan:") || !dayName
+      ? presetName
+      : selected === "default"
+        ? dayName
+        : `${presetName} · ${dayName}`;
+  const selectedItem =
+    !selected.startsWith("plan:") && dayName ? `day:${selectedDay}` : selected;
   useEffect(() => {
     if (
       !selected.startsWith("plan:") &&
@@ -101,7 +141,7 @@ export default function ReviewSettingsSelector({
         >
           <Command
             label="復習対象を絞り込む"
-            defaultValue={selected}
+            defaultValue={selectedItem}
             filter={(_value, search, keywords) => {
               const normalize = (text: string) =>
                 text.normalize("NFKC").toLocaleLowerCase();
@@ -126,9 +166,11 @@ export default function ReviewSettingsSelector({
                     <CommandItem
                       key={item.id}
                       value={item.id}
-                      keywords={[item.name]}
+                      keywords={[item.name, group.name]}
                       onSelect={() => {
-                        onSelect(item.id);
+                        if (item.id.startsWith("day:"))
+                          onSelectDay?.(item.id.slice(4));
+                        else onSelect(item.id);
                         setOpen(false);
                         setQuery("");
                       }}
@@ -137,7 +179,8 @@ export default function ReviewSettingsSelector({
                       <Check
                         aria-hidden="true"
                         className={
-                          item.id === selected
+                          item.id === selectedItem ||
+                          (selected !== "default" && item.id === selected)
                             ? "mt-0.5 size-4"
                             : "mt-0.5 size-4 opacity-0"
                         }
