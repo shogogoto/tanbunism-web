@@ -18,9 +18,9 @@ type ProfileDetail = {
 };
 
 export default function ProfileDetailPage({ userId }: { userId: string }) {
-  const cacheKey = `public:profile-detail:resource-xp-v3:${userId}`;
+  const cacheKey = `public:profile-detail:resource-xp-v4:${userId}`;
   const { data, error, isLoading } = usePersistentSWR<ProfileDetail>(
-    ["profile-detail", userId, "resource-xp-v3"],
+    ["profile-detail", userId, "resource-xp-v4"],
     async () => {
       const profileResponse = await userProfileUserProfileUsernameGet(userId);
       if (profileResponse.status !== 200 || !profileResponse.data) {

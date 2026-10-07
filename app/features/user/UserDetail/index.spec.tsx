@@ -48,10 +48,11 @@ const learningProgress = {
     },
   ],
   total_xp: 31,
-  level: 1,
-  current_level_xp: 31,
-  xp_for_next_level: 50,
-  xp_to_next_level: 19,
+  level: 3,
+  current_level_xp: 1,
+  xp_for_next_level: 30,
+  xp_to_next_level: 29,
+  level_xp_coefficient: 10,
 };
 
 it("Powerと今日のXPだけを簡潔に表示し、累計XPとは区別する", () => {
@@ -71,7 +72,7 @@ it("Powerと今日のXPだけを簡潔に表示し、累計XPとは区別する"
   expect(stats.getByText("今日のXP").nextSibling).toHaveTextContent("7");
   expect(stats.getByRole("progressbar")).toHaveAttribute(
     "aria-valuetext",
-    "31 / 50 XP · 今日 +7 XP",
+    "1 / 30 XP · 今日 +7 XP",
   );
   expect(
     stats.getByRole("progressbar").querySelector('[data-xp-segment="today"]'),
@@ -112,14 +113,17 @@ describe("LearningLevel", () => {
     const user = userEvent.setup();
     render(<LearningLevel progress={learningProgress} />);
 
-    expect(screen.getByText("Lv. 1")).toBeInTheDocument();
+    expect(screen.getByText("Lv. 3")).toBeInTheDocument();
     expect(screen.getByText("累計 31 XP")).toBeInTheDocument();
-    expect(screen.getByText("次のレベルまで 19 XP")).toBeInTheDocument();
-    expect(screen.getByText("Lv. 1：累計 0 XP以上")).toBeInTheDocument();
-    expect(screen.getByText("Lv. 2：累計 50 XP")).toBeInTheDocument();
+    expect(screen.getByText("次のレベルまで 29 XP")).toBeInTheDocument();
+    expect(screen.getByText("Lv. 3：累計 30 XP以上")).toBeInTheDocument();
+    expect(screen.getByText("Lv. 4：累計 60 XP")).toBeInTheDocument();
+    expect(
+      screen.getByText("次のLvに必要なXP：Lv. 3 × 10 = 30 XP"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-label",
-      "レベル進捗 62%",
+      "レベル進捗 3.3333333333333335%",
     );
 
     await user.click(

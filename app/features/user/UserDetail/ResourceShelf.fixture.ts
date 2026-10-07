@@ -40,14 +40,19 @@ export const shelfFixture = {
 } as unknown as NameSpace;
 
 export const growthFixture: GrowthResult = {
-  rules: { exposure_xp: 1, answer_xp: 5, correct_bonus_xp: 2, level_curve: 50 },
+  rules: {
+    exposure_xp: 1,
+    answer_xp: 5,
+    correct_bonus_xp: 2,
+    level_xp_coefficient: 10,
+  },
   resources: [
     {
       resource_id: "10000000-0000-0000-0000-000000000001",
       total_xp: 80,
-      level: 2,
-      current_level_xp: 30,
-      xp_for_next_level: 150,
+      level: 4,
+      current_level_xp: 20,
+      xp_for_next_level: 40,
       power: 26,
       logic_count: 10,
       reference_count: 16,
@@ -67,9 +72,9 @@ export const growthFixture: GrowthResult = {
     {
       resource_id: "10000000-0000-0000-0000-000000000002",
       total_xp: 155,
-      level: 2,
-      current_level_xp: 105,
-      xp_for_next_level: 150,
+      level: 6,
+      current_level_xp: 5,
+      xp_for_next_level: 60,
       power: 64,
       logic_count: 20,
       reference_count: 44,
@@ -84,7 +89,7 @@ export const growthFixture: GrowthResult = {
       total_xp: 0,
       level: 1,
       current_level_xp: 0,
-      xp_for_next_level: 50,
+      xp_for_next_level: 10,
       power: 12,
       logic_count: 9,
       reference_count: 3,

@@ -6,6 +6,7 @@ import {
   TabsTrigger,
 } from "~/shared/components/ui/tabs";
 import BrokenQuizManager from "./brokenQuizzes";
+import LevelSettingsManager from "./levels";
 import OrphanedTanbunManager from "./orphanedTanbuns";
 import AdminUserManager from "./users";
 import WorkloadSettingsManager from "./workload";
@@ -34,6 +35,7 @@ export default function Admin() {
           <TabsTrigger value="broken-quizzes">参照切れQuiz</TabsTrigger>
           <TabsTrigger value="users">ユーザー</TabsTrigger>
           <TabsTrigger value="workload">負荷制御</TabsTrigger>
+          <TabsTrigger value="levels">レベル</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="orphans" className="mt-0">
@@ -50,6 +52,9 @@ export default function Admin() {
       </TabsContent>
       <TabsContent value="workload" className="mt-0">
         <WorkloadSettingsManager />
+      </TabsContent>
+      <TabsContent value="levels" className="mt-0">
+        <LevelSettingsManager />
       </TabsContent>
     </Tabs>
   );

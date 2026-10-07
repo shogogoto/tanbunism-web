@@ -39,7 +39,7 @@ export type GrowthResult = {
     exposure_xp: number;
     answer_xp: number;
     correct_bonus_xp: number;
-    level_curve: number;
+    level_xp_coefficient: number;
   };
 };
 const GrowthContext = createContext<
@@ -163,11 +163,11 @@ export default function ResourceGrowthBadge({
             {rules.correct_bonus_xp} XP
           </p>
           <p>
-            同じ対象・種別は一日一回。Lv到達XP：{rules.level_curve} × (Lv −
-            1)²。
+            同じ対象・種別は一日一回。次のLvまで：現在Lv ×{" "}
+            {rules.level_xp_coefficient} XP。
           </p>
           <p>
-            リソースXPは導入後の復習から記録します。既存のユーザーXPとは別集計です。
+            復習XPは導入後から記録します。ユーザーXPは各リソースの合計です。
           </p>
         </div>
         <div>

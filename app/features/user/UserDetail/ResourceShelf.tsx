@@ -321,6 +321,7 @@ function ResourceBook({
             <p className="text-xs text-muted-foreground">
               見たよ +{rules.exposure_xp} ／ 回答 +{rules.answer_xp} ／ 正解 +
               {rules.correct_bonus_xp} XP。同じ対象・種別は1日1回。
+              次のLvまで：現在Lv × {rules.level_xp_coefficient} XP。
             </p>
           )}
           <div className="rounded border p-3 text-sm">

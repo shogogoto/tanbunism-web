@@ -157,7 +157,10 @@ export function LearningLevel({
   embedded = false,
   defaultDetailsOpen = false,
 }: {
-  progress: LearningProgress & { today_xp?: number };
+  progress: LearningProgress & {
+    today_xp?: number;
+    level_xp_coefficient?: number;
+  };
   embedded?: boolean;
   defaultDetailsOpen?: boolean;
 }) {
@@ -213,6 +216,12 @@ export function LearningLevel({
           </p>
         </div>
       </div>
+      {progress.level_xp_coefficient !== undefined && (
+        <p className="text-xs text-muted-foreground">
+          次のLvに必要なXP：Lv. {progress.level} ×{" "}
+          {progress.level_xp_coefficient} = {progress.xp_for_next_level} XP
+        </p>
+      )}
       <Collapsible open={isXpDetailsOpen} onOpenChange={setIsXpDetailsOpen}>
         <CollapsibleTrigger asChild>
           <Button

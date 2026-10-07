@@ -16,15 +16,15 @@ const server = setupServer(
         exposure_xp: 1,
         answer_xp: 5,
         correct_bonus_xp: 2,
-        level_curve: 50,
+        level_xp_coefficient: 10,
       },
       resources: [
         {
           resource_id: "resource-1",
           total_xp: 57,
-          level: 2,
-          current_level_xp: 7,
-          xp_for_next_level: 150,
+          level: 3,
+          current_level_xp: 27,
+          xp_for_next_level: 30,
           power: 8,
           logic_count: 3,
           reference_count: 5,
@@ -59,17 +59,18 @@ it("一覧は小さく表示し、内訳でPowerと復習XPの根拠を確認で
   renderGrowth();
   expect(
     await screen.findByRole("button", { name: "LvとPowerの内訳" }),
-  ).toHaveTextContent("Lv.2");
+  ).toHaveTextContent("Lv.3");
   expect(screen.getByText("Power 8")).toBeVisible();
-  expect(screen.getByText("7/150")).toBeVisible();
+  expect(screen.getByText("27/30")).toBeVisible();
   await userEvent.click(
     screen.getByRole("button", { name: "LvとPowerの内訳" }),
   );
-  expect(screen.getByText("次のLvまで 143 XP")).toBeVisible();
+  expect(screen.getByText("次のLvまで 3 XP")).toBeVisible();
+  expect(screen.getByText(/現在Lv × 10 XP/)).toBeVisible();
   expect(screen.getByText(/論理 3 ＋ 参照 5/)).toBeVisible();
   expect(screen.getByText("当時の単文")).toBeVisible();
   expect(screen.getByText("+5 XP")).toBeVisible();
-  expect(screen.getByText(/導入後の復習から記録/)).toBeVisible();
+  expect(screen.getByText(/復習XPは導入後から記録/)).toBeVisible();
 });
 
 it("取得に失敗してもResourceの一覧を妨げない", async () => {
