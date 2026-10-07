@@ -1,8 +1,9 @@
-import { Award } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { Card, CardContent } from "~/shared/components/ui/card";
 import { Highlight } from "./Highlight";
+import { KnowledgeScore } from "./KnowledgeMetric";
+export { KnowledgeScore } from "./KnowledgeMetric";
 
 type Props = {
   uid: string;
@@ -97,18 +98,5 @@ export default function KnowledgeCard({
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-export function KnowledgeScore({ score }: { score: number }) {
-  return (
-    <span
-      className="flex shrink-0 items-center gap-1 text-blue-700 dark:text-blue-300"
-      aria-label={`スコア: ${score}`}
-      title={`スコア: ${score}`}
-    >
-      <Award className="size-3.5" aria-hidden="true" />
-      <span className="font-mono tabular-nums">{score}</span>
-    </span>
   );
 }

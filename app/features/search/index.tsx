@@ -4,13 +4,13 @@ import {
   List,
   LoaderCircle,
   type LucideIcon,
-  Network,
   TextInitial,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Highlight } from "~/features/tanbun/components/Highlight";
 import KnowledgeCard from "~/features/tanbun/components/KnowledgeCard";
+import { KnowledgePageRank } from "~/features/tanbun/components/KnowledgeMetric";
 import UserAvatar from "~/features/user/UserAvatar";
 import { Card, CardContent } from "~/shared/components/ui/card";
 import { searchResourcePostResourceSearchPost } from "~/shared/generated/entry/entry";
@@ -246,7 +246,6 @@ function StandardSearch() {
           if (result.type === "knowledge") {
             return (
               <KnowledgeResult
-                showPageRank={settings.knowledge.order === "pagerank"}
                 pageRank={state.pagerankScores[result.value.uid]}
                 key={`knowledge:${result.value.uid}`}
                 value={result.value}
@@ -472,13 +471,11 @@ function KnowledgeResult({
   value,
   info,
   query,
-  showPageRank,
   pageRank,
 }: {
   value: Tanbun;
   info?: ResourceInfo;
   query: string;
-  showPageRank: boolean;
   pageRank?: number | null;
 }) {
   return (
@@ -491,18 +488,7 @@ function KnowledgeResult({
       state={{ tanbun: value, ...info }}
       metadata={
         <>
-          {showPageRank && (
-            <span
-              className="flex shrink-0 items-center gap-1"
-              title="PageRank（リソース内の平均を1とした値）。未計算・更新後は再計算が必要です。"
-              aria-label={`PageRank: ${pageRank == null ? "未計算・要再計算" : pageRank.toFixed(2)}`}
-            >
-              <Network className="size-3.5" aria-hidden="true" />
-              <span className="font-mono tabular-nums">
-                {pageRank == null ? "—" : pageRank.toFixed(2)}
-              </span>
-            </span>
-          )}
+          <KnowledgePageRank value={pageRank} />
           {info?.resource ? (
             <Link
               to={`/resource/${info.resource.uid}#${value.uid}`}
