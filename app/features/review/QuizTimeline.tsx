@@ -13,7 +13,6 @@ import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
-import { useBottomSwipe } from "~/shared/hooks/useTouchNavigation";
 import { useRecommendationDay } from "~/shared/lib/recommendationDay";
 import { cn } from "~/shared/lib/utils";
 
@@ -81,16 +80,13 @@ function DailyQuizTimeline({
 
   const sorted = quizzes;
   const timelineRef = useRef<HTMLDivElement>(null);
-  const bottomSwipe = useBottomSwipe(
-    () => {
-      setCurrentIndex((current) => Math.min(current + 1, sorted.length - 1));
-      timelineRef.current?.scrollIntoView?.({
-        block: "start",
-        behavior: "smooth",
-      });
-    },
-    currentIndex < sorted.length - 1,
-  );
+  function moveFromBottom(index: number) {
+    setCurrentIndex(index);
+    timelineRef.current?.scrollIntoView?.({
+      block: "start",
+      behavior: "smooth",
+    });
+  }
   const completed = sorted.filter(
     (item) =>
       item.answered_in_set ||
@@ -130,7 +126,6 @@ function DailyQuizTimeline({
   return (
     <div
       ref={timelineRef}
-      {...bottomSwipe}
       className="mx-auto w-full max-w-3xl space-y-2"
       data-quiz-timeline
     >
@@ -228,6 +223,30 @@ function DailyQuizTimeline({
               </div>
             ))}
           </div>
+          <nav
+            aria-label="下部のクイズ移動"
+            className="flex items-center justify-between gap-3 border-t p-3 sm:hidden"
+            data-dashboard-swipe-ignore
+          >
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 flex-1"
+              disabled={currentIndex === 0}
+              onClick={() => moveFromBottom(currentIndex - 1)}
+            >
+              <ChevronLeft aria-hidden="true" /> 前の問題
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 flex-1"
+              disabled={currentIndex === sorted.length - 1}
+              onClick={() => moveFromBottom(currentIndex + 1)}
+            >
+              次の問題 <ChevronRight aria-hidden="true" />
+            </Button>
+          </nav>
         </div>
       )}
     </div>

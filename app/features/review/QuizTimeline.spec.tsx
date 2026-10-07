@@ -287,9 +287,18 @@ it("日替わりセットの順序を維持し1問ずつ表示する", async () 
   fireEvent.touchEnd(answered, {
     changedTouches: [{ clientX: 200, clientY: 150 }],
   });
+  expect(answered).toBeVisible();
+  expect(unanswered).not.toBeVisible();
+  expect(screen.getByText("1 / 2")).toBeVisible();
+  expect(
+    screen.getByRole("navigation", { name: "下部のクイズ移動" }),
+  ).toHaveClass("sm:hidden");
+  expect(screen.getByRole("button", { name: "前の問題" })).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "次の問題" }));
   expect(unanswered).toBeVisible();
-  expect(screen.getByText("2 / 2")).toBeVisible();
-  await user.click(screen.getByRole("button", { name: "前のクイズ" }));
+  expect(screen.getByRole("button", { name: "次の問題" })).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "前の問題" }));
+  expect(answered).toBeVisible();
   await user.click(screen.getByRole("button", { name: "次のクイズ" }));
 
   expect(unanswered).toBeVisible();
