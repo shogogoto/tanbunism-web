@@ -1,14 +1,18 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { imageRequest } from "~/features/user/ImageUploader/api";
 import { getTransformedImageUrl } from "~/features/user/libs/image";
 import { Button } from "~/shared/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/shared/components/ui/popover";
 
 type Inventory = {
   resources: {
     public_id: string;
     bytes: number;
-    created_at: string;
     url?: string | null;
     referenced: boolean;
     can_delete: boolean;
@@ -18,37 +22,79 @@ type Inventory = {
   retrying: number;
 };
 
-function ImagePreview({ url, publicId }: { url: string; publicId: string }) {
-  const optimized = getTransformedImageUrl(url, 320, 320, "fit") ?? url;
-  const [source, setSource] = useState(optimized);
+function PreviewImage({ url, publicId }: { url: string; publicId: string }) {
+  const [source, setSource] = useState(
+    getTransformedImageUrl(url, 320, 320, "fit") ?? url,
+  );
   const [failed, setFailed] = useState(false);
+  return failed ? (
+    <span className="text-xs text-muted-foreground">読み込み失敗</span>
+  ) : (
+    <img
+      src={source}
+      alt={publicId}
+      loading="lazy"
+      className="h-full w-full object-contain"
+      onError={() => {
+        if (source !== url) setSource(url);
+        else setFailed(true);
+      }}
+    />
+  );
+}
+
+function ImagePreview({ url, publicId }: { url: string; publicId: string }) {
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const show = () => {
+    clearTimeout(closeTimer.current);
+    setOpen(true);
+  };
+  const hide = () => {
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setOpen(false), 150);
+  };
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      className="h-full w-full flex items-center justify-center"
-      aria-label={`${publicId}の画像を開く`}
-    >
-      {failed ? (
-        <span className="p-4 text-center text-sm text-muted-foreground">
-          画像を読み込めませんでした
-          <br />
-          元画像を開く
-        </span>
-      ) : (
-        <img
-          src={source}
-          alt={publicId}
-          loading="lazy"
-          className="h-full w-full object-contain"
-          onError={() => {
-            if (source !== url) setSource(url);
-            else setFailed(true);
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="size-12 rounded bg-muted flex items-center justify-center"
+          aria-label={`${publicId}のプレビュー`}
+          onMouseEnter={show}
+          onMouseLeave={hide}
+          onClick={(event) => {
+            event.preventDefault();
+            show();
           }}
-        />
-      )}
-    </a>
+        >
+          <PreviewImage url={url} publicId={publicId} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="right"
+        className="w-[min(320px,85vw)] p-2"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+      >
+        <div className="aspect-square">
+          <PreviewImage url={url} publicId={`${publicId}の拡大画像`} />
+        </div>
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 block text-sm underline"
+          aria-label={`${publicId}の画像を開く`}
+        >
+          元画像を開く
+        </a>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -61,10 +107,11 @@ export default function ImageManager() {
     setBusy(true);
     setError("");
     try {
-      const data = await imageRequest<Inventory>(
-        `/admin/images${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+      setInventory(
+        await imageRequest<Inventory>(
+          `/admin/images${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+        ),
       );
-      setInventory(data);
       setSelected([]);
     } catch (cause) {
       setError(
@@ -77,34 +124,33 @@ export default function ImageManager() {
   async function cleanup(ids = selected) {
     if (
       !window.confirm(
-        `未参照のアバター画像${ids.length}件を削除予約しますか？\n約1時間後に再確認して削除します。この操作は取り消せません。`,
+        `未参照のアバター画像${ids.length}件を今すぐ削除しますか？\nアップロード直後の画像も削除されます。この操作は取り消せません。`,
       )
     )
       return;
     setBusy(true);
     setError("");
     try {
-      const result = await imageRequest<{ scheduled: string[] }>(
-        "/admin/images/cleanup",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ public_ids: ids }),
-        },
-      );
-      if (result.scheduled.length) {
-        toast.success(`${result.scheduled.length}件の画像を削除予約しました`);
-      } else {
+      const result = await imageRequest<{
+        deleted: string[];
+        skipped: string[];
+      }>("/admin/images/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ public_ids: ids }),
+      });
+      if (result.deleted.length)
+        toast.success(`${result.deleted.length}件の画像を削除しました`);
+      if (result.skipped.length)
         toast.info(
-          "削除対象はありません。参照状態などが変わった可能性があります。",
+          `${result.skipped.length}件は参照中または対象外のため削除しませんでした`,
         );
-      }
       await load();
     } catch (cause) {
       setError(
         cause instanceof Error
           ? cause.message
-          : "画像の削除予約に失敗しました。",
+          : "画像の削除に失敗しました。更新して現在の状態を確認してください。",
       );
     } finally {
       setBusy(false);
@@ -114,7 +160,7 @@ export default function ImageManager() {
     <section className="space-y-4 p-4 sm:p-6">
       <h2 className="font-semibold">Cloudinary画像</h2>
       <p className="text-sm text-muted-foreground">
-        アバター画像を表示します。未参照で72時間以上経過した画像のみ削除予約できます。予約後、約1時間後に参照状態を再確認して削除します。
+        未参照のアバター画像は即時削除できます。プレビューはホバー・クリックで拡大します。使用中の画像は削除できません。
       </p>
       <div className="flex flex-wrap gap-2 items-center">
         <Button disabled={busy} onClick={() => load()}>
@@ -134,7 +180,7 @@ export default function ImageManager() {
           variant="destructive"
           onClick={() => cleanup()}
         >
-          選択した画像{selected.length}件を削除予約
+          選択した画像{selected.length}件を削除
         </Button>
       </div>
       {error && (
@@ -144,7 +190,7 @@ export default function ImageManager() {
       )}
       {inventory && (
         <p className="text-sm">
-          削除待ち {inventory.pending}件 / 再試行中 {inventory.retrying}件
+          自動削除待ち {inventory.pending}件 / 再試行中 {inventory.retrying}件
         </p>
       )}
       {inventory?.resources.length === 0 && (
@@ -152,50 +198,22 @@ export default function ImageManager() {
           アバター画像はありません。
         </p>
       )}
-      <div className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-        {inventory?.resources.map((image) => (
-          <article
-            key={image.public_id}
-            className="min-w-0 overflow-hidden rounded-lg border bg-card"
-          >
-            <div className="aspect-square bg-muted flex items-center justify-center">
-              {image.url ? (
-                <ImagePreview
-                  key={image.url}
-                  url={image.url}
-                  publicId={image.public_id}
-                />
-              ) : (
-                <span className="text-sm text-muted-foreground">
-                  プレビューなし
-                </span>
-              )}
-            </div>
-            <div className="space-y-3 p-3 text-sm">
-              <div className="flex items-center justify-between gap-2">
-                <span
-                  className={
-                    image.referenced ? "text-emerald-500" : "text-amber-500"
-                  }
-                >
-                  {image.referenced ? "参照中" : "未参照（参照なし）"}
-                </span>
-                <span className="text-muted-foreground whitespace-nowrap">
-                  {Math.ceil(image.bytes / 1024)} KB
-                </span>
-              </div>
-              <p className="break-all text-xs text-muted-foreground">
-                {image.public_id}
-              </p>
-              {!image.can_delete && (
-                <p className="text-xs text-muted-foreground">
-                  {image.referenced
-                    ? "使用中のため削除できません"
-                    : "保護中：72時間以内、または管理対象外の画像"}
-                </p>
-              )}
-              <div className="flex items-center justify-between gap-2">
-                <label className="flex items-center gap-2">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left">
+              <th className="p-2">選択</th>
+              <th className="p-2">画像</th>
+              <th className="p-2">画像ID</th>
+              <th className="p-2">容量</th>
+              <th className="p-2">参照状態</th>
+              <th className="p-2">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {inventory?.resources.map((image) => (
+              <tr key={image.public_id} className="border-b">
+                <td className="p-2">
                   <input
                     type="checkbox"
                     aria-label={image.public_id}
@@ -209,21 +227,55 @@ export default function ImageManager() {
                       )
                     }
                   />
-                  選択
-                </label>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  disabled={busy || !image.can_delete}
-                  onClick={() => cleanup([image.public_id])}
-                  aria-label={`${image.public_id}を削除予約`}
-                >
-                  削除予約
-                </Button>
-              </div>
-            </div>
-          </article>
-        ))}
+                </td>
+                <td className="p-2">
+                  {image.url ? (
+                    <ImagePreview
+                      key={image.url}
+                      url={image.url}
+                      publicId={image.public_id}
+                    />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      プレビューなし
+                    </span>
+                  )}
+                </td>
+                <td className="p-2 break-all min-w-48">{image.public_id}</td>
+                <td className="p-2 whitespace-nowrap">
+                  {Math.ceil(image.bytes / 1024)} KB
+                </td>
+                <td className="p-2 whitespace-nowrap">
+                  <span
+                    className={
+                      image.referenced ? "text-emerald-500" : "text-amber-500"
+                    }
+                  >
+                    {image.referenced ? "参照中" : "未参照"}
+                  </span>
+                  {!image.can_delete && (
+                    <p className="text-xs text-muted-foreground">
+                      {image.referenced
+                        ? "使用中のため削除不可"
+                        : "アバターフォルダ外"}
+                    </p>
+                  )}
+                </td>
+                <td className="p-2">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={busy || !image.can_delete}
+                    onClick={() => cleanup([image.public_id])}
+                    aria-label={`${image.public_id}を削除`}
+                  >
+                    削除
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   );
