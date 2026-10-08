@@ -9,5 +9,11 @@ export default function LogoutDialogContent() {
     await signOut();
     navigate("/");
   }
-  return <ConfirmDialogContent title="ログアウト" handleClick={handleClick} />;
+  return (
+    <ConfirmDialogContent
+      title="ログアウト"
+      handleClick={handleClick}
+      keyboardNavigation
+    />
+  );
 }
