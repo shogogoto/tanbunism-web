@@ -47,30 +47,6 @@ const uwConfig: CloudinaryUploadWidgetOptions = {
   maxImageHeight: 1024,
   //
   apiKey: import.meta.env.VITE_CLOUDINARY_API_KEY,
-  // biome-ignore lint/suspicious/noExplicitAny:
-  uploadSignature: async (callback: any, params_to_sign: any) => {
-    try {
-      const params = Object.fromEntries(
-        Object.entries(params_to_sign).map(([key, value]) => [
-          key,
-          String(value),
-        ]),
-      );
-      const { signature } = await imageRequest<{ signature: string }>(
-        "/user/avatar/sign",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ params }),
-        },
-      );
-      callback(signature);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "画像の署名に失敗しました",
-      );
-    }
-  },
 };
 
 type Props = {
@@ -100,6 +76,12 @@ export default function UploadWidget({
   }, []);
 
   const openWidget = useCallback(() => {
+    if (!uwConfig.cloudName || !uwConfig.apiKey || !uwConfig.uploadPreset) {
+      toast.error(
+        "画像アップロードの設定が不足しています。フロントエンドのCloud Name・API Key・Upload Presetを確認してください。",
+      );
+      return;
+    }
     widgetRef.current?.open();
   }, []);
 
@@ -108,13 +90,56 @@ export default function UploadWidget({
       widgetRef.current = window.cloudinary.createUploadWidget(
         {
           ...uwConfig,
-          // A fresh identity on every upload, even when the widget is reused.
-          prepareUploadParams: (callback: (params: object) => void) => {
-            callback({
-              publicId: `${publicId}/${crypto.randomUUID()}`,
-              overwrite: false,
-              invalidate: true,
-            });
+          // prepareUploadParams overrides uploadSignature in Cloudinary's widget.
+          // Sign the final parameters here, including the new identity and crop.
+          prepareUploadParams: async (
+            callback: (params: object | object[]) => void,
+            requests: Record<string, unknown> | Record<string, unknown>[],
+          ) => {
+            try {
+              const prepared = await Promise.all(
+                (Array.isArray(requests) ? requests : [requests]).map(
+                  async (request) => {
+                    const uploadId = `${publicId}/${crypto.randomUUID()}`;
+                    const params = Object.fromEntries(
+                      Object.entries({
+                        ...request,
+                        public_id: uploadId,
+                        overwrite: false,
+                        invalidate: true,
+                      }).map(([key, value]) => [key, String(value)]),
+                    );
+                    const { signature } = await imageRequest<{
+                      signature: string;
+                    }>("/user/avatar/sign", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ params }),
+                    });
+                    if (!signature || typeof signature !== "string") {
+                      throw new Error(
+                        "画像アップロードの署名を取得できませんでした",
+                      );
+                    }
+                    return {
+                      publicId: uploadId,
+                      overwrite: false,
+                      invalidate: true,
+                      signature,
+                    };
+                  },
+                ),
+              );
+              callback(prepared.length === 1 ? prepared[0] : prepared);
+            } catch (error) {
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "画像の署名に失敗しました",
+              );
+              // Never continue as an unsigned upload when signing fails.
+              callback({ cancel: true });
+            }
           },
         },
         (error, result) => {
