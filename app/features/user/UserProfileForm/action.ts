@@ -7,7 +7,7 @@ export async function editUserProfile({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
   const submission = parseWithZod(formData, { schema: UserProfileSchema });
   if (submission.status !== "success") {
-    return Response.json({ submission: submission.reply() });
+    return Response.json({ submission: submission.reply() }, { status: 400 });
   }
 
   const cvt = Object.fromEntries(
@@ -21,13 +21,16 @@ export async function editUserProfile({ request }: ActionFunctionArgs) {
     credentials: "include",
   });
   if (res.status !== 200) {
-    return Response.json({
-      submission: submission.reply({
-        formErrors: [
-          `プロフィールの更新に失敗しました: ${JSON.stringify(res.data) || "不明なエラー"}`,
-        ],
-      }),
-    });
+    return Response.json(
+      {
+        submission: submission.reply({
+          formErrors: [
+            `プロフィールの更新に失敗しました: ${JSON.stringify(res.data) || "不明なエラー"}`,
+          ],
+        }),
+      },
+      { status: res.status },
+    );
   }
   return Response.json({
     submission: submission.reply(),

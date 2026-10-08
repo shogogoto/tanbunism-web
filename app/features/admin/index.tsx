@@ -8,6 +8,7 @@ import {
   TabsTrigger,
 } from "~/shared/components/ui/tabs";
 import BrokenQuizManager from "./brokenQuizzes";
+import ImageManager from "./images";
 import LevelSettingsManager from "./levels";
 import OrphanedTanbunManager from "./orphanedTanbuns";
 import PageRankManager from "./pagerank";
@@ -48,6 +49,7 @@ export default function Admin() {
           <TabsTrigger value="levels">レベル</TabsTrigger>
           <TabsTrigger value="power">Power</TabsTrigger>
           <TabsTrigger value="pagerank">PageRank</TabsTrigger>
+          <TabsTrigger value="images">画像</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="orphans" className="mt-0">
@@ -73,6 +75,9 @@ export default function Admin() {
       </TabsContent>
       <TabsContent value="pagerank" className="mt-0">
         <PageRankManager />
+      </TabsContent>
+      <TabsContent value="images" className="mt-0">
+        <ImageManager />
       </TabsContent>
     </Tabs>
   );

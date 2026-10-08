@@ -7,6 +7,7 @@ import type {
 import type { KeyboardEvent, ReactElement } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { imageRequest } from "./api";
 
 declare global {
   interface Window {
@@ -25,58 +26,57 @@ declare global {
 const uwConfig: CloudinaryUploadWidgetOptions = {
   cloudName: import.meta.env.VITE_CLOUD_NAME,
   uploadPreset: import.meta.env.VITE_UPLOAD_PRESET,
-  folder: "avatar",
-  sources: [
-    "local",
-    "url",
-    "camera",
-    "image_search",
-    "google_drive",
-    "facebook",
-    "instagram",
-    "dropbox",
-  ],
+  folder: import.meta.env.VITE_CLOUD_FOLDER || "avatar",
+  resourceType: "image",
+  sources: ["local", "camera"],
   theme: "minimal",
-  showAdvancedOptions: true,
-  // multiple: false,
+  showAdvancedOptions: false,
+  multiple: false,
+  maxFiles: 1,
   // tags: ['users', 'profile'],
   // context: { alt: 'user_uploaded' },
-  clientAllowedFormats: ["jpeg", "jpg", "png", "gif", "webp", "svg", "bmp"],
+  clientAllowedFormats: ["jpeg", "jpg", "png", "webp"],
   cropping: true,
   // showSkipCropButton: false,
   croppingShowBackButton: true,
   croppingShowDimensions: true,
   croppingValidateDimensions: true,
   autoMinimize: true,
-  // maxImageFileSize: 5000000, // 5MB
-  // maxImageWidth: 2000,
+  maxImageFileSize: 5000000,
+  maxImageWidth: 1024,
+  maxImageHeight: 1024,
   //
   apiKey: import.meta.env.VITE_CLOUDINARY_API_KEY,
   // biome-ignore lint/suspicious/noExplicitAny:
   uploadSignature: async (callback: any, params_to_sign: any) => {
-    // CloudinaryのUpload設定で signed, overwrite 有効にしたら上書きできた
-    const formData = new FormData();
-    for (const key in params_to_sign) {
-      formData.append(key, params_to_sign[key]);
+    try {
+      const params = Object.fromEntries(
+        Object.entries(params_to_sign).map(([key, value]) => [
+          key,
+          String(value),
+        ]),
+      );
+      const { signature } = await imageRequest<{ signature: string }>(
+        "/user/avatar/sign",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ params }),
+        },
+      );
+      callback(signature);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "画像の署名に失敗しました",
+      );
     }
-    const res = await fetch("/user/signUpload", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!res.ok) {
-      throw new Error("Failed to fetch upload signature");
-    }
-
-    const { signature } = await res.json();
-    callback(signature);
   },
 };
 
 type Props = {
   children: ReactElement;
   publicId: string;
-  onUploadSuccess: (imageUrl: string) => void;
+  onUploadSuccess: (imageUrl: string) => void | Promise<void>;
 };
 
 export default function UploadWidget({
@@ -106,7 +106,17 @@ export default function UploadWidget({
   useEffect(() => {
     if (isScriptLoaded && window.cloudinary && !widgetRef.current) {
       widgetRef.current = window.cloudinary.createUploadWidget(
-        { ...uwConfig, publicId },
+        {
+          ...uwConfig,
+          // A fresh identity on every upload, even when the widget is reused.
+          prepareUploadParams: (callback: (params: object) => void) => {
+            callback({
+              publicId: `${publicId}/${crypto.randomUUID()}`,
+              overwrite: false,
+              invalidate: true,
+            });
+          },
+        },
         (error, result) => {
           if (!error && result?.event === "success") {
             const { info } = result;
@@ -133,14 +143,22 @@ export default function UploadWidget({
             } else {
               uploadedImageUrl = (info as { secure_url: string }).secure_url;
             }
-            onUploadSuccess(uploadedImageUrl);
+            Promise.resolve(onUploadSuccess(uploadedImageUrl)).catch(() => {
+              toast.error(
+                "画像の保存に失敗しました。未使用の画像は後で削除されます。",
+              );
+            });
           } else if (error) {
             console.error("Upload failed:", error);
-            toast.error("画像のアッフロートに失敗しました");
+            toast.error("画像のアップロードに失敗しました");
           }
         },
       );
     }
+    return () => {
+      widgetRef.current?.destroy();
+      widgetRef.current = null;
+    };
   }, [isScriptLoaded, publicId, onUploadSuccess]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {

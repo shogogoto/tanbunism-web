@@ -9,27 +9,31 @@ export function getTransformedImageUrl(
   crop = "fill",
 ) {
   if (!url) return undefined;
-
   try {
-    const urlParts = url.split("/upload/");
-    if (urlParts.length !== 2) {
-      console.warn("URL does not appear to be a Cloudinary URL:", url);
-      return url;
-    }
-    const publicIdAndFormat = urlParts[1].split("/").pop(); // publicId.ext
-    const pathSegments = urlParts[1].split("/");
-
-    // 'v123456789/' のようなバージョンセグメントを考慮してpublicIdを取得
-    let publicIdIndex =
-      pathSegments.findIndex((segment) => segment.startsWith("v")) + 1;
-    if (publicIdIndex === 0) publicIdIndex = 0; // バージョンがない場合
-    const publicId = pathSegments.slice(publicIdIndex).join("/");
-
-    // publicId の末尾に拡張子が含まれる場合があるため、変換パラメータの後に publicId を追加
-    // 例: upload/w_100,h_100,c_fill/my_folder/my_image.jpg
-    return `${urlParts[0]}/upload/w_${width},h_${height},c_${crop}/${publicId}`;
-  } catch (e) {
-    console.error("Failed to transform Cloudinary URL:", e);
-    return url; // エラー時は元のURLを返す
+    const parsed = new URL(url);
+    if (parsed.hostname !== "res.cloudinary.com") return url;
+    const marker = "/image/upload/";
+    const index = parsed.pathname.indexOf(marker);
+    if (index < 0) return url;
+    const prefix = parsed.pathname.slice(0, index + marker.length);
+    const path = parsed.pathname.slice(index + marker.length);
+    // Append after existing crop transformations, before the version/public ID.
+    const segments = path.split("/");
+    const version = segments.findIndex((segment) => /^v\\d+$/.test(segment));
+    const boundary =
+      version >= 0
+        ? version
+        : segments.findIndex(
+            (segment) => !segment.includes(",") && !/^[a-z]+_/.test(segment),
+          );
+    if (boundary < 0) return url;
+    const optimization = `c_${crop},w_${width},h_${height},q_auto,f_auto`;
+    const transform = segments.slice(0, boundary);
+    if (transform.at(-1) !== optimization) transform.push(optimization);
+    parsed.pathname =
+      prefix + [...transform, ...segments.slice(boundary)].join("/");
+    return parsed.toString();
+  } catch {
+    return url;
   }
 }
