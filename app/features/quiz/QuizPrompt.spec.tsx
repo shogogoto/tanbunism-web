@@ -56,6 +56,7 @@ describe("QuizPrompt", () => {
   it("単文組から関係を問うときは関係名を隠して両方の単文を示す", () => {
     render(
       <QuizPrompt
+        headerAccessory={<span>未回答</span>}
         quiz={quiz({
           quiz_type: "pair2rel",
           prompt: {
@@ -72,6 +73,10 @@ describe("QuizPrompt", () => {
 
     expect(screen.getByText("哺乳類は動物である")).toBeInTheDocument();
     expect(screen.getByText("犬は哺乳類である")).toBeInTheDocument();
+    const status = screen.getByText("未回答");
+    const body = screen.getByText("哺乳類は動物である").closest("div");
+    expect(status.parentElement).not.toContainElement(body);
+    expect(body?.parentElement).toBe(status.parentElement?.parentElement);
     expect(screen.getByText("哺乳類")).toBeInTheDocument();
     expect(screen.getByText("犬")).toBeInTheDocument();
     expect(screen.getByText("Aから見たBとの関係は？")).toBeInTheDocument();

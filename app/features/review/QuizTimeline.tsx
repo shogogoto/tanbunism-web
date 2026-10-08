@@ -378,11 +378,36 @@ function QuizTimelineCard({
       <div
         data-hotkey-item={isCurrent ? true : undefined}
         data-hotkey-active={isCurrent ? "true" : undefined}
-        className="flex items-start gap-2 border-b p-3 outline-none data-[hotkey-active=true]:bg-accent/30 sm:gap-3 sm:p-4"
+        className="border-b p-3 outline-none data-[hotkey-active=true]:bg-accent/30 sm:p-4"
       >
         <QuizPrompt
           quiz={item.quiz}
           className="min-w-0 flex-1"
+          headerAccessory={
+            hasSessionResult ? (
+              <Badge variant={sessionResult ? "secondary" : "destructive"}>
+                今回 {sessionResult ? "正解" : "不正解"}
+              </Badge>
+            ) : (
+              <Badge
+                variant={
+                  item.attempts === 0
+                    ? "default"
+                    : needsReview(item)
+                      ? "destructive"
+                      : "secondary"
+                }
+              >
+                {item.answered_in_set || item.answered_today
+                  ? "回答済み"
+                  : item.attempts === 0
+                    ? "未回答"
+                    : needsReview(item)
+                      ? `復習 ${Math.round((item.accuracy ?? 0) * 100)}%`
+                      : `${item.attempts}回答`}
+              </Badge>
+            )
+          }
           renderSubject={(subject) => (
             <button
               type="button"
@@ -412,29 +437,6 @@ function QuizTimelineCard({
             </button>
           )}
         />
-        {hasSessionResult ? (
-          <Badge variant={sessionResult ? "secondary" : "destructive"}>
-            今回 {sessionResult ? "正解" : "不正解"}
-          </Badge>
-        ) : (
-          <Badge
-            variant={
-              item.attempts === 0
-                ? "default"
-                : needsReview(item)
-                  ? "destructive"
-                  : "secondary"
-            }
-          >
-            {item.answered_in_set || item.answered_today
-              ? "回答済み"
-              : item.attempts === 0
-                ? "未回答"
-                : needsReview(item)
-                  ? `復習 ${Math.round((item.accuracy ?? 0) * 100)}%`
-                  : `${item.attempts}回答`}
-          </Badge>
-        )}
       </div>
       <CardContent className="space-y-2 p-0">
         <QuizAttempt
@@ -445,12 +447,14 @@ function QuizTimelineCard({
           className="border-0 p-3 sm:p-4"
           onAnswered={onAnswered}
           completed={item.answered_in_set || item.answered_today}
+          actionInfo={
+            item.accuracy != null ? (
+              <span className="whitespace-nowrap">
+                正答率 {Math.round(item.accuracy * 100)}%
+              </span>
+            ) : undefined
+          }
         />
-        {item.accuracy !== null && (
-          <p className="border-t px-3 py-1 text-xs text-muted-foreground sm:px-4 sm:py-3">
-            これまでの正答率 {Math.round(item.accuracy * 100)}%
-          </p>
-        )}
       </CardContent>
     </Card>
   );

@@ -40,6 +40,7 @@ type Props = {
   className?: string;
   compact?: boolean;
   showTypeBadge?: boolean;
+  headerAccessory?: ReactNode;
   renderSubject?: (subject: string) => ReactNode;
   renderObject?: (object: string) => ReactNode;
 };
@@ -92,6 +93,7 @@ export default function QuizPrompt({
   className,
   compact = false,
   showTypeBadge = true,
+  headerAccessory,
   renderSubject = (subject) => subject,
   renderObject = (object) => object,
 }: Props) {
@@ -102,6 +104,7 @@ export default function QuizPrompt({
   if (!prompt || !quizType || !(quizType in presentation)) {
     return (
       <p className={cn("whitespace-pre-line text-sm font-medium", className)}>
+        {headerAccessory}
         {renderSubject(quiz.statement)}
       </p>
     );
@@ -114,11 +117,14 @@ export default function QuizPrompt({
     <div
       className={cn("min-w-0", compact ? "space-y-1" : "space-y-2", className)}
     >
-      <div className="flex flex-wrap items-center gap-2">
-        {showTypeBadge && <QuizTypeBadge quizType={quizType} />}
-        <span className="text-xs text-muted-foreground">
-          {style.instruction}
-        </span>
+      <div className="flex items-start gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          {showTypeBadge && <QuizTypeBadge quizType={quizType} />}
+          <span className="text-xs text-muted-foreground">
+            {style.instruction}
+          </span>
+        </div>
+        {headerAccessory}
       </div>
       {isRelation ? (
         <div className={cn("space-y-1.5", !compact && "rounded border p-2")}>

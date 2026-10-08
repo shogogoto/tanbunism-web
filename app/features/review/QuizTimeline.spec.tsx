@@ -272,6 +272,10 @@ it("日替わりセットの順序を維持し1問ずつ表示する", async () 
   expect(answered).toBeVisible();
   expect(unanswered).not.toBeVisible();
   expect(screen.getByText("復習 50%")).toBeVisible();
+  const accuracy = screen.getByText("正答率 50%");
+  expect(accuracy.parentElement?.parentElement).toContainElement(
+    screen.getByRole("button", { name: "不備を報告" }),
+  );
   const timelineItems = document.querySelectorAll("[data-hotkey-item]");
   expect(timelineItems).toHaveLength(1);
   expect(timelineItems[0]).toHaveTextContent("回答済みの問題");

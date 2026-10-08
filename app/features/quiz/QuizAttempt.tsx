@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useSWRConfig } from "swr";
 import { invalidateGamification } from "~/features/gamification/invalidate";
 import {
@@ -26,6 +26,7 @@ type Props = {
   onAnswered?: (isCorrect: boolean) => void;
   completed?: boolean;
   compactMobile?: boolean;
+  actionInfo?: ReactNode;
 };
 
 export default function QuizAttempt({
@@ -35,6 +36,7 @@ export default function QuizAttempt({
   onAnswered,
   completed = false,
   compactMobile = false,
+  actionInfo,
 }: Props) {
   const { mutate } = useSWRConfig();
   const [selected, setSelected] = useState<string[]>([]);
@@ -174,9 +176,14 @@ export default function QuizAttempt({
       )}
       <div className="flex items-center justify-between gap-2">
         <QuizReportButton quizId={quiz.quiz_id} compactMobile={compactMobile} />
+        {actionInfo && (
+          <div className="min-w-0 flex-1 text-xs text-muted-foreground">
+            {actionInfo}
+          </div>
+        )}
         {readOnly && (
           <>
-            <p className="flex-1 text-sm">回答済み</p>
+            {!actionInfo && <p className="flex-1 text-sm">回答済み</p>}
             <Button
               type="button"
               size="sm"
