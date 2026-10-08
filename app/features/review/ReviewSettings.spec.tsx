@@ -379,4 +379,9 @@ it("復習画面で設定を切り替え、最後の選択をユーザー別に�
     "href",
     "/dashboard?view=review-settings",
   );
+  expect(
+    screen.getByRole("link", { name: "設定を管理" }).querySelector("svg"),
+  ).not.toBeNull();
+  expect(screen.queryByText("設定を管理")).not.toBeInTheDocument();
+  expect(screen.queryByText("復習対象")).not.toBeInTheDocument();
 });

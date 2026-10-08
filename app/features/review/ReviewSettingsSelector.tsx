@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
@@ -108,10 +108,9 @@ export default function ReviewSettingsSelector({
   }, [user, selected]);
   return (
     <div
-      className="mx-auto flex max-w-3xl flex-wrap items-center gap-2 py-2 text-sm"
+      className="flex min-w-0 items-center gap-1 text-sm"
       data-dashboard-swipe-ignore
     >
-      <span className="shrink-0">復習対象</span>
       <Popover
         open={open}
         onOpenChange={(next) => {
@@ -124,7 +123,7 @@ export default function ReviewSettingsSelector({
             variant="outline"
             size="sm"
             aria-label="復習設定を切り替え"
-            className="h-8 min-w-0 max-w-60 gap-2"
+            className="h-11 min-w-0 max-w-32 gap-1 px-2 sm:h-9 sm:max-w-60"
             title={selectedName}
           >
             <span className="truncate">{selectedName}</span>
@@ -135,7 +134,7 @@ export default function ReviewSettingsSelector({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          align="start"
+          align="end"
           className="w-96 max-w-[calc(100vw-2rem)] p-0"
           data-dashboard-swipe-ignore
         >
@@ -202,9 +201,13 @@ export default function ReviewSettingsSelector({
             ? "/dashboard?view=study-plans"
             : "/dashboard?view=review-settings"
         }
-        className="ml-auto shrink-0 text-muted-foreground hover:underline"
+        aria-label={
+          selected.startsWith("plan:") ? "学習計画を管理" : "設定を管理"
+        }
+        title={selected.startsWith("plan:") ? "学習計画を管理" : "設定を管理"}
+        className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:size-9"
       >
-        {selected.startsWith("plan:") ? "学習計画を管理" : "設定を管理"}
+        <Settings className="size-4" aria-hidden="true" />
       </Link>
       {(error || plansError) && (
         <span role="alert" className="text-xs text-destructive">

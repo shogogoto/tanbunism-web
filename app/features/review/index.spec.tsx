@@ -188,11 +188,16 @@ it("計画の復習から同じ選択欄で過去の日替わりへ戻れる", a
   const user = userEvent.setup();
   render(
     <MemoryRouter initialEntries={["/review?resource=resource-1&view=quiz"]}>
+      <ReviewHeaderTabs />
       <Review />
     </MemoryRouter>,
   );
   expect(screen.getByText("計画の準備済みクイズ")).toBeVisible();
   const target = screen.getByLabelText("復習対象");
+  expect(
+    screen.getByRole("group", { name: "復習対象と設定" }),
+  ).toContainElement(target);
+  expect(target.closest("section")).toBeNull();
   const days = target.querySelectorAll<HTMLOptionElement>(
     'option[value^="day:"]',
   );
