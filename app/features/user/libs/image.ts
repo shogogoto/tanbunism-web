@@ -19,7 +19,7 @@ export function getTransformedImageUrl(
     const path = parsed.pathname.slice(index + marker.length);
     // Append after existing crop transformations, before the version/public ID.
     const segments = path.split("/");
-    const version = segments.findIndex((segment) => /^v\\d+$/.test(segment));
+    const version = segments.findIndex((segment) => /^v\d+$/.test(segment));
     const boundary =
       version >= 0
         ? version

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { imageRequest } from "~/features/user/ImageUploader/api";
@@ -54,6 +54,25 @@ describe("admin images", () => {
     ).toBeDisabled();
     expect(screen.getByText("参照中")).toBeInTheDocument();
     expect(screen.getAllByText("未参照（参照なし）")).toHaveLength(2);
+    const preview = screen.getByRole("img", { name: "avatar/orphan" });
+    fireEvent.error(preview);
+    expect(preview).toHaveAttribute(
+      "src",
+      "https://res.cloudinary.com/test/image/upload/v123/avatar/orphan.jpg",
+    );
+    fireEvent.error(preview);
+    expect(
+      screen.queryByRole("img", { name: "avatar/orphan" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("画像を読み込めませんでした", { exact: false }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "avatar/orphanの画像を開く" }),
+    ).toHaveAttribute(
+      "href",
+      "https://res.cloudinary.com/test/image/upload/v123/avatar/orphan.jpg",
+    );
     await user.click(screen.getByLabelText("avatar/orphan"));
     vi.spyOn(window, "confirm").mockReturnValue(true);
     vi.mocked(imageRequest).mockResolvedValueOnce({

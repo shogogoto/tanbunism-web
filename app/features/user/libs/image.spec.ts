@@ -25,4 +25,15 @@ describe("optimized avatar delivery", () => {
     expect(getTransformedImageUrl("bad-url", 256, 256)).toBe("bad-url");
     expect(getTransformedImageUrl(null, 256, 256)).toBeUndefined();
   });
+  it("recognizes numeric version segments after a named transformation", () => {
+    expect(
+      getTransformedImageUrl(
+        "https://res.cloudinary.com/cloud/image/upload/t_avatar/v123/avatar/user.jpg",
+        256,
+        256,
+      ),
+    ).toBe(
+      "https://res.cloudinary.com/cloud/image/upload/t_avatar/c_fill,w_256,h_256,q_auto,f_auto/v123/avatar/user.jpg",
+    );
+  });
 });

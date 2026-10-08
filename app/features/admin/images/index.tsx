@@ -18,6 +18,40 @@ type Inventory = {
   retrying: number;
 };
 
+function ImagePreview({ url, publicId }: { url: string; publicId: string }) {
+  const optimized = getTransformedImageUrl(url, 320, 320, "fit") ?? url;
+  const [source, setSource] = useState(optimized);
+  const [failed, setFailed] = useState(false);
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="h-full w-full flex items-center justify-center"
+      aria-label={`${publicId}の画像を開く`}
+    >
+      {failed ? (
+        <span className="p-4 text-center text-sm text-muted-foreground">
+          画像を読み込めませんでした
+          <br />
+          元画像を開く
+        </span>
+      ) : (
+        <img
+          src={source}
+          alt={publicId}
+          loading="lazy"
+          className="h-full w-full object-contain"
+          onError={() => {
+            if (source !== url) setSource(url);
+            else setFailed(true);
+          }}
+        />
+      )}
+    </a>
+  );
+}
+
 export default function ImageManager() {
   const [inventory, setInventory] = useState<Inventory>();
   const [selected, setSelected] = useState<string[]>([]);
@@ -126,20 +160,11 @@ export default function ImageManager() {
           >
             <div className="aspect-square bg-muted flex items-center justify-center">
               {image.url ? (
-                <a
-                  href={image.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="h-full w-full"
-                  aria-label={`${image.public_id}の画像を開く`}
-                >
-                  <img
-                    src={getTransformedImageUrl(image.url, 320, 320, "fit")}
-                    alt={image.public_id}
-                    loading="lazy"
-                    className="h-full w-full object-contain"
-                  />
-                </a>
+                <ImagePreview
+                  key={image.url}
+                  url={image.url}
+                  publicId={image.public_id}
+                />
               ) : (
                 <span className="text-sm text-muted-foreground">
                   プレビューなし
