@@ -173,13 +173,9 @@ function DailyQuizTimeline({
       )}
       {sorted.length > 0 && (
         <div className="border-y sm:border-x">
-          <div className="flex items-center justify-between border-b px-4 py-2 text-sm">
-            <span>{historical ? `${day}のセット` : "今日のセット"}</span>
-            <span className="tabular-nums text-muted-foreground">
-              {completed} / {sorted.length}問 回答済み
-            </span>
-          </div>
           <QuizTimelinePager
+            label={historical ? `${day}のセット` : "今日のセット"}
+            completed={completed}
             currentIndex={currentIndex}
             quizIds={sorted.map((item) => item.quiz.quiz_id)}
             completedIds={
@@ -225,7 +221,7 @@ function DailyQuizTimeline({
           </div>
           <nav
             aria-label="下部のクイズ移動"
-            className="flex items-center justify-between gap-3 border-t p-3 sm:hidden"
+            className="flex items-center justify-between gap-3 border-t px-3 py-2 sm:hidden"
             data-dashboard-swipe-ignore
           >
             <Button
@@ -254,11 +250,15 @@ function DailyQuizTimeline({
 }
 
 function QuizTimelinePager({
+  label,
+  completed,
   currentIndex,
   quizIds,
   completedIds,
   onChange,
 }: {
+  label: string;
+  completed: number;
   currentIndex: number;
   quizIds: string[];
   completedIds: Set<string>;
@@ -286,62 +286,70 @@ function QuizTimelinePager({
   }, [currentIndex]);
   return (
     <nav
-      className="flex items-center gap-2 border-b px-2 py-3 sm:px-4"
+      className="border-b"
       aria-label="クイズを移動"
       data-dashboard-swipe-ignore
     >
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        data-quiz-timeline-prev
-        disabled={currentIndex === 0}
-        onClick={() => onChange(currentIndex - 1)}
-        aria-label="前のクイズ"
-      >
-        <ChevronLeft />
-      </Button>
-      <div ref={dotsRef} className="min-w-0 flex-1 overflow-x-auto py-1">
-        <div className="mx-auto flex w-max items-center gap-0.5">
-          {quizIds.map((quizId, index) => (
-            <button
-              key={quizId}
-              type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-full"
-              onClick={() => onChange(index)}
-              aria-label={`${index + 1}問目を表示`}
-              title={completedIds.has(quizId) ? "回答済み" : "未回答"}
-              aria-current={index === currentIndex ? "true" : undefined}
-            >
-              <span
-                className={cn(
-                  "block size-2 rounded-full transition-[width,height,background-color]",
-                  completedIds.has(quizId)
-                    ? "bg-emerald-500"
-                    : "bg-muted-foreground/35",
-                  index === currentIndex &&
-                    "size-2.5 ring-2 ring-primary ring-offset-2 ring-offset-background",
-                )}
-                aria-hidden="true"
-              />
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center justify-between px-3 pt-1 text-xs sm:border-b sm:px-4 sm:py-2 sm:text-sm">
+        <span>{label}</span>
+        <span className="tabular-nums text-muted-foreground">
+          {completed} / {count}問 回答済み
+        </span>
       </div>
-      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-        {currentIndex + 1} / {count}
-      </span>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        data-quiz-timeline-next
-        disabled={currentIndex === count - 1}
-        onClick={() => onChange(currentIndex + 1)}
-        aria-label="次のクイズ"
-      >
-        <ChevronRight />
-      </Button>
+      <div className="flex items-center gap-2 px-2 py-0.5 sm:px-4 sm:py-3">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          data-quiz-timeline-prev
+          disabled={currentIndex === 0}
+          onClick={() => onChange(currentIndex - 1)}
+          aria-label="前のクイズ"
+        >
+          <ChevronLeft />
+        </Button>
+        <div ref={dotsRef} className="min-w-0 flex-1 overflow-x-auto py-1">
+          <div className="mx-auto flex w-max items-center gap-0.5">
+            {quizIds.map((quizId, index) => (
+              <button
+                key={quizId}
+                type="button"
+                className="flex size-7 shrink-0 items-center justify-center rounded-full"
+                onClick={() => onChange(index)}
+                aria-label={`${index + 1}問目を表示`}
+                title={completedIds.has(quizId) ? "回答済み" : "未回答"}
+                aria-current={index === currentIndex ? "true" : undefined}
+              >
+                <span
+                  className={cn(
+                    "block size-2 rounded-full transition-[width,height,background-color]",
+                    completedIds.has(quizId)
+                      ? "bg-emerald-500"
+                      : "bg-muted-foreground/35",
+                    index === currentIndex &&
+                      "size-2.5 ring-2 ring-primary ring-offset-2 ring-offset-background",
+                  )}
+                  aria-hidden="true"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+          {currentIndex + 1} / {count}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          data-quiz-timeline-next
+          disabled={currentIndex === count - 1}
+          onClick={() => onChange(currentIndex + 1)}
+          aria-label="次のクイズ"
+        >
+          <ChevronRight />
+        </Button>
+      </div>
     </nav>
   );
 }
@@ -370,7 +378,7 @@ function QuizTimelineCard({
       <div
         data-hotkey-item={isCurrent ? true : undefined}
         data-hotkey-active={isCurrent ? "true" : undefined}
-        className="flex items-start gap-3 border-b p-4 outline-none data-[hotkey-active=true]:bg-accent/30"
+        className="flex items-start gap-2 border-b p-3 outline-none data-[hotkey-active=true]:bg-accent/30 sm:gap-3 sm:p-4"
       >
         <QuizPrompt
           quiz={item.quiz}
@@ -433,12 +441,13 @@ function QuizTimelineCard({
           key={item.quiz.quiz_id}
           quiz={item.quiz}
           showStatement={false}
-          className="border-0 p-4"
+          compactMobile
+          className="border-0 p-3 sm:p-4"
           onAnswered={onAnswered}
           completed={item.answered_in_set || item.answered_today}
         />
         {item.accuracy !== null && (
-          <p className="border-t px-4 py-3 text-xs text-muted-foreground">
+          <p className="border-t px-3 py-1 text-xs text-muted-foreground sm:px-4 sm:py-3">
             これまでの正答率 {Math.round(item.accuracy * 100)}%
           </p>
         )}

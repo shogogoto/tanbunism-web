@@ -15,7 +15,10 @@ import { Label } from "~/shared/components/ui/label";
 import { Textarea } from "~/shared/components/ui/textarea";
 import { type QuizReportReason, reportQuizIssue } from "./api";
 
-export default function QuizReportButton({ quizId }: { quizId: string }) {
+export default function QuizReportButton({
+  quizId,
+  compactMobile = false,
+}: { quizId: string; compactMobile?: boolean }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<QuizReportReason>("undefined");
   const [detail, setDetail] = useState("");
@@ -45,10 +48,18 @@ export default function QuizReportButton({ quizId }: { quizId: string }) {
           type="button"
           variant="ghost"
           size="sm"
-          className="text-muted-foreground"
+          aria-label="不備を報告"
+          title="不備を報告"
+          className={
+            compactMobile
+              ? "min-h-11 min-w-11 px-2 text-muted-foreground sm:min-h-0 sm:min-w-0 sm:px-3"
+              : "text-muted-foreground"
+          }
         >
           <Flag className="size-4" />
-          不備を報告
+          <span className={compactMobile ? "hidden sm:inline" : undefined}>
+            不備を報告
+          </span>
         </Button>
       </DialogTrigger>
       <DialogContent>

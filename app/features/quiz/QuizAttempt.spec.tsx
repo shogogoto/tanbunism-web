@@ -17,6 +17,7 @@ it("参照方向を補足しても元の選択肢IDで回答する", async () =>
   render(
     <MemoryRouter>
       <QuizAttempt
+        compactMobile
         quiz={{
           quiz_id: "reference-quiz",
           quiz_type: "pair2rel",
@@ -37,6 +38,12 @@ it("参照方向を補足しても元の選択肢IDで回答する", async () =>
       />
     </MemoryRouter>,
   );
+  expect(
+    screen.getByRole("button", { name: "被参照（BがAを参照）" }),
+  ).toHaveClass("min-h-11", "py-2", "text-base");
+  const report = screen.getByRole("button", { name: "不備を報告" });
+  expect(report).toHaveClass("min-h-11", "min-w-11");
+  expect(report.querySelector("span")).toHaveClass("hidden", "sm:inline");
   await user.click(
     screen.getByRole("button", { name: "被参照（BがAを参照）" }),
   );

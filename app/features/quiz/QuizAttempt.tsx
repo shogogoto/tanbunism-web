@@ -25,6 +25,7 @@ type Props = {
   showStatement?: boolean;
   onAnswered?: (isCorrect: boolean) => void;
   completed?: boolean;
+  compactMobile?: boolean;
 };
 
 export default function QuizAttempt({
@@ -33,6 +34,7 @@ export default function QuizAttempt({
   showStatement = true,
   onAnswered,
   completed = false,
+  compactMobile = false,
 }: Props) {
   const { mutate } = useSWRConfig();
   const [selected, setSelected] = useState<string[]>([]);
@@ -75,7 +77,13 @@ export default function QuizAttempt({
   }
 
   return (
-    <div className={cn("space-y-3 border p-3", className)}>
+    <div
+      className={cn(
+        "space-y-3 border p-3",
+        compactMobile && "space-y-2 sm:space-y-3",
+        className,
+      )}
+    >
       {showStatement && (
         <QuizPrompt
           quiz={quiz}
@@ -95,7 +103,7 @@ export default function QuizAttempt({
           const isSelected = selected.includes(optionId);
           const isCorrect = Boolean(answer) && quiz.correct.includes(optionId);
           const isSelectedWrong = Boolean(answer) && isSelected && !isCorrect;
-          const className = `flex w-full items-start gap-2 border p-3 text-left text-base leading-relaxed ${
+          const className = `flex w-full items-start gap-2 border ${compactMobile ? "min-h-11 px-3 py-2 sm:p-3" : "p-3"} text-left text-base leading-relaxed ${
             isCorrect
               ? "border-green-600 bg-green-500/10"
               : isSelectedWrong
@@ -152,23 +160,12 @@ export default function QuizAttempt({
           <AlertTitle>
             {answer.is_correct ? "正解です" : "不正解です"}
           </AlertTitle>
-          <AlertDescription>
+          <AlertDescription
+            className={compactMobile ? "sr-only sm:not-sr-only" : undefined}
+          >
             回答を記録しました。問題文と選択肢から関連する単文を開けます。
           </AlertDescription>
         </Alert>
-      )}
-      {readOnly && (
-        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-          <p>回答済み</p>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setReviewAgain(true)}
-          >
-            もう一度解く
-          </Button>
-        </div>
       )}
       {error && (
         <p role="alert" className="text-xs text-destructive">
@@ -176,7 +173,20 @@ export default function QuizAttempt({
         </p>
       )}
       <div className="flex items-center justify-between gap-2">
-        <QuizReportButton quizId={quiz.quiz_id} />
+        <QuizReportButton quizId={quiz.quiz_id} compactMobile={compactMobile} />
+        {readOnly && (
+          <>
+            <p className="flex-1 text-sm">回答済み</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setReviewAgain(true)}
+            >
+              もう一度解く
+            </Button>
+          </>
+        )}
         {!answer && !readOnly && (
           <Button
             type="button"
