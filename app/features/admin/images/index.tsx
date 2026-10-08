@@ -157,7 +157,7 @@ export default function ImageManager() {
     }
   }
   return (
-    <section className="w-full max-w-5xl space-y-4 p-4 sm:p-6">
+    <section className="mx-auto w-full max-w-5xl space-y-4 p-4 sm:p-6">
       <h2 className="font-semibold">Cloudinary画像</h2>
       <p className="text-sm text-muted-foreground">
         未参照のアバター画像は即時削除できます。プレビューはホバー・クリックで拡大します。使用中の画像は削除できません。

@@ -39,8 +39,8 @@ export default function Admin() {
   }
   return (
     <Tabs value={tab} onValueChange={setTab} className="gap-0">
-      <div className="border-b px-4 py-2 sm:px-6">
-        <TabsList className="h-auto flex-wrap justify-start">
+      <div className="flex justify-center border-b px-4 py-2 sm:px-6">
+        <TabsList className="h-auto flex-wrap justify-center">
           <TabsTrigger value="orphans">孤立Tanbun</TabsTrigger>
           <TabsTrigger value="misplaced">配置切れTanbun</TabsTrigger>
           <TabsTrigger value="broken-quizzes">参照切れQuiz</TabsTrigger>
