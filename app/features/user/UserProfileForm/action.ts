@@ -11,10 +11,12 @@ export async function editUserProfile({ request }: ActionFunctionArgs) {
   }
 
   const cvt = Object.fromEntries(
-    Object.entries(submission.value).map(([k, v]) => {
-      // if (k === "username") return [k, v]; // usernameは空にできない
-      return [k, v === undefined ? "" : v];
-    }),
+    Object.entries(submission.value)
+      .filter(([key]) => formData.has(key))
+      .map(([k, v]) => {
+        // if (k === "username") return [k, v]; // usernameは空にできない
+        return [k, v === undefined ? "" : v];
+      }),
   );
 
   const res = await usersPatchCurrentUserUserMePatch(cvt, {

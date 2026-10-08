@@ -1,5 +1,5 @@
 import type React from "react";
-import { createContext, useCallback, useContext } from "react";
+import { createContext, useCallback, useContext, useEffect } from "react";
 import { toast } from "sonner";
 import type { KeyedMutator } from "swr";
 import { authCookieLogoutAuthCookieLogoutPost } from "~/shared/generated/auth/auth";
@@ -9,7 +9,7 @@ import {
   type usersCurrentUserUserMeGetResponse,
 } from "~/shared/generated/user/user";
 import { clearPrivateCache } from "~/shared/lib/indexed";
-import { easyStorage } from "~/shared/lib/storage";
+import { easyStorage, setItem } from "~/shared/lib/storage";
 
 interface AuthContextT {
   user: UserRead | undefined;
@@ -32,18 +32,20 @@ export function useAuth() {
 
 const USER_CACHE_KEY = "auth-user";
 export function AuthProvider({ children }: React.PropsWithChildren) {
-  const { getItem, removeItem, setItem } = easyStorage(USER_CACHE_KEY);
+  const { getItem, removeItem } = easyStorage(USER_CACHE_KEY);
   const { data, isLoading, isValidating, mutate } =
     useUsersCurrentUserUserMeGet({
       fetch: { credentials: "include" },
       swr: {
         fallbackData: getItem(),
         errorRetryCount: 3,
-        onSuccess: (data) => {
-          setItem(data);
-        },
       },
     });
+
+  // Bound mutate() updates (avatar/profile edits) do not invoke SWR onSuccess.
+  useEffect(() => {
+    if (data?.status === 200 && data.data) setItem(USER_CACHE_KEY, data);
+  }, [data]);
 
   const isAuthenticated = data?.status === 200 && !!data.data;
   const user = data?.data;

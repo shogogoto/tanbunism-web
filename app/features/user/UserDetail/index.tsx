@@ -63,7 +63,7 @@ export default function UserDetail({
         <CardContent className="space-y-4 p-4 sm:p-6">
           <div className="grid items-start gap-6 md:grid-cols-2">
             <UserProfile
-              user={user}
+              user={isOwnProfile ? currentUser : user}
               avatarAction={
                 isOwnProfile ? (
                   <Button
