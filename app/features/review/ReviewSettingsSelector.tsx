@@ -123,7 +123,7 @@ export default function ReviewSettingsSelector({
             variant="outline"
             size="sm"
             aria-label="復習設定を切り替え"
-            className="h-11 min-w-0 max-w-32 gap-1 px-2 sm:h-9 sm:max-w-60"
+            className="h-11 min-w-0 max-w-24 gap-1 px-2 sm:h-9 sm:max-w-60"
             title={selectedName}
           >
             <span className="truncate">{selectedName}</span>

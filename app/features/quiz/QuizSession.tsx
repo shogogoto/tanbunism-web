@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useSWRConfig } from "swr";
 import { invalidateGamification } from "~/features/gamification/invalidate";
+import { usePublishReviewProgress } from "~/features/review/ReviewProgress";
 import {
   Alert,
   AlertDescription,
@@ -16,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/shared/components/ui/card";
+import { useRecommendationDay } from "~/shared/lib/recommendationDay";
 import {
   ChainSentenceLink,
   RelationAnnotation,
@@ -268,6 +270,16 @@ export default function QuizSession({
   const isComplete =
     recommendations.length > 0 &&
     recommendations.every(({ quiz }) => results[quiz.quiz_id] !== undefined);
+  const reviewDay = useRecommendationDay();
+  usePublishReviewProgress(
+    "quiz",
+    `plan:${planId}`,
+    reviewDay,
+    recommendations.filter(({ quiz }) => results[quiz.quiz_id] !== undefined)
+      .length,
+    recommendations.length,
+    !!planId && loadState.status === "ready",
+  );
   const selectedPlan = plans.find(({ uid }) => uid === planId);
   const expectedQuizCount = selectedPlan
     ? Math.max(selectedPlan.n_quiz, selectedPlan.quiz_types.length)

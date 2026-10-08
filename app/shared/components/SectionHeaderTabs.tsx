@@ -1,12 +1,15 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
+import { cn } from "~/shared/lib/utils";
 
 export default function SectionHeaderTabs({
   sections,
   label,
+  compact = false,
 }: {
-  sections: readonly { id: string; label: string }[];
+  sections: readonly { id: string; label: string; progress?: string }[];
   label: string;
+  compact?: boolean;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -51,7 +54,10 @@ export default function SectionHeaderTabs({
     <nav
       aria-label={label}
       role="tablist"
-      className="relative flex max-w-full justify-start gap-6 overflow-x-auto px-3 sm:justify-center md:px-6"
+      className={cn(
+        "relative flex max-w-full justify-start gap-6 overflow-x-auto px-3 sm:justify-center md:px-6",
+        compact && "gap-2 px-0 sm:gap-4 sm:px-3 md:px-3",
+      )}
     >
       {sections.map((section, index) => (
         <button
@@ -82,6 +88,11 @@ export default function SectionHeaderTabs({
             {index + 1}
           </kbd>
           {section.label}
+          {section.progress && (
+            <span className="font-normal tabular-nums text-xs text-muted-foreground">
+              {section.progress}
+            </span>
+          )}
         </button>
       ))}
       <span

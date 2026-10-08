@@ -4,6 +4,11 @@ import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
 import Review from ".";
 import ReviewHeaderTabs from "./ReviewHeaderTabs";
+import {
+  ReviewProgressProvider,
+  usePublishReviewProgress,
+} from "./ReviewProgress";
+import { useReviewTarget } from "./useReviewTarget";
 
 const planState = vi.hoisted(() => ({
   data: [
@@ -18,6 +23,41 @@ const planState = vi.hoisted(() => ({
     },
   ],
 }));
+
+function PublishProgress() {
+  const target = useReviewTarget();
+  usePublishReviewProgress(
+    "knowledge",
+    "default",
+    target.selectedDay,
+    2,
+    30,
+    true,
+  );
+  usePublishReviewProgress("quiz", "default", target.selectedDay, 2, 20, true);
+  return null;
+}
+
+it("選択中のセットの進捗をタブへ表示し、別の対象へ混ぜない", async () => {
+  const user = userEvent.setup();
+  render(
+    <MemoryRouter initialEntries={["/review"]}>
+      <ReviewProgressProvider>
+        <ReviewHeaderTabs />
+        <PublishProgress />
+      </ReviewProgressProvider>
+    </MemoryRouter>,
+  );
+  expect(screen.getByRole("tab", { name: "知識" })).toHaveTextContent("2/30");
+  expect(screen.getByRole("tab", { name: "クイズ" })).toHaveTextContent("2/20");
+  await user.selectOptions(screen.getByLabelText("復習対象"), "plan:plan-1");
+  expect(screen.getByRole("tab", { name: "知識" })).not.toHaveTextContent(
+    "2/30",
+  );
+  expect(screen.getByRole("tab", { name: "クイズ" })).not.toHaveTextContent(
+    "2/20",
+  );
+});
 vi.mock("./useReviewPlans", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./useReviewPlans")>()),
   useReviewPlans: () => ({ data: planState.data }),

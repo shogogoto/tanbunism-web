@@ -10,6 +10,17 @@ import {
   listDailyQuizzes,
 } from "~/features/quiz/api";
 import { recommendationDay } from "~/shared/lib/recommendationDay";
+import { ReviewProgressProvider, useReviewProgress } from "./ReviewProgress";
+
+function Progress({ day = recommendationDay() }: { day?: string }) {
+  const progress = useReviewProgress("quiz", "default", day);
+  return (
+    <output aria-label="クイズ進捗">
+      {progress ? `${progress.done}/${progress.total}` : "未取得"}
+    </output>
+  );
+}
+
 import QuizTimeline from "./QuizTimeline";
 
 it("過去セットの回答済みを引き継ぎ、過去への候補追加は出さない", async () => {
@@ -42,9 +53,12 @@ it("過去セットの回答済みを引き継ぎ、過去への候補追加は�
   });
   render(
     <SWRConfig value={{ provider: () => new Map() }}>
-      <MemoryRouter>
-        <QuizTimeline selectedDay={day} />
-      </MemoryRouter>
+      <ReviewProgressProvider>
+        <MemoryRouter>
+          <Progress day={day} />
+          <QuizTimeline selectedDay={day} />
+        </MemoryRouter>
+      </ReviewProgressProvider>
     </SWRConfig>,
   );
   expect(await screen.findByText("過去の問題")).toBeVisible();
@@ -54,8 +68,8 @@ it("過去セットの回答済みを引き継ぎ、過去への候補追加は�
     "default",
     day,
   );
-  expect(screen.getByText(`${day}のセット`)).toBeVisible();
-  expect(screen.getByText("1 / 1問 回答済み")).toBeVisible();
+  expect(screen.queryByText(`${day}のセット`)).not.toBeInTheDocument();
+  expect(screen.getByLabelText("クイズ進捗")).toHaveTextContent("1/1");
   expect(
     screen.queryByRole("button", { name: "回答する" }),
   ).not.toBeInTheDocument();
@@ -123,9 +137,12 @@ it("問題の単文を覗いて閉じても選択肢と現在地を維持する"
 function renderTimeline() {
   return render(
     <SWRConfig value={{ provider: () => new Map() }}>
-      <MemoryRouter>
-        <QuizTimeline />
-      </MemoryRouter>
+      <ReviewProgressProvider>
+        <MemoryRouter>
+          <Progress />
+          <QuizTimeline />
+        </MemoryRouter>
+      </ReviewProgressProvider>
     </SWRConfig>,
   );
 }
@@ -200,9 +217,12 @@ it("全ユーザー版では専用feedを取得する", async () => {
 
   render(
     <SWRConfig value={{ provider: () => new Map() }}>
-      <MemoryRouter>
-        <QuizTimeline scope="global" />
-      </MemoryRouter>
+      <ReviewProgressProvider>
+        <MemoryRouter>
+          <Progress />
+          <QuizTimeline scope="global" />
+        </MemoryRouter>
+      </ReviewProgressProvider>
     </SWRConfig>,
   );
 
@@ -296,7 +316,7 @@ it("日替わりセットの順序を維持し1問ずつ表示する", async () 
   expect(screen.getByText("1 / 2")).toBeVisible();
   expect(
     screen.getByRole("navigation", { name: "下部のクイズ移動" }),
-  ).toHaveClass("sm:hidden");
+  ).toHaveClass("sm:hidden", "fixed", "bottom-[var(--app-footer-height,5rem)]");
   expect(screen.getByRole("button", { name: "前の問題" })).toBeDisabled();
   await user.click(screen.getByRole("button", { name: "次の問題" }));
   expect(unanswered).toBeVisible();
@@ -402,7 +422,7 @@ it("クイズTL上で回答して結果を確認できる", async () => {
   expect(answerQuiz).toHaveBeenCalledWith("quiz-1", ["option-1"]);
   expect(await screen.findByText("正解です")).toBeInTheDocument();
   expect(screen.getByText("今回 正解")).toBeInTheDocument();
-  expect(screen.getByText("1 / 1問 回答済み")).toBeVisible();
+  expect(screen.getByLabelText("クイズ進捗")).toHaveTextContent("1/1");
 });
 
 it("再訪しても今日の回答済み件数を表示する", async () => {
@@ -439,7 +459,7 @@ it("再訪しても今日の回答済み件数を表示する", async () => {
   renderTimeline();
 
   expect(await screen.findByText("Aの文")).toBeVisible();
-  expect(screen.getByText("1 / 1問 回答済み")).toBeVisible();
+  expect(screen.getByLabelText("クイズ進捗")).toHaveTextContent("1/1");
   expect(screen.queryByRole("alert")).toBeNull();
   expect(
     screen.queryByRole("button", { name: "回答する" }),

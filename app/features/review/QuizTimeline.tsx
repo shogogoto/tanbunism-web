@@ -15,6 +15,7 @@ import { Button } from "~/shared/components/ui/button";
 import { Card, CardContent } from "~/shared/components/ui/card";
 import { useRecommendationDay } from "~/shared/lib/recommendationDay";
 import { cn } from "~/shared/lib/utils";
+import { usePublishReviewProgress } from "./ReviewProgress";
 
 const REVIEW_ACCURACY_THRESHOLD = 0.8;
 
@@ -93,6 +94,14 @@ function DailyQuizTimeline({
       item.answered_today ||
       item.quiz.quiz_id in sessionResults,
   ).length;
+  usePublishReviewProgress(
+    "quiz",
+    profile,
+    day,
+    completed,
+    sorted.length,
+    scope === "personal" && !isLoading && !error,
+  );
 
   async function addMore() {
     setAdding(true);
@@ -126,7 +135,7 @@ function DailyQuizTimeline({
   return (
     <div
       ref={timelineRef}
-      className="mx-auto w-full max-w-3xl space-y-2"
+      className="mx-auto w-full max-w-3xl space-y-2 pb-16 sm:pb-0"
       data-quiz-timeline
     >
       {actionError && (
@@ -174,8 +183,6 @@ function DailyQuizTimeline({
       {sorted.length > 0 && (
         <div className="border-y sm:border-x">
           <QuizTimelinePager
-            label={historical ? `${day}のセット` : "今日のセット"}
-            completed={completed}
             currentIndex={currentIndex}
             quizIds={sorted.map((item) => item.quiz.quiz_id)}
             completedIds={
@@ -221,7 +228,7 @@ function DailyQuizTimeline({
           </div>
           <nav
             aria-label="下部のクイズ移動"
-            className="flex items-center justify-between gap-3 border-t px-3 py-2 sm:hidden"
+            className="fixed inset-x-0 bottom-[var(--app-footer-height,5rem)] z-30 flex items-center justify-between gap-3 border-t bg-background px-3 py-2 sm:hidden"
             data-dashboard-swipe-ignore
           >
             <Button
@@ -250,15 +257,11 @@ function DailyQuizTimeline({
 }
 
 function QuizTimelinePager({
-  label,
-  completed,
   currentIndex,
   quizIds,
   completedIds,
   onChange,
 }: {
-  label: string;
-  completed: number;
   currentIndex: number;
   quizIds: string[];
   completedIds: Set<string>;
@@ -290,12 +293,6 @@ function QuizTimelinePager({
       aria-label="クイズを移動"
       data-dashboard-swipe-ignore
     >
-      <div className="flex items-center justify-between px-3 pt-1 text-xs sm:border-b sm:px-4 sm:py-2 sm:text-sm">
-        <span>{label}</span>
-        <span className="tabular-nums text-muted-foreground">
-          {completed} / {count}問 回答済み
-        </span>
-      </div>
       <div className="flex items-center gap-2 px-2 py-0.5 sm:px-4 sm:py-3">
         <Button
           type="button"

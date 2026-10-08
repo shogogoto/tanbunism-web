@@ -5,6 +5,17 @@ import { SWRConfig } from "swr";
 import { beforeEach, expect, it, vi } from "vitest";
 import { genericCache } from "~/shared/lib/indexed";
 import { recommendationDay } from "~/shared/lib/recommendationDay";
+import { ReviewProgressProvider, useReviewProgress } from "./ReviewProgress";
+
+function Progress({ day = recommendationDay() }: { day?: string }) {
+  const progress = useReviewProgress("knowledge", "default", day);
+  return (
+    <output aria-label="知識進捗">
+      {progress ? `${progress.done}/${progress.total}` : "未取得"}
+    </output>
+  );
+}
+
 import PersonalTimeline, {
   PERSONAL_TIMELINE_CACHE_KEY,
 } from "./PersonalTimeline";
@@ -37,10 +48,13 @@ beforeEach(async () => {
 function renderTimeline(children?: ReactNode) {
   return render(
     <SWRConfig value={{ provider: () => new Map() }}>
-      <MemoryRouter>
-        <PersonalTimeline />
-        {children}
-      </MemoryRouter>
+      <ReviewProgressProvider>
+        <MemoryRouter>
+          <Progress />
+          <PersonalTimeline />
+          {children}
+        </MemoryRouter>
+      </ReviewProgressProvider>
     </SWRConfig>,
   );
 }
@@ -86,7 +100,7 @@ it("単文を見た日を一日一回だけ記録する", async () => {
   expect(
     screen.getByRole("button", { name: "今日は記録済み、累計3日" }),
   ).toBeDisabled();
-  expect(screen.getByText("1件")).toBeVisible();
+  expect(screen.getByLabelText("知識進捗")).toHaveTextContent("1/1");
   expect(markTanbunSeen).toHaveBeenCalledWith("sentence-1");
 
   await act(async () => {
@@ -164,7 +178,7 @@ it("記録に失敗したら表示を元に戻す", async () => {
       name: "今日見たことを記録、累計2日",
     }),
   ).toBeEnabled();
-  expect(screen.getByText("0件")).toBeVisible();
+  expect(screen.getByLabelText("知識進捗")).toHaveTextContent("0/1");
   expect(screen.getByRole("alert")).toHaveTextContent("記録に失敗しました");
 });
 
@@ -197,7 +211,7 @@ it("更新中も永続cacheのTLを表示する", async () => {
   renderTimeline();
 
   expect(await screen.findByText("キャッシュされた単文")).toBeVisible();
-  expect(screen.getByText("3件")).toBeVisible();
+  expect(screen.getByLabelText("知識進捗")).toHaveTextContent("0/1");
   expect(screen.queryByLabelText("読み込み中")).toBeNull();
 });
 

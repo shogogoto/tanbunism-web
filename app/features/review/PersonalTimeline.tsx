@@ -13,6 +13,7 @@ import { Button } from "~/shared/components/ui/button";
 import { usePersistentSWR } from "~/shared/hooks/swr/useCache";
 import { genericCache } from "~/shared/lib/indexed";
 import { useRecommendationDay } from "~/shared/lib/recommendationDay";
+import { usePublishReviewProgress } from "./ReviewProgress";
 import {
   type PersonalTanbunItem,
   addPersonalTanbuns,
@@ -69,7 +70,14 @@ export default function PersonalTimeline({
     },
   );
   const items = data?.items ?? [];
-  const seenTodayCount = data?.seenTodayCount ?? 0;
+  usePublishReviewProgress(
+    "knowledge",
+    profile,
+    day,
+    items.filter((item) => item.seen_in_set || item.seen_today).length,
+    items.length,
+    !!data,
+  );
   const [actionError, setActionError] = useState<string>();
   const [adding, setAdding] = useState(false);
   const [exhausted, setExhausted] = useState(false);
@@ -199,27 +207,6 @@ export default function PersonalTimeline({
       )}
       {items.length > 0 && (
         <>
-          <div className="sticky top-[var(--review-controls-height,0px)] z-10 flex flex-wrap items-center gap-2 border bg-background px-3 py-2 text-sm">
-            <Eye className="size-4 text-primary" aria-hidden="true" />
-            <span className="text-muted-foreground">
-              {profile.startsWith("plan:")
-                ? "今日の見たよ（全体）"
-                : "今日の見たよ"}
-            </span>
-            <strong className="tabular-nums">{seenTodayCount}件</strong>
-            <span className="ml-auto text-muted-foreground tabular-nums">
-              {historical
-                ? `${day}のセット`
-                : profile.startsWith("plan:")
-                  ? "この計画の知識"
-                  : "今日のセット"}{" "}
-              {
-                items.filter((item) => item.seen_in_set || item.seen_today)
-                  .length
-              }{" "}
-              / {items.length}
-            </span>
-          </div>
           {!historical && items.every((item) => item.seen_today) && (
             <div className="py-2 text-center">
               <Button

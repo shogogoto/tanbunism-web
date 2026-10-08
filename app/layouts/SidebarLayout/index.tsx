@@ -1,4 +1,10 @@
-import { useCallback, useState } from "react";
+import {
+  type CSSProperties,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { Outlet, useMatch, useRevalidator } from "react-router";
 import { useSWRConfig } from "swr";
 import { useAuth } from "~/features/auth/AuthProvider";
@@ -11,6 +17,7 @@ import {
 } from "~/features/notifications/NotificationProvider";
 import { PushPermissionPrompt } from "~/features/notifications/PushPermissionPrompt";
 import PullToRefresh from "~/features/pull-to-refresh/PullToRefresh";
+import { ReviewProgressProvider } from "~/features/review/ReviewProgress";
 import { Toaster } from "~/shared/components/ui/sonner";
 import { HistoryPanelProvider } from "~/shared/history/HistoryPanel";
 import { useIsMobile } from "~/shared/hooks/use-mobile";
@@ -27,7 +34,9 @@ export default function SidebarLayout() {
     <HistoryPanelProvider>
       <NotificationProvider userId={user?.uid}>
         <HotkeyProvider>
-          <SidebarShell isMobile={isMobile} />
+          <ReviewProgressProvider key={user?.uid ?? "guest"}>
+            <SidebarShell isMobile={isMobile} />
+          </ReviewProgressProvider>
         </HotkeyProvider>
       </NotificationProvider>
     </HistoryPanelProvider>
@@ -35,6 +44,25 @@ export default function SidebarLayout() {
 }
 
 function SidebarShell({ isMobile }: { isMobile: boolean }) {
+  const footerRef = useRef<HTMLElement>(null);
+  const [footerHeight, setFooterHeight] = useState(80);
+  useLayoutEffect(() => {
+    const footer = footerRef.current;
+    if (!footer) return;
+    const measure = () =>
+      setFooterHeight(footer.getBoundingClientRect().height);
+    measure();
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? undefined
+        : new ResizeObserver(measure);
+    observer?.observe(footer);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
   const { user } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
@@ -54,7 +82,10 @@ function SidebarShell({ isMobile }: { isMobile: boolean }) {
   }, [mutate, refreshNotifications, revalidator]);
 
   return (
-    <div className="flex h-dvh w-full bg-background">
+    <div
+      className="flex h-dvh w-full bg-background"
+      style={{ "--app-footer-height": `${footerHeight}px` } as CSSProperties}
+    >
       <DesktopSidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed((current) => !current)}
@@ -69,7 +100,10 @@ function SidebarShell({ isMobile }: { isMobile: boolean }) {
         >
           <Outlet />
         </PullToRefresh>
-        <footer className="w-full shrink-0 border-t bg-background md:hidden">
+        <footer
+          ref={footerRef}
+          className="w-full shrink-0 border-t bg-background md:hidden"
+        >
           {user && (
             <div className="flex h-7 items-center justify-center border-b px-2">
               <HeaderXpProgress

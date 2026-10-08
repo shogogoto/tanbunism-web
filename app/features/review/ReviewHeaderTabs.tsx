@@ -1,5 +1,6 @@
 import { useAuth } from "~/features/auth/AuthProvider";
 import SectionHeaderTabs from "~/shared/components/SectionHeaderTabs";
+import { useReviewProgress } from "./ReviewProgress";
 import ReviewSettingsSelector from "./ReviewSettingsSelector";
 import { useReviewTarget } from "./useReviewTarget";
 const sections = [
@@ -9,10 +10,27 @@ const sections = [
 export default function ReviewHeaderTabs() {
   const { user } = useAuth();
   const target = useReviewTarget();
+  const knowledge = useReviewProgress(
+    "knowledge",
+    target.profile,
+    target.selectedDay,
+  );
+  const quiz = useReviewProgress("quiz", target.profile, target.selectedDay);
+  const withProgress = sections.map((section) => {
+    const progress = section.id === "knowledge" ? knowledge : quiz;
+    return {
+      ...section,
+      progress: progress ? `${progress.done}/${progress.total}` : undefined,
+    };
+  });
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-2 px-2">
       <div className="min-w-0 shrink-0">
-        <SectionHeaderTabs sections={sections} label="復習の表示切り替え" />
+        <SectionHeaderTabs
+          compact
+          sections={withProgress}
+          label="復習の表示切り替え"
+        />
       </div>
       {user && (
         <fieldset
