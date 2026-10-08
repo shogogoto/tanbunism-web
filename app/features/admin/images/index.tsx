@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { imageRequest } from "~/features/user/ImageUploader/api";
 import { getTransformedImageUrl } from "~/features/user/libs/image";
@@ -101,27 +101,48 @@ function ImagePreview({ url, publicId }: { url: string; publicId: string }) {
 export default function ImageManager() {
   const [inventory, setInventory] = useState<Inventory>();
   const [selected, setSelected] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
-  async function load(cursor?: string) {
+  const load = useCallback(async () => {
     setBusy(true);
     setError("");
     try {
-      setInventory(
-        await imageRequest<Inventory>(
+      const resources: Inventory["resources"] = [];
+      const cursors = new Set<string>();
+      let cursor: string | undefined;
+      let page: Inventory;
+      do {
+        page = await imageRequest<Inventory>(
           `/admin/images${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
-        ),
-      );
+        );
+        resources.push(...page.resources);
+        cursor = page.next_cursor ?? undefined;
+        if (cursor && cursors.has(cursor))
+          throw new Error(
+            "画像一覧の取得が完了しませんでした。再試行してください。",
+          );
+        if (cursor) cursors.add(cursor);
+      } while (cursor);
+      setInventory({ ...page, resources, next_cursor: null });
       setSelected([]);
     } catch (cause) {
+      setInventory(undefined);
       setError(
         cause instanceof Error ? cause.message : "画像を取得できませんでした。",
       );
     } finally {
       setBusy(false);
     }
-  }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const deletable =
+    inventory?.resources
+      .filter((image) => image.can_delete && !image.referenced)
+      .map((image) => image.public_id) ?? [];
   async function cleanup(ids = selected) {
+    if (!ids.length) return;
     if (
       !window.confirm(
         `未参照のアバター画像${ids.length}件を今すぐ削除しますか？\nアップロード直後の画像も削除されます。この操作は取り消せません。`,
@@ -131,14 +152,22 @@ export default function ImageManager() {
     setBusy(true);
     setError("");
     try {
-      const result = await imageRequest<{
-        deleted: string[];
-        skipped: string[];
-      }>("/admin/images/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ public_ids: ids }),
-      });
+      const result = { deleted: [] as string[], skipped: [] as string[] };
+      // The API accepts at most 100 IDs and rechecks references before deletion.
+      for (let offset = 0; offset < ids.length; offset += 100) {
+        const batch = await imageRequest<typeof result>(
+          "/admin/images/delete",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              public_ids: ids.slice(offset, offset + 100),
+            }),
+          },
+        );
+        result.deleted.push(...batch.deleted);
+        result.skipped.push(...batch.skipped);
+      }
       if (result.deleted.length)
         toast.success(`${result.deleted.length}件の画像を削除しました`);
       if (result.skipped.length)
@@ -166,15 +195,13 @@ export default function ImageManager() {
         <Button disabled={busy} onClick={() => load()}>
           {busy ? "処理中…" : "画像を確認・更新"}
         </Button>
-        {inventory?.next_cursor && (
-          <Button
-            disabled={busy}
-            variant="outline"
-            onClick={() => load(inventory.next_cursor ?? undefined)}
-          >
-            次の100件
-          </Button>
-        )}
+        <Button
+          disabled={busy || !deletable.length}
+          variant="destructive"
+          onClick={() => cleanup(deletable)}
+        >
+          未参照画像{deletable.length}件をすべて削除
+        </Button>
         <Button
           disabled={busy || !selected.length}
           variant="destructive"

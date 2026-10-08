@@ -11,7 +11,72 @@ afterEach(() => {
 });
 
 describe("admin images", () => {
-  it("only allows explicit selection of eligible unreferenced avatars", async () => {
+  it("deletes all eligible images across pages without selection, in batches", async () => {
+    const orphans = Array.from({ length: 101 }, (_, index) => ({
+      public_id: `avatar/orphan-${index}`,
+      bytes: 1000,
+      referenced: false,
+      can_delete: true,
+    }));
+    const live = {
+      public_id: "avatar/live",
+      bytes: 1000,
+      referenced: true,
+      can_delete: false,
+    };
+    const outside = {
+      public_id: "other/image",
+      bytes: 1000,
+      referenced: false,
+      can_delete: false,
+    };
+    vi.mocked(imageRequest).mockImplementation(async (path, options) => {
+      if (path === "/admin/images/delete") {
+        const { public_ids } = JSON.parse(options?.body as string);
+        return { deleted: public_ids, skipped: [] };
+      }
+      return {
+        resources: path.includes("cursor=")
+          ? [...orphans.slice(100), outside]
+          : [...orphans.slice(0, 100), live],
+        next_cursor: path.includes("cursor=") ? null : "page/2",
+        pending: 0,
+        retrying: 0,
+      };
+    });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const user = userEvent.setup();
+    render(<ImageManager />);
+    const button = await screen.findByRole("button", {
+      name: "未参照画像101件をすべて削除",
+    });
+    expect(imageRequest).toHaveBeenCalledWith("/admin/images?cursor=page%2F2");
+    await user.click(button);
+    expect(imageRequest).toHaveBeenCalledTimes(2);
+    confirm.mockReturnValue(true);
+    await user.click(button);
+    await waitFor(() => expect(imageRequest).toHaveBeenCalledTimes(6));
+    const batches = vi
+      .mocked(imageRequest)
+      .mock.calls.filter(([path]) => path === "/admin/images/delete")
+      .map(([, options]) => JSON.parse(options?.body as string).public_ids);
+    expect(batches.map((batch) => batch.length)).toEqual([100, 1]);
+    expect(batches.flat()).toEqual(orphans.map((image) => image.public_id));
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("101件"));
+  });
+
+  it("shows load failures without enabling deletion", async () => {
+    vi.mocked(imageRequest).mockRejectedValueOnce(new Error("一覧の取得失敗"));
+    render(<ImageManager />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "一覧の取得失敗",
+    );
+    expect(
+      screen.getByRole("button", { name: "未参照画像0件をすべて削除" }),
+    ).toBeDisabled();
+  });
+
+  it("automatically loads images and protects referenced avatars", async () => {
     vi.mocked(imageRequest).mockResolvedValue({
       resources: [
         {
@@ -41,8 +106,7 @@ describe("admin images", () => {
     });
     const user = userEvent.setup();
     render(<ImageManager />);
-    expect(imageRequest).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "画像を確認・更新" }));
+    expect(imageRequest).toHaveBeenCalledWith("/admin/images");
     expect(await screen.findByLabelText("avatar/live")).toBeDisabled();
     expect(screen.getByLabelText("avatar/recent")).not.toBeDisabled();
     expect(screen.getByRole("table")).toBeInTheDocument();
@@ -113,7 +177,6 @@ describe("admin images", () => {
     });
     const user = userEvent.setup();
     render(<ImageManager />);
-    await user.click(screen.getByRole("button", { name: "画像を確認・更新" }));
     const button = await screen.findByRole("button", {
       name: "avatar/orphanを削除",
     });
@@ -153,7 +216,6 @@ describe("admin images", () => {
     });
     const user = userEvent.setup({ skipHover: true });
     render(<ImageManager />);
-    await user.click(screen.getByRole("button", { name: "画像を確認・更新" }));
     await user.click(
       await screen.findByRole("button", { name: "avatar/testのプレビュー" }),
     );
