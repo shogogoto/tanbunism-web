@@ -84,6 +84,17 @@ export function listAdminUsers(): Promise<AdminUserItem[]> {
   return request("/admin/users");
 }
 
+export function grantAdminUser(
+  userId: string,
+  confirmation: string,
+): Promise<AdminUserItem> {
+  return request(`/admin/users/${encodeURIComponent(userId)}/admin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ confirmation }),
+  });
+}
+
 export function updateAdminUserStatus(
   userId: string,
   isActive: boolean,

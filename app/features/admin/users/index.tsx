@@ -4,6 +4,7 @@ import {
   Database,
   KeyRound,
   RotateCcw,
+  ShieldCheck,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -46,6 +47,7 @@ import {
   deleteAdminResource,
   deleteAdminUser,
   getAdminResourceDeletionImpact,
+  grantAdminUser,
   listAdminUserResources,
   listAdminUsers,
   resetAdminUserPassword,
@@ -59,6 +61,8 @@ export default function AdminUserManager() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [statusTarget, setStatusTarget] = useState<AdminUserItem>();
+  const [adminTarget, setAdminTarget] = useState<AdminUserItem>();
+  const [adminConfirmation, setAdminConfirmation] = useState("");
   const [resourceOwner, setResourceOwner] = useState<AdminUserItem>();
   const [passwordTarget, setPasswordTarget] = useState<AdminUserItem>();
   const [deleteTarget, setDeleteTarget] = useState<AdminUserItem>();
@@ -114,6 +118,25 @@ export default function AdminUserManager() {
       setStatusTarget(undefined);
     } catch (mutationError) {
       setError(errorMessage(mutationError));
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
+  async function grantAdmin() {
+    if (!adminTarget || adminConfirmation !== adminTarget.email) return;
+    setIsMutating(true);
+    setError(undefined);
+    try {
+      const updated = await grantAdminUser(adminTarget.uid, adminConfirmation);
+      setUsers((current) =>
+        current.map((user) => (user.uid === updated.uid ? updated : user)),
+      );
+      toast.success(`${updated.email} を管理者に設定しました`);
+      setAdminTarget(undefined);
+      setAdminConfirmation("");
+    } catch (cause) {
+      setError(errorMessage(cause));
     } finally {
       setIsMutating(false);
     }
@@ -224,7 +247,7 @@ export default function AdminUserManager() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">ユーザー管理</h2>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          アカウントの停止・再開、パスワード再設定、所有データを含む削除を行います。
+          管理者の設定、アカウントの停止・再開、パスワード再設定、所有データを含む削除を行います。
         </p>
       </section>
 
@@ -284,6 +307,21 @@ export default function AdminUserManager() {
                   <TableCell>{formatDate(user.created)}</TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={
+                          user.is_superuser || !user.is_active || isMutating
+                        }
+                        aria-label={`${user.email}を管理者に設定`}
+                        onClick={() => {
+                          setAdminTarget(user);
+                          setAdminConfirmation("");
+                        }}
+                      >
+                        <ShieldCheck /> 管理者にする
+                      </Button>
                       <Button
                         type="button"
                         variant="outline"
@@ -354,6 +392,51 @@ export default function AdminUserManager() {
           }}
         />
       )}
+
+      <AlertDialog
+        open={Boolean(adminTarget)}
+        onOpenChange={(open) => {
+          if (!open && !isMutating) {
+            setAdminTarget(undefined);
+            setAdminConfirmation("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>管理者に設定しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              {adminTarget?.email}{" "}
+              に、全ユーザーのデータ管理・削除や管理者の追加を行う権限を付与します。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <label htmlFor="admin-role-confirmation" className="space-y-2">
+            <span className="text-sm">
+              確認のため対象ユーザーのメールアドレスを入力
+            </span>
+            <Input
+              id="admin-role-confirmation"
+              value={adminConfirmation}
+              onChange={(event) => setAdminConfirmation(event.target.value)}
+              autoComplete="off"
+            />
+          </label>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isMutating}>
+              キャンセル
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isMutating || adminConfirmation !== adminTarget?.email}
+              onClick={(event) => {
+                event.preventDefault();
+                void grantAdmin();
+              }}
+            >
+              管理者に設定する
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={Boolean(statusTarget)}

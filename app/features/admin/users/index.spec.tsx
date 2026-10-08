@@ -6,6 +6,7 @@ import {
   deleteAdminResource,
   deleteAdminUser,
   getAdminResourceDeletionImpact,
+  grantAdminUser,
   listAdminUserResources,
   listAdminUsers,
   resetAdminUserPassword,
@@ -14,6 +15,7 @@ import {
 
 vi.mock("./api", () => ({
   listAdminUsers: vi.fn(),
+  grantAdminUser: vi.fn(),
   updateAdminUserStatus: vi.fn(),
   listAdminUserResources: vi.fn(),
   getAdminResourceDeletionImpact: vi.fn(),
@@ -41,6 +43,10 @@ const resource = {
 };
 
 beforeEach(() => {
+  vi.mocked(grantAdminUser).mockResolvedValue({
+    ...targetUser,
+    is_superuser: true,
+  });
   vi.mocked(listAdminUsers).mockResolvedValue([targetUser]);
   vi.mocked(updateAdminUserStatus).mockResolvedValue({
     ...targetUser,
@@ -71,6 +77,34 @@ beforeEach(() => {
     deleted_quiz_count: 2,
     deleted_answer_count: 3,
   });
+});
+
+it("メール確認後に管理者を設定し、付与後は停止・削除を無効にする", async () => {
+  const user = userEvent.setup();
+  render(<AdminUserManager />);
+  await user.click(
+    await screen.findByRole("button", {
+      name: `${targetUser.email}を管理者に設定`,
+    }),
+  );
+  const button = screen.getByRole("button", { name: "管理者に設定する" });
+  expect(button).toBeDisabled();
+  await user.type(
+    screen.getByLabelText("確認のため対象ユーザーのメールアドレスを入力"),
+    targetUser.email,
+  );
+  await user.click(button);
+  await waitFor(() =>
+    expect(grantAdminUser).toHaveBeenCalledWith(
+      targetUser.uid,
+      targetUser.email,
+    ),
+  );
+  expect(await screen.findByText("管理者")).toBeVisible();
+  expect(screen.getByRole("button", { name: "停止" })).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: `${targetUser.email}を削除` }),
+  ).toBeDisabled();
 });
 
 it("通常ユーザーを確認して停止できる", async () => {

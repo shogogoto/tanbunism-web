@@ -11,10 +11,16 @@ import GlobalHotkeys, {
   HotkeyProvider,
 } from "./GlobalHotkeys";
 
+const auth = vi.hoisted(() => ({ isAuthenticated: true, signOut: vi.fn() }));
+beforeEach(() => {
+  auth.isAuthenticated = true;
+  auth.signOut.mockReset();
+});
+
 vi.mock("~/features/auth/AuthProvider", () => ({
   useAuth: () => ({
-    isAuthenticated: true,
     user: { uid: "user-1", username: "reader" },
+    ...auth,
   }),
 }));
 
@@ -370,8 +376,57 @@ it("hとlで前後のタブへ移動する", async () => {
 
   await user.keyboard("l");
 
-  expect(selectNext).toHaveBeenCalledOnce();
+  await waitFor(() => expect(selectNext).toHaveBeenCalledOnce(), {
+    timeout: 2000,
+  });
   expect(screen.getByRole("tab", { name: "次のタブ" })).toHaveFocus();
+});
+
+it("l iはログインへ移動し、タブを変更しない", async () => {
+  auth.isAuthenticated = false;
+  const next = vi.fn();
+  renderHotkeys(
+    <div role="tablist">
+      <button type="button" role="tab" aria-selected="true">
+        現在
+      </button>
+      <button type="button" role="tab" aria-selected="false" onClick={next}>
+        次
+      </button>
+    </div>,
+  );
+  await userEvent.setup().keyboard("li");
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
+    "/login",
+  );
+  expect(next).not.toHaveBeenCalled();
+});
+
+it("l oはログアウト確認を開き、確認後にログアウトする", async () => {
+  auth.signOut.mockResolvedValue(undefined);
+  renderHotkeys(undefined, "/review");
+  const user = userEvent.setup();
+  await user.keyboard("lo");
+  expect(screen.getByRole("dialog")).toBeVisible();
+  expect(auth.signOut).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "キャンセル" }));
+  expect(auth.signOut).not.toHaveBeenCalled();
+  await user.keyboard("lo");
+  await user.click(screen.getByRole("button", { name: "ログアウト" }));
+  await waitFor(() => expect(auth.signOut).toHaveBeenCalledOnce());
+  expect(screen.getByRole("status", { name: "現在地" }).textContent).toBe("/");
+});
+
+it("入力中やログアウト済みではl oを実行しない", async () => {
+  auth.isAuthenticated = false;
+  renderHotkeys();
+  const user = userEvent.setup();
+  await user.keyboard("lo");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await user.click(screen.getByRole("textbox", { name: "入力欄" }));
+  await user.keyboard("li");
+  expect(screen.getByRole("textbox", { name: "入力欄" })).toHaveValue("li");
+  expect(screen.getByRole("status", { name: "現在地" }).textContent).toBe("/");
 });
 
 it("focusがタブにあってもcurrentの次の項目へ移動する", async () => {

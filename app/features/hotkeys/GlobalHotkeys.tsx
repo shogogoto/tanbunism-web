@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
+import LogoutDialogContent from "~/features/auth/SignOutDialog";
 import { Button } from "~/shared/components/ui/button";
 import {
   Dialog,
@@ -64,6 +65,10 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
                 )}
                 <HotkeyRow keys={["g", "s"]} label="検索へ移動" />
                 <HotkeyRow keys={["g", "q"]} label="クイズ検索へ移動" />
+                <HotkeyRow keys={["l", "i"]} label="ログイン画面へ移動" />
+                {isAuthenticated && (
+                  <HotkeyRow keys={["l", "o"]} label="ログアウトの確認" />
+                )}
                 <HotkeyRow keys={["h", "l"]} label="前後のタブへ移動" />
                 <HotkeyRow keys={["Ctrl", "1–9"]} label="番号のタブへ移動" />
                 <HotkeyRow keys={["u", "d"]} label="ページを上下にスクロール" />
@@ -99,7 +104,8 @@ export default function GlobalHotkeys() {
   const { isAuthenticated, user } = useAuth();
   const { openHistory } = useHistoryPanel();
   const { openHelp } = useHotkeys();
-  const waitingForDestination = useRef(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const waitingForDestination = useRef<"g" | "l" | null>(null);
   const chordTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
@@ -118,15 +124,26 @@ export default function GlobalHotkeys() {
     }
 
     function resetChord() {
-      waitingForDestination.current = false;
+      waitingForDestination.current = null;
       if (chordTimer.current) clearTimeout(chordTimer.current);
       chordTimer.current = undefined;
     }
 
-    function startChord() {
+    function startChord(prefix: "g" | "l") {
       resetChord();
-      waitingForDestination.current = true;
-      chordTimer.current = setTimeout(resetChord, CHORD_TIMEOUT_MS);
+      waitingForDestination.current = prefix;
+      chordTimer.current = setTimeout(() => {
+        resetChord();
+        if (
+          prefix === "l" &&
+          !isEditableTarget(document.activeElement) &&
+          !document.querySelector(
+            '[role="dialog"], [role="alertdialog"], dialog[open]',
+          )
+        ) {
+          moveActiveTab(1);
+        }
+      }, CHORD_TIMEOUT_MS);
     }
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -143,7 +160,7 @@ export default function GlobalHotkeys() {
 
       const key = event.key.toLowerCase();
       const dialogOpen = document.querySelector(
-        '[role="dialog"], dialog[open]',
+        '[role="dialog"], [role="alertdialog"], dialog[open]',
       );
 
       // プレビュー中は背後の問題・タブを変更しない。項目移動もdialog内のみ。
@@ -162,6 +179,17 @@ export default function GlobalHotkeys() {
         }
         resetChord();
         return;
+      }
+
+      if (waitingForDestination.current === "l") {
+        resetChord();
+        if (key === "i" || key === "o") {
+          event.preventDefault();
+          if (key === "i" && !isAuthenticated) navigate("/login");
+          if (key === "o" && isAuthenticated) setLogoutOpen(true);
+          return;
+        }
+        moveActiveTab(1);
       }
 
       if (key === "?") {
@@ -222,8 +250,14 @@ export default function GlobalHotkeys() {
         return;
       }
 
-      if (!waitingForDestination.current && (key === "h" || key === "l")) {
-        if (moveActiveTab(key === "l" ? 1 : -1)) event.preventDefault();
+      if (!waitingForDestination.current && key === "l") {
+        event.preventDefault();
+        startChord("l");
+        return;
+      }
+
+      if (!waitingForDestination.current && key === "h") {
+        if (moveActiveTab(-1)) event.preventDefault();
         resetChord();
         return;
       }
@@ -235,7 +269,7 @@ export default function GlobalHotkeys() {
       }
 
       if (key === "g") {
-        startChord();
+        startChord("g");
         return;
       }
 
@@ -262,14 +296,22 @@ export default function GlobalHotkeys() {
 
     window.addEventListener("keydown", releaseEditableFocus, true);
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("pointerdown", resetChord);
+    window.addEventListener("blur", resetChord);
     return () => {
       window.removeEventListener("keydown", releaseEditableFocus, true);
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("pointerdown", resetChord);
+      window.removeEventListener("blur", resetChord);
       resetChord();
     };
   }, [isAuthenticated, navigate, openHelp, openHistory, user]);
 
-  return null;
+  return (
+    <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+      <LogoutDialogContent />
+    </Dialog>
+  );
 }
 
 function ContextHotkeySection({
