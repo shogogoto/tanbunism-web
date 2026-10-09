@@ -123,7 +123,10 @@ vi.mock("~/features/quiz/QuizAttempt", () => ({
   ),
 }));
 vi.mock("~/features/review/api", () => ({ markTanbunSeen: vi.fn() }));
-vi.mock("./api", () => ({ loadDungeon: vi.fn() }));
+vi.mock("./api", () => ({
+  loadDungeon: vi.fn(),
+  loadConnectedKnowledge: vi.fn(async () => []),
+}));
 
 beforeEach(() => {
   available = true;
@@ -336,7 +339,7 @@ it("records seen knowledge, takes quiz damage and restores the run after remount
     screen.getByRole("heading", { name: "現在地 · 第1地点" }),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: /1 · 現在地.*知識の進路/ }),
+    screen.getByRole("button", { name: /現在地.*進路の用語/ }),
   ).toBeInTheDocument();
   expect(loadDungeon).toHaveBeenCalledTimes(loadsBeforeRemount);
 });
@@ -539,6 +542,40 @@ it("does not offer dungeon switching while an adventure is in progress", async (
     screen.queryByRole("combobox", { name: "過去のダンジョン" }),
   ).not.toBeInTheDocument();
   expect(state.save.run?.resourceId).toBe("book");
+});
+
+it("parks a dungeon in the server snapshot and resumes its HP/location without a new right", async () => {
+  const save = enterDungeon(newSave(), "book", "テストの本", 1);
+  if (!save.run) throw new Error("Missing run");
+  const content = await loadDungeon("book");
+  state = {
+    revision: 1,
+    save: {
+      ...save,
+      visitedDungeons: ["book"],
+      content,
+      run: { ...save.run, hp: 24, moves: 2, readIds: ["sentence"] },
+    },
+  };
+  available = false;
+  renderGame();
+  const user = userEvent.setup();
+  expect(await screen.findByText("HP 24/35")).toBeVisible();
+  await user.click(
+    screen.getByRole("button", { name: "ダンジョンを切り替える" }),
+  );
+  expect(
+    await screen.findByRole("combobox", { name: "過去のダンジョン" }),
+  ).toBeVisible();
+  expect(state.save.dungeons?.book.run.hp).toBe(24);
+  expect(state.save.maps?.book.current).toBe("sentence");
+  const resume = await screen.findByRole("button", { name: "現在地から再開" });
+  expect(resume).toBeEnabled();
+  await user.click(resume);
+  expect(await screen.findByText("HP 24/35")).toBeVisible();
+  expect(state.save.run?.moves).toBe(2);
+  expect(state.save.maps?.book.current).toBe("sentence");
+  expect(consumeCount).toBe(0);
 });
 
 it("admin unlock is applied without healing or erasing progress", async () => {

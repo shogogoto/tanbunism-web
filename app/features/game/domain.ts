@@ -1,4 +1,5 @@
 import type { DungeonContent } from "./api";
+import { type DungeonMap, ENTRANCE, type ParkedDungeon } from "./exploration";
 
 export const MOVES_PER_EVENT = 5;
 export const ENEMIES_TO_CLEAR = 3;
@@ -27,6 +28,8 @@ export type GameSave = {
   run?: Run;
   content?: DungeonContent;
   battleFeedback?: string | null;
+  maps?: Record<string, DungeonMap>;
+  dungeons?: Record<string, ParkedDungeon>;
 };
 export const newSave = (): GameSave => ({
   version: 2,
@@ -41,9 +44,27 @@ export function enterDungeon(
 ): GameSave {
   // The caller must consume a server-side adventure right first.
   if (save.run) return save;
+  const parked = save.dungeons?.[resourceId];
+  if (parked && !["cleared", "defeated"].includes(parked.run.phase)) {
+    const dungeons = { ...save.dungeons };
+    delete dungeons[resourceId];
+    return {
+      ...save,
+      dungeons,
+      run: parked.run,
+      content: parked.content,
+      battleFeedback: undefined,
+    };
+  }
   const maxHp = 30 + level * 5;
   return {
     ...save,
+    maps: save.maps?.[resourceId]
+      ? {
+          ...save.maps,
+          [resourceId]: { ...save.maps[resourceId], current: ENTRANCE },
+        }
+      : save.maps,
     battleFeedback: undefined,
     run: {
       resourceId,
@@ -78,16 +99,20 @@ export function move(
   roll: number,
 ): GameSave {
   const run = save.run;
-  if (!run || run.phase !== "path" || run.readIds.includes(sentenceId))
+  if (
+    !run ||
+    run.phase !== "path" ||
+    (!save.maps && run.readIds.includes(sentenceId))
+  )
     return save;
   const moves = run.moves + 1;
-  const encounter = roll < 0.65;
+  const encounter = sentenceId !== ENTRANCE && roll < 0.65;
   return {
     ...save,
     run: {
       ...run,
       moves,
-      readIds: [...run.readIds, sentenceId],
+      readIds: [...run.readIds, sentenceId].slice(-100),
       enemyHp: encounter ? run.enemyMaxHp : 0,
       phase: encounter ? "battle" : moves >= MOVES_PER_EVENT ? "rest" : "path",
     },

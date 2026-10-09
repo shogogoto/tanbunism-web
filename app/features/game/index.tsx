@@ -17,11 +17,11 @@ import { Input } from "~/shared/components/ui/input";
 import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
 import BattleDialog from "./BattleDialog";
+import ExplorationMap from "./Map";
 import PathTerms from "./PathTerms";
 import PlayerStatus from "./PlayerStatus";
-import DungeonRoute from "./Route";
 import { useAdventureAccess } from "./access";
-import { loadDungeon } from "./api";
+import { loadConnectedKnowledge, loadDungeon } from "./api";
 import {
   ENEMIES_TO_CLEAR,
   type GameSave,
@@ -32,6 +32,14 @@ import {
   newSave,
   resumeEvent,
 } from "./domain";
+import {
+  ENTRANCE,
+  dungeonMap,
+  explore,
+  knownKnowledge,
+  neighbours,
+  parkDungeon,
+} from "./exploration";
 import { requestGameState } from "./state";
 import { readGameSave } from "./storage";
 
@@ -93,19 +101,35 @@ export function GamePlay({
   const { openPreview, preview } = useTanbunPreview();
   const run = save.run;
   const resourceId = run?.resourceId ?? selectedId;
+  const parked = save.dungeons?.[resourceId];
   const {
     data: loadedContent,
     error: contentError,
     isLoading,
     mutate: retryContent,
   } = useSWR(
-    stateLoaded && resourceId && !save.content
+    stateLoaded && resourceId && !save.content && !parked?.content
       ? ["game-dungeon", userId, resourceId]
       : null,
     () => loadDungeon(resourceId),
     { revalidateOnFocus: false, dedupingInterval: 30_000 },
   );
-  const content = run ? (save.content ?? loadedContent) : loadedContent;
+  const content = run
+    ? (save.content ?? loadedContent)
+    : (parked?.content ?? loadedContent);
+  const map = run ? dungeonMap(save, run) : undefined;
+  const {
+    data: connected,
+    error: connectionError,
+    isLoading: connectionsLoading,
+    mutate: retryConnections,
+  } = useSWR(
+    run && map?.current !== ENTRANCE && run.phase === "path"
+      ? ["game-connections", run.resourceId, map?.current]
+      : null,
+    () => loadConnectedKnowledge(run?.resourceId ?? "", map?.current ?? ""),
+    { revalidateOnFocus: false, shouldRetryOnError: false },
+  );
   const serverNow = access.data
     ? access.data.server_now + Date.now() - access.data.receivedAt
     : Date.now();
@@ -236,14 +260,22 @@ export function GamePlay({
       void settleAnswer(false, true);
     }
   }, [remainingSeconds, feedback, busy, answerSubmitting, error, settleAnswer]);
-  async function advance(sentenceId: string) {
-    if (pendingMove.current) return;
+  async function advance(
+    sentenceId: string,
+    kind: "relation" | "detour" = "detour",
+  ) {
+    if (pendingMove.current || !run || run.phase !== "path" || !content) return;
     pendingMove.current = true;
     setBusy(true);
     setError(undefined);
     try {
-      await markTanbunSeen(sentenceId);
-      await update(move(save, sentenceId, Math.random()));
+      const explored = explore(save, sentenceId, kind);
+      if (explored === save) return;
+      if (sentenceId !== ENTRANCE) await markTanbunSeen(sentenceId);
+      await update({
+        ...move(explored, sentenceId, Math.random()),
+        content: knownKnowledge(content, connected ?? []),
+      });
       void invalidateGamification(mutate, { preserveData: true }).catch(
         () => undefined,
       );
@@ -260,23 +292,10 @@ export function GamePlay({
   }
   async function leave() {
     if (pendingMove.current || answerRequestPending.current) return;
-    if (
-      run &&
-      run.phase !== "cleared" &&
-      run.phase !== "defeated" &&
-      !window.confirm(
-        "ダンジョンから戻りますか？ 今回の攻略は振り出しに戻ります。復習履歴・XPは残ります。",
-      )
-    )
-      return;
+    if (run?.phase === "battle" || feedback) return;
     setBusy(true);
     try {
-      await update({
-        ...save,
-        run: undefined,
-        content: undefined,
-        battleFeedback: undefined,
-      });
+      await update(parkDungeon(save));
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "撤退を保存できませんでした。",
@@ -290,10 +309,11 @@ export function GamePlay({
     void navigate("/game/adventure");
   }
   async function startEvent() {
+    const needsAccess = !parked || parked.run.phase !== "path";
     if (
       !stateLoaded ||
       pendingMove.current ||
-      !access.data?.available ||
+      (needsAccess && !access.data?.available) ||
       access.error
     )
       return;
@@ -310,19 +330,21 @@ export function GamePlay({
     setBusy(true);
     setError(undefined);
     try {
+      const entering = run
+        ? resumeEvent(save)
+        : enterDungeon(
+            save,
+            selectedId,
+            selected?.resource_name ?? "リソース",
+            level ?? 1,
+          );
+      const next =
+        entering.run?.phase === "rest" ? resumeEvent(entering) : entering;
       await update(
-        run
-          ? resumeEvent(save)
-          : {
-              ...enterDungeon(
-                save,
-                selectedId,
-                selected?.resource_name ?? "リソース",
-                level ?? 1,
-              ),
-              content,
-            },
-        true,
+        { ...next, content: next.content ?? content },
+        !parked ||
+          parked.run.phase === "rest" ||
+          ["defeated", "cleared"].includes(parked.run.phase),
       );
       void access.mutate().catch(() => undefined);
     } catch (cause) {
@@ -346,12 +368,33 @@ export function GamePlay({
     ),
   );
   const canStart = Boolean(
-    stateLoaded && access.data?.available && !access.error && !busy,
+    stateLoaded &&
+      (access.data?.available || parked?.run.phase === "path") &&
+      !access.error &&
+      !busy,
   );
+  const discovered = new Set(map?.places.map((place) => place.id));
   const paths =
-    content?.knowledge
-      .filter((item) => !run?.readIds.includes(item.uid))
-      .slice(0, 3) ?? [];
+    map?.current === ENTRANCE
+      ? (content?.knowledge
+          .filter((item) => !discovered.has(item.uid))
+          .slice(0, 3) ?? [])
+      : (connected ?? [])
+          .filter(
+            (item) =>
+              !neighbours(
+                map ?? { current: ENTRANCE, places: [], edges: [] },
+              ).includes(item.uid),
+          )
+          .slice(0, 3);
+  const detour =
+    map?.current !== ENTRANCE && !connectionsLoading && !connectionError
+      ? content?.knowledge.find(
+          (item) =>
+            !discovered.has(item.uid) &&
+            !paths.some((path) => path.uid === item.uid),
+        )
+      : undefined;
   const quiz = content?.quizzes.length
     ? content.quizzes[
         Math.max(0, (run?.quizCursor ?? 0) - (feedback ? 1 : 0)) %
@@ -587,7 +630,10 @@ export function GamePlay({
                           }
                           onClick={() => void startEvent()}
                         >
-                          ダンジョンに入る
+                          {parked &&
+                          !["cleared", "defeated"].includes(parked.run.phase)
+                            ? "現在地から再開"
+                            : "ダンジョンに入る"}
                         </Button>
                       </>
                     )
@@ -606,12 +652,16 @@ export function GamePlay({
                 </p>
               </div>
               <PlayerStatus run={run} name={playerName} player={player} />
-              <DungeonRoute
-                key={run.resourceId}
-                run={run}
-                knowledge={content?.knowledge ?? []}
-                onOpen={(sentenceId) => openPreview({ sentenceId })}
-              />
+              {map && (
+                <ExplorationMap
+                  key={run.resourceId}
+                  map={map}
+                  knowledge={content?.knowledge ?? []}
+                  onOpen={(sentenceId) => openPreview({ sentenceId })}
+                  onMove={(sentenceId) => void advance(sentenceId)}
+                  disabled={busy || Boolean(feedback) || run.phase !== "path"}
+                />
+              )}
               {isLoading && <Loading />}
               {(feedback || run.phase === "battle") && (
                 <BattleDialog
@@ -731,6 +781,18 @@ export function GamePlay({
                   <h3 className="text-sm font-medium">
                     第{run.readIds.length + 1}地点へ · 次の進路
                   </h3>
+                  {connectionsLoading && <Loading />}
+                  {connectionError && (
+                    <div role="alert" className="text-sm space-y-2">
+                      <p>{connectionError.message}</p>
+                      <Button
+                        variant="outline"
+                        onClick={() => void retryConnections()}
+                      >
+                        繋がりを再取得
+                      </Button>
+                    </div>
+                  )}
                   {paths.map((item) => (
                     <div
                       key={item.uid}
@@ -743,7 +805,12 @@ export function GamePlay({
                       <div className="flex gap-2">
                         <Button
                           disabled={busy}
-                          onClick={() => void advance(item.uid)}
+                          onClick={() =>
+                            void advance(
+                              item.uid,
+                              map?.current === ENTRANCE ? "detour" : "relation",
+                            )
+                          }
                         >
                           見たよ · この道へ
                         </Button>
@@ -756,11 +823,30 @@ export function GamePlay({
                       </div>
                     </div>
                   ))}
-                  {!paths.length && (
-                    <p>
-                      このダンジョンの知識を一巡しました。今回はここまで。復習履歴とXPは残ります。
-                    </p>
+                  {detour && (
+                    <div className="rounded-lg border border-dashed p-3 space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        寄り道 · 知識の関係とは別の道
+                      </p>
+                      <PathTerms knowledge={detour} />
+                      <p>{detour.sentence}</p>
+                      <Button
+                        disabled={busy}
+                        variant="outline"
+                        onClick={() => void advance(detour.uid)}
+                      >
+                        見たよ · 寄り道へ
+                      </Button>
+                    </div>
                   )}
+                  {!paths.length &&
+                    !detour &&
+                    !connectionsLoading &&
+                    !connectionError && (
+                      <p className="text-sm text-muted-foreground">
+                        新しい道はありません。マップから通った道を戻れます。
+                      </p>
+                    )}
                 </>
               ) : !feedback && run.phase === "rest" ? (
                 <div className="rounded-lg border p-4 space-y-3">
@@ -798,12 +884,12 @@ export function GamePlay({
               ) : null}
               <Button
                 variant="outline"
-                disabled={busy}
+                disabled={busy || run.phase === "battle" || Boolean(feedback)}
                 onClick={() => void leave()}
               >
                 {run.phase === "cleared" || run.phase === "defeated"
                   ? "入口へ戻る"
-                  : "撤退"}
+                  : "ダンジョンを切り替える"}
               </Button>
             </>
           )}

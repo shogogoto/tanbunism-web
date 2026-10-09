@@ -1,7 +1,11 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { listStudyPlans, recommendQuizzes } from "~/features/quiz/api";
-import { searchByTextTanbunGet } from "~/shared/generated/tanbun/tanbun";
-import { loadDungeon } from "./api";
+import {
+  detailTanbunSentenceSentenceIdGet,
+  searchByTextTanbunGet,
+} from "~/shared/generated/tanbun/tanbun";
+import { tanbunDetailCache } from "~/shared/lib/indexed";
+import { loadConnectedKnowledge, loadDungeon } from "./api";
 
 vi.mock("~/features/quiz/api", () => ({
   listStudyPlans: vi.fn(),
@@ -9,6 +13,10 @@ vi.mock("~/features/quiz/api", () => ({
 }));
 vi.mock("~/shared/generated/tanbun/tanbun", () => ({
   searchByTextTanbunGet: vi.fn(),
+  detailTanbunSentenceSentenceIdGet: vi.fn(),
+}));
+vi.mock("~/shared/lib/indexed", () => ({
+  tanbunDetailCache: { get: vi.fn(), set: vi.fn() },
 }));
 beforeEach(() => vi.resetAllMocks());
 it("scopes knowledge and prepared quizzes to one resource without generation", async () => {
@@ -54,4 +62,36 @@ it("scopes knowledge and prepared quizzes to one resource without generation", a
   expect(recommendQuizzes).toHaveBeenCalledWith("plan", "sent2term", {
     generateMissing: false,
   });
+});
+
+it("uses cached direct graph neighbours only, excluding other resources and the center", async () => {
+  vi.mocked(tanbunDetailCache.get).mockResolvedValue({
+    uid: "a",
+    g: {
+      directed: true,
+      multigraph: true,
+      graph: {},
+      nodes: [],
+      edges: [
+        { source: "a", target: "b", type: "BELOW", key: 0 },
+        { source: "c", target: "a", type: "BELOW", key: 0 },
+        { source: "a", target: "outside", type: "BELOW", key: 0 },
+        { source: "b", target: "unrelated", type: "BELOW", key: 0 },
+      ],
+    },
+    knowdes: Object.fromEntries(
+      ["a", "b", "c", "outside", "unrelated"].map((uid) => [
+        uid,
+        {
+          uid,
+          sentence: uid,
+          resource_uid: uid === "outside" ? "other" : "book",
+        },
+      ]),
+    ),
+  } as unknown as Awaited<ReturnType<typeof tanbunDetailCache.get>>);
+  expect(
+    (await loadConnectedKnowledge("book", "a")).map((item) => item.uid),
+  ).toEqual(["b", "c"]);
+  expect(detailTanbunSentenceSentenceIdGet).not.toHaveBeenCalled();
 });
