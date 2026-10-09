@@ -123,7 +123,7 @@ export default function SearchHeaderControls() {
           </div>
         </div>
         <div
-          className="flex items-center gap-1"
+          className="flex items-center justify-center gap-1"
           role="tablist"
           aria-label="検索対象"
         >

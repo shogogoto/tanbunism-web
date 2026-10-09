@@ -1,4 +1,5 @@
 import { useAuth } from "~/features/auth/AuthProvider";
+import SectionHeaderGroup from "~/shared/components/SectionHeaderGroup";
 import SectionHeaderTabs from "~/shared/components/SectionHeaderTabs";
 import { useReviewProgress } from "./ReviewProgress";
 import ReviewSettingsSelector from "./ReviewSettingsSelector";
@@ -24,28 +25,26 @@ export default function ReviewHeaderTabs() {
     };
   });
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-2 px-2">
-      <div className="min-w-0 shrink-0">
-        <SectionHeaderTabs
-          compact
-          sections={withProgress}
-          label="復習の表示切り替え"
-        />
-      </div>
-      {user && (
-        <fieldset
-          className="ml-auto min-w-0 max-w-full"
-          aria-label="復習対象と設定"
-        >
-          <ReviewSettingsSelector
-            selected={target.profile}
-            onSelect={target.selectPreset}
-            recentDays={target.recentDays}
-            selectedDay={target.selectedDay}
-            onSelectDay={target.selectDay}
-          />
-        </fieldset>
-      )}
-    </div>
+    <SectionHeaderGroup
+      actions={
+        user && (
+          <fieldset className="min-w-0 max-w-full" aria-label="復習対象と設定">
+            <ReviewSettingsSelector
+              selected={target.profile}
+              onSelect={target.selectPreset}
+              recentDays={target.recentDays}
+              selectedDay={target.selectedDay}
+              onSelectDay={target.selectDay}
+            />
+          </fieldset>
+        )
+      }
+    >
+      <SectionHeaderTabs
+        compact
+        sections={withProgress}
+        label="復習の表示切り替え"
+      />
+    </SectionHeaderGroup>
   );
 }
