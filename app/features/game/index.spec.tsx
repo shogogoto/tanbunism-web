@@ -1,12 +1,42 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router";
-import { SWRConfig } from "swr";
+import { SWRConfig, useSWRConfig } from "swr";
 import { beforeEach, expect, it, vi } from "vitest";
 import { markTanbunSeen } from "~/features/review/api";
 import { GamePlay } from ".";
+import { adventureAccessKey } from "./access";
 import { loadDungeon } from "./api";
-import { readGameSave } from "./storage";
+import { enterDungeon, newSave } from "./domain";
+import { readGameSave, writeGameSave } from "./storage";
+
+let available = true;
+let consumeCount = 0;
+const server = setupServer(
+  http.get("*/game/adventure-access", () =>
+    HttpResponse.json({
+      available,
+      server_now: Date.now(),
+      next_available_at: Date.now() + 600000,
+    }),
+  ),
+  http.post("*/game/adventure-access/consume", () => {
+    consumeCount++;
+    if (!available)
+      return HttpResponse.json({ detail: "使用済み" }, { status: 409 });
+    available = false;
+    return HttpResponse.json({
+      available,
+      server_now: Date.now(),
+      next_available_at: Date.now() + 600000,
+    });
+  }),
+);
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterAll(() => server.close());
+afterEach(() => server.resetHandlers());
 
 vi.mock("~/features/gamification/ResourceGrowth", () => ({
   useResourceGrowth: () => ({
@@ -44,6 +74,8 @@ vi.mock("~/features/review/api", () => ({ markTanbunSeen: vi.fn() }));
 vi.mock("./api", () => ({ loadDungeon: vi.fn() }));
 
 beforeEach(() => {
+  available = true;
+  consumeCount = 0;
   localStorage.clear();
   vi.restoreAllMocks();
   vi.mocked(loadDungeon).mockResolvedValue({
@@ -69,13 +101,38 @@ beforeEach(() => {
   });
   vi.spyOn(Math, "random").mockReturnValue(0.1);
 });
+it("does not enter or lose local progress when another device consumed the right", async () => {
+  server.use(
+    http.post("*/game/adventure-access/consume", () =>
+      HttpResponse.json({ detail: "別端末で使用済み" }, { status: 409 }),
+    ),
+  );
+  renderGame();
+  await enter();
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "別端末で使用済み",
+  );
+  expect(readGameSave("player").run).toBeUndefined();
+});
 function renderGame() {
   return render(
     <MemoryRouter>
       <SWRConfig value={{ provider: () => new Map() }}>
         <GamePlay userId="player" />
+        <RefreshAccess />
       </SWRConfig>
     </MemoryRouter>,
+  );
+}
+function RefreshAccess() {
+  const { mutate } = useSWRConfig();
+  return (
+    <button
+      type="button"
+      onClick={() => void mutate(adventureAccessKey("player"))}
+    >
+      冒険権を再確認
+    </button>
   );
 }
 async function enter() {
@@ -89,6 +146,7 @@ async function enter() {
 it("records seen knowledge, takes quiz damage and restores the run after remount", async () => {
   const view = renderGame();
   const user = await enter();
+  expect(consumeCount).toBe(1);
   await user.click(
     await screen.findByRole("button", { name: "見たよ · この道へ" }),
   );
@@ -119,4 +177,30 @@ it("does not advance when the seen API fails", async () => {
   );
   expect(await screen.findByRole("alert")).toHaveTextContent("記録失敗");
   expect(readGameSave("player").run).toMatchObject({ phase: "path", moves: 0 });
+});
+
+it("admin unlock is applied without healing or erasing progress", async () => {
+  const save = enterDungeon(newSave(), "book", "テストの本", 1);
+  if (!save.run) throw new Error("Missing run");
+  writeGameSave("player", {
+    ...save,
+    run: { ...save.run, hp: 24, moves: 5, kills: 2, phase: "rest" },
+  });
+  available = false;
+  renderGame();
+  const user = userEvent.setup();
+  expect(
+    await screen.findByRole("button", { name: "あと10分" }),
+  ).toBeDisabled();
+  available = true;
+  await user.click(screen.getByRole("button", { name: "冒険権を再確認" }));
+  await user.click(await screen.findByRole("button", { name: "冒険を再開" }));
+  expect(await screen.findByText("知識を読んで進路を選ぶ")).toBeInTheDocument();
+  expect(readGameSave("player").run).toMatchObject({
+    hp: 24,
+    moves: 0,
+    kills: 2,
+    phase: "path",
+  });
+  expect(consumeCount).toBe(1);
 });

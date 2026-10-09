@@ -15,6 +15,7 @@ import Loading from "~/shared/components/Loading";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
+import { consumeAdventureAccess, useAdventureAccess } from "./access";
 import { loadDungeon } from "./api";
 import {
   ENEMIES_TO_CLEAR,
@@ -47,6 +48,7 @@ export function GamePlay({ userId }: { userId: string }) {
   const pendingMove = useRef(false);
   const [error, setError] = useState<string>();
   const [feedback, setFeedback] = useState<string>();
+  const access = useAdventureAccess(userId);
   const { data: growth, error: growthError } = useResourceGrowth();
   const progress = useGetLearningProgressUserUserIdLearningProgressGet(userId, {
     fetch: { credentials: "include" },
@@ -121,11 +123,55 @@ export function GamePlay({ userId }: { userId: string }) {
     setFeedback(undefined);
     setSelectedId("");
   }
+  async function startEvent() {
+    if (pendingMove.current || !access.data?.available || access.error) return;
+    if (
+      run
+        ? run.phase !== "rest"
+        : !selected ||
+          !level ||
+          !content?.quizzes.length ||
+          !content?.knowledge.length
+    )
+      return;
+    pendingMove.current = true;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const consumed = await consumeAdventureAccess();
+      await access.mutate(consumed, { revalidate: false });
+      update(
+        run
+          ? resumeEvent(save)
+          : enterDungeon(
+              save,
+              selectedId,
+              selected?.resource_name ?? "リソース",
+              level ?? 1,
+            ),
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "冒険を開始できませんでした。",
+      );
+      void access.mutate().catch(() => undefined);
+    } finally {
+      pendingMove.current = false;
+      setBusy(false);
+    }
+  }
   if (!ready) return <Loading />;
   const remainingMinutes = Math.max(
     0,
-    Math.ceil((save.nextEventAt - now) / 60_000),
+    Math.ceil(
+      ((access.data?.next_available_at ?? 0) -
+        ((access.data?.server_now ?? 0) +
+          now -
+          (access.data?.receivedAt ?? now))) /
+        60_000,
+    ),
   );
+  const canStart = Boolean(access.data?.available && !access.error && !busy);
   const paths =
     content?.knowledge
       .filter((item) => !run?.readIds.includes(item.uid))
@@ -151,16 +197,20 @@ export function GamePlay({ userId }: { userId: string }) {
           冒険
         </h1>
         <span className="text-sm text-muted-foreground">
-          {remainingMinutes ? `次の冒険まで ${remainingMinutes}分` : "冒険可能"}
+          {access.data?.available
+            ? "冒険可能"
+            : access.data && remainingMinutes
+              ? `次の冒険まで ${remainingMinutes}分`
+              : "冒険権を確認中"}
         </span>
       </header>
       <p className="text-xs text-muted-foreground">
-        試作版 ·
-        冒険状態はこの端末に保存。復習履歴・XPは通常どおり記録されます。
+        試作版 · 攻略状態はこの端末に保存。冒険権は毎時00分・30分に回復します。
       </p>
-      {(error || growthError || progress.error) && (
+      {(error || access.error || growthError || progress.error) && (
         <p role="alert" className="text-sm text-destructive">
           {error ??
+            access.error?.message ??
             growthError?.message ??
             "プレイヤーのLvを取得できませんでした。"}
         </p>
@@ -206,6 +256,7 @@ export function GamePlay({ userId }: { userId: string }) {
                 <button
                   key={resource.resource_id}
                   type="button"
+                  disabled={busy}
                   data-hotkey-item
                   aria-pressed={selectedId === resource.resource_id}
                   onClick={() => setSelectedId(resource.resource_id)}
@@ -247,22 +298,12 @@ export function GamePlay({ userId }: { userId: string }) {
                     )}
                     <Button
                       disabled={
-                        remainingMinutes > 0 ||
+                        !canStart ||
                         !level ||
                         !content.knowledge.length ||
                         !content.quizzes.length
                       }
-                      onClick={() =>
-                        update(
-                          enterDungeon(
-                            save,
-                            selected.resource_id,
-                            selected.resource_name ?? "リソース",
-                            level ?? 1,
-                            Date.now(),
-                          ),
-                        )
-                      }
+                      onClick={() => void startEvent()}
                     >
                       ダンジョンに入る
                     </Button>
@@ -376,11 +417,10 @@ export function GamePlay({ userId }: { userId: string }) {
               <p className="text-sm text-muted-foreground">
                 HP・撃破数を引き継いで次の冒険へ。ダンジョン内では回復しません。
               </p>
-              <Button
-                disabled={remainingMinutes > 0}
-                onClick={() => update(resumeEvent(save, Date.now()))}
-              >
-                {remainingMinutes ? `あと${remainingMinutes}分` : "冒険を再開"}
+              <Button disabled={!canStart} onClick={() => void startEvent()}>
+                {!access.data?.available && remainingMinutes
+                  ? `あと${remainingMinutes}分`
+                  : "冒険を再開"}
               </Button>
             </div>
           ) : run.phase === "cleared" ? (

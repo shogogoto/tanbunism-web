@@ -1,4 +1,3 @@
-export const EVENT_RECOVERY_MS = 30 * 60_000;
 export const MOVES_PER_EVENT = 5;
 export const ENEMIES_TO_CLEAR = 3;
 
@@ -18,14 +17,12 @@ export type Run = {
   phase: "path" | "battle" | "rest" | "defeated" | "cleared";
 };
 export type GameSave = {
-  version: 1;
-  nextEventAt: number;
+  version: 2;
   clears: Record<string, number>;
   run?: Run;
 };
 export const newSave = (): GameSave => ({
-  version: 1,
-  nextEventAt: 0,
+  version: 2,
   clears: {},
 });
 
@@ -34,13 +31,12 @@ export function enterDungeon(
   resourceId: string,
   name: string,
   level: number,
-  now: number,
 ): GameSave {
-  if (save.run || now < save.nextEventAt) return save;
+  // The caller must consume a server-side adventure right first.
+  if (save.run) return save;
   const maxHp = 30 + level * 5;
   return {
     ...save,
-    nextEventAt: now + EVENT_RECOVERY_MS,
     run: {
       resourceId,
       name,
@@ -59,11 +55,11 @@ export function enterDungeon(
   };
 }
 
-export function resumeEvent(save: GameSave, now: number): GameSave {
-  if (save.run?.phase !== "rest" || now < save.nextEventAt) return save;
+export function resumeEvent(save: GameSave): GameSave {
+  // Server permission is independent of HP, kills and local adventure state.
+  if (save.run?.phase !== "rest") return save;
   return {
     ...save,
-    nextEventAt: now + EVENT_RECOVERY_MS,
     run: { ...save.run, moves: 0, phase: "path" },
   };
 }

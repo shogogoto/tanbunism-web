@@ -7,11 +7,10 @@ export function readGameSave(userId: string): GameSave {
   try {
     const value = JSON.parse(
       localStorage.getItem(gameSaveKey(userId)) ?? "null",
-    ) as GameSave | null;
+    ) as (Omit<GameSave, "version"> & { version: number }) | null;
     if (
       !value ||
-      value.version !== 1 ||
-      !Number.isFinite(value.nextEventAt) ||
+      (value.version !== 1 && value.version !== 2) ||
       !value.clears ||
       typeof value.clears !== "object" ||
       Object.values(value.clears).some(
@@ -42,7 +41,8 @@ export function readGameSave(userId: string): GameSave {
         ].some((number) => !Number.isFinite(number) || number < 0))
     )
       return newSave();
-    return value;
+    // Preserve HP/laps from v1, but never trust its device-only cooldown.
+    return { version: 2, clears: value.clears, run: value.run };
   } catch {
     return newSave();
   }

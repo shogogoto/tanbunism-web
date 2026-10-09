@@ -1,5 +1,15 @@
+import type { AdventureAccess } from "~/features/game/access";
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
+
+export function resetAdminUserAdventure(
+  userId: string,
+): Promise<AdventureAccess> {
+  return request(`/admin/users/${encodeURIComponent(userId)}/adventure-reset`, {
+    method: "POST",
+  });
+}
 
 export type AdminUserItem = {
   uid: string;

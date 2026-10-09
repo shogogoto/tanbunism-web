@@ -9,6 +9,7 @@ import {
   grantAdminUser,
   listAdminUserResources,
   listAdminUsers,
+  resetAdminUserAdventure,
   resetAdminUserPassword,
   updateAdminUserStatus,
 } from "./api";
@@ -21,6 +22,7 @@ vi.mock("./api", () => ({
   getAdminResourceDeletionImpact: vi.fn(),
   deleteAdminResource: vi.fn(),
   resetAdminUserPassword: vi.fn(),
+  resetAdminUserAdventure: vi.fn(),
   deleteAdminUser: vi.fn(),
 }));
 
@@ -43,6 +45,11 @@ const resource = {
 };
 
 beforeEach(() => {
+  vi.mocked(resetAdminUserAdventure).mockResolvedValue({
+    available: true,
+    server_now: 0,
+    next_available_at: 1800000,
+  });
   vi.mocked(grantAdminUser).mockResolvedValue({
     ...targetUser,
     is_superuser: true,
@@ -77,6 +84,25 @@ beforeEach(() => {
     deleted_quiz_count: 2,
     deleted_answer_count: 3,
   });
+});
+
+it("confirms and resets only the selected user's adventure permission", async () => {
+  const user = userEvent.setup();
+  render(<AdminUserManager />);
+  await user.click(
+    await screen.findByRole("button", {
+      name: `${targetUser.email}の冒険待ち時間を解除`,
+    }),
+  );
+  expect(screen.getByText(/HP・攻略状況・復習XPは変更しません/)).toBeVisible();
+  expect(resetAdminUserAdventure).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "待ち時間を解除する" }));
+  await waitFor(() =>
+    expect(resetAdminUserAdventure).toHaveBeenCalledWith(targetUser.uid),
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+  );
 });
 
 it("メール確認後に管理者を設定し、付与後は停止・削除を無効にする", async () => {

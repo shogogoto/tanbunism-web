@@ -10,6 +10,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
+import { adventureAccessKey } from "~/features/game/access";
 import { invalidateGamification } from "~/features/gamification/invalidate";
 import {
   AlertDialog,
@@ -50,6 +51,7 @@ import {
   grantAdminUser,
   listAdminUserResources,
   listAdminUsers,
+  resetAdminUserAdventure,
   resetAdminUserPassword,
   updateAdminUserStatus,
 } from "./api";
@@ -62,6 +64,7 @@ export default function AdminUserManager() {
   const [error, setError] = useState<string>();
   const [statusTarget, setStatusTarget] = useState<AdminUserItem>();
   const [adminTarget, setAdminTarget] = useState<AdminUserItem>();
+  const [adventureTarget, setAdventureTarget] = useState<AdminUserItem>();
   const [adminConfirmation, setAdminConfirmation] = useState("");
   const [resourceOwner, setResourceOwner] = useState<AdminUserItem>();
   const [passwordTarget, setPasswordTarget] = useState<AdminUserItem>();
@@ -135,6 +138,24 @@ export default function AdminUserManager() {
       toast.success(`${updated.email} を管理者に設定しました`);
       setAdminTarget(undefined);
       setAdminConfirmation("");
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
+  async function resetAdventure() {
+    if (!adventureTarget || isMutating) return;
+    setIsMutating(true);
+    setError(undefined);
+    try {
+      await resetAdminUserAdventure(adventureTarget.uid);
+      await mutate(adventureAccessKey(adventureTarget.uid)).catch(
+        () => undefined,
+      );
+      toast.success(`${adventureTarget.email} の冒険待ち時間を解除しました`);
+      setAdventureTarget(undefined);
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -247,7 +268,7 @@ export default function AdminUserManager() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">ユーザー管理</h2>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          管理者の設定、アカウントの停止・再開、パスワード再設定、所有データを含む削除を行います。
+          管理者の設定、冒険待ち時間の解除、アカウントの停止・再開、パスワード再設定、所有データを含む削除を行います。
         </p>
       </section>
 
@@ -335,6 +356,16 @@ export default function AdminUserManager() {
                         type="button"
                         variant="outline"
                         size="sm"
+                        disabled={isMutating || !user.is_active}
+                        aria-label={`${user.email}の冒険待ち時間を解除`}
+                        onClick={() => setAdventureTarget(user)}
+                      >
+                        <RotateCcw /> 冒険を可能に
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => void openResources(user)}
                       >
                         <Database />
@@ -380,6 +411,35 @@ export default function AdminUserManager() {
           </Table>
         </div>
       )}
+
+      <AlertDialog
+        open={Boolean(adventureTarget)}
+        onOpenChange={(open) => !open && setAdventureTarget(undefined)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>冒険待ち時間を解除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              {adventureTarget?.email}{" "}
+              がすぐに冒険を開始・再開できるようにします。HP・攻略状況・復習XPは変更しません。冒険権は蓄積しません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isMutating}>
+              キャンセル
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isMutating}
+              onClick={(event) => {
+                event.preventDefault();
+                void resetAdventure();
+              }}
+            >
+              待ち時間を解除する
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {transferSource && (
         <UserDataTransfer

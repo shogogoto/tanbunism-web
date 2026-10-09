@@ -1,23 +1,12 @@
 import { describe, expect, it } from "vitest";
-import {
-  EVENT_RECOVERY_MS,
-  answer,
-  enterDungeon,
-  move,
-  newSave,
-  resumeEvent,
-} from "./domain";
+import { answer, enterDungeon, move, newSave, resumeEvent } from "./domain";
 
-const entered = () => enterDungeon(newSave(), "resource", "本", 1, 1000);
+const entered = () => enterDungeon(newSave(), "resource", "本", 1);
 describe("adventure rules", () => {
-  it("derives player stats from user Lv and consumes one recovering event", () => {
+  it("derives player stats from user Lv, leaving permission to the server", () => {
     const save = entered();
     expect(save.run?.hp).toBe(35);
-    expect(save.nextEventAt).toBe(1000 + EVENT_RECOVERY_MS);
-    expect(enterDungeon(save, "other", "別の本", 99, 2000)).toBe(save);
-    expect(
-      enterDungeon({ ...save, run: undefined }, "other", "別の本", 1, 2000).run,
-    ).toBeUndefined();
+    expect(enterDungeon(save, "other", "別の本", 99)).toBe(save);
   });
   it("ends at five moves but finishes a final encounter first", () => {
     let save = entered();
@@ -28,8 +17,7 @@ describe("adventure rules", () => {
     save = answer(answer(save, true), true);
     expect(save.run?.phase).toBe("rest");
     expect(save.run?.moves).toBe(5);
-    expect(resumeEvent(save, 2000)).toBe(save);
-    const resumed = resumeEvent(save, 1000 + EVENT_RECOVERY_MS);
+    const resumed = resumeEvent(save);
     expect(resumed.run?.phase).toBe("path");
     expect(resumed.run?.moves).toBe(0);
     expect(resumed.run?.kills).toBe(1);
@@ -41,7 +29,7 @@ describe("adventure rules", () => {
     expect(save.run?.enemyHp).toBe(20);
     if (!save.run) throw new Error("Expected an active run");
     save = { ...save, run: { ...save.run, phase: "rest" } };
-    expect(resumeEvent(save, save.nextEventAt).run?.hp).toBe(24);
+    expect(resumeEvent(save).run?.hp).toBe(24);
   });
   it("three defeated enemies count one lap, not resource XP", () => {
     let save = entered();
