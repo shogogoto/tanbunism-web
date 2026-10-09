@@ -1,4 +1,4 @@
-import { BookOpen, Compass } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import useSWR, { useSWRConfig } from "swr";
@@ -15,12 +15,6 @@ import UserAvatar from "~/features/user/UserAvatar";
 import Loading from "~/shared/components/Loading";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "~/shared/components/ui/tabs";
 import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
 import BattleDialog from "./BattleDialog";
@@ -381,31 +375,7 @@ export function GamePlay({
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-4 p-3 pb-8 sm:p-6">
-      <header className="flex items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Compass />
-          ゲーム
-        </h1>
-        <span className="text-sm text-muted-foreground">
-          {access.data?.available
-            ? "冒険可能"
-            : access.data && remainingMinutes
-              ? `次の冒険まで ${remainingMinutes}分`
-              : "冒険権を確認中"}
-        </span>
-      </header>
-      <p className="text-xs text-muted-foreground">
-        冒険権は毎時00分・30分に回復します。
-      </p>
-      <Tabs
-        value={menu}
-        onValueChange={(value) => void navigate(`/game/${value}`)}
-      >
-        <TabsList aria-label="ゲームメニュー">
-          <TabsTrigger value="adventure">冒険</TabsTrigger>
-          <TabsTrigger value="status">ステータス</TabsTrigger>
-          <TabsTrigger value="item">アイテム</TabsTrigger>
-        </TabsList>
+      <div className="space-y-4">
         {(error || access.error || growthError || progress.error) && (
           <p role="alert" className="text-sm text-destructive">
             {error ??
@@ -437,7 +407,17 @@ export function GamePlay({
             この端末の旧冒険を引き継ぐ
           </Button>
         )}
-        <TabsContent value={menu} className="space-y-4">
+        <div
+          className="space-y-4"
+          role="tabpanel"
+          aria-label={
+            menu === "status"
+              ? "ステータス"
+              : menu === "item"
+                ? "アイテム"
+                : "冒険"
+          }
+        >
           {menu === "status" ? (
             <div className="rounded-lg border p-4 space-y-3">
               <h2 className="font-semibold">ステータス</h2>
@@ -838,8 +818,8 @@ export function GamePlay({
               </Button>
             </>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
       {preview}
     </section>
   );

@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import DashboardHeaderTabs from "~/features/dashboard/DashboardHeaderTabs";
+import GameHeaderTabs from "~/features/game/GameHeaderTabs";
 import ReviewHeaderTabs from "~/features/review/ReviewHeaderTabs";
 import SearchHeaderControls from "~/features/search/SearchHeaderControls";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
@@ -58,6 +59,9 @@ export default function AppHeader() {
       </div>
       {pathname === "/dashboard" && <DashboardHeaderTabs />}
       {pathname === "/review" && <ReviewHeaderTabs />}
+      {(pathname === "/game" || pathname.startsWith("/game/")) && (
+        <GameHeaderTabs />
+      )}
       {pathname.startsWith("/search") && <SearchHeaderControls />}
     </header>
   );

@@ -13,6 +13,7 @@ import { SWRConfig, useSWRConfig } from "swr";
 import { beforeEach, expect, it, vi } from "vitest";
 import { markTanbunSeen } from "~/features/review/api";
 import { GamePlay } from ".";
+import GameHeaderTabs from "./GameHeaderTabs";
 import { adventureAccessKey } from "./access";
 import { loadDungeon } from "./api";
 import { enterDungeon, move, newSave } from "./domain";
@@ -22,6 +23,9 @@ let available = true;
 let consumeCount = 0;
 let stateLoadCount = 0;
 let state: GameState = { revision: 0, save: newSave() };
+vi.mock("~/features/auth/AuthProvider", () => ({
+  useAuth: () => ({ user: { uid: "player" }, isAuthenticated: true }),
+}));
 const server = setupServer(
   http.get("*/game/state", () => {
     stateLoadCount++;
@@ -174,6 +178,7 @@ function renderGame(path = "/game/adventure") {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <SWRConfig value={{ provider: () => new Map() }}>
+        <GameHeaderTabs />
         <Routes>
           <Route
             path="/game/:menu?"
@@ -222,6 +227,30 @@ it("switches game tabs with arrow keys without resetting the adventure", async (
   expect(await screen.findByText("HP 35/35")).toBeInTheDocument();
   expect(stateLoadCount).toBe(1);
   expect(state.revision).toBe(1);
+});
+
+it("shows compact header tabs beside adventure access without a duplicate title", async () => {
+  renderGame();
+  expect(await screen.findByText("冒険可能")).toBeVisible();
+  const tabs = screen.getByRole("tablist", { name: "ゲームメニュー" });
+  expect(tabs.querySelector("[data-dashboard-tab-indicator]")).toHaveAttribute(
+    "data-active-tab",
+    "adventure",
+  );
+  expect(
+    screen.queryByRole("heading", { name: "ゲーム" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("冒険権は毎時00分・30分に回復します。"),
+  ).not.toBeInTheDocument();
+  expect(tabs.parentElement?.parentElement).toContainElement(
+    screen.getByText("冒険可能"),
+  );
+  expect(within(tabs).getAllByRole("tab")).toHaveLength(3);
+  expect(screen.getByText("冒険可能")).toHaveAttribute(
+    "title",
+    "冒険権は毎時00分・30分に回復します。",
+  );
 });
 function HistoryControls() {
   const location = useLocation();

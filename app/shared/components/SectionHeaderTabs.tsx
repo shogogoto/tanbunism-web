@@ -6,10 +6,14 @@ export default function SectionHeaderTabs({
   sections,
   label,
   compact = false,
+  active: controlledActive,
+  onSelect,
 }: {
   sections: readonly { id: string; label: string; progress?: string }[];
   label: string;
   compact?: boolean;
+  active?: string;
+  onSelect?: (id: string) => void;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -18,7 +22,7 @@ export default function SectionHeaderTabs({
     width: 0,
     ready: false,
   });
-  const requested = searchParams.get("view");
+  const requested = controlledActive ?? searchParams.get("view");
   const active = sections.some((section) => section.id === requested)
     ? requested
     : sections[0].id;
@@ -76,6 +80,10 @@ export default function SectionHeaderTabs({
               : "text-muted-foreground hover:text-foreground"
           }`}
           onClick={() => {
+            if (onSelect) {
+              onSelect(section.id);
+              return;
+            }
             setSearchParams((current) => {
               const next = new URLSearchParams(current);
               if (section.id === sections[0].id) next.delete("view");
@@ -83,6 +91,24 @@ export default function SectionHeaderTabs({
               return next;
             });
           }}
+          onKeyDown={(event) => {
+            if (!onSelect) return;
+            const nextIndex =
+              event.key === "ArrowRight"
+                ? (index + 1) % sections.length
+                : event.key === "ArrowLeft"
+                  ? (index + sections.length - 1) % sections.length
+                  : event.key === "Home"
+                    ? 0
+                    : event.key === "End"
+                      ? sections.length - 1
+                      : undefined;
+            if (nextIndex === undefined) return;
+            event.preventDefault();
+            tabRefs.current[nextIndex]?.focus();
+            onSelect(sections[nextIndex].id);
+          }}
+          tabIndex={onSelect && active !== section.id ? -1 : 0}
         >
           <kbd className="min-w-3 text-center font-mono text-[10px] leading-none text-muted-foreground">
             {index + 1}
