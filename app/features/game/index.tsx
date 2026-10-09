@@ -15,6 +15,7 @@ import Loading from "~/shared/components/Loading";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
+import DungeonRoute from "./Route";
 import { useAdventureAccess } from "./access";
 import { loadDungeon } from "./api";
 import {
@@ -315,6 +316,10 @@ export function GamePlay({ userId }: { userId: string }) {
               <p className="text-sm">
                 HP {run.hp}/{run.maxHp} · 撃破 {run.kills}/{ENEMIES_TO_CLEAR}
               </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                現在地 ·{" "}
+                {run.readIds.length ? `第${run.readIds.length}地点` : "入口"}
+              </p>
             </div>
           )}
           <div className="grid gap-3 sm:grid-cols-3">
@@ -486,10 +491,16 @@ export function GamePlay({ userId }: { userId: string }) {
               max={run.maxHp}
             />
             <p className="text-xs text-muted-foreground">
-              進行 {run.moves}/{MOVES_PER_EVENT} · 撃破 {run.kills}/
+              今回の移動 {run.moves}/{MOVES_PER_EVENT} · 撃破 {run.kills}/
               {ENEMIES_TO_CLEAR}
             </p>
           </div>
+          <DungeonRoute
+            key={run.resourceId}
+            run={run}
+            knowledge={content?.knowledge ?? []}
+            onOpen={(sentenceId) => openPreview({ sentenceId })}
+          />
           {isLoading && <Loading />}
           {feedback ? (
             <div className="rounded-lg border p-4 space-y-3">
@@ -509,7 +520,9 @@ export function GamePlay({ userId }: { userId: string }) {
             </div>
           ) : run.phase === "path" && content ? (
             <>
-              <h3 className="text-sm font-medium">知識を読んで進路を選ぶ</h3>
+              <h3 className="text-sm font-medium">
+                第{run.readIds.length + 1}地点へ · 次の進路
+              </h3>
               {paths.map((item) => (
                 <div key={item.uid} className="rounded-lg border p-3 space-y-3">
                   <p className="text-base leading-relaxed">{item.sentence}</p>

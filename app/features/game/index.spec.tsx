@@ -181,6 +181,7 @@ it("records seen knowledge, takes quiz damage and restores the run after remount
     hp: 24,
     phase: "battle",
     moves: 1,
+    readIds: ["sentence"],
   });
   const loadsBeforeRemount = vi.mocked(loadDungeon).mock.calls.length;
   view.unmount();
@@ -190,6 +191,12 @@ it("records seen knowledge, takes quiz damage and restores the run after remount
     await screen.findByRole("heading", { name: /敵と遭遇/ }),
   ).toBeInTheDocument();
   expect(screen.getByText("HP 24/35")).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "現在地 · 第1地点" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: /1 · 現在地.*知識の進路/ }),
+  ).toBeInTheDocument();
   expect(loadDungeon).toHaveBeenCalledTimes(loadsBeforeRemount);
 });
 
@@ -243,7 +250,7 @@ it("admin unlock is applied without healing or erasing progress", async () => {
   available = true;
   await user.click(screen.getByRole("button", { name: "冒険権を再確認" }));
   await user.click(await screen.findByRole("button", { name: "冒険を再開" }));
-  expect(await screen.findByText("知識を読んで進路を選ぶ")).toBeInTheDocument();
+  expect(await screen.findByText("第1地点へ · 次の進路")).toBeInTheDocument();
   expect(state.save.run).toMatchObject({
     hp: 24,
     moves: 0,

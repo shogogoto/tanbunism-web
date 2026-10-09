@@ -21,7 +21,7 @@ describe("adventure rules", () => {
     expect(resumed.run?.phase).toBe("path");
     expect(resumed.run?.moves).toBe(0);
     expect(resumed.run?.kills).toBe(1);
-    expect(resumed.run?.readIds).toHaveLength(5);
+    expect(resumed.run?.readIds).toEqual(["s0", "s1", "s2", "s3", "s4"]);
   });
   it("wrong answers damage the player, and resuming never heals", () => {
     let save = answer(move(entered(), "s", 0.1), false);

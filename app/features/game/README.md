@@ -22,6 +22,13 @@ device changes. Refresh/focus reads the latest state; revision checks reject sta
 overwrites. Enter/resume saves the snapshot and consumes the clock slot in one
 atomic Cypher query. Returning to the menu does not retreat. Old local progress
 can be explicitly imported once, before the first server save; it is not deleted.
+`run.readIds` is the ordered route of knowledge chosen with Seen, not a set or
+recommendation order. Its last item is the current location; an empty route means
+the entrance. Event rest resets only the event's move count, never this route.
+The route panel connects entrance and visited knowledge, highlights the current
+location and combat/rest phase, and opens the shared detail preview on click.
+Long routes show the latest three locations and expand to the complete route.
+Retreat/finishing still discards this run's route; it is not a historical archive.
 Admin user management can clear only that
 user's waiting time, never HP/laps/XP or accumulate rights. The game refreshes
 access every 15 seconds, on focus, and at the next clock boundary.
