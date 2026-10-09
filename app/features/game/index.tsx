@@ -10,17 +10,19 @@ import QuizAttempt from "~/features/quiz/QuizAttempt";
 import QuizPreviewPrompt from "~/features/quiz/QuizPreviewPrompt";
 import { markTanbunSeen } from "~/features/review/api";
 import { useTanbunPreview } from "~/features/tanbun/detail/Preview";
+import { canonicalSentenceId } from "~/features/tanbun/detail/cache";
 import UserAvatar from "~/features/user/UserAvatar";
 import Loading from "~/shared/components/Loading";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
+import { tanbunDetailCache } from "~/shared/lib/indexed";
 import BattleDialog from "./BattleDialog";
 import ExplorationMap from "./Map";
 import PlayerStatus from "./PlayerStatus";
 import { useAdventureAccess } from "./access";
-import { loadConnectedKnowledge, loadDungeon } from "./api";
+import { loadConnectedKnowledge, loadDungeon, validateKnowledge } from "./api";
 import {
   ENEMIES_TO_CLEAR,
   type GameSave,
@@ -118,6 +120,31 @@ export function GamePlay({
     ? (save.content ?? loadedContent)
     : (parked?.content ?? loadedContent);
   const map = run ? dungeonMap(save, run) : undefined;
+  const validationIds = [
+    ...new Set([
+      ...(content?.knowledge.map((item) => item.uid) ?? []),
+      ...(map?.places.map((place) => place.id) ?? []),
+    ]),
+  ].sort();
+  const {
+    data: validIds,
+    error: validationError,
+    isLoading: validatingKnowledge,
+    mutate: retryValidity,
+  } = useSWR(
+    stateLoaded && run?.phase === "path" && content
+      ? ["game-valid-knowledge", userId, resourceId, validationIds.join(",")]
+      : null,
+    () => validateKnowledge(resourceId, validationIds),
+    { revalidateOnFocus: true, shouldRetryOnError: false },
+  );
+  const validSet = validIds
+    ? new Set(validIds.map(canonicalSentenceId))
+    : undefined;
+  const unavailableIds = validSet
+    ? validationIds.filter((id) => !validSet.has(canonicalSentenceId(id)))
+    : [];
+  const unavailable = new Set(unavailableIds.map(canonicalSentenceId));
   const {
     data: connected,
     error: connectionError,
@@ -280,6 +307,22 @@ export function GamePlay({
         () => undefined,
       );
     } catch (cause) {
+      if (cause instanceof Error && "status" in cause && cause.status === 404) {
+        await tanbunDetailCache
+          .delete(canonicalSentenceId(map?.current ?? ""))
+          .catch(() => undefined);
+        try {
+          await Promise.all([retryValidity(), retryConnections()]);
+          setError(
+            "この単文は削除・更新されたか、閲覧できなくなりました。移動数は消費せず、候補を更新しました。",
+          );
+        } catch {
+          setError(
+            "この単文は現在利用できません。候補の再取得に失敗しました。再試行してください。",
+          );
+        }
+        return;
+      }
       setError(
         cause instanceof Error
           ? cause.message
@@ -377,14 +420,19 @@ export function GamePlay({
   const paths =
     map?.current === ENTRANCE
       ? (content?.knowledge
-          .filter((item) => !discovered.has(item.uid))
+          .filter(
+            (item) =>
+              !discovered.has(item.uid) &&
+              !unavailable.has(canonicalSentenceId(item.uid)),
+          )
           .slice(0, 3) ?? [])
       : (connected ?? [])
           .filter(
             (item) =>
               !neighbours(
                 map ?? { current: ENTRANCE, places: [], edges: [] },
-              ).includes(item.uid),
+              ).includes(item.uid) &&
+              !unavailable.has(canonicalSentenceId(item.uid)),
           )
           .slice(0, 3);
   const detour =
@@ -392,6 +440,7 @@ export function GamePlay({
       ? content?.knowledge.find(
           (item) =>
             !discovered.has(item.uid) &&
+            !unavailable.has(canonicalSentenceId(item.uid)) &&
             !paths.some((path) => path.uid === item.uid),
         )
       : undefined;
@@ -652,7 +701,14 @@ export function GamePlay({
                   knowledge={content?.knowledge ?? []}
                   onOpen={(sentenceId) => openPreview({ sentenceId })}
                   onMove={(sentenceId, kind) => void advance(sentenceId, kind)}
-                  disabled={busy || Boolean(feedback) || run.phase !== "path"}
+                  disabled={
+                    busy ||
+                    Boolean(feedback) ||
+                    run.phase !== "path" ||
+                    validatingKnowledge ||
+                    Boolean(validationError)
+                  }
+                  unavailableIds={unavailableIds}
                   player={player}
                   title={run.name}
                   remainingMoves={Math.max(0, MOVES_PER_EVENT - run.moves)}
@@ -687,6 +743,23 @@ export function GamePlay({
                   }
                 >
                   {isLoading && <Loading />}
+                  {validationError && (
+                    <div
+                      role="alert"
+                      className="rounded-lg border bg-background p-3"
+                    >
+                      <p>単文の有効性を確認できませんでした。</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          void retryValidity().catch(() => undefined)
+                        }
+                      >
+                        候補を再取得
+                      </Button>
+                    </div>
+                  )}
                   {(feedback || run.phase === "battle") && (
                     <BattleDialog
                       run={run}

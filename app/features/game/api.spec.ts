@@ -5,7 +5,7 @@ import {
   searchByTextTanbunGet,
 } from "~/shared/generated/tanbun/tanbun";
 import { tanbunDetailCache } from "~/shared/lib/indexed";
-import { loadConnectedKnowledge, loadDungeon } from "./api";
+import { loadConnectedKnowledge, loadDungeon, validateKnowledge } from "./api";
 
 vi.mock("~/features/quiz/api", () => ({
   listStudyPlans: vi.fn(),
@@ -18,7 +18,17 @@ vi.mock("~/shared/generated/tanbun/tanbun", () => ({
 vi.mock("~/shared/lib/indexed", () => ({
   tanbunDetailCache: { get: vi.fn(), set: vi.fn() },
 }));
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (_url: string, options: RequestInit) => {
+      const body = JSON.parse(options.body as string);
+      return new Response(JSON.stringify(body.sentence_ids), { status: 200 });
+    }),
+  );
+});
+afterEach(() => vi.unstubAllGlobals());
 it("scopes knowledge and prepared quizzes to one resource without generation", async () => {
   const tanbun = {
     uid: "sentence",
@@ -94,4 +104,37 @@ it("uses cached direct graph neighbours only, excluding other resources and the 
     (await loadConnectedKnowledge("book", "a")).map((item) => item.uid),
   ).toEqual(["b", "c"]);
   expect(detailTanbunSentenceSentenceIdGet).not.toHaveBeenCalled();
+});
+
+it("rechecks cached graph neighbours and excludes orphaned knowledge", async () => {
+  vi.mocked(tanbunDetailCache.get).mockResolvedValue({
+    uid: "a",
+    g: {
+      edges: [
+        { source: "a", target: "orphan" },
+        { source: "a", target: "valid" },
+      ],
+    },
+    knowdes: {
+      orphan: { uid: "orphan", sentence: "古い文", resource_uid: "book" },
+      valid: { uid: "valid", sentence: "現行の文", resource_uid: "book" },
+    },
+  } as unknown as Awaited<ReturnType<typeof tanbunDetailCache.get>>);
+  vi.mocked(fetch).mockResolvedValue(
+    new Response(JSON.stringify(["valid"]), { status: 200 }),
+  );
+  expect(
+    (await loadConnectedKnowledge("book", "a")).map((item) => item.uid),
+  ).toEqual(["valid"]);
+  expect(fetch).toHaveBeenCalledWith(
+    expect.stringContaining("/game/knowledge/validate"),
+    expect.objectContaining({ credentials: "include", cache: "no-store" }),
+  );
+});
+
+it("fails closed if validation cannot be reached rather than returning stale candidates", async () => {
+  vi.mocked(fetch).mockResolvedValue(
+    new Response("unavailable", { status: 503 }),
+  );
+  await expect(validateKnowledge("book", ["a"])).rejects.toThrow("有効性");
 });

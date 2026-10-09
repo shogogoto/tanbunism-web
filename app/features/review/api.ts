@@ -69,5 +69,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const body = (await response.json().catch(() => undefined)) as
     | { detail?: string }
     | undefined;
-  throw new Error(body?.detail ?? "ダッシュボードを取得できませんでした。");
+  throw Object.assign(
+    new Error(body?.detail ?? "ダッシュボードを取得できませんでした。"),
+    { status: response.status },
+  );
 }

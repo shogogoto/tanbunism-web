@@ -15,7 +15,7 @@ import { markTanbunSeen } from "~/features/review/api";
 import { GamePlay } from ".";
 import GameHeaderTabs from "./GameHeaderTabs";
 import { adventureAccessKey } from "./access";
-import { loadDungeon } from "./api";
+import { loadDungeon, validateKnowledge } from "./api";
 import { enterDungeon, move, newSave } from "./domain";
 import type { GameState } from "./state";
 
@@ -126,6 +126,7 @@ vi.mock("~/features/review/api", () => ({ markTanbunSeen: vi.fn() }));
 vi.mock("./api", () => ({
   loadDungeon: vi.fn(),
   loadConnectedKnowledge: vi.fn(async () => []),
+  validateKnowledge: vi.fn(async (_resource: string, ids: string[]) => ids),
 }));
 
 beforeEach(() => {
@@ -136,6 +137,9 @@ beforeEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
   vi.clearAllMocks();
+  vi.mocked(validateKnowledge).mockImplementation(
+    async (_resource, ids) => ids,
+  );
   vi.mocked(loadDungeon).mockResolvedValue({
     knowledge: [
       {
@@ -206,6 +210,69 @@ function renderGame(path = "/game/adventure") {
     </MemoryRouter>,
   );
 }
+
+it("refreshes a candidate deleted after display without spending moves or resetting the run", async () => {
+  const save = enterDungeon(newSave(), "book", "テストの本", 1);
+  state = {
+    revision: 1,
+    save: { ...save, content: await loadDungeon("book") },
+  };
+  const user = userEvent.setup();
+  renderGame();
+  await user.click(
+    await screen.findByRole("button", { name: /未探索.*進路の用語/ }),
+  );
+  const confirm = screen.getByRole("button", { name: "見たよ · この道へ" });
+  await waitFor(() => expect(confirm).toBeEnabled());
+  vi.mocked(markTanbunSeen).mockRejectedValueOnce(
+    Object.assign(new Error("単文が見つかりません"), { status: 404 }),
+  );
+  vi.mocked(validateKnowledge).mockResolvedValue([]);
+  await user.click(confirm);
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "移動数は消費せず、候補を更新しました",
+  );
+  expect(state.save.run?.moves).toBe(0);
+  expect(state.save.run?.hp).toBe(35);
+  expect(state.revision).toBe(1);
+  expect(
+    screen.queryByRole("button", { name: /未探索.*進路の用語/ }),
+  ).not.toBeInTheDocument();
+});
+
+it("revalidates restored knowledge and leaves stale visited places in history but unavailable for travel", async () => {
+  const save = enterDungeon(newSave(), "book", "テストの本", 1);
+  state = {
+    revision: 1,
+    save: {
+      ...save,
+      content: await loadDungeon("book"),
+      maps: {
+        book: {
+          current: "@entrance",
+          places: [{ id: "sentence", region: 0 }],
+          edges: [{ from: "@entrance", to: "sentence", kind: "detour" }],
+        },
+      },
+    },
+  };
+  vi.mocked(validateKnowledge).mockResolvedValue([]);
+  renderGame();
+  await userEvent.setup().click(
+    await screen.findByRole("button", {
+      name: /領域 1.*進路の用語.*利用不可/,
+    }),
+  );
+  expect(
+    screen.queryByRole("button", { name: "進路の用語へ移動" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "詳細" }),
+  ).not.toBeInTheDocument();
+  expect(state.save.maps?.book.places).toHaveLength(1);
+  expect(state.save.run?.hp).toBe(35);
+  expect(markTanbunSeen).not.toHaveBeenCalled();
+});
 
 it("persists continuing a completed lap without spending another adventure right", async () => {
   const save = enterDungeon(newSave(), "book", "テストの本", 1);

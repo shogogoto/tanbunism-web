@@ -30,6 +30,7 @@ export default function ExplorationMap({
   map,
   knowledge,
   candidates = [],
+  unavailableIds = [],
   onOpen,
   onMove,
   disabled,
@@ -43,6 +44,7 @@ export default function ExplorationMap({
   map: DungeonMap;
   knowledge: PathKnowledge[];
   candidates?: MapCandidate[];
+  unavailableIds?: string[];
   onOpen: (id: string) => void;
   onMove: (id: string, kind?: "relation" | "detour") => void;
   disabled: boolean;
@@ -257,6 +259,7 @@ export default function ExplorationMap({
   const candidate = candidates.find((item) => item.knowledge.uid === selected);
   const canMove =
     !disabled &&
+    !unavailableIds.includes(selected ?? "") &&
     selected !== map.current &&
     Boolean(selected && (allIds.includes(selected) || candidate));
   const index = map.places.findIndex((place) => place.id === map.current);
@@ -413,6 +416,11 @@ export default function ExplorationMap({
                             : `領域 ${map.places[i - 1].region + 1}`}
                     </span>
                     <span className="line-clamp-2 font-medium">{label}</span>
+                    {unavailableIds.includes(id) && (
+                      <span className="text-xs text-muted-foreground">
+                        利用不可
+                      </span>
+                    )}
                   </button>
                 );
               },
@@ -540,6 +548,11 @@ export default function ExplorationMap({
             </Button>
             <div className="pr-8">
               <PathTerms knowledge={chosen} />
+              {unavailableIds.includes(selected) && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  現在利用できない単文です。開拓履歴は保持されています。
+                </p>
+              )}
               <p className="mt-2 text-sm leading-relaxed">
                 {selected === ENTRANCE
                   ? "ダンジョンの入口"
@@ -566,7 +579,7 @@ export default function ExplorationMap({
                     : "移動 · １歩"}
                 </Button>
               )}
-              {selected !== ENTRANCE && (
+              {selected !== ENTRANCE && !unavailableIds.includes(selected) && (
                 <Button
                   size="sm"
                   variant="outline"

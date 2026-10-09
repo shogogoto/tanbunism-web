@@ -17,6 +17,52 @@ export type DungeonContent = {
 const sameId = (a: string, b: string) =>
   a.replaceAll("-", "").toLowerCase() === b.replaceAll("-", "").toLowerCase();
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
+
+/** Always check current ownership/location, even when the displayed text is cached. */
+export async function validateKnowledge(
+  resourceId: string,
+  ids: string[],
+): Promise<string[]> {
+  const unique = [...new Set(ids.map(canonicalSentenceId))];
+  const valid: string[] = [];
+  for (let offset = 0; offset < unique.length; offset += 500) {
+    const response = await fetch(`${API_BASE_URL}/game/knowledge/validate`, {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resource_id: resourceId,
+        sentence_ids: unique.slice(offset, offset + 500),
+      }),
+    });
+    if (!response.ok)
+      throw new Error(
+        "単文の有効性を確認できませんでした。再試行してください。",
+      );
+    const result: unknown = await response.json();
+    if (!Array.isArray(result) || !result.every((id) => typeof id === "string"))
+      throw new Error("単文の有効性を確認できませんでした。");
+    valid.push(...result.map(canonicalSentenceId));
+  }
+  return valid;
+}
+
+async function reviewable(
+  resourceId: string,
+  items: PathKnowledge[],
+): Promise<PathKnowledge[]> {
+  const valid = new Set(
+    await validateKnowledge(
+      resourceId,
+      items.map((item) => item.uid),
+    ),
+  );
+  return items.filter((item) => valid.has(canonicalSentenceId(item.uid)));
+}
+
 /** Reuse sentence detail/cache; fetch only the current place, never the entire resource graph. */
 export async function loadConnectedKnowledge(
   resourceId: string,
@@ -45,11 +91,14 @@ export async function loadConnectedKnowledge(
       )
       .map(canonicalSentenceId),
   );
-  return Object.values(chain.knowdes).filter(
-    (item) =>
-      ids.has(canonicalSentenceId(item.uid)) &&
-      sameId(item.resource_uid, resourceId) &&
-      !sameId(item.uid, sentenceId),
+  return reviewable(
+    resourceId,
+    Object.values(chain.knowdes).filter(
+      (item) =>
+        ids.has(canonicalSentenceId(item.uid)) &&
+        sameId(item.resource_uid, resourceId) &&
+        !sameId(item.uid, sentenceId),
+    ),
   );
 }
 
@@ -83,7 +132,7 @@ export async function loadDungeon(resourceId: string): Promise<DungeonContent> {
         .filter((item) => sameId(item.resource_id, resourceId))
     : [];
   return {
-    knowledge: knowledge.data.data,
+    knowledge: await reviewable(resourceId, knowledge.data.data),
     quizzes: [
       ...new Map(
         recommendations.map((item) => [item.quiz.quiz_id, item.quiz]),
