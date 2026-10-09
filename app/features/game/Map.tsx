@@ -44,8 +44,62 @@ export default function ExplorationMap({
   const [fullscreen, setFullscreen] = useState(false);
   const [selected, setSelected] = useState<string>();
   const [zoom, setZoom] = useState(1);
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const media = window.matchMedia("(max-width: 639px)");
+    const update = () => setNarrow(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   const viewport = useRef<HTMLDivElement>(null);
   const fullButton = useRef<HTMLButtonElement>(null);
+  const ownsFullscreen = useRef(false);
+  function closeFullscreen() {
+    setFullscreen(false);
+    if (ownsFullscreen.current && document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined);
+    }
+    ownsFullscreen.current = false;
+  }
+  function toggleFullscreen() {
+    if (fullscreen) return closeFullscreen();
+    setFullscreen(true);
+    // Keep body-level battle and detail portals inside native fullscreen.
+    const request = document.documentElement.requestFullscreen;
+    if (request && !document.fullscreenElement) {
+      ownsFullscreen.current = true;
+      void request
+        .call(document.documentElement, { navigationUI: "hide" })
+        .then(
+          () => {
+            if (!ownsFullscreen.current && document.fullscreenElement) {
+              void document.exitFullscreen().catch(() => undefined);
+            }
+          },
+          () => {
+            ownsFullscreen.current = false;
+          },
+        );
+    }
+  }
+  useEffect(() => {
+    function changed() {
+      if (!document.fullscreenElement && ownsFullscreen.current) {
+        ownsFullscreen.current = false;
+        setFullscreen(false);
+      }
+    }
+    document.addEventListener("fullscreenchange", changed);
+    return () => {
+      document.removeEventListener("fullscreenchange", changed);
+      if (ownsFullscreen.current && document.fullscreenElement) {
+        void document.exitFullscreen().catch(() => undefined);
+      }
+      ownsFullscreen.current = false;
+    };
+  }, []);
   const drag = useRef<
     { x: number; y: number; left: number; top: number } | undefined
   >(undefined);
@@ -70,16 +124,29 @@ export default function ExplorationMap({
     levels.set(id, level);
     const row = columns.get(level) ?? 0;
     columns.set(level, row + 1);
-    positions.set(id, { x: 360 + level * 230, y: 220 + row * 150 });
+    positions.set(
+      id,
+      narrow
+        ? { x: 360 + row * 200, y: 220 + level * 150 }
+        : { x: 360 + level * 230, y: 220 + row * 150 },
+    );
   }
   const candidateLevel = (levels.get(map.current) ?? 0) + 1;
   for (const item of fresh) {
     const row = columns.get(candidateLevel) ?? 0;
     columns.set(candidateLevel, row + 1);
-    positions.set(item.knowledge.uid, {
-      x: 360 + candidateLevel * 230,
-      y: 220 + row * 150,
-    });
+    positions.set(
+      item.knowledge.uid,
+      narrow
+        ? {
+            x: 360 + row * 200,
+            y: 220 + candidateLevel * 150,
+          }
+        : {
+            x: 360 + candidateLevel * 230,
+            y: 220 + row * 150,
+          },
+    );
   }
   const width = Math.max(
     1200,
@@ -110,6 +177,15 @@ export default function ExplorationMap({
   useEffect(() => {
     center();
   }, [currentPosition?.x, currentPosition?.y, zoom, fullscreen]);
+  // The fullscreen portal mounts after the first effect; resize also happens on rotation.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: center uses current canvas dimensions.
+  useEffect(() => {
+    const element = viewport.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(center);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [currentPosition?.x, currentPosition?.y, zoom, fullscreen]);
   useEffect(() => {
     if (map.current) setSelected(undefined);
   }, [map.current]);
@@ -128,6 +204,25 @@ export default function ExplorationMap({
       <div
         ref={viewport}
         aria-label="探索マップをスクロール"
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable map supports arrow-key panning.
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          const offset = {
+            ArrowLeft: [-120, 0],
+            ArrowRight: [120, 0],
+            ArrowUp: [0, -120],
+            ArrowDown: [0, 120],
+          }[event.key];
+          if (offset) {
+            event.preventDefault();
+            event.currentTarget.scrollBy({
+              left: offset[0],
+              top: offset[1],
+              behavior: "smooth",
+            });
+          }
+        }}
         className="absolute inset-0 overflow-auto overscroll-contain cursor-grab active:cursor-grabbing"
         onPointerDown={(event) => {
           if (
@@ -242,7 +337,7 @@ export default function ExplorationMap({
         </div>
       </div>
       <header className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2">
-        <div className="pointer-events-auto min-w-0 max-w-[65%] rounded-xl border bg-background/95 p-2 shadow-lg sm:max-w-sm sm:p-3">
+        <div className="pointer-events-auto min-w-0 max-w-[calc(100%-3rem)] rounded-xl border bg-background/95 p-2 shadow-lg sm:max-w-sm sm:p-3">
           {title && <h2 className="truncate text-sm font-semibold">{title}</h2>}
           <h3 className="text-xs">
             現在地 · {map.current === ENTRANCE ? "入口" : `第${index + 1}地点`}
@@ -259,7 +354,7 @@ export default function ExplorationMap({
             variant="ghost"
             ref={fullButton}
             aria-label={fullscreen ? "全画面を終了" : "マップを全画面表示"}
-            onClick={() => setFullscreen(!fullscreen)}
+            onClick={toggleFullscreen}
           >
             <Maximize className="size-4" />
           </Button>
@@ -291,17 +386,17 @@ export default function ExplorationMap({
           </Button>
         </div>
       </header>
-      <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col items-center gap-2">
         <div className="pointer-events-auto max-w-full space-y-2 text-xs">
           {children}
-          <p className="w-fit rounded bg-background/90 px-2 py-1 text-muted-foreground">
+          <p className="hidden w-fit rounded bg-background/90 px-2 py-1 text-muted-foreground sm:block">
             実線：知識の関係 · 破線：寄り道
           </p>
         </div>
         {selected && (
           <section
             aria-label="選択した地点"
-            className="pointer-events-auto relative max-h-[45dvh] w-full overflow-y-auto rounded-xl border bg-background/95 p-3 shadow-xl sm:max-w-sm"
+            className="pointer-events-auto relative max-h-[35dvh] w-full overflow-y-auto rounded-xl border bg-background/95 p-3 shadow-xl sm:max-w-lg"
           >
             <Button
               size="icon"
@@ -324,6 +419,7 @@ export default function ExplorationMap({
               {canMove && (
                 <Button
                   size="sm"
+                  className="min-h-11 flex-1"
                   onClick={() => onMove(selected, candidate?.kind)}
                   aria-label={
                     candidate
@@ -354,10 +450,22 @@ export default function ExplorationMap({
     </section>
   );
   return (
-    <Dialog open={fullscreen} onOpenChange={setFullscreen}>
+    <Dialog
+      open={fullscreen}
+      onOpenChange={(open) => {
+        if (!open) closeFullscreen();
+      }}
+    >
       {fullscreen ? (
         <DialogContent
           className="inset-0 left-0 top-0 flex h-dvh max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 data-[state=open]:animate-none data-[state=closed]:animate-none sm:max-w-none [&>button]:hidden"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            requestAnimationFrame(() => {
+              viewport.current?.focus({ preventScroll: true });
+              center();
+            });
+          }}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             requestAnimationFrame(() => fullButton.current?.focus());

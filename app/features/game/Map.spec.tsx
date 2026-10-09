@@ -112,3 +112,31 @@ it("allows previews but not movement while combat or rest disables travel", () =
     screen.queryByRole("button", { name: /へ移動/ }),
   ).not.toBeInTheDocument();
 });
+it("requests browser fullscreen and retains the app fallback when permission is denied", async () => {
+  const request = vi.fn().mockRejectedValue(new Error("Unsupported"));
+  Object.defineProperty(document.documentElement, "requestFullscreen", {
+    configurable: true,
+    value: request,
+  });
+  try {
+    render(
+      <ExplorationMap
+        map={map}
+        knowledge={[]}
+        onMove={vi.fn()}
+        onOpen={vi.fn()}
+        disabled={false}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "マップを全画面表示" }),
+    );
+    expect(request).toHaveBeenCalledWith({ navigationUI: "hide" });
+    expect(screen.getByRole("dialog", { name: "冒険マップ" })).toBeVisible();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  } finally {
+    Reflect.deleteProperty(document.documentElement, "requestFullscreen");
+  }
+});

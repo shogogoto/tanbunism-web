@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "~/shared/components/ui/dialog";
 import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
+import EnemyAvatar from "./EnemyAvatar";
 import PlayerStatus from "./PlayerStatus";
 import type { Run } from "./domain";
 
@@ -58,7 +59,9 @@ export default function BattleDialog({
                 aria-label="敵"
                 className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 space-y-2"
               >
-                <h3 className="text-sm font-medium text-rose-500">敵</h3>
+                <h3 className="flex items-center gap-2 text-sm font-medium text-rose-500">
+                  <EnemyAvatar identity={`${run.resourceId}:${run.kills}`} />敵
+                </h3>
                 <p className="text-sm tabular-nums">
                   敵HP {run.enemyHp}/{run.enemyMaxHp}
                 </p>

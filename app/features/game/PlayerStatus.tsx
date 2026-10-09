@@ -7,7 +7,35 @@ export default function PlayerStatus({
   run,
   name = "あなた",
   player,
-}: { run: Run; name?: string; player?: UserReadPublic }) {
+  compact = false,
+}: { run: Run; name?: string; player?: UserReadPublic; compact?: boolean }) {
+  if (compact)
+    return (
+      <div
+        aria-label="プレイヤー"
+        className="mt-1 flex items-center gap-2 text-xs tabular-nums"
+      >
+        <UserAvatar user={player} className="size-6 shrink-0" />
+        <Heart className="size-3 text-rose-400" />
+        <span>
+          HP {run.hp}/{run.maxHp}
+        </span>
+        <div
+          role="progressbar"
+          tabIndex={-1}
+          aria-label="プレイヤーHP"
+          aria-valuenow={run.hp}
+          aria-valuemin={0}
+          aria-valuemax={run.maxHp}
+          className="h-1.5 w-16 overflow-hidden rounded-full bg-sky-500/15"
+        >
+          <div
+            className="h-full bg-sky-500"
+            style={{ width: `${Math.min(100, (run.hp / run.maxHp) * 100)}%` }}
+          />
+        </div>
+      </div>
+    );
   return (
     <section
       aria-label="プレイヤー"

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { answer, enterDungeon, move, newSave, resumeEvent } from "./domain";
+import {
+  answer,
+  continueExploring,
+  enterDungeon,
+  move,
+  newSave,
+  resumeEvent,
+} from "./domain";
 
 const entered = () => enterDungeon(newSave(), "resource", "本", 1);
 describe("adventure rules", () => {
@@ -48,5 +55,25 @@ describe("adventure rules", () => {
     expect(answer(save, true)).toBe(save);
     const peaceful = move(entered(), "s", 0.9);
     expect(move(peaceful, "s", 0.9)).toBe(peaceful);
+  });
+  it("continues a cleared lap from the same place without healing or resetting moves", () => {
+    let save = entered();
+    for (let i = 0; i < 3; i++)
+      save = answer(answer(move(save, `s${i}`, 0.1), true), true);
+    const next = continueExploring(save);
+    expect(next.run?.phase).toBe("path");
+    expect(next.run?.hp).toBe(save.run?.hp);
+    expect(next.run?.moves).toBe(3);
+    expect(next.run?.readIds).toEqual(save.run?.readIds);
+    expect(next.run?.kills).toBe(0);
+    expect(next.clears.resource).toBe(1);
+    expect(continueExploring({ ...save, battleFeedback: "正解" })).toEqual({
+      ...save,
+      battleFeedback: "正解",
+    });
+    if (!save.run) throw new Error("Expected run");
+    expect(
+      continueExploring({ ...save, run: { ...save.run, moves: 5 } }).run?.phase,
+    ).toBe("rest");
   });
 });

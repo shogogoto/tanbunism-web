@@ -26,6 +26,7 @@ import {
   type GameSave,
   MOVES_PER_EVENT,
   answer,
+  continueExploring,
   enterDungeon,
   move,
   newSave,
@@ -661,6 +662,7 @@ export function GamePlay({
                         {run.kills}/{ENEMIES_TO_CLEAR}
                       </p>
                       <PlayerStatus
+                        compact
                         run={run}
                         name={playerName}
                         player={player}
@@ -849,8 +851,28 @@ export function GamePlay({
                       <h3 className="font-semibold">ダンジョン攻略！</h3>
                       <p className="mt-2 text-sm">
                         攻略 {save.clears[run.resourceId]}周 ·
-                        復習の成果を持ち帰ろう。
+                        現在地から探索を続けられます。
                       </p>
+                      <Button
+                        className="mt-3"
+                        disabled={busy}
+                        onClick={() => {
+                          if (pendingMove.current) return;
+                          pendingMove.current = true;
+                          setBusy(true);
+                          setError(undefined);
+                          void update(continueExploring(save))
+                            .catch(() =>
+                              setError("探索の再開を保存できませんでした。"),
+                            )
+                            .finally(() => {
+                              pendingMove.current = false;
+                              setBusy(false);
+                            });
+                        }}
+                      >
+                        探索を続ける
+                      </Button>
                     </div>
                   ) : !feedback && run.phase === "defeated" ? (
                     <div aria-live="polite" className="rounded-lg border p-4">

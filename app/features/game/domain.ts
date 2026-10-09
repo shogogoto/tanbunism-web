@@ -93,6 +93,19 @@ export function resumeEvent(save: GameSave): GameSave {
   };
 }
 
+/** A lap is a reward, not a dead end. Continue without healing or extra moves. */
+export function continueExploring(save: GameSave): GameSave {
+  if (save.run?.phase !== "cleared" || save.battleFeedback) return save;
+  return {
+    ...save,
+    run: {
+      ...save.run,
+      kills: 0,
+      phase: save.run.moves >= MOVES_PER_EVENT ? "rest" : "path",
+    },
+  };
+}
+
 export function move(
   save: GameSave,
   sentenceId: string,
