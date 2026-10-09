@@ -6,9 +6,10 @@ export async function invalidateGamification(
   { preserveData = false }: { preserveData?: boolean } = {},
 ) {
   // 永続キャッシュの削除に失敗しても、表示中のXPは再取得する。
-  await genericCache
-    .deletePrefix("public:profile-detail:")
-    .catch(() => undefined);
+  await Promise.all([
+    genericCache.deletePrefix("public:profile-detail:"),
+    genericCache.deletePrefix("unified-search-user-"),
+  ]).catch(() => undefined);
   const matches = (key: unknown) => {
     const text = typeof key === "string" ? key : JSON.stringify(key);
     return /learning-progress|resource-growth|profile-detail/.test(text ?? "");

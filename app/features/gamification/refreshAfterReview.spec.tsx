@@ -95,6 +95,8 @@ it.each(["quiz", "exposure"])(
     await genericCache.set("public:profile-detail:resource-xp-v4:user-1", {
       stale: true,
     });
+    await genericCache.set("unified-search-user-old", { stale: true });
+    await genericCache.set("unified-search-knowledge-keep", { retained: true });
     render(
       <SWRConfig
         value={{ provider: () => new Map(), dedupingInterval: 30_000 }}
@@ -130,5 +132,9 @@ it.each(["quiz", "exposure"])(
       await genericCache.get("public:profile-detail:resource-xp-v4:user-1"),
     ).toBeUndefined();
     expect(fetches).toBe(2);
+    expect(await genericCache.get("unified-search-user-old")).toBeUndefined();
+    expect(await genericCache.get("unified-search-knowledge-keep")).toEqual({
+      retained: true,
+    });
   },
 );

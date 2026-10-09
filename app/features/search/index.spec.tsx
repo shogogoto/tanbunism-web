@@ -148,6 +148,28 @@ function renderSearch(initialEntry = "/search?q=数学") {
 }
 
 describe("統合検索", () => {
+  it("旧算出方法のユーザーLvキャッシュを表示しない", async () => {
+    await genericCache.set(
+      createCacheKey("unified-search-user", {
+        query: "数学",
+        settings: JSON.stringify(defaultSearchSettings.user),
+        page: 1,
+      }),
+      { type: "user", data: [{ user, level: 99 }], total: 1 },
+    );
+    server.use(
+      http.post("*/user/search", () => new HttpResponse(null, { status: 503 })),
+    );
+    const ui = userEvent.setup();
+    renderSearch();
+    await ui.click(screen.getByRole("tab", { name: "ユーザー" }));
+    await screen.findByText("ユーザーを検索できませんでした。");
+    expect(
+      screen.queryByRole("link", { name: /読書家/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Lv. 99")).not.toBeInTheDocument();
+  });
+
   it("左右スワイプでタブを切り替え検索文字列を保持する", async () => {
     renderSearch();
     const swipeLeft = (element: HTMLElement) => {

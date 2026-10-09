@@ -429,6 +429,7 @@ function searchCacheKey(
   settings: SearchSettings,
 ) {
   return createCacheKey(`unified-search-${type}`, {
+    ...(type === "user" ? { levelVersion: "resource-ledger-v1" } : {}),
     query,
     settings: JSON.stringify(settings[type]),
     page,
