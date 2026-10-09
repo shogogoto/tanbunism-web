@@ -39,12 +39,64 @@ it("marks current location and offers only adjacent places for one-step travel",
   ).not.toBeInTheDocument();
   await userEvent
     .setup()
-    .click(screen.getByRole("button", { name: "用語Aへ移動" }));
-  expect(onMove).toHaveBeenCalledWith("a");
+    .click(screen.getByRole("button", { name: /領域 1.*用語A/ }));
   await userEvent
     .setup()
-    .click(screen.getByRole("button", { name: /領域 1.*用語A/ }));
+    .click(screen.getByRole("button", { name: "用語Aへ移動" }));
+  expect(onMove).toHaveBeenCalledWith("a", undefined);
+  await userEvent.setup().click(screen.getByRole("button", { name: "詳細" }));
   expect(onOpen).toHaveBeenCalledWith("a");
+});
+it("shows unexplored candidates on the map and moves only after confirmation", async () => {
+  const onMove = vi.fn();
+  render(
+    <ExplorationMap
+      map={map}
+      knowledge={[]}
+      candidates={[
+        {
+          knowledge: {
+            uid: "c",
+            sentence: "新しい単文",
+            term: { names: ["用語C"] },
+          },
+          kind: "relation",
+        },
+      ]}
+      onMove={onMove}
+      onOpen={vi.fn()}
+      disabled={false}
+    />,
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: /未探索.*用語C/ }));
+  expect(onMove).not.toHaveBeenCalled();
+  expect(screen.getByText("新しい単文")).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "見たよ · この道へ" }));
+  expect(onMove).toHaveBeenCalledWith("c", "relation");
+});
+it("enters app fullscreen, supports Escape, and restores focus without moving", async () => {
+  const onMove = vi.fn();
+  render(
+    <ExplorationMap
+      map={map}
+      knowledge={[]}
+      onMove={onMove}
+      onOpen={vi.fn()}
+      disabled={false}
+    />,
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "マップを全画面表示" }));
+  expect(screen.getByRole("dialog", { name: "冒険マップ" })).toBeVisible();
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await vi.waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "マップを全画面表示" }),
+    ).toHaveFocus(),
+  );
+  expect(onMove).not.toHaveBeenCalled();
 });
 it("allows previews but not movement while combat or rest disables travel", () => {
   render(

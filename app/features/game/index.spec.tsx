@@ -172,7 +172,7 @@ it("does not enter or lose local progress when another device consumed the right
     ),
   );
   renderGame();
-  await enter();
+  await enter(false);
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "別端末で使用済み",
   );
@@ -282,11 +282,15 @@ function RefreshAccess() {
     </button>
   );
 }
-async function enter() {
+async function enter(select = true) {
   const user = userEvent.setup();
   await user.click(
     await screen.findByRole("button", { name: "ダンジョンに入る" }),
   );
+  if (select)
+    await user.click(
+      await screen.findByRole("button", { name: /未探索.*進路の用語/ }),
+    );
   return user;
 }
 it("records seen knowledge, takes quiz damage and restores the run after remount", async () => {
@@ -450,7 +454,7 @@ it("selects a destination when adventure is opened directly", async () => {
   await user.click(screen.getByRole("button", { name: "ブラウザで戻る" }));
   expect(screen.getByTestId("pathname").textContent).toBe("/game/adventure");
   expect(
-    screen.getByRole("button", { name: "見たよ · この道へ" }),
+    screen.getByRole("button", { name: /未探索.*進路の用語/ }),
   ).toBeVisible();
   expect(stateLoadCount).toBe(1);
   expect(consumeCount).toBe(1);
@@ -469,8 +473,30 @@ it("does not advance when the seen API fails", async () => {
 it("shows terms on knowledge offered as the next path", async () => {
   renderGame();
   await enter();
-  expect(screen.getByText("進路の用語")).toBeVisible();
-  expect(screen.getByText("知識の進路")).toBeVisible();
+  const selected = screen.getByRole("region", { name: "選択した地点" });
+  expect(within(selected).getByText("進路の用語")).toBeVisible();
+  expect(within(selected).getByText("知識の進路")).toBeVisible();
+});
+
+it("fullscreen is presentation-only and does not reset or save the adventure", async () => {
+  state = {
+    revision: 1,
+    save: enterDungeon(newSave(), "book", "テストの本", 1),
+  };
+  const original = state.save;
+  renderGame();
+  const user = userEvent.setup();
+  await screen.findByText("HP 35/35");
+  await user.click(screen.getByRole("button", { name: "マップを全画面表示" }));
+  expect(
+    within(screen.getByRole("dialog", { name: "冒険マップ" })).getByText(
+      "HP 35/35",
+    ),
+  ).toBeVisible();
+  await user.keyboard("{Escape}");
+  expect(state.save).toBe(original);
+  expect(state.revision).toBe(1);
+  expect(consumeCount).toBe(0);
 });
 
 it("selects an uncleared previous dungeon without consuming access until entry", async () => {
@@ -597,7 +623,9 @@ it("admin unlock is applied without healing or erasing progress", async () => {
   available = true;
   await user.click(screen.getByRole("button", { name: "冒険権を再確認" }));
   await user.click(await screen.findByRole("button", { name: "冒険を再開" }));
-  expect(await screen.findByText("第1地点へ · 次の進路")).toBeInTheDocument();
+  expect(
+    await screen.findByRole("heading", { name: "現在地 · 入口" }),
+  ).toBeInTheDocument();
   expect(state.save.run).toMatchObject({
     hp: 24,
     moves: 0,

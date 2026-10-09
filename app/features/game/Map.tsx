@@ -1,26 +1,65 @@
-import { MapPin } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { LocateFixed, Maximize, Minus, Plus, X } from "lucide-react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import UserAvatar from "~/features/user/UserAvatar";
+import { Button } from "~/shared/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "~/shared/components/ui/dialog";
+import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
+import PathTerms from "./PathTerms";
 import type { PathKnowledge } from "./api";
 import { type DungeonMap, ENTRANCE, neighbours } from "./exploration";
 
-/** Stable first-discovery layout: branches stay put when the player backtracks. */
+export type MapCandidate = {
+  knowledge: PathKnowledge;
+  kind: "relation" | "detour";
+};
+
 export default function ExplorationMap({
   map,
   knowledge,
+  candidates = [],
   onOpen,
   onMove,
   disabled,
+  player,
+  title,
+  status,
+  children,
 }: {
   map: DungeonMap;
   knowledge: PathKnowledge[];
+  candidates?: MapCandidate[];
   onOpen: (id: string) => void;
-  onMove: (id: string) => void;
+  onMove: (id: string, kind?: "relation" | "detour") => void;
   disabled: boolean;
+  player?: UserReadPublic;
+  title?: string;
+  status?: ReactNode;
+  children?: ReactNode;
 }) {
-  const sentences = new Map(knowledge.map((item) => [item.uid, item]));
+  const [fullscreen, setFullscreen] = useState(false);
+  const [selected, setSelected] = useState<string>();
+  const [zoom, setZoom] = useState(1);
   const viewport = useRef<HTMLDivElement>(null);
+  const fullButton = useRef<HTMLButtonElement>(null);
+  const drag = useRef<
+    { x: number; y: number; left: number; top: number } | undefined
+  >(undefined);
+  const sentences = new Map(
+    [...knowledge, ...candidates.map((item) => item.knowledge)].map((item) => [
+      item.uid,
+      item,
+    ]),
+  );
   const adjacent = neighbours(map);
   const allIds = [ENTRANCE, ...map.places.map((place) => place.id)];
+  const fresh = candidates.filter(
+    (item) => !allIds.includes(item.knowledge.uid),
+  );
   const levels = new Map<string, number>([[ENTRANCE, 0]]);
   const positions = new Map<string, { x: number; y: number }>();
   const columns = new Map<number, number>();
@@ -31,111 +70,308 @@ export default function ExplorationMap({
     levels.set(id, level);
     const row = columns.get(level) ?? 0;
     columns.set(level, row + 1);
-    positions.set(id, { x: 30 + level * 160, y: 30 + row * 105 });
+    positions.set(id, { x: 360 + level * 230, y: 220 + row * 150 });
   }
-  const width = Math.max(320, ...[...positions.values()].map((p) => p.x + 150));
-  const height = Math.max(130, ...[...positions.values()].map((p) => p.y + 95));
-  const index = map.places.findIndex((place) => place.id === map.current);
+  const candidateLevel = (levels.get(map.current) ?? 0) + 1;
+  for (const item of fresh) {
+    const row = columns.get(candidateLevel) ?? 0;
+    columns.set(candidateLevel, row + 1);
+    positions.set(item.knowledge.uid, {
+      x: 360 + candidateLevel * 230,
+      y: 220 + row * 150,
+    });
+  }
+  const width = Math.max(
+    1200,
+    ...[...positions.values()].map((p) => p.x + 460),
+  );
+  const height = Math.max(
+    800,
+    ...[...positions.values()].map((p) => p.y + 320),
+  );
   const currentPosition = positions.get(map.current);
-  useEffect(() => {
+  function center() {
     viewport.current?.scrollTo?.({
       left: Math.max(
         0,
-        (currentPosition?.x ?? 0) -
-          (viewport.current.clientWidth ?? 0) / 2 +
-          64,
+        (currentPosition?.x ?? 0) * zoom -
+          viewport.current.clientWidth / 2 +
+          80 * zoom,
       ),
-      top: Math.max(0, (currentPosition?.y ?? 0) - 50),
+      top: Math.max(
+        0,
+        (currentPosition?.y ?? 0) * zoom -
+          viewport.current.clientHeight / 2 +
+          40 * zoom,
+      ),
     });
-  }, [currentPosition?.x, currentPosition?.y]);
-  return (
+  }
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-center when the canvas moves into/out of the fullscreen portal.
+  useEffect(() => {
+    center();
+  }, [currentPosition?.x, currentPosition?.y, zoom, fullscreen]);
+  useEffect(() => {
+    if (map.current) setSelected(undefined);
+  }, [map.current]);
+  const chosen = selected ? sentences.get(selected) : undefined;
+  const candidate = candidates.find((item) => item.knowledge.uid === selected);
+  const canMove =
+    !disabled &&
+    selected !== map.current &&
+    Boolean(selected && (adjacent.includes(selected) || candidate));
+  const index = map.places.findIndex((place) => place.id === map.current);
+  const canvas = (
     <section
       aria-label="ダンジョンのマップ"
-      className="min-w-0 rounded-xl border p-3"
+      className={`relative isolate min-w-0 overflow-hidden bg-background ${fullscreen ? "h-dvh w-full" : "h-[calc(100dvh-11rem)] min-h-[440px] rounded-xl border sm:h-[calc(100dvh-7rem)]"}`}
     >
-      <h3 className="flex items-center gap-2 text-sm font-medium">
-        <MapPin className="size-4 text-primary" />
-        現在地 · {map.current === ENTRANCE ? "入口" : `第${index + 1}地点`}
-      </h3>
-      <p className="mt-1 text-xs text-muted-foreground">
-        開拓 {map.places.length}地点 · 達成度{" "}
-        {Math.floor(map.places.length / 5)} · 破線は寄り道
-      </p>
       <div
         ref={viewport}
-        className="mt-3 max-h-80 overflow-auto rounded-lg bg-muted/20"
         aria-label="探索マップをスクロール"
+        className="absolute inset-0 overflow-auto overscroll-contain cursor-grab active:cursor-grabbing"
+        onPointerDown={(event) => {
+          if (
+            event.pointerType !== "mouse" ||
+            (event.target as Element).closest("button")
+          )
+            return;
+          drag.current = {
+            x: event.clientX,
+            y: event.clientY,
+            left: event.currentTarget.scrollLeft,
+            top: event.currentTarget.scrollTop,
+          };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          if (drag.current) {
+            event.currentTarget.scrollLeft =
+              drag.current.left + drag.current.x - event.clientX;
+            event.currentTarget.scrollTop =
+              drag.current.top + drag.current.y - event.clientY;
+          }
+        }}
+        onPointerUp={() => {
+          drag.current = undefined;
+        }}
+        onPointerCancel={() => {
+          drag.current = undefined;
+        }}
       >
-        <div className="relative" style={{ width, height }}>
-          <svg
-            aria-hidden="true"
-            className="absolute inset-0 text-primary/40"
-            width={width}
-            height={height}
+        <div style={{ width: width * zoom, height: height * zoom }}>
+          <div
+            className="relative bg-[radial-gradient(circle,var(--color-border)_1px,transparent_1px)] bg-[size:28px_28px]"
+            style={{
+              width,
+              height,
+              transform: `scale(${zoom})`,
+              transformOrigin: "top left",
+            }}
           >
-            {map.edges.map((edge) => {
-              const from = positions.get(edge.from);
-              const to = positions.get(edge.to);
-              if (!from || !to) return null;
-              return (
-                <line
-                  key={`${edge.from}:${edge.to}`}
-                  x1={from.x + 60}
-                  y1={from.y + 28}
-                  x2={to.x + 60}
-                  y2={to.y + 28}
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeDasharray={edge.kind === "detour" ? "5 5" : undefined}
-                />
-              );
-            })}
-          </svg>
-          {allIds.map((id, i) => {
-            const point = positions.get(id);
-            const item = sentences.get(id);
-            const current = map.current === id;
-            const canMove = !disabled && !current && adjacent.includes(id);
-            const label =
-              id === ENTRANCE
-                ? "入口"
-                : item?.term?.names?.[0] || item?.sentence || `地点 ${i}`;
-            return (
-              <div
-                key={id}
-                className="absolute w-32"
-                style={{ left: point?.x, top: point?.y }}
-              >
-                <button
-                  type="button"
-                  aria-current={current ? "location" : undefined}
-                  onClick={() => id !== ENTRANCE && onOpen(id)}
-                  className={`w-full rounded-lg border bg-background p-2 text-left text-xs hover:bg-muted ${current ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
-                >
-                  <span className="block text-muted-foreground">
-                    {current
-                      ? "現在地"
-                      : id === ENTRANCE
-                        ? "入口"
-                        : `領域 ${map.places[i - 1].region + 1}`}
-                  </span>
-                  <span className="line-clamp-2 font-medium">{label}</span>
-                </button>
-                {canMove && (
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 text-primary/50"
+              width={width}
+              height={height}
+            >
+              {[
+                ...map.edges,
+                ...fresh.map((item) => ({
+                  from: map.current,
+                  to: item.knowledge.uid,
+                  kind: item.kind,
+                })),
+              ].map((edge) => {
+                const from = positions.get(edge.from);
+                const to = positions.get(edge.to);
+                return from && to ? (
+                  <line
+                    key={`${edge.from}:${edge.to}`}
+                    x1={from.x + 80}
+                    y1={from.y + 38}
+                    x2={to.x + 80}
+                    y2={to.y + 38}
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeDasharray={edge.kind === "detour" ? "8 8" : undefined}
+                  />
+                ) : null;
+              })}
+            </svg>
+            {[...allIds, ...fresh.map((item) => item.knowledge.uid)].map(
+              (id, i) => {
+                const point = positions.get(id);
+                const item = sentences.get(id);
+                const current = id === map.current;
+                const unexplored = i >= allIds.length;
+                const label =
+                  id === ENTRANCE
+                    ? "入口"
+                    : item?.term?.names?.[0] || item?.sentence || `地点 ${i}`;
+                return (
                   <button
+                    key={id}
                     type="button"
-                    className="mt-1 w-full rounded border bg-background px-2 py-1 text-xs hover:bg-muted"
-                    onClick={() => onMove(id)}
-                    aria-label={`${label}へ移動`}
+                    aria-current={current ? "location" : undefined}
+                    aria-pressed={selected === id}
+                    onClick={() => setSelected(id)}
+                    className={`absolute w-40 rounded-xl border bg-background/95 p-3 text-left text-sm shadow-lg hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${current ? "border-primary ring-4 ring-primary/20" : unexplored ? "border-dashed border-primary/60" : "border-border"}`}
+                    style={{ left: point?.x, top: point?.y }}
                   >
-                    移動 · １歩
+                    {current && (
+                      <UserAvatar
+                        user={player}
+                        className="absolute -top-9 left-1/2 size-10 -translate-x-1/2 border-2 border-primary shadow-lg"
+                      />
+                    )}
+                    <span className="block text-xs text-muted-foreground">
+                      {current
+                        ? "現在地"
+                        : unexplored
+                          ? "未探索"
+                          : id === ENTRANCE
+                            ? "入口"
+                            : `領域 ${map.places[i - 1].region + 1}`}
+                    </span>
+                    <span className="line-clamp-2 font-medium">{label}</span>
                   </button>
-                )}
-              </div>
-            );
-          })}
+                );
+              },
+            )}
+          </div>
         </div>
       </div>
+      <header className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2">
+        <div className="pointer-events-auto min-w-0 max-w-[65%] rounded-xl border bg-background/95 p-2 shadow-lg sm:max-w-sm sm:p-3">
+          {title && <h2 className="truncate text-sm font-semibold">{title}</h2>}
+          <h3 className="text-xs">
+            現在地 · {map.current === ENTRANCE ? "入口" : `第${index + 1}地点`}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            開拓 {map.places.length}地点 · 達成度{" "}
+            {Math.floor(map.places.length / 5)}
+          </p>
+          {status}
+        </div>
+        <div className="pointer-events-auto flex flex-col gap-1 rounded-lg border bg-background/95 p-1 shadow-lg sm:flex-row">
+          <Button
+            size="icon"
+            variant="ghost"
+            ref={fullButton}
+            aria-label={fullscreen ? "全画面を終了" : "マップを全画面表示"}
+            onClick={() => setFullscreen(!fullscreen)}
+          >
+            <Maximize className="size-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="現在地へ"
+            onClick={center}
+          >
+            <LocateFixed className="size-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="拡大"
+            disabled={zoom >= 1.5}
+            onClick={() => setZoom((value) => Math.min(1.5, value + 0.25))}
+          >
+            <Plus className="size-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="縮小"
+            disabled={zoom <= 0.5}
+            onClick={() => setZoom((value) => Math.max(0.5, value - 0.25))}
+          >
+            <Minus className="size-4" />
+          </Button>
+        </div>
+      </header>
+      <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="pointer-events-auto max-w-full space-y-2 text-xs">
+          {children}
+          <p className="w-fit rounded bg-background/90 px-2 py-1 text-muted-foreground">
+            実線：知識の関係 · 破線：寄り道
+          </p>
+        </div>
+        {selected && (
+          <section
+            aria-label="選択した地点"
+            className="pointer-events-auto relative max-h-[45dvh] w-full overflow-y-auto rounded-xl border bg-background/95 p-3 shadow-xl sm:max-w-sm"
+          >
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute right-1 top-1"
+              aria-label="地点の選択を閉じる"
+              onClick={() => setSelected(undefined)}
+            >
+              <X className="size-4" />
+            </Button>
+            <div className="pr-8">
+              <PathTerms knowledge={chosen} />
+              <p className="mt-2 text-sm leading-relaxed">
+                {selected === ENTRANCE
+                  ? "ダンジョンの入口"
+                  : (chosen?.sentence ?? "単文詳細を開く")}
+              </p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {canMove && (
+                <Button
+                  size="sm"
+                  onClick={() => onMove(selected, candidate?.kind)}
+                  aria-label={
+                    candidate
+                      ? undefined
+                      : `${chosen?.term?.names?.[0] || chosen?.sentence || (selected === ENTRANCE ? "入口" : selected)}へ移動`
+                  }
+                >
+                  {candidate
+                    ? candidate.kind === "detour" && map.current !== ENTRANCE
+                      ? "見たよ · 寄り道へ"
+                      : "見たよ · この道へ"
+                    : "移動 · １歩"}
+                </Button>
+              )}
+              {selected !== ENTRANCE && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onOpen(selected)}
+                >
+                  詳細
+                </Button>
+              )}
+            </div>
+          </section>
+        )}
+      </div>
     </section>
+  );
+  return (
+    <Dialog open={fullscreen} onOpenChange={setFullscreen}>
+      {fullscreen ? (
+        <DialogContent
+          className="inset-0 left-0 top-0 flex h-dvh max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 data-[state=open]:animate-none data-[state=closed]:animate-none sm:max-w-none [&>button]:hidden"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            requestAnimationFrame(() => fullButton.current?.focus());
+          }}
+        >
+          <DialogTitle className="sr-only">冒険マップ</DialogTitle>
+          <DialogDescription className="sr-only">
+            地点を選択して探索します。Escapeで全画面を終了します。
+          </DialogDescription>
+          {canvas}
+        </DialogContent>
+      ) : (
+        canvas
+      )}
+    </Dialog>
   );
 }

@@ -18,7 +18,6 @@ import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
 import BattleDialog from "./BattleDialog";
 import ExplorationMap from "./Map";
-import PathTerms from "./PathTerms";
 import PlayerStatus from "./PlayerStatus";
 import { useAdventureAccess } from "./access";
 import { loadConnectedKnowledge, loadDungeon } from "./api";
@@ -416,7 +415,9 @@ export function GamePlay({
   });
 
   return (
-    <section className="mx-auto w-full max-w-3xl space-y-4 p-3 pb-8 sm:p-6">
+    <section
+      className={`mx-auto w-full space-y-4 p-2 pb-8 sm:p-3 ${run && menu === "adventure" ? "" : "max-w-3xl"}`}
+    >
       <div className="space-y-4">
         {(error || access.error || growthError || progress.error) && (
           <p role="alert" className="text-sm text-destructive">
@@ -643,254 +644,235 @@ export function GamePlay({
             </>
           ) : (
             <>
-              <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
-                <p className="text-xs text-muted-foreground">ダンジョン</p>
-                <h2 className="font-semibold">{run.name}</h2>
-                <p className="text-xs text-muted-foreground">
-                  今回の移動 {run.moves}/{MOVES_PER_EVENT} · 撃破 {run.kills}/
-                  {ENEMIES_TO_CLEAR}
-                </p>
-              </div>
-              <PlayerStatus run={run} name={playerName} player={player} />
               {map && (
                 <ExplorationMap
                   key={run.resourceId}
                   map={map}
                   knowledge={content?.knowledge ?? []}
                   onOpen={(sentenceId) => openPreview({ sentenceId })}
-                  onMove={(sentenceId) => void advance(sentenceId)}
+                  onMove={(sentenceId, kind) => void advance(sentenceId, kind)}
                   disabled={busy || Boolean(feedback) || run.phase !== "path"}
-                />
-              )}
-              {isLoading && <Loading />}
-              {(feedback || run.phase === "battle") && (
-                <BattleDialog
-                  run={run}
-                  playerName={playerName}
                   player={player}
-                  busy={busy || answerSubmitting}
-                >
-                  {error && (
-                    <p role="alert" className="text-sm text-destructive">
-                      {error}
-                    </p>
-                  )}
-                  {feedback ? (
-                    <div className="rounded-lg border p-4 space-y-3">
-                      <output className="block">{feedback}</output>
-                      {quiz && (
-                        <QuizPreviewPrompt quiz={quiz} showCorrectAnswer />
-                      )}
-                      <Button
-                        disabled={busy}
-                        onClick={() => {
-                          setBusy(true);
-                          void update({ ...save, battleFeedback: undefined })
-                            .catch((cause) => setError(cause.message))
-                            .finally(() => setBusy(false));
-                        }}
-                      >
-                        続ける
-                      </Button>
-                    </div>
-                  ) : quiz ? (
+                  title={run.name}
+                  status={
                     <>
                       <p className="text-xs text-muted-foreground">
-                        正解で敵にダメージ。不正解であなたにダメージ。
+                        今回の移動 {run.moves}/{MOVES_PER_EVENT} · 撃破{" "}
+                        {run.kills}/{ENEMIES_TO_CLEAR}
                       </p>
-                      <div className="flex items-center gap-3 text-sm tabular-nums">
-                        <span
-                          role="timer"
-                          className={
-                            remainingSeconds !== undefined &&
-                            remainingSeconds <= 10
-                              ? "text-destructive"
-                              : undefined
-                          }
-                        >
-                          {answerSubmitting
-                            ? "回答を送信中"
-                            : remainingSeconds === undefined
-                              ? "制限時間を準備中…"
-                              : `残り ${remainingSeconds}秒`}
-                        </span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full bg-amber-500 transition-[width]"
-                            style={{
-                              width: `${Math.min(100, ((remainingSeconds ?? 0) / (run.answerSeconds ?? 1)) * 100)}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <QuizAttempt
-                        key={`${run.resourceId}:${run.quizCursor}`}
-                        quiz={quiz}
-                        compactMobile
-                        disabled={
-                          busy || !run.answerDeadline || remainingSeconds === 0
-                        }
-                        canSubmit={() =>
-                          Boolean(
-                            run.answerDeadline &&
-                              (access.data
-                                ? access.data.server_now +
-                                  Date.now() -
-                                  access.data.receivedAt
-                                : Date.now()) < run.answerDeadline,
-                          )
-                        }
-                        onSubmittingChange={(submitting) => {
-                          answerRequestPending.current = submitting;
-                          if (submitting)
-                            submittedOnTime.current = Boolean(
-                              run.answerDeadline &&
-                                (access.data
-                                  ? access.data.server_now +
-                                    Date.now() -
-                                    access.data.receivedAt
-                                  : Date.now()) < run.answerDeadline,
-                            );
-                          setAnswerSubmitting(submitting);
-                        }}
-                        onAnswered={(correct) => {
-                          void settleAnswer(
-                            correct && submittedOnTime.current,
-                            !submittedOnTime.current,
-                          );
-                        }}
+                      <PlayerStatus
+                        run={run}
+                        name={playerName}
+                        player={player}
                       />
                     </>
-                  ) : isLoading ? (
-                    <Loading />
-                  ) : (
-                    <div className="space-y-2">
-                      <p role="alert">クイズを取得できませんでした。</p>
-                      <Button
-                        variant="outline"
-                        onClick={() => void retryContent()}
-                      >
-                        再試行
-                      </Button>
-                    </div>
-                  )}
-                </BattleDialog>
-              )}
-              {!feedback && run.phase === "path" && content ? (
-                <>
-                  <h3 className="text-sm font-medium">
-                    第{run.readIds.length + 1}地点へ · 次の進路
-                  </h3>
-                  {connectionsLoading && <Loading />}
-                  {connectionError && (
-                    <div role="alert" className="text-sm space-y-2">
-                      <p>{connectionError.message}</p>
-                      <Button
-                        variant="outline"
-                        onClick={() => void retryConnections()}
-                      >
-                        繋がりを再取得
-                      </Button>
-                    </div>
-                  )}
-                  {paths.map((item) => (
-                    <div
-                      key={item.uid}
-                      className="rounded-lg border p-3 space-y-3"
-                    >
-                      <PathTerms knowledge={item} />
-                      <p className="text-base leading-relaxed">
-                        {item.sentence}
-                      </p>
-                      <div className="flex gap-2">
-                        <Button
-                          disabled={busy}
-                          onClick={() =>
-                            void advance(
-                              item.uid,
-                              map?.current === ENTRANCE ? "detour" : "relation",
-                            )
-                          }
-                        >
-                          見たよ · この道へ
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          onClick={() => openPreview({ sentenceId: item.uid })}
-                        >
-                          詳細
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {detour && (
-                    <div className="rounded-lg border border-dashed p-3 space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        寄り道 · 知識の関係とは別の道
-                      </p>
-                      <PathTerms knowledge={detour} />
-                      <p>{detour.sentence}</p>
-                      <Button
-                        disabled={busy}
-                        variant="outline"
-                        onClick={() => void advance(detour.uid)}
-                      >
-                        見たよ · 寄り道へ
-                      </Button>
-                    </div>
-                  )}
-                  {!paths.length &&
-                    !detour &&
-                    !connectionsLoading &&
-                    !connectionError && (
-                      <p className="text-sm text-muted-foreground">
-                        新しい道はありません。マップから通った道を戻れます。
-                      </p>
-                    )}
-                </>
-              ) : !feedback && run.phase === "rest" ? (
-                <div className="rounded-lg border p-4 space-y-3">
-                  <h3 className="font-semibold">今回の冒険はここまで</h3>
-                  <p className="text-sm text-muted-foreground">
-                    HP・撃破数を引き継いで次の冒険へ。ダンジョン内では回復しません。
-                  </p>
-                  <Button
-                    disabled={!canStart}
-                    onClick={() => void startEvent()}
-                  >
-                    {!access.data?.available && remainingMinutes
-                      ? `あと${remainingMinutes}分`
-                      : "冒険を再開"}
-                  </Button>
-                </div>
-              ) : !feedback && run.phase === "cleared" ? (
-                <div
-                  aria-live="polite"
-                  className="rounded-lg border border-emerald-500/50 bg-emerald-500/5 p-4"
+                  }
+                  candidates={
+                    !feedback && run.phase === "path"
+                      ? [
+                          ...paths.map((knowledge) => ({
+                            knowledge,
+                            kind:
+                              map.current === ENTRANCE
+                                ? ("detour" as const)
+                                : ("relation" as const),
+                          })),
+                          ...(detour
+                            ? [{ knowledge: detour, kind: "detour" as const }]
+                            : []),
+                        ]
+                      : []
+                  }
                 >
-                  <h3 className="font-semibold">ダンジョン攻略！</h3>
-                  <p className="mt-2 text-sm">
-                    攻略 {save.clears[run.resourceId]}周 ·
-                    復習の成果を持ち帰ろう。
-                  </p>
-                </div>
-              ) : !feedback && run.phase === "defeated" ? (
-                <div aria-live="polite" className="rounded-lg border p-4">
-                  <h3 className="font-semibold">冒険失敗</h3>
-                  <p className="mt-2 text-sm">
-                    攻略は振り出しへ。復習履歴とXPは失われません。
-                  </p>
-                </div>
-              ) : null}
-              <Button
-                variant="outline"
-                disabled={busy || run.phase === "battle" || Boolean(feedback)}
-                onClick={() => void leave()}
-              >
-                {run.phase === "cleared" || run.phase === "defeated"
-                  ? "入口へ戻る"
-                  : "ダンジョンを切り替える"}
-              </Button>
+                  {isLoading && <Loading />}
+                  {(feedback || run.phase === "battle") && (
+                    <BattleDialog
+                      run={run}
+                      playerName={playerName}
+                      player={player}
+                      busy={busy || answerSubmitting}
+                    >
+                      {error && (
+                        <p role="alert" className="text-sm text-destructive">
+                          {error}
+                        </p>
+                      )}
+                      {feedback ? (
+                        <div className="rounded-lg border p-4 space-y-3">
+                          <output className="block">{feedback}</output>
+                          {quiz && (
+                            <QuizPreviewPrompt quiz={quiz} showCorrectAnswer />
+                          )}
+                          <Button
+                            disabled={busy}
+                            onClick={() => {
+                              setBusy(true);
+                              void update({
+                                ...save,
+                                battleFeedback: undefined,
+                              })
+                                .catch((cause) => setError(cause.message))
+                                .finally(() => setBusy(false));
+                            }}
+                          >
+                            続ける
+                          </Button>
+                        </div>
+                      ) : quiz ? (
+                        <>
+                          <p className="text-xs text-muted-foreground">
+                            正解で敵にダメージ。不正解であなたにダメージ。
+                          </p>
+                          <div className="flex items-center gap-3 text-sm tabular-nums">
+                            <span
+                              role="timer"
+                              className={
+                                remainingSeconds !== undefined &&
+                                remainingSeconds <= 10
+                                  ? "text-destructive"
+                                  : undefined
+                              }
+                            >
+                              {answerSubmitting
+                                ? "回答を送信中"
+                                : remainingSeconds === undefined
+                                  ? "制限時間を準備中…"
+                                  : `残り ${remainingSeconds}秒`}
+                            </span>
+                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className="h-full bg-amber-500 transition-[width]"
+                                style={{
+                                  width: `${Math.min(100, ((remainingSeconds ?? 0) / (run.answerSeconds ?? 1)) * 100)}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <QuizAttempt
+                            key={`${run.resourceId}:${run.quizCursor}`}
+                            quiz={quiz}
+                            compactMobile
+                            disabled={
+                              busy ||
+                              !run.answerDeadline ||
+                              remainingSeconds === 0
+                            }
+                            canSubmit={() =>
+                              Boolean(
+                                run.answerDeadline &&
+                                  (access.data
+                                    ? access.data.server_now +
+                                      Date.now() -
+                                      access.data.receivedAt
+                                    : Date.now()) < run.answerDeadline,
+                              )
+                            }
+                            onSubmittingChange={(submitting) => {
+                              answerRequestPending.current = submitting;
+                              if (submitting)
+                                submittedOnTime.current = Boolean(
+                                  run.answerDeadline &&
+                                    (access.data
+                                      ? access.data.server_now +
+                                        Date.now() -
+                                        access.data.receivedAt
+                                      : Date.now()) < run.answerDeadline,
+                                );
+                              setAnswerSubmitting(submitting);
+                            }}
+                            onAnswered={(correct) => {
+                              void settleAnswer(
+                                correct && submittedOnTime.current,
+                                !submittedOnTime.current,
+                              );
+                            }}
+                          />
+                        </>
+                      ) : isLoading ? (
+                        <Loading />
+                      ) : (
+                        <div className="space-y-2">
+                          <p role="alert">クイズを取得できませんでした。</p>
+                          <Button
+                            variant="outline"
+                            onClick={() => void retryContent()}
+                          >
+                            再試行
+                          </Button>
+                        </div>
+                      )}
+                    </BattleDialog>
+                  )}
+                  {!feedback && run.phase === "path" && content ? (
+                    <>
+                      {connectionsLoading && <Loading />}
+                      {connectionError && (
+                        <div role="alert" className="text-sm space-y-2">
+                          <p>{connectionError.message}</p>
+                          <Button
+                            variant="outline"
+                            onClick={() => void retryConnections()}
+                          >
+                            繋がりを再取得
+                          </Button>
+                        </div>
+                      )}
+                      {!paths.length &&
+                        !detour &&
+                        !connectionsLoading &&
+                        !connectionError && (
+                          <p className="text-sm text-muted-foreground">
+                            新しい道はありません。マップから通った道を戻れます。
+                          </p>
+                        )}
+                    </>
+                  ) : !feedback && run.phase === "rest" ? (
+                    <div className="rounded-lg border p-4 space-y-3">
+                      <h3 className="font-semibold">今回の冒険はここまで</h3>
+                      <p className="text-sm text-muted-foreground">
+                        HP・撃破数を引き継いで次の冒険へ。ダンジョン内では回復しません。
+                      </p>
+                      <Button
+                        disabled={!canStart}
+                        onClick={() => void startEvent()}
+                      >
+                        {!access.data?.available && remainingMinutes
+                          ? `あと${remainingMinutes}分`
+                          : "冒険を再開"}
+                      </Button>
+                    </div>
+                  ) : !feedback && run.phase === "cleared" ? (
+                    <div
+                      aria-live="polite"
+                      className="rounded-lg border border-emerald-500/50 bg-emerald-500/5 p-4"
+                    >
+                      <h3 className="font-semibold">ダンジョン攻略！</h3>
+                      <p className="mt-2 text-sm">
+                        攻略 {save.clears[run.resourceId]}周 ·
+                        復習の成果を持ち帰ろう。
+                      </p>
+                    </div>
+                  ) : !feedback && run.phase === "defeated" ? (
+                    <div aria-live="polite" className="rounded-lg border p-4">
+                      <h3 className="font-semibold">冒険失敗</h3>
+                      <p className="mt-2 text-sm">
+                        攻略は振り出しへ。復習履歴とXPは失われません。
+                      </p>
+                    </div>
+                  ) : null}
+                  <Button
+                    variant="outline"
+                    disabled={
+                      busy || run.phase === "battle" || Boolean(feedback)
+                    }
+                    onClick={() => void leave()}
+                  >
+                    {run.phase === "cleared" || run.phase === "defeated"
+                      ? "入口へ戻る"
+                      : "ダンジョンを切り替える"}
+                  </Button>
+                </ExplorationMap>
+              )}
             </>
           )}
         </div>

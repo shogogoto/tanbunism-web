@@ -48,6 +48,15 @@ be described as knowledge relations. `run.readIds` remains a bounded travel log;
 revisits cost one move but never create another place or change its region.
 The spatial map highlights the current place, offers travel to adjacent discovered
 places, scrolls to the current location, and opens the shared detail preview.
+Active adventure uses the available page width and most viewport height. Unexplored
+choices appear on that same map; selecting a place opens a floating knowledge/terms
+panel, with explicit move confirmation. Dungeon/player status and adventure actions
+float over the map rather than forming a separate card list. The current place uses
+the shared profile avatar. Mouse dragging and native touch scrolling pan the map;
+zoom buttons and a current-location button provide alternative navigation.
+Optional app fullscreen uses the shared modal dialog (not the browser Fullscreen
+API), hides the surrounding shell and exits with Escape or its fullscreen toggle.
+This changes presentation only, not HP, moves, deadlines or saved dungeon state.
 Only the current sentence's existing detail graph/cache is loaded for actual
 same-resource relation choices; the whole resource graph is not preloaded.
 Knowledge relationships use solid map edges; game detours use dashed edges.
