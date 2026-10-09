@@ -11,15 +11,24 @@ import GlobalHotkeys, {
   HotkeyProvider,
 } from "./GlobalHotkeys";
 
-const auth = vi.hoisted(() => ({ isAuthenticated: true, signOut: vi.fn() }));
+const auth = vi.hoisted(() => ({
+  isAuthenticated: true,
+  isSuperuser: false,
+  signOut: vi.fn(),
+}));
 beforeEach(() => {
   auth.isAuthenticated = true;
+  auth.isSuperuser = false;
   auth.signOut.mockReset();
 });
 
 vi.mock("~/features/auth/AuthProvider", () => ({
   useAuth: () => ({
-    user: { uid: "user-1", username: "reader" },
+    user: {
+      uid: "user-1",
+      username: "reader",
+      is_superuser: auth.isSuperuser,
+    },
     ...auth,
   }),
 }));
@@ -113,6 +122,37 @@ it("未ログインのg gではゲームへ移動しない", async () => {
   expect(screen.getByRole("status", { name: "現在地" })).not.toHaveTextContent(
     "/game",
   );
+});
+
+it.each([
+  { loggedIn: true, superuser: true, allowed: true },
+  { loggedIn: true, superuser: false, allowed: false },
+  { loggedIn: false, superuser: true, allowed: false },
+])(
+  "g aと管理画面のヘルプを権限に応じて制限する: %j",
+  async ({ loggedIn, superuser, allowed }) => {
+    auth.isAuthenticated = loggedIn;
+    auth.isSuperuser = superuser;
+    const user = userEvent.setup();
+    renderHotkeys();
+    await user.keyboard("ga");
+    expect(screen.getByRole("status", { name: "現在地" }).textContent).toBe(
+      allowed ? "/admin" : "/",
+    );
+    await user.keyboard("?");
+    expect(screen.queryByText("管理画面へ移動") !== null).toBe(allowed);
+  },
+);
+
+it("superuserでも入力中のg aは入力として扱う", async () => {
+  auth.isSuperuser = true;
+  const user = userEvent.setup();
+  renderHotkeys();
+  const input = screen.getByRole("textbox", { name: "入力欄" });
+  await user.click(input);
+  await user.keyboard("ga");
+  expect(input).toHaveValue("ga");
+  expect(screen.getByRole("status", { name: "現在地" }).textContent).toBe("/");
 });
 
 it("プロフィールの行をj kで移動してEnterで詳細、Spaceで復習を開く", async () => {

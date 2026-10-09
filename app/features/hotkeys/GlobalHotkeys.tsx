@@ -30,7 +30,7 @@ type HotkeyContextValue = {
 const HotkeyContext = createContext<HotkeyContextValue | null>(null);
 
 export function HotkeyProvider({ children }: PropsWithChildren) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { pathname, search } = useLocation();
   const [helpOpen, setHelpOpen] = useState(false);
   const openHelp = useCallback(() => setHelpOpen(true), []);
@@ -54,6 +54,9 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
               </h3>
               <dl className="mt-1 divide-y">
                 <HotkeyRow keys={["g", "h"]} label="履歴を開く" />
+                {isAuthenticated && user?.is_superuser && (
+                  <HotkeyRow keys={["g", "a"]} label="管理画面へ移動" />
+                )}
                 {isAuthenticated && (
                   <>
                     <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
@@ -278,6 +281,10 @@ export default function GlobalHotkeys() {
       resetChord();
 
       const actions: Record<string, (() => void) | undefined> = {
+        a:
+          isAuthenticated && user?.is_superuser
+            ? () => navigate("/admin")
+            : undefined,
         g: isAuthenticated ? () => navigate("/game") : undefined,
         h: openHistory,
         d: isAuthenticated ? () => navigate("/dashboard") : undefined,
