@@ -3,6 +3,18 @@ import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
 import AppHeader from "./AppHeader";
 
+it.each(["/game", "/game/adventure", "/game/status/", "/game/item/"])(
+  "keeps the game title at %s",
+  (path) => {
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <AppHeader />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("ゲーム")).toBeVisible();
+  },
+);
+
 const auth = vi.hoisted(() => ({
   isAuthenticated: false,
   user: undefined as

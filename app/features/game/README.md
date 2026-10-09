@@ -12,7 +12,11 @@ at each clock :00/:30 boundary, capacity one; ongoing HP/kills persist between e
 the run, never learning XP. Dungeon clearing counts laps, not resource levels.
 
 Numbers are provisional balancing constants, not a finalized level design.
-The entrance is a menu: Adventure, Status, Items. Adventure resumes the current
+The entrance `/game` links to `/game/adventure`, `/game/status`, and `/game/item`.
+Menu changes use browser history, so Back/Forward restores the previous section;
+direct links and reloads open the same section. The shared game component stays
+mounted across menu changes, preserving the adventure and its battle timer.
+Adventure resumes the current
 dungeon; new destinations appear only after explicitly opening the destination picker.
 Items are a placeholder, not implemented weapons.
 

@@ -1,6 +1,6 @@
 import { BookOpen, Compass } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import useSWR, { useSWRConfig } from "swr";
 import AuthGuard from "~/features/auth/AuthGuard";
 import { useAuth } from "~/features/auth/AuthProvider";
@@ -56,9 +56,9 @@ export function GamePlay({
   const [ready, setReady] = useState(false);
   const [stateLoaded, setStateLoaded] = useState(false);
   const revision = useRef(0);
-  const [menu, setMenu] = useState<"home" | "adventure" | "status" | "items">(
-    "home",
-  );
+  const { menu: routeMenu } = useParams();
+  const menu = routeMenu ?? "home";
+  const navigate = useNavigate();
   const [showDestinations, setShowDestinations] = useState(false);
   const [legacy, setLegacy] = useState<GameSave>();
   const [now, setNow] = useState(Date.now);
@@ -73,6 +73,13 @@ export function GamePlay({
   const submittedOnTime = useRef(true);
   const access = useAdventureAccess(userId);
   const { data: growth, error: growthError } = useResourceGrowth();
+  useEffect(() => {
+    if (menu !== "adventure" || save.run || selectedId) return;
+    const recommended = [...(growth?.resources ?? [])].sort((a, b) =>
+      (a.last_reviewed_on ?? "").localeCompare(b.last_reviewed_on ?? ""),
+    )[0];
+    if (recommended) setSelectedId(recommended.resource_id);
+  }, [menu, save.run, selectedId, growth]);
   const progress = useGetLearningProgressUserUserIdLearningProgressGet(userId, {
     fetch: { credentials: "include" },
   });
@@ -274,7 +281,7 @@ export function GamePlay({
     }
     setFeedback(undefined);
     setSelectedId("");
-    setMenu("home");
+    void navigate("/game");
   }
   async function startEvent() {
     if (
@@ -352,7 +359,6 @@ export function GamePlay({
   const selected = resources.find(
     (resource) => resource.resource_id === selectedId,
   );
-  const recommended = selected ?? resources[0];
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-4 p-3 pb-8 sm:p-6">
@@ -373,8 +379,8 @@ export function GamePlay({
         冒険権は毎時00分・30分に回復します。
       </p>
       {menu !== "home" && (
-        <Button variant="ghost" onClick={() => setMenu("home")}>
-          ゲームメニュー
+        <Button asChild variant="ghost">
+          <Link to="/game">ゲームメニュー</Link>
         </Button>
       )}
       {(error || access.error || growthError || progress.error) && (
@@ -425,21 +431,14 @@ export function GamePlay({
             </div>
           )}
           <div className="grid gap-3 sm:grid-cols-3">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setMenu("adventure");
-                if (!run && !selectedId && recommended)
-                  setSelectedId(recommended.resource_id);
-              }}
-            >
-              {run ? "冒険を続ける" : "冒険"}
+            <Button asChild variant="outline">
+              <Link to="/game/adventure">{run ? "冒険を続ける" : "冒険"}</Link>
             </Button>
-            <Button variant="outline" onClick={() => setMenu("status")}>
-              ステータス
+            <Button asChild variant="outline">
+              <Link to="/game/status">ステータス</Link>
             </Button>
-            <Button variant="outline" onClick={() => setMenu("items")}>
-              アイテム
+            <Button asChild variant="outline">
+              <Link to="/game/item">アイテム</Link>
             </Button>
           </div>
         </div>
@@ -463,7 +462,7 @@ export function GamePlay({
             周
           </p>
         </div>
-      ) : menu === "items" ? (
+      ) : menu === "item" ? (
         <div className="rounded-lg border p-4 space-y-2">
           <h2 className="font-semibold">アイテム</h2>
           <p className="text-sm text-muted-foreground">

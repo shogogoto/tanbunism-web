@@ -2,7 +2,13 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { MemoryRouter } from "react-router";
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router";
 import { SWRConfig, useSWRConfig } from "swr";
 import { beforeEach, expect, it, vi } from "vitest";
 import { markTanbunSeen } from "~/features/review/api";
@@ -14,9 +20,13 @@ import type { GameState } from "./state";
 
 let available = true;
 let consumeCount = 0;
+let stateLoadCount = 0;
 let state: GameState = { revision: 0, save: newSave() };
 const server = setupServer(
-  http.get("*/game/state", () => HttpResponse.json(state)),
+  http.get("*/game/state", () => {
+    stateLoadCount++;
+    return HttpResponse.json(state);
+  }),
   http.put("*/game/state", async ({ request }) => {
     const body = (await request.json()) as GameState & {
       consume_access: boolean;
@@ -107,6 +117,7 @@ vi.mock("./api", () => ({ loadDungeon: vi.fn() }));
 beforeEach(() => {
   available = true;
   consumeCount = 0;
+  stateLoadCount = 0;
   state = { revision: 0, save: newSave() };
   localStorage.clear();
   vi.restoreAllMocks();
@@ -147,14 +158,32 @@ it("does not enter or lose local progress when another device consumed the right
   );
   expect(state.save.run).toBeUndefined();
 });
-function renderGame() {
+function renderGame(path = "/game") {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[path]}>
       <SWRConfig value={{ provider: () => new Map() }}>
-        <GamePlay userId="player" />
+        <Routes>
+          <Route path="/game/:menu?" element={<GamePlay userId="player" />} />
+        </Routes>
         <RefreshAccess />
+        <HistoryControls />
       </SWRConfig>
     </MemoryRouter>,
+  );
+}
+function HistoryControls() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  return (
+    <>
+      <output data-testid="pathname">{location.pathname}</output>
+      <button type="button" onClick={() => void navigate(-1)}>
+        ブラウザで戻る
+      </button>
+      <button type="button" onClick={() => void navigate(1)}>
+        ブラウザで進む
+      </button>
+    </>
   );
 }
 function RefreshAccess() {
@@ -170,7 +199,7 @@ function RefreshAccess() {
 }
 async function enter() {
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "冒険" }));
+  await user.click(await screen.findByRole("link", { name: "冒険" }));
   await user.click(
     await screen.findByRole("button", { name: "ダンジョンに入る" }),
   );
@@ -200,7 +229,7 @@ it("records seen knowledge, takes quiz damage and restores the run after remount
   const loadsBeforeRemount = vi.mocked(loadDungeon).mock.calls.length;
   view.unmount();
   renderGame();
-  await user.click(await screen.findByRole("button", { name: "冒険を続ける" }));
+  await user.click(await screen.findByRole("link", { name: "冒険を続ける" }));
   expect(
     await screen.findByRole("heading", { name: /敵と遭遇/ }),
   ).toBeInTheDocument();
@@ -235,7 +264,7 @@ it("times out only once and preserves feedback across reopening", async () => {
   state = { revision: 1, save };
   const view = renderGame();
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "冒険を続ける" }));
+  await user.click(await screen.findByRole("link", { name: "冒険を続ける" }));
   expect(
     await screen.findByText("時間切れ · あなたのHP −11"),
   ).toBeInTheDocument();
@@ -244,7 +273,7 @@ it("times out only once and preserves feedback across reopening", async () => {
   expect(markTanbunSeen).not.toHaveBeenCalled();
   view.unmount();
   renderGame();
-  await user.click(await screen.findByRole("button", { name: "冒険を続ける" }));
+  await user.click(await screen.findByRole("link", { name: "冒険を続ける" }));
   expect(
     await screen.findByText("時間切れ · あなたのHP −11"),
   ).toBeInTheDocument();
@@ -259,19 +288,73 @@ it("opens a menu and preserves the adventure when switching sections", async () 
   state = { revision: 1, save };
   renderGame();
   const user = userEvent.setup();
-  await screen.findByRole("button", { name: "冒険を続ける" });
+  await screen.findByRole("link", { name: "冒険を続ける" });
   expect(
     screen.queryByRole("button", { name: "行き先を変更する" }),
   ).not.toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "ステータス" }));
+  await user.click(screen.getByRole("link", { name: "ステータス" }));
+  expect(screen.getByTestId("pathname")).toHaveTextContent("/game/status");
   expect(screen.getByText("ダンジョン攻略 0周")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "ゲームメニュー" }));
-  await user.click(screen.getByRole("button", { name: "アイテム" }));
+  await user.click(screen.getByRole("link", { name: "ゲームメニュー" }));
+  await user.click(screen.getByRole("link", { name: "アイテム" }));
+  expect(screen.getByTestId("pathname")).toHaveTextContent("/game/item");
   expect(
     screen.getByText(/武器・アイテム機能は今後追加予定/),
   ).toBeInTheDocument();
   expect(state.revision).toBe(1);
   expect(state.save.run?.hp).toBe(35);
+  await user.click(screen.getByRole("button", { name: "ブラウザで戻る" }));
+  expect(screen.getByTestId("pathname").textContent).toBe("/game");
+  await user.click(screen.getByRole("button", { name: "ブラウザで戻る" }));
+  expect(screen.getByTestId("pathname").textContent).toBe("/game/status");
+  expect(screen.getByText("ダンジョン攻略 0周")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "ブラウザで進む" }));
+  await user.click(screen.getByRole("button", { name: "ブラウザで進む" }));
+  expect(screen.getByTestId("pathname").textContent).toBe("/game/item");
+  expect(stateLoadCount).toBe(1);
+  expect(consumeCount).toBe(0);
+});
+
+it.each(["/game/status", "/game/status/"])(
+  "opens status directly at %s without changing adventure state",
+  async (path) => {
+    state = {
+      revision: 1,
+      save: enterDungeon(newSave(), "book", "テストの本", 1),
+    };
+    renderGame(path);
+    expect(await screen.findByText("ダンジョン攻略 0周")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "ゲームメニュー" }),
+    ).toHaveAttribute("href", "/game");
+    expect(state.save.run?.hp).toBe(35);
+    expect(state.revision).toBe(1);
+  },
+);
+
+it("opens the item URL directly", async () => {
+  renderGame("/game/item/");
+  expect(
+    await screen.findByText(/武器・アイテム機能は今後追加予定/),
+  ).toBeInTheDocument();
+});
+
+it("selects a destination when adventure is opened directly", async () => {
+  renderGame("/game/adventure");
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "ダンジョンに入る" }),
+  );
+  expect(state.save.run?.resourceId).toBe("book");
+  expect(consumeCount).toBe(1);
+  await user.click(screen.getByRole("link", { name: "ゲームメニュー" }));
+  await user.click(screen.getByRole("button", { name: "ブラウザで戻る" }));
+  expect(screen.getByTestId("pathname").textContent).toBe("/game/adventure");
+  expect(
+    screen.getByRole("button", { name: "見たよ · この道へ" }),
+  ).toBeVisible();
+  expect(stateLoadCount).toBe(1);
+  expect(consumeCount).toBe(1);
 });
 it("does not advance when the seen API fails", async () => {
   vi.mocked(markTanbunSeen).mockRejectedValue(new Error("記録失敗"));
@@ -297,7 +380,7 @@ it("admin unlock is applied without healing or erasing progress", async () => {
   available = false;
   renderGame();
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "冒険を続ける" }));
+  await user.click(await screen.findByRole("link", { name: "冒険を続ける" }));
   expect(
     await screen.findByRole("button", { name: "あと10分" }),
   ).toBeDisabled();

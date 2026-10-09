@@ -20,7 +20,7 @@ export default [
     route("login", "routes/user/login.tsx"),
     route("quiz", "routes/quiz.tsx"),
     route("review", "routes/review.tsx"),
-    route("game", "routes/game.tsx"),
+    route("game/:menu?", "routes/game.tsx"),
     route("study-plans", "routes/study-plans.tsx"),
     route("quiz/list", "routes/quiz-list.tsx"),
     route("answers", "routes/answers.tsx"),

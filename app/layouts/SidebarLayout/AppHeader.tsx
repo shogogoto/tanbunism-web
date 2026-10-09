@@ -67,7 +67,7 @@ function pageTitle(pathname: string): string {
   if (pathname === "/admin") return "管理";
   if (pathname === "/dashboard") return "ダッシュボード";
   if (pathname === "/review") return "復習";
-  if (pathname === "/game") return "ゲーム";
+  if (pathname === "/game" || pathname.startsWith("/game/")) return "ゲーム";
   if (isQuizSection(pathname)) return "クイズ";
   if (pathname === "/answers") return "回答履歴";
   if (pathname === "/achievement") return "学習記録";
