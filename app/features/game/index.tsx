@@ -656,18 +656,18 @@ export function GamePlay({
                   player={player}
                   title={run.name}
                   status={
-                    <>
-                      <p className="text-xs text-muted-foreground">
-                        今回の移動 {run.moves}/{MOVES_PER_EVENT} · 撃破{" "}
-                        {run.kills}/{ENEMIES_TO_CLEAR}
-                      </p>
-                      <PlayerStatus
-                        compact
-                        run={run}
-                        name={playerName}
-                        player={player}
-                      />
-                    </>
+                    <p className="text-xs text-muted-foreground">
+                      残り移動 {Math.max(0, MOVES_PER_EVENT - run.moves)}歩 ·
+                      撃破 {run.kills}/{ENEMIES_TO_CLEAR}
+                    </p>
+                  }
+                  playerStatus={
+                    <PlayerStatus
+                      compact
+                      run={run}
+                      name={playerName}
+                      player={player}
+                    />
                   }
                   candidates={
                     !feedback && run.phase === "path"

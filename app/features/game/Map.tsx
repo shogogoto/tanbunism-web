@@ -11,7 +11,7 @@ import {
 import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import PathTerms from "./PathTerms";
 import type { PathKnowledge } from "./api";
-import { type DungeonMap, ENTRANCE, neighbours } from "./exploration";
+import { type DungeonMap, ENTRANCE } from "./exploration";
 import { directionalPlace } from "./navigation";
 
 export type MapCandidate = {
@@ -29,6 +29,7 @@ export default function ExplorationMap({
   player,
   title,
   status,
+  playerStatus,
   children,
 }: {
   map: DungeonMap;
@@ -40,6 +41,7 @@ export default function ExplorationMap({
   player?: UserReadPublic;
   title?: string;
   status?: ReactNode;
+  playerStatus?: ReactNode;
   children?: ReactNode;
 }) {
   const [fullscreen, setFullscreen] = useState(false);
@@ -59,6 +61,7 @@ export default function ExplorationMap({
     return () => media.removeEventListener("change", update);
   }, []);
   const viewport = useRef<HTMLDivElement>(null);
+  const mapElement = useRef<HTMLElement>(null);
   const fullButton = useRef<HTMLButtonElement>(null);
   const ownsFullscreen = useRef(false);
   function closeFullscreen() {
@@ -89,6 +92,30 @@ export default function ExplorationMap({
         );
     }
   }
+  // biome-ignore lint/correctness/useExhaustiveDependencies: toggle reads fullscreen and stable DOM refs only.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as Element | null;
+      if (
+        event.defaultPrevented ||
+        event.repeat ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.key.toLowerCase() !== "f" ||
+        target?.closest(
+          "input, textarea, select, [contenteditable]:not([contenteditable=false]), [role=textbox]",
+        ) ||
+        (target?.closest("dialog, [role=dialog], [role=alertdialog]") &&
+          !mapElement.current?.contains(target))
+      )
+        return;
+      event.preventDefault();
+      toggleFullscreen();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [fullscreen]);
   useEffect(() => {
     function changed() {
       if (!document.fullscreenElement && ownsFullscreen.current) {
@@ -114,7 +141,6 @@ export default function ExplorationMap({
       item,
     ]),
   );
-  const adjacent = neighbours(map);
   const allIds = [ENTRANCE, ...map.places.map((place) => place.id)];
   const fresh = candidates.filter(
     (item) => !allIds.includes(item.knowledge.uid),
@@ -223,10 +249,11 @@ export default function ExplorationMap({
   const canMove =
     !disabled &&
     selected !== map.current &&
-    Boolean(selected && (adjacent.includes(selected) || candidate));
+    Boolean(selected && (allIds.includes(selected) || candidate));
   const index = map.places.findIndex((place) => place.id === map.current);
   const canvas = (
     <section
+      ref={mapElement}
       aria-label="ダンジョンのマップ"
       className={`relative isolate min-w-0 overflow-hidden bg-background ${fullscreen ? "h-dvh w-full" : "h-[calc(100dvh-11rem)] min-h-[440px] rounded-xl border sm:h-[calc(100dvh-7rem)]"}`}
     >
@@ -384,8 +411,11 @@ export default function ExplorationMap({
           </div>
         </div>
       </div>
-      <header className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2">
-        <div className="pointer-events-auto min-w-0 max-w-[calc(100%-3rem)] rounded-xl border bg-background/95 p-2 shadow-lg sm:max-w-sm sm:p-3">
+      <header
+        aria-label="ダンジョン情報"
+        className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 border-b bg-background/95 px-3 py-2 shadow-sm"
+      >
+        <div className="pointer-events-auto min-w-0 flex-1 space-y-0.5">
           {title && <h2 className="truncate text-sm font-semibold">{title}</h2>}
           <h3 className="text-xs">
             現在地 · {map.current === ENTRANCE ? "入口" : `第${index + 1}地点`}
@@ -396,12 +426,13 @@ export default function ExplorationMap({
           </p>
           {status}
         </div>
-        <div className="pointer-events-auto flex flex-col gap-1 rounded-lg border bg-background/95 p-1 shadow-lg sm:flex-row">
+        <div className="pointer-events-auto flex shrink-0 gap-1">
           <Button
             size="icon"
             variant="ghost"
             ref={fullButton}
             aria-label={fullscreen ? "全画面を終了" : "マップを全画面表示"}
+            title="全画面切り替え (f)"
             onClick={toggleFullscreen}
           >
             <Maximize className="size-4" />
@@ -435,12 +466,20 @@ export default function ExplorationMap({
         </div>
       </header>
       <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col items-center gap-2">
+        {playerStatus && (
+          <div
+            aria-label="プレイヤー情報"
+            className="pointer-events-auto self-start rounded-lg border bg-background/95 px-3 py-2 shadow-lg lg:absolute lg:bottom-0 lg:left-0"
+          >
+            {playerStatus}
+          </div>
+        )}
         <div className="pointer-events-auto max-w-full space-y-2 text-xs">
           {children}
           <p className="hidden w-fit rounded bg-background/90 px-2 py-1 text-muted-foreground sm:block">
             実線：知識の関係 · 破線：寄り道
             <br />
-            矢印：地点を選ぶ · Enter：確認 · Esc：戻る
+            矢印：地点を選ぶ · Enter：確認 · Esc：戻る · f：全画面
           </p>
         </div>
         {selected && (

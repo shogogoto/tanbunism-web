@@ -15,6 +15,70 @@ const map: DungeonMap = {
     { from: "a", to: "b", kind: "relation" },
   ],
 };
+it("toggles fullscreen with f without intercepting text inputs or other dialogs", async () => {
+  render(
+    <>
+      <input aria-label="検索" />
+      <dialog open aria-label="別のダイアログ" tabIndex={-1}>
+        詳細画面
+      </dialog>
+      <ExplorationMap
+        map={map}
+        knowledge={[]}
+        onMove={vi.fn()}
+        onOpen={vi.fn()}
+        disabled={false}
+      />
+    </>,
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("textbox", { name: "検索" }));
+  await user.keyboard("f");
+  expect(screen.getByRole("textbox", { name: "検索" })).toHaveValue("f");
+  expect(
+    screen.queryByRole("dialog", { name: "冒険マップ" }),
+  ).not.toBeInTheDocument();
+  screen.getByRole("dialog", { name: "別のダイアログ" }).focus();
+  await user.keyboard("f");
+  expect(
+    screen.queryByRole("dialog", { name: "冒険マップ" }),
+  ).not.toBeInTheDocument();
+  screen.getByLabelText("探索マップをスクロール").focus();
+  await user.keyboard("f");
+  expect(screen.getByRole("dialog", { name: "冒険マップ" })).toBeVisible();
+  await user.keyboard("f");
+  expect(
+    screen.queryByRole("dialog", { name: "冒険マップ" }),
+  ).not.toBeInTheDocument();
+});
+
+it("separates the dungeon header and player HUD, and offers non-adjacent known travel", async () => {
+  const onMove = vi.fn();
+  render(
+    <ExplorationMap
+      map={map}
+      knowledge={[]}
+      title="本のダンジョン"
+      status={<span>残り移動 3歩</span>}
+      playerStatus={<span>HP 20/35</span>}
+      onMove={onMove}
+      onOpen={vi.fn()}
+      disabled={false}
+    />,
+  );
+  const header = screen.getByLabelText("ダンジョン情報");
+  expect(header).toHaveTextContent("本のダンジョン");
+  expect(header).toHaveTextContent("残り移動 3歩");
+  expect(header).not.toHaveTextContent("HP");
+  expect(screen.getByLabelText("プレイヤー情報")).toHaveTextContent("HP 20/35");
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: /入口\s*入口/ }));
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "入口へ移動" }));
+  expect(onMove).toHaveBeenCalledWith("@entrance", undefined);
+});
 it("uses arrows to focus places, Enter to open/confirm, and Escape to return without travel", async () => {
   const onMove = vi.fn();
   render(
@@ -86,7 +150,7 @@ it("keeps fullscreen open when Escape dismisses a selection and prevents keyboar
   await user.keyboard("{Escape}");
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
-it("marks current location and offers only adjacent places for one-step travel", async () => {
+it("marks current location and offers one-step travel to known places", async () => {
   const onMove = vi.fn();
   const onOpen = vi.fn();
   render(

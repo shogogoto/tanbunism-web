@@ -13,6 +13,19 @@ const step = (save: ReturnType<typeof start>, id: string) =>
   move(explore(save, id, "detour"), id, 0.9);
 
 describe("persistent exploration", () => {
+  it("travels to any discovered place for one move without adding roads or achievement", () => {
+    const save = step(step(step(start(), "a"), "b"), "c");
+    const visited = step(save, "a");
+    expect(visited.maps?.book.current).toBe("a");
+    expect(visited.run?.moves).toBe(4);
+    expect(visited.maps?.book.places).toEqual(save.maps?.book.places);
+    expect(visited.maps?.book.edges).toEqual(save.maps?.book.edges);
+    const entrance = step(visited, ENTRANCE);
+    expect(entrance.maps?.book.current).toBe(ENTRANCE);
+    expect(entrance.run?.moves).toBe(5);
+    expect(entrance.run?.phase).toBe("rest");
+    expect(entrance.maps?.book.edges).toEqual(save.maps?.book.edges);
+  });
   it("backtracks for one move without counting a new place or changing its region", () => {
     let save = step(step(start(), "a"), "b");
     if (!save.run) throw new Error("No run");

@@ -52,8 +52,6 @@ export function explore(
   const map = dungeonMap(save, save.run);
   if (id === map.current) return save;
   const known = id === ENTRANCE || map.places.some((place) => place.id === id);
-  if (known && !neighbours(map).includes(id) && kind !== "relation")
-    return save;
   const connected = map.edges.some(
     (edge) =>
       (edge.from === map.current && edge.to === id) ||
@@ -71,9 +69,11 @@ export function explore(
               ...map.places,
               { id, region: Math.floor(map.places.length / PLACES_PER_REGION) },
             ],
-        edges: connected
-          ? map.edges
-          : [...map.edges, { from: map.current, to: id, kind }],
+        // Travel to known places never invents a knowledge relation or detour.
+        edges:
+          known || connected
+            ? map.edges
+            : [...map.edges, { from: map.current, to: id, kind }],
       },
     },
   };
