@@ -1,17 +1,20 @@
-import { Heart, Shield, Swords, UserRound } from "lucide-react";
+import { Heart, Shield, Swords } from "lucide-react";
+import UserAvatar from "~/features/user/UserAvatar";
+import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import type { Run } from "./domain";
 
 export default function PlayerStatus({
   run,
   name = "あなた",
-}: { run: Run; name?: string }) {
+  player,
+}: { run: Run; name?: string; player?: UserReadPublic }) {
   return (
     <section
       aria-label="プレイヤー"
       className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 space-y-2"
     >
       <h3 className="flex items-center gap-2 text-sm font-medium">
-        <UserRound className="size-4 shrink-0 text-sky-500" />
+        <UserAvatar user={player} className="size-7 shrink-0" />
         <span className="min-w-0 flex-1 truncate" title={name}>
           {name}
         </span>

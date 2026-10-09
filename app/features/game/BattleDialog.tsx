@@ -8,15 +8,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/shared/components/ui/dialog";
+import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import PlayerStatus from "./PlayerStatus";
 import type { Run } from "./domain";
 
 export default function BattleDialog({
   run,
   playerName,
+  player,
   children,
   busy,
-}: { run: Run; playerName?: string; children: ReactNode; busy: boolean }) {
+}: {
+  run: Run;
+  playerName?: string;
+  player?: UserReadPublic;
+  children: ReactNode;
+  busy: boolean;
+}) {
   const [open, setOpen] = useState(true);
   return (
     <>
@@ -45,7 +53,7 @@ export default function BattleDialog({
           </DialogHeader>
           <div className="min-h-0 overflow-y-auto space-y-3 pr-1">
             <div className="grid grid-cols-2 gap-2">
-              <PlayerStatus run={run} name={playerName} />
+              <PlayerStatus run={run} name={playerName} player={player} />
               <section
                 aria-label="敵"
                 className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 space-y-2"
