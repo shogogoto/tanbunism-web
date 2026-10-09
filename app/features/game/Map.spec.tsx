@@ -59,7 +59,8 @@ it("separates the dungeon header and player HUD, and offers non-adjacent known t
       map={map}
       knowledge={[]}
       title="本のダンジョン"
-      status={<span>残り移動 3歩</span>}
+      remainingMoves={3}
+      status={<span>撃破 1/3</span>}
       playerStatus={<span>HP 20/35</span>}
       onMove={onMove}
       onOpen={vi.fn()}
@@ -68,7 +69,9 @@ it("separates the dungeon header and player HUD, and offers non-adjacent known t
   );
   const header = screen.getByLabelText("ダンジョン情報");
   expect(header).toHaveTextContent("本のダンジョン");
-  expect(header).toHaveTextContent("残り移動 3歩");
+  expect(header).not.toHaveTextContent("撃破");
+  expect(header).not.toContainElement(screen.getByLabelText("残り移動数"));
+  expect(screen.getByLabelText("残り移動数")).toHaveTextContent("3歩");
   expect(header).not.toHaveTextContent("HP");
   expect(screen.getByLabelText("プレイヤー情報")).toHaveTextContent("HP 20/35");
   await userEvent

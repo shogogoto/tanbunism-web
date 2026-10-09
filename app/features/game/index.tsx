@@ -655,9 +655,9 @@ export function GamePlay({
                   disabled={busy || Boolean(feedback) || run.phase !== "path"}
                   player={player}
                   title={run.name}
+                  remainingMoves={Math.max(0, MOVES_PER_EVENT - run.moves)}
                   status={
                     <p className="text-xs text-muted-foreground">
-                      残り移動 {Math.max(0, MOVES_PER_EVENT - run.moves)}歩 ·
                       撃破 {run.kills}/{ENEMIES_TO_CLEAR}
                     </p>
                   }

@@ -1,4 +1,11 @@
-import { LocateFixed, Maximize, Minus, Plus, X } from "lucide-react";
+import {
+  Footprints,
+  LocateFixed,
+  Maximize,
+  Minus,
+  Plus,
+  X,
+} from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import UserAvatar from "~/features/user/UserAvatar";
 import { Button } from "~/shared/components/ui/button";
@@ -29,6 +36,7 @@ export default function ExplorationMap({
   player,
   title,
   status,
+  remainingMoves,
   playerStatus,
   children,
 }: {
@@ -41,6 +49,7 @@ export default function ExplorationMap({
   player?: UserReadPublic;
   title?: string;
   status?: ReactNode;
+  remainingMoves?: number;
   playerStatus?: ReactNode;
   children?: ReactNode;
 }) {
@@ -413,18 +422,24 @@ export default function ExplorationMap({
       </div>
       <header
         aria-label="ダンジョン情報"
-        className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 border-b bg-background/95 px-3 py-2 shadow-sm"
+        className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-3 border-b bg-background/95 px-3 py-2 shadow-sm"
       >
-        <div className="pointer-events-auto min-w-0 flex-1 space-y-0.5">
-          {title && <h2 className="truncate text-sm font-semibold">{title}</h2>}
-          <h3 className="text-xs">
+        <div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-3 overflow-x-auto whitespace-nowrap">
+          {title && (
+            <h2
+              className="max-w-64 shrink-0 truncate text-sm font-semibold"
+              title={title}
+            >
+              {title}
+            </h2>
+          )}
+          <h3 className="shrink-0 text-xs text-muted-foreground">
             現在地 · {map.current === ENTRANCE ? "入口" : `第${index + 1}地点`}
           </h3>
-          <p className="text-xs text-muted-foreground">
+          <span className="shrink-0 text-xs text-muted-foreground">
             開拓 {map.places.length}地点 · 達成度{" "}
             {Math.floor(map.places.length / 5)}
-          </p>
-          {status}
+          </span>
         </div>
         <div className="pointer-events-auto flex shrink-0 gap-1">
           <Button
@@ -465,6 +480,27 @@ export default function ExplorationMap({
           </Button>
         </div>
       </header>
+      {(remainingMoves !== undefined || status) && (
+        <aside
+          aria-label="冒険の進行状況"
+          className="absolute right-3 top-16 rounded-xl border bg-background/95 px-3 py-2 shadow-lg"
+        >
+          {remainingMoves !== undefined && (
+            <output
+              aria-label="残り移動数"
+              className="flex items-center justify-center gap-2 text-primary"
+              title="残り移動数"
+            >
+              <Footprints aria-hidden="true" className="size-7" />
+              <span className="text-4xl font-bold leading-none tabular-nums">
+                {remainingMoves}
+              </span>
+              <span className="sr-only">歩</span>
+            </output>
+          )}
+          {status && <div className="mt-1 text-center">{status}</div>}
+        </aside>
+      )}
       <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col items-center gap-2">
         {playerStatus && (
           <div
