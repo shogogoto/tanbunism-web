@@ -1,4 +1,4 @@
-import { BookOpen, Compass, Heart, Shield, Swords } from "lucide-react";
+import { BookOpen, Compass } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import useSWR, { useSWRConfig } from "swr";
@@ -15,6 +15,8 @@ import Loading from "~/shared/components/Loading";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
+import BattleDialog from "./BattleDialog";
+import PlayerStatus from "./PlayerStatus";
 import DungeonRoute from "./Route";
 import { useAdventureAccess } from "./access";
 import { loadDungeon } from "./api";
@@ -35,12 +37,21 @@ export default function Game() {
   const { user } = useAuth();
   return (
     <AuthGuard>
-      {user && <GamePlay key={user.uid} userId={user.uid} />}
+      {user && (
+        <GamePlay
+          key={user.uid}
+          userId={user.uid}
+          playerName={user.display_name || user.username || undefined}
+        />
+      )}
     </AuthGuard>
   );
 }
 
-export function GamePlay({ userId }: { userId: string }) {
+export function GamePlay({
+  userId,
+  playerName,
+}: { userId: string; playerName?: string }) {
   const [save, setSave] = useState<GameSave>(newSave);
   const [ready, setReady] = useState(false);
   const [stateLoaded, setStateLoaded] = useState(false);
@@ -314,7 +325,8 @@ export function GamePlay({ userId }: { userId: string }) {
               <p className="text-xs text-muted-foreground">攻略中</p>
               <h2 className="font-semibold">{run.name}</h2>
               <p className="text-sm">
-                HP {run.hp}/{run.maxHp} · 撃破 {run.kills}/{ENEMIES_TO_CLEAR}
+                あなたのHP {run.hp}/{run.maxHp} · 撃破 {run.kills}/
+                {ENEMIES_TO_CLEAR}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 現在地 ·{" "}
@@ -471,30 +483,14 @@ export function GamePlay({ userId }: { userId: string }) {
       ) : (
         <>
           <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+            <p className="text-xs text-muted-foreground">ダンジョン</p>
             <h2 className="font-semibold">{run.name}</h2>
-            <div className="flex flex-wrap items-center gap-4 text-sm tabular-nums">
-              <span className="flex gap-1 items-center">
-                <Heart className="size-4 text-rose-400" />
-                HP {run.hp}/{run.maxHp}
-              </span>
-              <span className="flex gap-1 items-center">
-                <Swords className="size-4" />攻 {run.attack}
-              </span>
-              <span className="flex gap-1 items-center">
-                <Shield className="size-4" />守 {run.defense}
-              </span>
-            </div>
-            <progress
-              aria-label="プレイヤーHP"
-              className="w-full h-2 accent-rose-400"
-              value={run.hp}
-              max={run.maxHp}
-            />
             <p className="text-xs text-muted-foreground">
               今回の移動 {run.moves}/{MOVES_PER_EVENT} · 撃破 {run.kills}/
               {ENEMIES_TO_CLEAR}
             </p>
           </div>
+          <PlayerStatus run={run} name={playerName} />
           <DungeonRoute
             key={run.resourceId}
             run={run}
@@ -502,23 +498,78 @@ export function GamePlay({ userId }: { userId: string }) {
             onOpen={(sentenceId) => openPreview({ sentenceId })}
           />
           {isLoading && <Loading />}
-          {feedback ? (
-            <div className="rounded-lg border p-4 space-y-3">
-              <output className="block">{feedback}</output>
-              {quiz && (
-                <>
-                  <QuizPrompt quiz={quiz} />
-                  <p className="text-sm text-emerald-500">
-                    正解:{" "}
-                    {quiz.correct
-                      .map((id) => quizOptionLabel(quiz, quiz.options[id]))
-                      .join("・")}
-                  </p>
-                </>
+          {(feedback || run.phase === "battle") && (
+            <BattleDialog run={run} playerName={playerName} busy={busy}>
+              {error && (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
               )}
-              <Button onClick={() => setFeedback(undefined)}>続ける</Button>
-            </div>
-          ) : run.phase === "path" && content ? (
+              {feedback ? (
+                <div className="rounded-lg border p-4 space-y-3">
+                  <output className="block">{feedback}</output>
+                  {quiz && (
+                    <>
+                      <QuizPrompt quiz={quiz} />
+                      <p className="text-sm text-emerald-500">
+                        正解:{" "}
+                        {quiz.correct
+                          .map((id) => quizOptionLabel(quiz, quiz.options[id]))
+                          .join("・")}
+                      </p>
+                    </>
+                  )}
+                  <Button onClick={() => setFeedback(undefined)}>続ける</Button>
+                </div>
+              ) : quiz ? (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    正解で敵にダメージ。不正解であなたにダメージ。
+                  </p>
+                  <QuizAttempt
+                    key={`${run.resourceId}:${run.quizCursor}`}
+                    quiz={quiz}
+                    compactMobile
+                    onAnswered={(correct) => {
+                      void (async () => {
+                        const next = answer(save, correct);
+                        setBusy(true);
+                        try {
+                          await update(next);
+                        } catch (cause) {
+                          setError(
+                            cause instanceof Error
+                              ? cause.message
+                              : "戦闘を保存できませんでした。",
+                          );
+                          return;
+                        } finally {
+                          setBusy(false);
+                        }
+                        setFeedback(
+                          correct
+                            ? next.run?.enemyHp === 0
+                              ? "敵を倒した！"
+                              : `敵に${run.attack}ダメージ！`
+                            : `不正解 · あなたのHP −${run.hp - (next.run?.hp ?? 0)}`,
+                        );
+                      })();
+                    }}
+                  />
+                </>
+              ) : isLoading ? (
+                <Loading />
+              ) : (
+                <div className="space-y-2">
+                  <p role="alert">クイズを取得できませんでした。</p>
+                  <Button variant="outline" onClick={() => void retryContent()}>
+                    再試行
+                  </Button>
+                </div>
+              )}
+            </BattleDialog>
+          )}
+          {!feedback && run.phase === "path" && content ? (
             <>
               <h3 className="text-sm font-medium">
                 第{run.readIds.length + 1}地点へ · 次の進路
@@ -548,47 +599,7 @@ export function GamePlay({ userId }: { userId: string }) {
                 </p>
               )}
             </>
-          ) : run.phase === "battle" && quiz ? (
-            <div className="space-y-3">
-              <h3 className="flex items-center gap-2 font-semibold">
-                <Swords className="size-4" />
-                敵と遭遇 · HP {run.enemyHp}/{run.enemyMaxHp}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                正解で攻撃。不正解でダメージ。
-              </p>
-              <QuizAttempt
-                key={`${run.resourceId}:${run.quizCursor}`}
-                quiz={quiz}
-                compactMobile
-                onAnswered={(correct) => {
-                  void (async () => {
-                    const next = answer(save, correct);
-                    setBusy(true);
-                    try {
-                      await update(next);
-                    } catch (cause) {
-                      setError(
-                        cause instanceof Error
-                          ? cause.message
-                          : "戦闘を保存できませんでした。",
-                      );
-                      return;
-                    } finally {
-                      setBusy(false);
-                    }
-                    setFeedback(
-                      correct
-                        ? next.run?.enemyHp === 0
-                          ? "敵を倒した！"
-                          : `${run.attack}ダメージ！`
-                        : `不正解 · HP −${run.hp - (next.run?.hp ?? 0)}`,
-                    );
-                  })();
-                }}
-              />
-            </div>
-          ) : run.phase === "rest" ? (
+          ) : !feedback && run.phase === "rest" ? (
             <div className="rounded-lg border p-4 space-y-3">
               <h3 className="font-semibold">今回の冒険はここまで</h3>
               <p className="text-sm text-muted-foreground">
@@ -600,7 +611,7 @@ export function GamePlay({ userId }: { userId: string }) {
                   : "冒険を再開"}
               </Button>
             </div>
-          ) : run.phase === "cleared" ? (
+          ) : !feedback && run.phase === "cleared" ? (
             <div
               aria-live="polite"
               className="rounded-lg border border-emerald-500/50 bg-emerald-500/5 p-4"
@@ -610,7 +621,7 @@ export function GamePlay({ userId }: { userId: string }) {
                 攻略 {save.clears[run.resourceId]}周 · 復習の成果を持ち帰ろう。
               </p>
             </div>
-          ) : run.phase === "defeated" ? (
+          ) : !feedback && run.phase === "defeated" ? (
             <div aria-live="polite" className="rounded-lg border p-4">
               <h3 className="font-semibold">冒険失敗</h3>
               <p className="mt-2 text-sm">

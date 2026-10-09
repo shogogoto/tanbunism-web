@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -176,7 +176,9 @@ it("records seen knowledge, takes quiz damage and restores the run after remount
   ).toBeInTheDocument();
   expect(markTanbunSeen).toHaveBeenCalledWith("sentence");
   await user.click(screen.getByRole("button", { name: "不正解を送信" }));
-  expect(await screen.findByText("不正解 · HP −11")).toBeInTheDocument();
+  expect(
+    await screen.findByText("不正解 · あなたのHP −11"),
+  ).toBeInTheDocument();
   expect(state.save.run).toMatchObject({
     hp: 24,
     phase: "battle",
@@ -190,7 +192,16 @@ it("records seen knowledge, takes quiz damage and restores the run after remount
   expect(
     await screen.findByRole("heading", { name: /敵と遭遇/ }),
   ).toBeInTheDocument();
-  expect(screen.getByText("HP 24/35")).toBeInTheDocument();
+  expect(
+    within(screen.getByRole("dialog")).getByText("HP 24/35"),
+  ).toBeInTheDocument();
+  const revisionBeforeClosing = state.revision;
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(state.revision).toBe(revisionBeforeClosing);
+  expect(
+    screen.getByRole("button", { name: "戦闘を開く" }),
+  ).toBeInTheDocument();
   expect(
     screen.getByRole("heading", { name: "現在地 · 第1地点" }),
   ).toBeInTheDocument();

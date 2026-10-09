@@ -28,6 +28,10 @@ the entrance. Event rest resets only the event's move count, never this route.
 The route panel connects entrance and visited knowledge, highlights the current
 location and combat/rest phase, and opens the shared detail preview on click.
 Long routes show the latest three locations and expand to the complete route.
+Dungeon progress and the named player's HP/attack/defense are separate panels.
+Encounters open a floating dialog with distinct enemy/player HP, the quiz and
+damage feedback. Escape/close only hides the dialog; reopening resumes the battle,
+not a retreat. Long quizzes scroll inside the viewport-bounded dialog.
 Retreat/finishing still discards this run's route; it is not a historical archive.
 Admin user management can clear only that
 user's waiting time, never HP/laps/XP or accumulate rights. The game refreshes
