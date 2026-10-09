@@ -112,8 +112,9 @@ vi.mock("~/features/gamification/invalidate", () => ({
   invalidateGamification: vi.fn(async () => undefined),
 }));
 vi.mock("~/features/tanbun/detail/Preview", () => ({
-  useTanbunPreview: () => ({ openPreview: vi.fn(), preview: null }),
+  useTanbunPreview: () => ({ openPreview, preview: null }),
 }));
+const { openPreview } = vi.hoisted(() => ({ openPreview: vi.fn() }));
 vi.mock("~/features/quiz/QuizAttempt", () => ({
   default: ({ onAnswered }: { onAnswered: (correct: boolean) => void }) => (
     <button type="button" onClick={() => onAnswered(false)}>
@@ -316,6 +317,15 @@ it("records seen knowledge, takes quiz damage and restores the run after remount
     within(screen.getByRole("dialog")).getByText("HP 24/35"),
   ).toBeInTheDocument();
   const revisionBeforeClosing = state.revision;
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", { name: "条件" }),
+  );
+  expect(openPreview).toHaveBeenCalledWith({
+    quizId: "quiz",
+    role: "target",
+    sentence: undefined,
+  });
+  expect(state.revision).toBe(revisionBeforeClosing);
   await user.keyboard("{Escape}");
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(state.revision).toBe(revisionBeforeClosing);

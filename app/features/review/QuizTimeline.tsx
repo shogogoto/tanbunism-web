@@ -1,14 +1,13 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
-import QuizPrompt from "~/features/quiz/QuizPrompt";
+import QuizPreviewPrompt from "~/features/quiz/QuizPreviewPrompt";
 import {
   type ManagedQuiz,
   addDailyQuizzes,
   listDailyQuizzes,
 } from "~/features/quiz/api";
 import { useQuizSWR } from "~/features/quiz/useQuizSWR";
-import { useTanbunPreview } from "~/features/tanbun/detail/Preview";
 import Loading from "~/shared/components/Loading";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
@@ -364,20 +363,18 @@ function QuizTimelineCard({
   hasSessionResult: boolean;
   onAnswered: (isCorrect: boolean) => void;
 }) {
-  const { openPreview, preview } = useTanbunPreview();
   return (
     <Card
       className="gap-0 border-0 py-0 shadow-none"
       data-quiz-timeline-card
       data-quiz-open="true"
     >
-      {preview}
       <div
         data-hotkey-item={isCurrent ? true : undefined}
         data-hotkey-active={isCurrent ? "true" : undefined}
         className="border-b p-3 outline-none data-[hotkey-active=true]:bg-accent/30 sm:p-4"
       >
-        <QuizPrompt
+        <QuizPreviewPrompt
           quiz={item.quiz}
           className="min-w-0 flex-1"
           headerAccessory={
@@ -405,34 +402,6 @@ function QuizTimelineCard({
               </Badge>
             )
           }
-          renderSubject={(subject) => (
-            <button
-              type="button"
-              className="text-left hover:text-primary hover:underline"
-              title="単文詳細を開く"
-              onClick={() =>
-                openPreview({ quizId: item.quiz.quiz_id, role: "target" })
-              }
-            >
-              {subject}
-            </button>
-          )}
-          renderObject={(object) => (
-            <button
-              type="button"
-              className="text-left hover:text-primary hover:underline"
-              title="単文詳細を開く"
-              onClick={() =>
-                openPreview({
-                  quizId: item.quiz.quiz_id,
-                  role: "correct",
-                  sentence: object,
-                })
-              }
-            >
-              {object}
-            </button>
-          )}
         />
       </div>
       <CardContent className="space-y-2 p-0">

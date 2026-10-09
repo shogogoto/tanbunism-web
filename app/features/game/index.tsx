@@ -7,8 +7,7 @@ import { useAuth } from "~/features/auth/AuthProvider";
 import { useResourceGrowth } from "~/features/gamification/ResourceGrowth";
 import { invalidateGamification } from "~/features/gamification/invalidate";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
-import QuizPrompt from "~/features/quiz/QuizPrompt";
-import { quizOptionLabel } from "~/features/quiz/relationPresentation";
+import QuizPreviewPrompt from "~/features/quiz/QuizPreviewPrompt";
 import { markTanbunSeen } from "~/features/review/api";
 import { useTanbunPreview } from "~/features/tanbun/detail/Preview";
 import UserAvatar from "~/features/user/UserAvatar";
@@ -630,17 +629,7 @@ export function GamePlay({
                     <div className="rounded-lg border p-4 space-y-3">
                       <output className="block">{feedback}</output>
                       {quiz && (
-                        <>
-                          <QuizPrompt quiz={quiz} />
-                          <p className="text-sm text-emerald-500">
-                            正解:{" "}
-                            {quiz.correct
-                              .map((id) =>
-                                quizOptionLabel(quiz, quiz.options[id]),
-                              )
-                              .join("・")}
-                          </p>
-                        </>
+                        <QuizPreviewPrompt quiz={quiz} showCorrectAnswer />
                       )}
                       <Button
                         disabled={busy}
