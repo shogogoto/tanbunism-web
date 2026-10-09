@@ -15,7 +15,7 @@ import Loading from "~/shared/components/Loading";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
-import { consumeAdventureAccess, useAdventureAccess } from "./access";
+import { useAdventureAccess } from "./access";
 import { loadDungeon } from "./api";
 import {
   ENEMIES_TO_CLEAR,
@@ -27,7 +27,8 @@ import {
   newSave,
   resumeEvent,
 } from "./domain";
-import { readGameSave, writeGameSave } from "./storage";
+import { requestGameState } from "./state";
+import { readGameSave } from "./storage";
 
 export default function Game() {
   const { user } = useAuth();
@@ -41,6 +42,13 @@ export default function Game() {
 export function GamePlay({ userId }: { userId: string }) {
   const [save, setSave] = useState<GameSave>(newSave);
   const [ready, setReady] = useState(false);
+  const [stateLoaded, setStateLoaded] = useState(false);
+  const revision = useRef(0);
+  const [menu, setMenu] = useState<"home" | "adventure" | "status" | "items">(
+    "home",
+  );
+  const [showDestinations, setShowDestinations] = useState(false);
+  const [legacy, setLegacy] = useState<GameSave>();
   const [now, setNow] = useState(Date.now);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
@@ -60,31 +68,63 @@ export function GamePlay({ userId }: { userId: string }) {
   const run = save.run;
   const resourceId = run?.resourceId ?? selectedId;
   const {
-    data: content,
+    data: loadedContent,
     error: contentError,
     isLoading,
     mutate: retryContent,
   } = useSWR(
-    resourceId ? ["game-dungeon", userId, resourceId] : null,
+    resourceId && !save.content ? ["game-dungeon", userId, resourceId] : null,
     () => loadDungeon(resourceId),
     { revalidateOnFocus: false, dedupingInterval: 30_000 },
   );
+  const content = run ? (save.content ?? loadedContent) : loadedContent;
   useEffect(() => {
-    setSave(readGameSave(userId));
-    setReady(true);
+    let active = true;
+    const reload = () => {
+      if (pendingMove.current) return;
+      void requestGameState()
+        .then((state) => {
+          if (!active) return;
+          revision.current = state.revision;
+          setSave(state.save);
+          setStateLoaded(true);
+          if (!state.revision) {
+            const old = readGameSave(userId);
+            if (old.run || Object.keys(old.clears).length) setLegacy(old);
+          } else setLegacy(undefined);
+          setReady(true);
+        })
+        .catch((cause) => {
+          if (active) {
+            setError(cause.message);
+            setReady(true);
+          }
+        });
+    };
+    reload();
+    window.addEventListener("focus", reload);
     const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", reload);
+    };
   }, [userId]);
 
-  function update(next: GameSave) {
+  async function update(next: GameSave, consumeAccess = false) {
     try {
-      writeGameSave(userId, next);
-      setSave(next);
-    } catch {
-      setSave(next);
-      setError(
-        "冒険状態をこの端末に保存できませんでした。画面を閉じると進行が失われます。",
-      );
+      const state = await requestGameState({
+        revision: revision.current,
+        save: next.run ? { ...next, content: next.content ?? content } : next,
+        consume_access: consumeAccess,
+      });
+      revision.current = state.revision;
+      setSave(state.save);
+    } catch (cause) {
+      const latest = await requestGameState();
+      revision.current = latest.revision;
+      setSave(latest.save);
+      throw cause;
     }
   }
   async function advance(sentenceId: string) {
@@ -94,7 +134,7 @@ export function GamePlay({ userId }: { userId: string }) {
     setError(undefined);
     try {
       await markTanbunSeen(sentenceId);
-      update(move(save, sentenceId, Math.random()));
+      await update(move(save, sentenceId, Math.random()));
       void invalidateGamification(mutate, { preserveData: true }).catch(
         () => undefined,
       );
@@ -109,7 +149,7 @@ export function GamePlay({ userId }: { userId: string }) {
       setBusy(false);
     }
   }
-  function leave() {
+  async function leave() {
     if (
       run &&
       run.phase !== "cleared" &&
@@ -119,12 +159,29 @@ export function GamePlay({ userId }: { userId: string }) {
       )
     )
       return;
-    update({ ...save, run: undefined });
+    setBusy(true);
+    try {
+      await update({ ...save, run: undefined, content: undefined });
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "撤退を保存できませんでした。",
+      );
+      return;
+    } finally {
+      setBusy(false);
+    }
     setFeedback(undefined);
     setSelectedId("");
+    setMenu("home");
   }
   async function startEvent() {
-    if (pendingMove.current || !access.data?.available || access.error) return;
+    if (
+      !stateLoaded ||
+      pendingMove.current ||
+      !access.data?.available ||
+      access.error
+    )
+      return;
     if (
       run
         ? run.phase !== "rest"
@@ -138,18 +195,21 @@ export function GamePlay({ userId }: { userId: string }) {
     setBusy(true);
     setError(undefined);
     try {
-      const consumed = await consumeAdventureAccess();
-      await access.mutate(consumed, { revalidate: false });
-      update(
+      await update(
         run
           ? resumeEvent(save)
-          : enterDungeon(
-              save,
-              selectedId,
-              selected?.resource_name ?? "リソース",
-              level ?? 1,
-            ),
+          : {
+              ...enterDungeon(
+                save,
+                selectedId,
+                selected?.resource_name ?? "リソース",
+                level ?? 1,
+              ),
+              content,
+            },
+        true,
       );
+      void access.mutate().catch(() => undefined);
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "冒険を開始できませんでした。",
@@ -171,7 +231,9 @@ export function GamePlay({ userId }: { userId: string }) {
         60_000,
     ),
   );
-  const canStart = Boolean(access.data?.available && !access.error && !busy);
+  const canStart = Boolean(
+    stateLoaded && access.data?.available && !access.error && !busy,
+  );
   const paths =
     content?.knowledge
       .filter((item) => !run?.readIds.includes(item.uid))
@@ -188,13 +250,14 @@ export function GamePlay({ userId }: { userId: string }) {
   const selected = resources.find(
     (resource) => resource.resource_id === selectedId,
   );
+  const recommended = selected ?? resources[0];
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-4 p-3 pb-8 sm:p-6">
       <header className="flex items-center justify-between gap-3">
         <h1 className="flex items-center gap-2 text-xl font-semibold">
           <Compass />
-          冒険
+          ゲーム
         </h1>
         <span className="text-sm text-muted-foreground">
           {access.data?.available
@@ -205,8 +268,13 @@ export function GamePlay({ userId }: { userId: string }) {
         </span>
       </header>
       <p className="text-xs text-muted-foreground">
-        試作版 · 攻略状態はこの端末に保存。冒険権は毎時00分・30分に回復します。
+        冒険権は毎時00分・30分に回復します。
       </p>
+      {menu !== "home" && (
+        <Button variant="ghost" onClick={() => setMenu("home")}>
+          ゲームメニュー
+        </Button>
+      )}
       {(error || access.error || growthError || progress.error) && (
         <p role="alert" className="text-sm text-destructive">
           {error ??
@@ -223,56 +291,138 @@ export function GamePlay({ userId }: { userId: string }) {
           </Button>
         </div>
       )}
-      {!run ? (
+      {menu === "home" ? (
+        <div className="space-y-3">
+          {legacy && (
+            <Button
+              disabled={busy}
+              variant="outline"
+              onClick={() => {
+                setBusy(true);
+                void update(legacy)
+                  .then(() => setLegacy(undefined))
+                  .catch((cause) => setError(cause.message))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              この端末の旧冒険を引き継ぐ
+            </Button>
+          )}
+          {run && (
+            <div className="rounded-lg border p-4">
+              <p className="text-xs text-muted-foreground">攻略中</p>
+              <h2 className="font-semibold">{run.name}</h2>
+              <p className="text-sm">
+                HP {run.hp}/{run.maxHp} · 撃破 {run.kills}/{ENEMIES_TO_CLEAR}
+              </p>
+            </div>
+          )}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setMenu("adventure");
+                if (!run && !selectedId && recommended)
+                  setSelectedId(recommended.resource_id);
+              }}
+            >
+              {run ? "冒険を続ける" : "冒険"}
+            </Button>
+            <Button variant="outline" onClick={() => setMenu("status")}>
+              ステータス
+            </Button>
+            <Button variant="outline" onClick={() => setMenu("items")}>
+              アイテム
+            </Button>
+          </div>
+        </div>
+      ) : menu === "status" ? (
+        <div className="rounded-lg border p-4 space-y-3">
+          <h2 className="font-semibold">ステータス</h2>
+          <p>Lv. {level ?? "—"}</p>
+          <p>
+            HP{" "}
+            {run
+              ? `${run.hp}/${run.maxHp}`
+              : level
+                ? `${30 + level * 5}/${30 + level * 5}`
+                : "—"}{" "}
+            · 攻 {run?.attack ?? (level ? 8 + level * 2 : "—")} · 守{" "}
+            {run?.defense ?? level ?? "—"}
+          </p>
+          <p>
+            ダンジョン攻略{" "}
+            {Object.values(save.clears).reduce((sum, value) => sum + value, 0)}
+            周
+          </p>
+        </div>
+      ) : menu === "items" ? (
+        <div className="rounded-lg border p-4 space-y-2">
+          <h2 className="font-semibold">アイテム</h2>
+          <p className="text-sm text-muted-foreground">
+            まだアイテムはありません。武器・アイテム機能は今後追加予定です。
+          </p>
+        </div>
+      ) : !run ? (
         <>
           <p className="text-sm text-muted-foreground">
             知識を読んで進み、クイズの敵と戦う。敵{ENEMIES_TO_CLEAR}
             体でダンジョン攻略。
           </p>
-          <Input
-            aria-label="ダンジョンを絞り込む"
-            data-global-search-input
-            placeholder="リソース名で探す"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          {!growth && !growthError && <Loading />}
-          {growth && !resources.length && (
-            <p>
-              リソースがありません。
-              <Link className="underline" to="/import">
-                読書メモをインポート
-              </Link>
-            </p>
+          <Button
+            variant="outline"
+            onClick={() => setShowDestinations(!showDestinations)}
+          >
+            行き先を変更する
+          </Button>
+          {showDestinations && (
+            <>
+              <Input
+                aria-label="ダンジョンを絞り込む"
+                data-global-search-input
+                placeholder="リソース名で探す"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+              {!growth && !growthError && <Loading />}
+              {growth && !resources.length && (
+                <p>
+                  リソースがありません。
+                  <Link className="underline" to="/import">
+                    読書メモをインポート
+                  </Link>
+                </p>
+              )}
+              <div className="grid gap-2 sm:grid-cols-2">
+                {resources
+                  .filter((resource) =>
+                    (resource.resource_name ?? "")
+                      .toLowerCase()
+                      .includes(query.toLowerCase()),
+                  )
+                  .map((resource) => (
+                    <button
+                      key={resource.resource_id}
+                      type="button"
+                      disabled={busy}
+                      data-hotkey-item
+                      aria-pressed={selectedId === resource.resource_id}
+                      onClick={() => setSelectedId(resource.resource_id)}
+                      className={`rounded-lg border p-3 text-left outline-none data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-primary ${selectedId === resource.resource_id ? "border-primary bg-primary/5" : "hover:bg-muted"}`}
+                    >
+                      <span className="flex items-center gap-2 font-medium">
+                        <BookOpen className="size-4 shrink-0" />
+                        {resource.resource_name || "リソース"}
+                      </span>
+                      <span className="mt-2 block text-xs text-muted-foreground">
+                        Lv.{resource.level} · Power {resource.power} · 攻略{" "}
+                        {save.clears[resource.resource_id] ?? 0}周
+                      </span>
+                    </button>
+                  ))}
+              </div>
+            </>
           )}
-          <div className="grid gap-2 sm:grid-cols-2">
-            {resources
-              .filter((resource) =>
-                (resource.resource_name ?? "")
-                  .toLowerCase()
-                  .includes(query.toLowerCase()),
-              )
-              .map((resource) => (
-                <button
-                  key={resource.resource_id}
-                  type="button"
-                  disabled={busy}
-                  data-hotkey-item
-                  aria-pressed={selectedId === resource.resource_id}
-                  onClick={() => setSelectedId(resource.resource_id)}
-                  className={`rounded-lg border p-3 text-left outline-none data-[hotkey-active=true]:ring-2 data-[hotkey-active=true]:ring-primary ${selectedId === resource.resource_id ? "border-primary bg-primary/5" : "hover:bg-muted"}`}
-                >
-                  <span className="flex items-center gap-2 font-medium">
-                    <BookOpen className="size-4 shrink-0" />
-                    {resource.resource_name || "リソース"}
-                  </span>
-                  <span className="mt-2 block text-xs text-muted-foreground">
-                    Lv.{resource.level} · Power {resource.power} · 攻略{" "}
-                    {save.clears[resource.resource_id] ?? 0}周
-                  </span>
-                </button>
-              ))}
-          </div>
           {selected && (
             <div className="rounded-lg border p-4 space-y-3">
               <h2 className="font-semibold">{selected.resource_name}</h2>
@@ -399,15 +549,29 @@ export function GamePlay({ userId }: { userId: string }) {
                 quiz={quiz}
                 compactMobile
                 onAnswered={(correct) => {
-                  const next = answer(save, correct);
-                  update(next);
-                  setFeedback(
-                    correct
-                      ? next.run?.enemyHp === 0
-                        ? "敵を倒した！"
-                        : `${run.attack}ダメージ！`
-                      : `不正解 · HP −${run.hp - (next.run?.hp ?? 0)}`,
-                  );
+                  void (async () => {
+                    const next = answer(save, correct);
+                    setBusy(true);
+                    try {
+                      await update(next);
+                    } catch (cause) {
+                      setError(
+                        cause instanceof Error
+                          ? cause.message
+                          : "戦闘を保存できませんでした。",
+                      );
+                      return;
+                    } finally {
+                      setBusy(false);
+                    }
+                    setFeedback(
+                      correct
+                        ? next.run?.enemyHp === 0
+                          ? "敵を倒した！"
+                          : `${run.attack}ダメージ！`
+                        : `不正解 · HP −${run.hp - (next.run?.hp ?? 0)}`,
+                    );
+                  })();
                 }}
               />
             </div>
@@ -441,10 +605,14 @@ export function GamePlay({ userId }: { userId: string }) {
               </p>
             </div>
           ) : null}
-          <Button variant="outline" disabled={busy} onClick={leave}>
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() => void leave()}
+          >
             {run.phase === "cleared" || run.phase === "defeated"
               ? "入口へ戻る"
-              : "ダンジョンから戻る"}
+              : "撤退"}
           </Button>
         </>
       )}

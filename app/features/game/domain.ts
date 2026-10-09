@@ -1,3 +1,5 @@
+import type { DungeonContent } from "./api";
+
 export const MOVES_PER_EVENT = 5;
 export const ENEMIES_TO_CLEAR = 3;
 
@@ -20,6 +22,7 @@ export type GameSave = {
   version: 2;
   clears: Record<string, number>;
   run?: Run;
+  content?: DungeonContent;
 };
 export const newSave = (): GameSave => ({
   version: 2,

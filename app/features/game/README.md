@@ -12,18 +12,29 @@ at each clock :00/:30 boundary, capacity one; ongoing HP/kills persist between e
 the run, never learning XP. Dungeon clearing counts laps, not resource levels.
 
 Numbers are provisional balancing constants, not a finalized level design.
-This is a single-player prototype: **game state is localStorage per account/device**,
-not authoritative or synchronized. Adventure rights are server-side (see backend
-`feature/game`); knowledge/answers/XP remain server-side. Enter/resume consumes the
-current server clock slot atomically. Admin user management can clear only that
+The entrance is a menu: Adventure, Status, Items. Adventure resumes the current
+dungeon; new destinations appear only after explicitly opening the destination picker.
+Items are a placeholder, not implemented weapons.
+
+This is a single-player prototype: **game snapshots are saved server-side per account**
+at `/game/state`. HP, progress, clears and the frozen knowledge/quiz order survive
+device changes. Refresh/focus reads the latest state; revision checks reject stale
+overwrites. Enter/resume saves the snapshot and consumes the clock slot in one
+atomic Cypher query. Returning to the menu does not retreat. Old local progress
+can be explicitly imported once, before the first server save; it is not deleted.
+Admin user management can clear only that
 user's waiting time, never HP/laps/XP or accumulate rights. The game refreshes
-access every 15 seconds, on focus, and at the next clock boundary. Version 1 local
-saves migrate with HP/laps preserved and their old local cooldown discarded.
+access every 15 seconds, on focus, and at the next clock boundary.
 Use only existing prepared quizzes (no generation when opening a dungeon).
 Currently loads up to 100 knowledge items per resource; no route-aware quiz
 recommendations yet. Global UI hotkeys continue to work; input/dialog guards apply.
 
-Next slices: server-authoritative adventure state and concurrency/replay protection;
+Combat rules still run on the client; the snapshot endpoint is not an anti-cheat
+system. Learning answers/exposures and game saves are separate requests: a failed
+game save never removes recorded learning XP. No competitive rewards should use
+these snapshots until server-authoritative combat is implemented.
+
+Next slices: server-authoritative combat and replay protection;
 path-linked encounters and occasional detours; choosing a captured quiz weapon
 on clearing, MP and attack turns; capped global-accuracy weapon damage; larger
 Power dungeon game-only rewards; skill allocation; quiz-type-specific timers;
