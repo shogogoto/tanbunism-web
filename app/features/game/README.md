@@ -19,6 +19,13 @@ mounted across menu changes, preserving the adventure and its battle timer.
 Adventure resumes the current
 dungeon; new destinations appear only after explicitly opening the destination picker.
 Items are a placeholder, not implemented weapons.
+The adventure entrance also offers previous dungeons, including uncleared visits.
+The server keeps a deduplicated recent-first `visitedDungeons` list across retreat,
+defeat and clearing, even when an older client omits the field. Legacy active runs
+and cleared dungeon IDs seed the list; past abandoned runs were not stored and
+cannot be reconstructed. The picker shows currently available resources only.
+Choosing a past dungeon only changes the destination; entry still consumes an
+adventure right. An ongoing dungeon must be left before selecting another.
 
 This is a single-player prototype: **game snapshots are saved server-side per account**
 at `/game/state`. HP, progress, clears and the frozen knowledge/quiz order survive

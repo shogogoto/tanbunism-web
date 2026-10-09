@@ -359,6 +359,13 @@ export function GamePlay({
   const selected = resources.find(
     (resource) => resource.resource_id === selectedId,
   );
+  const visitedIds = Array.from(
+    new Set([...(save.visitedDungeons ?? []), ...Object.keys(save.clears)]),
+  );
+  const visited = visitedIds.flatMap((id) => {
+    const resource = resources.find((item) => item.resource_id === id);
+    return resource ? [resource] : [];
+  });
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-4 p-3 pb-8 sm:p-6">
@@ -475,6 +482,33 @@ export function GamePlay({
             知識を読んで進み、クイズの敵と戦う。敵{ENEMIES_TO_CLEAR}
             体でダンジョン攻略。
           </p>
+          {visited.length > 0 && (
+            <div className="space-y-2">
+              <label htmlFor="visited-dungeon" className="text-sm font-medium">
+                過去のダンジョン
+              </label>
+              <select
+                id="visited-dungeon"
+                className="h-10 w-full min-w-0 rounded-md border bg-background px-3 text-sm"
+                disabled={busy || !stateLoaded}
+                value={visitedIds.includes(selectedId) ? selectedId : ""}
+                onChange={(event) => {
+                  if (event.target.value) setSelectedId(event.target.value);
+                }}
+              >
+                <option value="">ダンジョンを選択</option>
+                {visited.map((resource) => (
+                  <option
+                    key={resource.resource_id}
+                    value={resource.resource_id}
+                  >
+                    {resource.resource_name || "リソース"} · 攻略
+                    {save.clears[resource.resource_id] ?? 0}周
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <Button
             variant="outline"
             onClick={() => setShowDestinations(!showDestinations)}

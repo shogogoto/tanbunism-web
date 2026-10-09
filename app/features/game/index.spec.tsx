@@ -89,6 +89,12 @@ vi.mock("~/features/gamification/ResourceGrowth", () => ({
           power: 20,
           level: 1,
         },
+        {
+          resource_id: "previous",
+          resource_name: "以前の本",
+          power: 10,
+          level: 1,
+        },
       ],
     },
   }),
@@ -365,6 +371,61 @@ it("does not advance when the seen API fails", async () => {
   );
   expect(await screen.findByRole("alert")).toHaveTextContent("記録失敗");
   expect(state.save.run).toMatchObject({ phase: "path", moves: 0 });
+});
+
+it("selects an uncleared previous dungeon without consuming access until entry", async () => {
+  state = {
+    revision: 1,
+    save: { ...newSave(), visitedDungeons: ["previous", "gone"] },
+  };
+  renderGame("/game/adventure");
+  const user = userEvent.setup();
+  const history = await screen.findByRole("combobox", {
+    name: "過去のダンジョン",
+  });
+  expect(
+    within(history).getByRole("option", { name: "以前の本 · 攻略0周" }),
+  ).toBeInTheDocument();
+  expect(within(history).getAllByRole("option")).toHaveLength(2);
+  await user.selectOptions(history, "previous");
+  expect(
+    await screen.findByRole("heading", { name: "以前の本" }),
+  ).toBeInTheDocument();
+  expect(state.revision).toBe(1);
+  expect(consumeCount).toBe(0);
+  await user.click(
+    await screen.findByRole("button", { name: "ダンジョンに入る" }),
+  );
+  expect(state.save.run?.resourceId).toBe("previous");
+  expect(consumeCount).toBe(1);
+  expect(state.save.visitedDungeons).toEqual(["previous", "gone"]);
+});
+
+it("includes legacy cleared dungeons in the previous dungeon picker", async () => {
+  state = { revision: 1, save: { ...newSave(), clears: { previous: 2 } } };
+  renderGame("/game/adventure");
+  const history = await screen.findByRole("combobox", {
+    name: "過去のダンジョン",
+  });
+  expect(
+    within(history).getByRole("option", { name: "以前の本 · 攻略2周" }),
+  ).toBeInTheDocument();
+});
+
+it("does not offer dungeon switching while an adventure is in progress", async () => {
+  state = {
+    revision: 1,
+    save: {
+      ...enterDungeon(newSave(), "book", "テストの本", 1),
+      visitedDungeons: ["previous"],
+    },
+  };
+  renderGame("/game/adventure");
+  expect(await screen.findByText("HP 35/35")).toBeVisible();
+  expect(
+    screen.queryByRole("combobox", { name: "過去のダンジョン" }),
+  ).not.toBeInTheDocument();
+  expect(state.save.run?.resourceId).toBe("book");
 });
 
 it("admin unlock is applied without healing or erasing progress", async () => {

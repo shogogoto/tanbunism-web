@@ -23,6 +23,7 @@ export type Run = {
 export type GameSave = {
   version: 2;
   clears: Record<string, number>;
+  visitedDungeons?: string[];
   run?: Run;
   content?: DungeonContent;
   battleFeedback?: string | null;
