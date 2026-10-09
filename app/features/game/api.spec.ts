@@ -12,10 +12,23 @@ vi.mock("~/shared/generated/tanbun/tanbun", () => ({
 }));
 beforeEach(() => vi.resetAllMocks());
 it("scopes knowledge and prepared quizzes to one resource without generation", async () => {
+  const tanbun = {
+    uid: "sentence",
+    sentence: "知識本文",
+    resource_uid: "resource",
+    term: { names: ["用語", "別名"] },
+    stats: {
+      n_detail: 0,
+      n_premise: 0,
+      n_conclusion: 0,
+      n_refer: 0,
+      n_referred: 0,
+    },
+  };
   vi.mocked(searchByTextTanbunGet).mockResolvedValue({
     status: 200,
     headers: new Headers(),
-    data: { total: 0, data: [], resource_infos: {} },
+    data: { total: 1, data: [tanbun], resource_infos: {} },
   });
   vi.mocked(listStudyPlans).mockResolvedValue([
     {
@@ -29,7 +42,11 @@ it("scopes knowledge and prepared quizzes to one resource without generation", a
     },
   ]);
   vi.mocked(recommendQuizzes).mockResolvedValue([]);
-  expect(await loadDungeon("resource")).toEqual({ knowledge: [], quizzes: [] });
+  expect(await loadDungeon("resource")).toEqual({
+    knowledge: [tanbun],
+    quizzes: [],
+  });
+  expect(searchByTextTanbunGet).toHaveBeenCalledTimes(1);
   expect(searchByTextTanbunGet).toHaveBeenCalledWith(
     expect.objectContaining({ resource_id: "resource" }),
     { credentials: "include" },

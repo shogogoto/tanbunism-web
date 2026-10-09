@@ -1,6 +1,7 @@
 import { MapPin } from "lucide-react";
 import { useState } from "react";
 import { Button } from "~/shared/components/ui/button";
+import PathTerms from "./PathTerms";
 import type { PathKnowledge } from "./api";
 import type { Run } from "./domain";
 
@@ -23,7 +24,7 @@ export default function DungeonRoute({
   onOpen: (sentenceId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const sentences = new Map(knowledge.map((item) => [item.uid, item.sentence]));
+  const sentences = new Map(knowledge.map((item) => [item.uid, item]));
   const hiddenCount = expanded ? 0 : Math.max(0, run.readIds.length - 3);
   const steps = run.readIds.slice(hiddenCount);
   return (
@@ -79,10 +80,11 @@ export default function DungeonRoute({
                 <span className="mb-1 block text-xs">
                   {position} · {current ? "現在地" : "通過"}
                 </span>
+                <PathTerms knowledge={sentences.get(sentenceId)} />
                 <span
                   className={`block break-words text-sm leading-relaxed ${current ? "" : "line-clamp-2"}`}
                 >
-                  {sentences.get(sentenceId) ?? "単文詳細を開く"}
+                  {sentences.get(sentenceId)?.sentence ?? "単文詳細を開く"}
                 </span>
               </button>
             </li>

@@ -43,6 +43,9 @@ recommendation order. Its last item is the current location; an empty route mean
 the entrance. Event rest resets only the event's move count, never this route.
 The route panel connects entrance and visited knowledge, highlights the current
 location and combat/rest phase, and opens the shared detail preview on click.
+Both next-path choices and visited steps display term names from the same search
+result/frozen snapshot, without per-sentence detail requests. Older snapshots
+without term data still render normally, with no invented terms.
 Long routes show the latest three locations and expand to the complete route.
 Dungeon progress and the named player's HP/attack/defense are separate panels.
 Encounters open a floating dialog with distinct enemy/player HP, the quiz and

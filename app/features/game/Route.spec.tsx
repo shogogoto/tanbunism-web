@@ -66,3 +66,32 @@ it("keeps the location visible during combat even when old content is missing", 
     "単文詳細を開く",
   );
 });
+
+it("shows terms and aliases on visited knowledge and keeps preview navigation", async () => {
+  const run = move(
+    enterDungeon(newSave(), "book", "本", 1),
+    "sentence",
+    0.9,
+  ).run;
+  if (!run) throw new Error("Missing run");
+  const open = vi.fn();
+  render(
+    <DungeonRoute
+      run={run}
+      knowledge={[
+        {
+          uid: "sentence",
+          sentence: "知識本文",
+          term: { names: ["用語", "別名", "用語", ""] },
+        },
+      ]}
+      onOpen={open}
+    />,
+  );
+  const button = screen.getByRole("button", { name: /1 · 現在地/ });
+  expect(within(button).getByText("用語")).toBeVisible();
+  expect(within(button).getByText("別名")).toBeVisible();
+  expect(within(button).getByText("知識本文")).toBeVisible();
+  await userEvent.setup().click(button);
+  expect(open).toHaveBeenCalledWith("sentence");
+});

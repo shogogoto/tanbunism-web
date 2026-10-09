@@ -16,6 +16,7 @@ import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
 import BattleDialog from "./BattleDialog";
+import PathTerms from "./PathTerms";
 import PlayerStatus from "./PlayerStatus";
 import DungeonRoute from "./Route";
 import { useAdventureAccess } from "./access";
@@ -756,6 +757,7 @@ export function GamePlay({
               </h3>
               {paths.map((item) => (
                 <div key={item.uid} className="rounded-lg border p-3 space-y-3">
+                  <PathTerms knowledge={item} />
                   <p className="text-base leading-relaxed">{item.sentence}</p>
                   <div className="flex gap-2">
                     <Button

@@ -129,7 +129,13 @@ beforeEach(() => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
   vi.mocked(loadDungeon).mockResolvedValue({
-    knowledge: [{ uid: "sentence", sentence: "知識の進路" }],
+    knowledge: [
+      {
+        uid: "sentence",
+        sentence: "知識の進路",
+        term: { names: ["進路の用語"] },
+      },
+    ],
     quizzes: [
       {
         quiz_id: "quiz",
@@ -371,6 +377,13 @@ it("does not advance when the seen API fails", async () => {
   );
   expect(await screen.findByRole("alert")).toHaveTextContent("記録失敗");
   expect(state.save.run).toMatchObject({ phase: "path", moves: 0 });
+});
+
+it("shows terms on knowledge offered as the next path", async () => {
+  renderGame();
+  await enter();
+  expect(screen.getByText("進路の用語")).toBeVisible();
+  expect(screen.getByText("知識の進路")).toBeVisible();
 });
 
 it("selects an uncleared previous dungeon without consuming access until entry", async () => {

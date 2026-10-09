@@ -3,9 +3,10 @@ import {
   listStudyPlans,
   recommendQuizzes,
 } from "~/features/quiz/api";
+import type { Tanbun } from "~/shared/generated/fastAPI.schemas";
 import { searchByTextTanbunGet } from "~/shared/generated/tanbun/tanbun";
 
-export type PathKnowledge = { uid: string; sentence: string };
+export type PathKnowledge = Pick<Tanbun, "uid" | "sentence" | "term">;
 export type DungeonContent = {
   knowledge: PathKnowledge[];
   quizzes: ReadableQuiz[];
