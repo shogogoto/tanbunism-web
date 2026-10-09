@@ -12,6 +12,7 @@ import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import PathTerms from "./PathTerms";
 import type { PathKnowledge } from "./api";
 import { type DungeonMap, ENTRANCE, neighbours } from "./exploration";
+import { directionalPlace } from "./navigation";
 
 export type MapCandidate = {
   knowledge: PathKnowledge;
@@ -43,6 +44,10 @@ export default function ExplorationMap({
 }) {
   const [fullscreen, setFullscreen] = useState(false);
   const [selected, setSelected] = useState<string>();
+  const [focused, setFocused] = useState(map.current);
+  const nodes = useRef(new Map<string, HTMLButtonElement>());
+  const primaryAction = useRef<HTMLButtonElement>(null);
+  const keyboardNavigation = useRef(false);
   const [zoom, setZoom] = useState(1);
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {
@@ -187,8 +192,32 @@ export default function ExplorationMap({
     return () => observer.disconnect();
   }, [currentPosition?.x, currentPosition?.y, zoom, fullscreen]);
   useEffect(() => {
-    if (map.current) setSelected(undefined);
+    if (map.current) {
+      setSelected(undefined);
+      setFocused(map.current);
+      if (keyboardNavigation.current) {
+        nodes.current.get(map.current)?.focus({ preventScroll: true });
+      }
+    }
   }, [map.current]);
+  function focusPlace(id: string) {
+    setFocused(id);
+    const node = nodes.current.get(id);
+    node?.focus({ preventScroll: true });
+    const point = positions.get(id);
+    const element = viewport.current;
+    if (point && element) {
+      element.scrollTo?.({
+        left: Math.max(0, (point.x + 80) * zoom - element.clientWidth / 2),
+        top: Math.max(0, (point.y + 40) * zoom - element.clientHeight / 2),
+      });
+    }
+  }
+  function closeSelection() {
+    const previous = selected;
+    setSelected(undefined);
+    if (previous) focusPlace(previous);
+  }
   const chosen = selected ? sentences.get(selected) : undefined;
   const candidate = candidates.find((item) => item.knowledge.uid === selected);
   const canMove =
@@ -204,23 +233,25 @@ export default function ExplorationMap({
       <div
         ref={viewport}
         aria-label="探索マップをスクロール"
-        // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable map supports arrow-key panning.
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: map entry point supports spatial keyboard navigation.
         tabIndex={0}
         onKeyDown={(event) => {
-          if (event.target !== event.currentTarget) return;
-          const offset = {
-            ArrowLeft: [-120, 0],
-            ArrowRight: [120, 0],
-            ArrowUp: [0, -120],
-            ArrowDown: [0, 120],
-          }[event.key];
-          if (offset) {
+          if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
+            return;
+          if (event.key.startsWith("Arrow")) {
             event.preventDefault();
-            event.currentTarget.scrollBy({
-              left: offset[0],
-              top: offset[1],
-              behavior: "smooth",
-            });
+            event.stopPropagation();
+            keyboardNavigation.current = true;
+            const origin = nodes.current.has(focused) ? focused : map.current;
+            focusPlace(
+              directionalPlace(positions, origin, event.key) ?? origin,
+            );
+          } else if (
+            event.target === event.currentTarget &&
+            event.key === "Enter"
+          ) {
+            event.preventDefault();
+            focusPlace(map.current);
           }
         }}
         className="absolute inset-0 overflow-auto overscroll-contain cursor-grab active:cursor-grabbing"
@@ -309,7 +340,24 @@ export default function ExplorationMap({
                     type="button"
                     aria-current={current ? "location" : undefined}
                     aria-pressed={selected === id}
-                    onClick={() => setSelected(id)}
+                    tabIndex={
+                      id === (positions.has(focused) ? focused : map.current)
+                        ? 0
+                        : -1
+                    }
+                    ref={(node) => {
+                      if (node) nodes.current.set(id, node);
+                      else nodes.current.delete(id);
+                    }}
+                    onFocus={() => setFocused(id)}
+                    onClick={(event) => {
+                      keyboardNavigation.current = event.detail === 0;
+                      setSelected(id);
+                      if (keyboardNavigation.current)
+                        requestAnimationFrame(() =>
+                          primaryAction.current?.focus(),
+                        );
+                    }}
                     className={`absolute w-40 rounded-xl border bg-background/95 p-3 text-left text-sm shadow-lg hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${current ? "border-primary ring-4 ring-primary/20" : unexplored ? "border-dashed border-primary/60" : "border-border"}`}
                     style={{ left: point?.x, top: point?.y }}
                   >
@@ -391,11 +439,19 @@ export default function ExplorationMap({
           {children}
           <p className="hidden w-fit rounded bg-background/90 px-2 py-1 text-muted-foreground sm:block">
             実線：知識の関係 · 破線：寄り道
+            <br />
+            矢印：地点を選ぶ · Enter：確認 · Esc：戻る
           </p>
         </div>
         {selected && (
           <section
             aria-label="選択した地点"
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              event.preventDefault();
+              event.stopPropagation();
+              closeSelection();
+            }}
             className="pointer-events-auto relative max-h-[35dvh] w-full overflow-y-auto rounded-xl border bg-background/95 p-3 shadow-xl sm:max-w-lg"
           >
             <Button
@@ -403,7 +459,7 @@ export default function ExplorationMap({
               variant="ghost"
               className="absolute right-1 top-1"
               aria-label="地点の選択を閉じる"
-              onClick={() => setSelected(undefined)}
+              onClick={closeSelection}
             >
               <X className="size-4" />
             </Button>
@@ -419,6 +475,7 @@ export default function ExplorationMap({
               {canMove && (
                 <Button
                   size="sm"
+                  ref={primaryAction}
                   className="min-h-11 flex-1"
                   onClick={() => onMove(selected, candidate?.kind)}
                   aria-label={
@@ -438,6 +495,7 @@ export default function ExplorationMap({
                 <Button
                   size="sm"
                   variant="outline"
+                  ref={canMove ? undefined : primaryAction}
                   onClick={() => onOpen(selected)}
                 >
                   詳細
@@ -459,6 +517,12 @@ export default function ExplorationMap({
       {fullscreen ? (
         <DialogContent
           className="inset-0 left-0 top-0 flex h-dvh max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 data-[state=open]:animate-none data-[state=closed]:animate-none sm:max-w-none [&>button]:hidden"
+          onEscapeKeyDown={(event) => {
+            if (selected) {
+              event.preventDefault();
+              closeSelection();
+            }
+          }}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
             requestAnimationFrame(() => {
