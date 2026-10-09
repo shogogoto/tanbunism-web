@@ -91,6 +91,30 @@ it("gから始まるショートカットで主要画面へ移動する", async 
   );
 });
 
+it("g gでゲームに移動し、入力中・未ログインでは移動しない", async () => {
+  const user = userEvent.setup();
+  renderHotkeys();
+  const input = screen.getByRole("textbox", { name: "入力欄" });
+  await user.click(input);
+  await user.keyboard("gg");
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent("/");
+  expect(input).toHaveValue("gg");
+  await user.keyboard("{Escape}gg");
+  expect(screen.getByRole("status", { name: "現在地" })).toHaveTextContent(
+    "/game",
+  );
+});
+
+it("未ログインのg gではゲームへ移動しない", async () => {
+  auth.isAuthenticated = false;
+  const user = userEvent.setup();
+  renderHotkeys();
+  await user.keyboard("gg");
+  expect(screen.getByRole("status", { name: "現在地" })).not.toHaveTextContent(
+    "/game",
+  );
+});
+
 it("プロフィールの行をj kで移動してEnterで詳細、Spaceで復習を開く", async () => {
   const user = userEvent.setup();
   renderHotkeys(

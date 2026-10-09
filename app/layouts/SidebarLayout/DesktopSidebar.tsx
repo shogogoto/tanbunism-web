@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircleUserRound,
   FileUp,
+  Gamepad2,
   LayoutDashboard,
   Search,
 } from "lucide-react";
@@ -31,6 +32,7 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
   const links = isAuthenticated
     ? [
         { to: "/review", label: "復習", icon: BookOpen },
+        { to: "/game", label: "ゲーム", icon: Gamepad2 },
         {
           to: "/dashboard",
           label: "ダッシュボード",

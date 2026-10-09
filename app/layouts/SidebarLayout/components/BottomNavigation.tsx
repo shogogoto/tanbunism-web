@@ -2,6 +2,7 @@ import {
   Bell,
   BookOpen,
   CircleUserRound,
+  Gamepad2,
   LayoutDashboard,
   LogIn,
   Search,
@@ -34,6 +35,9 @@ export default function BottomNavigation() {
       )}
       {isAuthenticated && (
         <NavigationItem to="/review" label="復習" icon={<BookOpen />} />
+      )}
+      {isAuthenticated && (
+        <NavigationItem to="/game" label="ゲーム" icon={<Gamepad2 />} />
       )}
       {isAuthenticated && (
         <NavigationItem

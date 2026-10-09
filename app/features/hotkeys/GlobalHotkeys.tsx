@@ -58,6 +58,7 @@ export function HotkeyProvider({ children }: PropsWithChildren) {
                   <>
                     <HotkeyRow keys={["g", "d"]} label="ダッシュボードへ移動" />
                     <HotkeyRow keys={["g", "r"]} label="復習へ移動" />
+                    <HotkeyRow keys={["g", "g"]} label="ゲームへ移動" />
                     <HotkeyRow keys={["g", "p"]} label="プロフィールへ移動" />
                     <HotkeyRow keys={["g", "n"]} label="通知へ移動" />
                     <HotkeyRow keys={["g", "i"]} label="インポートへ移動" />
@@ -268,7 +269,7 @@ export default function GlobalHotkeys() {
         return;
       }
 
-      if (key === "g") {
+      if (key === "g" && waitingForDestination.current !== "g") {
         startChord("g");
         return;
       }
@@ -277,6 +278,7 @@ export default function GlobalHotkeys() {
       resetChord();
 
       const actions: Record<string, (() => void) | undefined> = {
+        g: isAuthenticated ? () => navigate("/game") : undefined,
         h: openHistory,
         d: isAuthenticated ? () => navigate("/dashboard") : undefined,
         r: isAuthenticated ? () => navigate("/review") : undefined,
@@ -522,9 +524,10 @@ function HotkeyRow({ keys, label }: { keys: string[]; label: string }) {
     <div className="flex items-center justify-between gap-4 py-3">
       <dt className="text-sm text-muted-foreground">{label}</dt>
       <dd className="flex items-center gap-1">
-        {keys.map((key) => (
+        {keys.map((key, position) => (
           <kbd
-            key={key}
+            // biome-ignore lint/suspicious/noArrayIndexKey: Chord positions are fixed; repeated keys such as g g need distinct identities.
+            key={`${key}-${position}`}
             className="min-w-7 rounded border bg-muted px-1.5 py-0.5 text-center font-mono text-xs shadow-xs"
           >
             {key}

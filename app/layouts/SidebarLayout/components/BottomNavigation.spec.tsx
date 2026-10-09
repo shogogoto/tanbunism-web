@@ -39,6 +39,10 @@ it("ログイン中は個人用画面を含む主要導線を表示する", () =
     "href",
     "/review",
   );
+  expect(screen.getByRole("link", { name: "ゲーム" })).toHaveAttribute(
+    "href",
+    "/game",
+  );
   expect(screen.getByRole("link", { name: "通知" })).toHaveAttribute(
     "href",
     "/notifications",
