@@ -482,13 +482,19 @@ export function GamePlay({
             知識を読んで進み、クイズの敵と戦う。敵{ENEMIES_TO_CLEAR}
             体でダンジョン攻略。
           </p>
-          {visited.length > 0 && (
-            <div className="space-y-2">
-              <label htmlFor="visited-dungeon" className="text-sm font-medium">
-                過去のダンジョン
-              </label>
+          <section
+            className="space-y-2"
+            aria-labelledby="visited-dungeon-label"
+          >
+            <h2 id="visited-dungeon-label" className="text-sm font-medium">
+              過去のダンジョン
+            </h2>
+            {!stateLoaded || (!growth && !growthError) ? (
+              <p className="text-sm text-muted-foreground">履歴を読み込み中…</p>
+            ) : visited.length > 0 ? (
               <select
                 id="visited-dungeon"
+                aria-labelledby="visited-dungeon-label"
                 className="h-10 w-full min-w-0 rounded-md border bg-background px-3 text-sm"
                 disabled={busy || !stateLoaded}
                 value={visitedIds.includes(selectedId) ? selectedId : ""}
@@ -507,8 +513,14 @@ export function GamePlay({
                   </option>
                 ))}
               </select>
-            </div>
-          )}
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {visitedIds.length > 0
+                  ? "参照できるダンジョンがありません。"
+                  : "訪問履歴はまだありません。"}
+              </p>
+            )}
+          </section>
           <Button
             variant="outline"
             onClick={() => setShowDestinations(!showDestinations)}

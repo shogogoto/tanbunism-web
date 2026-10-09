@@ -11,6 +11,7 @@ import {
 import type { ReactNode } from "react";
 import { NavLink } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
+import { AdventureBadge } from "~/features/game/AdventureBadge";
 import { NotificationBadge } from "~/features/notifications/NotificationBadge";
 
 export default function BottomNavigation() {
@@ -37,7 +38,12 @@ export default function BottomNavigation() {
         <NavigationItem to="/review" label="復習" icon={<BookOpen />} />
       )}
       {isAuthenticated && (
-        <NavigationItem to="/game" label="ゲーム" icon={<Gamepad2 />} />
+        <NavigationItem
+          to="/game"
+          label="ゲーム"
+          icon={<Gamepad2 />}
+          badge={<AdventureBadge />}
+        />
       )}
       {isAuthenticated && (
         <NavigationItem

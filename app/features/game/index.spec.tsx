@@ -412,6 +412,22 @@ it("includes legacy cleared dungeons in the previous dungeon picker", async () =
   ).toBeInTheDocument();
 });
 
+it("shows an explicit empty history instead of hiding the section", async () => {
+  renderGame("/game/adventure");
+  expect(await screen.findByText("訪問履歴はまだありません。")).toBeVisible();
+  expect(
+    screen.getByRole("region", { name: "過去のダンジョン" }),
+  ).toBeVisible();
+});
+
+it("explains when past dungeons are no longer available", async () => {
+  state = { revision: 1, save: { ...newSave(), visitedDungeons: ["removed"] } };
+  renderGame("/game/adventure");
+  expect(
+    await screen.findByText("参照できるダンジョンがありません。"),
+  ).toBeVisible();
+});
+
 it("does not offer dungeon switching while an adventure is in progress", async () => {
   state = {
     revision: 1,

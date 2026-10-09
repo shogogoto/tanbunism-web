@@ -26,6 +26,11 @@ and cleared dungeon IDs seed the list; past abandoned runs were not stored and
 cannot be reconstructed. The picker shows currently available resources only.
 Choosing a past dungeon only changes the destination; entry still consumes an
 adventure right. An ongoing dungeon must be left before selecting another.
+Empty or unavailable history is shown explicitly instead of hiding the section.
+Desktop (including the collapsed sidebar) and mobile navigation share the
+adventure-access cache and show a green dot while adventure is available.
+The dot hides when access is consumed, unknown, or its refresh fails, and returns
+when the server-clock slot recovers. Logged-out navigation makes no access request.
 
 This is a single-player prototype: **game snapshots are saved server-side per account**
 at `/game/state`. HP, progress, clears and the frozen knowledge/quiz order survive

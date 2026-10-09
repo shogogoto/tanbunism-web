@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Link, NavLink } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
+import { AdventureBadge } from "~/features/game/AdventureBadge";
 import { HotkeyHelpButton } from "~/features/hotkeys/GlobalHotkeys";
 import { NotificationBadge } from "~/features/notifications/NotificationBadge";
 import ThemeToggle from "~/shared/components/theme/ThemeToggle";
@@ -113,6 +114,7 @@ export default function DesktopSidebar({ collapsed, onToggle }: Props) {
           >
             <span className="relative shrink-0">
               <Icon className="size-5" />
+              {to === "/game" && <AdventureBadge />}
               {to === "/notifications" && collapsed && (
                 <NotificationBadge compact />
               )}

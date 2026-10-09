@@ -38,12 +38,16 @@ async function requestAccess(consume = false): Promise<TimedAdventureAccess> {
 
 export const consumeAdventureAccess = () => requestAccess(true);
 
-export function useAdventureAccess(userId: string) {
-  const access = useSWR(adventureAccessKey(userId), () => requestAccess(), {
-    refreshInterval: 15_000,
-    dedupingInterval: 1000,
-    revalidateOnFocus: true,
-  });
+export function useAdventureAccess(userId?: string) {
+  const access = useSWR(
+    userId ? adventureAccessKey(userId) : null,
+    () => requestAccess(),
+    {
+      refreshInterval: 15_000,
+      dedupingInterval: 1000,
+      revalidateOnFocus: true,
+    },
+  );
   const { data, mutate } = access;
   useEffect(() => {
     if (!data || data.available) return;

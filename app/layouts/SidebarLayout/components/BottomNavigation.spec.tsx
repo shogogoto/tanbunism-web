@@ -3,6 +3,10 @@ import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
 import BottomNavigation from "./BottomNavigation";
 
+vi.mock("~/features/game/access", () => ({
+  useAdventureAccess: () => ({ data: { available: true } }),
+}));
+
 const auth = vi.hoisted(() => ({
   isAuthenticated: true,
   user: { uid: "user-1", username: "reader" },
@@ -43,6 +47,7 @@ it("ログイン中は個人用画面を含む主要導線を表示する", () =
     "href",
     "/game",
   );
+  expect(screen.getByRole("status", { name: "冒険可能" })).toBeVisible();
   expect(screen.getByRole("link", { name: "通知" })).toHaveAttribute(
     "href",
     "/notifications",
@@ -80,6 +85,9 @@ it("未ログインではダッシュボードを表示しない", () => {
   ).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "検索" })).toBeVisible();
   expect(screen.queryByRole("link", { name: "復習" })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("status", { name: "冒険可能" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("link", { name: "プロフィール" }),
   ).not.toBeInTheDocument();

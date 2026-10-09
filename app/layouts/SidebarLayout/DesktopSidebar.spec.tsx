@@ -3,6 +3,25 @@ import { MemoryRouter } from "react-router";
 import { expect, it, vi } from "vitest";
 import DesktopSidebar from "./DesktopSidebar";
 
+vi.mock("~/features/game/access", () => ({
+  useAdventureAccess: () => ({ data: { available: true } }),
+}));
+
+it.each([true, false])(
+  "shows adventure availability with collapsed=%s",
+  (collapsed) => {
+    render(
+      <MemoryRouter>
+        <DesktopSidebar collapsed={collapsed} onToggle={vi.fn()} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("status", { name: "冒険可能" })).toBeVisible();
+    expect(
+      screen.getByRole("status", { name: "冒険可能" }).closest("a"),
+    ).toHaveAttribute("href", "/game");
+  },
+);
+
 vi.mock("~/features/auth/AuthProvider", () => ({
   useAuth: () => ({
     isAuthenticated: true,
