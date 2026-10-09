@@ -44,7 +44,8 @@ export default function BattleDialog({
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 overflow-y-auto space-y-3 pr-1">
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-2">
+              <PlayerStatus run={run} name={playerName} />
               <section
                 aria-label="敵"
                 className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 space-y-2"
@@ -70,12 +71,11 @@ export default function BattleDialog({
                   />
                 </div>
               </section>
-              <PlayerStatus run={run} name={playerName} />
             </div>
             {children}
           </div>
           <p className="shrink-0 text-xs text-muted-foreground">
-            閉じても戦闘は保持されます。
+            閉じても制限時間は進みます。
           </p>
         </DialogContent>
       </Dialog>

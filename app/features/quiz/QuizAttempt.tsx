@@ -27,6 +27,9 @@ type Props = {
   completed?: boolean;
   compactMobile?: boolean;
   actionInfo?: ReactNode;
+  disabled?: boolean;
+  onSubmittingChange?: (submitting: boolean) => void;
+  canSubmit?: () => boolean;
 };
 
 export default function QuizAttempt({
@@ -37,6 +40,9 @@ export default function QuizAttempt({
   completed = false,
   compactMobile = false,
   actionInfo,
+  disabled = false,
+  onSubmittingChange,
+  canSubmit,
 }: Props) {
   const { mutate } = useSWRConfig();
   const [selected, setSelected] = useState<string[]>([]);
@@ -49,7 +55,7 @@ export default function QuizAttempt({
   const quizType = chain?.quizzes[0]?.quiz_type;
 
   function toggle(optionId: string) {
-    if (answer || readOnly) return;
+    if (answer || readOnly || disabled || isSubmitting) return;
     setSelected((current) =>
       current.includes(optionId)
         ? current.filter((id) => id !== optionId)
@@ -58,8 +64,16 @@ export default function QuizAttempt({
   }
 
   async function submit() {
-    if (readOnly || isSubmitting) return;
+    if (
+      readOnly ||
+      isSubmitting ||
+      disabled ||
+      answer ||
+      (canSubmit && !canSubmit())
+    )
+      return;
     setIsSubmitting(true);
+    onSubmittingChange?.(true);
     setError(undefined);
     try {
       const answeredChain = await answerQuiz(quiz.quiz_id, selected);
@@ -75,6 +89,7 @@ export default function QuizAttempt({
       );
     } finally {
       setIsSubmitting(false);
+      onSubmittingChange?.(false);
     }
   }
 
@@ -149,6 +164,7 @@ export default function QuizAttempt({
               data-quiz-option-index={index + 1}
               aria-label={label}
               aria-pressed={isSelected}
+              disabled={disabled || isSubmitting}
               onClick={() => toggle(optionId)}
               className={className}
             >
@@ -200,7 +216,9 @@ export default function QuizAttempt({
             size="sm"
             data-quiz-submit
             disabled={
-              isSubmitting || (!quiz.no_correct_option && selected.length === 0)
+              disabled ||
+              isSubmitting ||
+              (!quiz.no_correct_option && selected.length === 0)
             }
             onClick={() => void submit()}
           >

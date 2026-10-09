@@ -1,5 +1,5 @@
 import { BookOpen, Compass } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import useSWR, { useSWRConfig } from "swr";
 import AuthGuard from "~/features/auth/AuthGuard";
@@ -68,6 +68,9 @@ export function GamePlay({
   const pendingMove = useRef(false);
   const [error, setError] = useState<string>();
   const [feedback, setFeedback] = useState<string>();
+  const [answerSubmitting, setAnswerSubmitting] = useState(false);
+  const answerRequestPending = useRef(false);
+  const submittedOnTime = useRef(true);
   const access = useAdventureAccess(userId);
   const { data: growth, error: growthError } = useResourceGrowth();
   const progress = useGetLearningProgressUserUserIdLearningProgressGet(userId, {
@@ -90,15 +93,25 @@ export function GamePlay({
     { revalidateOnFocus: false, dedupingInterval: 30_000 },
   );
   const content = run ? (save.content ?? loadedContent) : loadedContent;
+  const serverNow = access.data
+    ? access.data.server_now + Date.now() - access.data.receivedAt
+    : Date.now();
+  const remainingSeconds = run?.answerDeadline
+    ? Math.min(
+        run.answerSeconds ?? Number.POSITIVE_INFINITY,
+        Math.max(0, Math.ceil((run.answerDeadline - serverNow) / 1000)),
+      )
+    : undefined;
   useEffect(() => {
     let active = true;
     const reload = () => {
-      if (pendingMove.current) return;
+      if (pendingMove.current || answerRequestPending.current) return;
       void requestGameState()
         .then((state) => {
           if (!active) return;
           revision.current = state.revision;
           setSave(state.save);
+          setFeedback(state.save.battleFeedback ?? undefined);
           setStateLoaded(true);
           if (!state.revision) {
             const old = readGameSave(userId);
@@ -123,22 +136,93 @@ export function GamePlay({
     };
   }, [userId]);
 
-  async function update(next: GameSave, consumeAccess = false) {
-    try {
-      const state = await requestGameState({
-        revision: revision.current,
-        save: next.run ? { ...next, content: next.content ?? content } : next,
-        consume_access: consumeAccess,
-      });
-      revision.current = state.revision;
-      setSave(state.save);
-    } catch (cause) {
-      const latest = await requestGameState();
-      revision.current = latest.revision;
-      setSave(latest.save);
-      throw cause;
+  const update = useCallback(
+    async (next: GameSave, consumeAccess = false) => {
+      try {
+        const state = await requestGameState({
+          revision: revision.current,
+          save: next.run ? { ...next, content: next.content ?? content } : next,
+          consume_access: consumeAccess,
+        });
+        revision.current = state.revision;
+        setSave(state.save);
+        setFeedback(state.save.battleFeedback ?? undefined);
+        return state;
+      } catch (cause) {
+        const latest = await requestGameState();
+        revision.current = latest.revision;
+        setSave(latest.save);
+        setFeedback(latest.save.battleFeedback ?? undefined);
+        throw cause;
+      }
+    },
+    [content],
+  );
+  const settleAnswer = useCallback(
+    async (correct: boolean, timedOut = false) => {
+      if (pendingMove.current || feedback || run?.phase !== "battle") return;
+      pendingMove.current = true;
+      setBusy(true);
+      setError(undefined);
+      const next = answer(save, correct);
+      const message = correct
+        ? next.run?.enemyHp === 0
+          ? "敵を倒した！"
+          : `敵に${run.attack}ダメージ！`
+        : `${timedOut ? "時間切れ" : "不正解"} · あなたのHP −${run.hp - (next.run?.hp ?? 0)}`;
+      try {
+        await update({ ...next, battleFeedback: message });
+      } catch (cause) {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "戦闘を保存できませんでした。",
+        );
+      } finally {
+        pendingMove.current = false;
+        setBusy(false);
+      }
+    },
+    [feedback, run, save, update],
+  );
+  useEffect(() => {
+    // Older snapshots get a server-issued deadline before answers are enabled.
+    if (
+      run?.phase === "battle" &&
+      !feedback &&
+      !run.answerDeadline &&
+      content &&
+      !busy &&
+      !error
+    ) {
+      pendingMove.current = true;
+      setBusy(true);
+      void update(save)
+        .then((state) => {
+          if (!state.save.run?.answerDeadline) {
+            throw new Error(
+              "回答期限を取得できませんでした。サーバーの更新後に再読み込みしてください。",
+            );
+          }
+        })
+        .catch((cause) => setError(cause.message))
+        .finally(() => {
+          pendingMove.current = false;
+          setBusy(false);
+        });
     }
-  }
+  }, [run, content, busy, error, feedback, save, update]);
+  useEffect(() => {
+    if (
+      remainingSeconds === 0 &&
+      !feedback &&
+      !busy &&
+      !answerSubmitting &&
+      !error
+    ) {
+      void settleAnswer(false, true);
+    }
+  }, [remainingSeconds, feedback, busy, answerSubmitting, error, settleAnswer]);
   async function advance(sentenceId: string) {
     if (pendingMove.current) return;
     pendingMove.current = true;
@@ -162,6 +246,7 @@ export function GamePlay({
     }
   }
   async function leave() {
+    if (pendingMove.current || answerRequestPending.current) return;
     if (
       run &&
       run.phase !== "cleared" &&
@@ -173,7 +258,12 @@ export function GamePlay({
       return;
     setBusy(true);
     try {
-      await update({ ...save, run: undefined, content: undefined });
+      await update({
+        ...save,
+        run: undefined,
+        content: undefined,
+        battleFeedback: undefined,
+      });
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "撤退を保存できませんでした。",
@@ -499,7 +589,11 @@ export function GamePlay({
           />
           {isLoading && <Loading />}
           {(feedback || run.phase === "battle") && (
-            <BattleDialog run={run} playerName={playerName} busy={busy}>
+            <BattleDialog
+              run={run}
+              playerName={playerName}
+              busy={busy || answerSubmitting}
+            >
               {error && (
                 <p role="alert" className="text-sm text-destructive">
                   {error}
@@ -519,41 +613,82 @@ export function GamePlay({
                       </p>
                     </>
                   )}
-                  <Button onClick={() => setFeedback(undefined)}>続ける</Button>
+                  <Button
+                    disabled={busy}
+                    onClick={() => {
+                      setBusy(true);
+                      void update({ ...save, battleFeedback: undefined })
+                        .catch((cause) => setError(cause.message))
+                        .finally(() => setBusy(false));
+                    }}
+                  >
+                    続ける
+                  </Button>
                 </div>
               ) : quiz ? (
                 <>
                   <p className="text-xs text-muted-foreground">
                     正解で敵にダメージ。不正解であなたにダメージ。
                   </p>
+                  <div className="flex items-center gap-3 text-sm tabular-nums">
+                    <span
+                      role="timer"
+                      className={
+                        remainingSeconds !== undefined && remainingSeconds <= 10
+                          ? "text-destructive"
+                          : undefined
+                      }
+                    >
+                      {answerSubmitting
+                        ? "回答を送信中"
+                        : remainingSeconds === undefined
+                          ? "制限時間を準備中…"
+                          : `残り ${remainingSeconds}秒`}
+                    </span>
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full bg-amber-500 transition-[width]"
+                        style={{
+                          width: `${Math.min(100, ((remainingSeconds ?? 0) / (run.answerSeconds ?? 1)) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
                   <QuizAttempt
                     key={`${run.resourceId}:${run.quizCursor}`}
                     quiz={quiz}
                     compactMobile
-                    onAnswered={(correct) => {
-                      void (async () => {
-                        const next = answer(save, correct);
-                        setBusy(true);
-                        try {
-                          await update(next);
-                        } catch (cause) {
-                          setError(
-                            cause instanceof Error
-                              ? cause.message
-                              : "戦闘を保存できませんでした。",
-                          );
-                          return;
-                        } finally {
-                          setBusy(false);
-                        }
-                        setFeedback(
-                          correct
-                            ? next.run?.enemyHp === 0
-                              ? "敵を倒した！"
-                              : `敵に${run.attack}ダメージ！`
-                            : `不正解 · あなたのHP −${run.hp - (next.run?.hp ?? 0)}`,
+                    disabled={
+                      busy || !run.answerDeadline || remainingSeconds === 0
+                    }
+                    canSubmit={() =>
+                      Boolean(
+                        run.answerDeadline &&
+                          (access.data
+                            ? access.data.server_now +
+                              Date.now() -
+                              access.data.receivedAt
+                            : Date.now()) < run.answerDeadline,
+                      )
+                    }
+                    onSubmittingChange={(submitting) => {
+                      answerRequestPending.current = submitting;
+                      if (submitting)
+                        submittedOnTime.current = Boolean(
+                          run.answerDeadline &&
+                            (access.data
+                              ? access.data.server_now +
+                                Date.now() -
+                                access.data.receivedAt
+                              : Date.now()) < run.answerDeadline,
                         );
-                      })();
+                      setAnswerSubmitting(submitting);
+                    }}
+                    onAnswered={(correct) => {
+                      void settleAnswer(
+                        correct && submittedOnTime.current,
+                        !submittedOnTime.current,
+                      );
                     }}
                   />
                 </>

@@ -17,12 +17,15 @@ export type Run = {
   quizCursor: number;
   readIds: string[];
   phase: "path" | "battle" | "rest" | "defeated" | "cleared";
+  answerDeadline?: number | null;
+  answerSeconds?: number | null;
 };
 export type GameSave = {
   version: 2;
   clears: Record<string, number>;
   run?: Run;
   content?: DungeonContent;
+  battleFeedback?: string | null;
 };
 export const newSave = (): GameSave => ({
   version: 2,
@@ -40,6 +43,7 @@ export function enterDungeon(
   const maxHp = 30 + level * 5;
   return {
     ...save,
+    battleFeedback: undefined,
     run: {
       resourceId,
       name,

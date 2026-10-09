@@ -9,7 +9,7 @@ import { markTanbunSeen } from "~/features/review/api";
 import { GamePlay } from ".";
 import { adventureAccessKey } from "./access";
 import { loadDungeon } from "./api";
-import { enterDungeon, newSave } from "./domain";
+import { enterDungeon, move, newSave } from "./domain";
 import type { GameState } from "./state";
 
 let available = true;
@@ -31,6 +31,17 @@ const server = setupServer(
         );
       available = false;
       consumeCount++;
+    }
+    const run = body.save.run;
+    if (run?.phase === "battle" && !body.save.battleFeedback) {
+      run.answerSeconds = 30;
+      run.answerDeadline =
+        state.save.run?.quizCursor === run.quizCursor &&
+        state.save.run.answerDeadline
+          ? state.save.run.answerDeadline
+          : Date.now() + 30_000;
+    } else if (run) {
+      run.answerDeadline = null;
     }
     state = { revision: state.revision + 1, save: body.save };
     return HttpResponse.json(state);
@@ -99,6 +110,7 @@ beforeEach(() => {
   state = { revision: 0, save: newSave() };
   localStorage.clear();
   vi.restoreAllMocks();
+  vi.clearAllMocks();
   vi.mocked(loadDungeon).mockResolvedValue({
     knowledge: [{ uid: "sentence", sentence: "知識の進路" }],
     quizzes: [
@@ -209,6 +221,37 @@ it("records seen knowledge, takes quiz damage and restores the run after remount
     screen.getByRole("button", { name: /1 · 現在地.*知識の進路/ }),
   ).toBeInTheDocument();
   expect(loadDungeon).toHaveBeenCalledTimes(loadsBeforeRemount);
+});
+
+it("times out only once and preserves feedback across reopening", async () => {
+  const save = move(
+    enterDungeon(newSave(), "book", "テストの本", 1),
+    "sentence",
+    0.1,
+  );
+  if (!save.run) throw new Error("Missing run");
+  save.run.answerDeadline = Date.now() - 1000;
+  save.run.answerSeconds = 30;
+  state = { revision: 1, save };
+  const view = renderGame();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "冒険を続ける" }));
+  expect(
+    await screen.findByText("時間切れ · あなたのHP −11"),
+  ).toBeInTheDocument();
+  expect(state.save.run?.hp).toBe(24);
+  expect(state.revision).toBe(2);
+  expect(markTanbunSeen).not.toHaveBeenCalled();
+  view.unmount();
+  renderGame();
+  await user.click(await screen.findByRole("button", { name: "冒険を続ける" }));
+  expect(
+    await screen.findByText("時間切れ · あなたのHP −11"),
+  ).toBeInTheDocument();
+  expect(state.revision).toBe(2);
+  await user.click(screen.getByRole("button", { name: "続ける" }));
+  expect(await screen.findByRole("timer")).toHaveTextContent("残り 30秒");
+  expect(state.save.battleFeedback).toBeUndefined();
 });
 
 it("opens a menu and preserves the adventure when switching sections", async () => {

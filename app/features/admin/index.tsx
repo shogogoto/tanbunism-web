@@ -7,6 +7,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "~/shared/components/ui/tabs";
+import BattleSettingsManager from "./battle";
 import BrokenQuizManager from "./brokenQuizzes";
 import ImageManager from "./images";
 import LevelSettingsManager from "./levels";
@@ -47,6 +48,7 @@ export default function Admin() {
           <TabsTrigger value="users">ユーザー</TabsTrigger>
           <TabsTrigger value="workload">負荷制御</TabsTrigger>
           <TabsTrigger value="levels">レベル</TabsTrigger>
+          <TabsTrigger value="battle">戦闘</TabsTrigger>
           <TabsTrigger value="power">Power</TabsTrigger>
           <TabsTrigger value="pagerank">PageRank</TabsTrigger>
           <TabsTrigger value="images">画像</TabsTrigger>
@@ -69,6 +71,9 @@ export default function Admin() {
       </TabsContent>
       <TabsContent value="levels" className="mt-0">
         <LevelSettingsManager />
+      </TabsContent>
+      <TabsContent value="battle" className="mt-0">
+        <BattleSettingsManager />
       </TabsContent>
       <TabsContent value="power" className="mt-0">
         <PowerSettingsManager />

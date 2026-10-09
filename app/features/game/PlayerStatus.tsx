@@ -11,9 +11,13 @@ export default function PlayerStatus({
       className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 space-y-2"
     >
       <h3 className="flex items-center gap-2 text-sm font-medium">
-        <UserRound className="size-4 text-sky-500" />
-        {name}
-        <span className="text-xs text-muted-foreground">プレイヤー</span>
+        <UserRound className="size-4 shrink-0 text-sky-500" />
+        <span className="min-w-0 flex-1 truncate" title={name}>
+          {name}
+        </span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          プレイヤー
+        </span>
       </h3>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm tabular-nums">
         <span className="flex items-center gap-1">

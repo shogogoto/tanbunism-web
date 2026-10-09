@@ -25,6 +25,10 @@ it("separates enemy HP from named player HP in the floating battle", () => {
     "敵HP 20/20",
   );
   const player = within(dialog).getByRole("region", { name: "プレイヤー" });
+  const enemy = within(dialog).getByRole("region", { name: "敵" });
+  expect(
+    player.compareDocumentPosition(enemy) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
   expect(player).toHaveTextContent("テストプレイヤー");
   expect(player).toHaveTextContent("HP 35/35");
   expect(
