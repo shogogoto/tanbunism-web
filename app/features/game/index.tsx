@@ -822,12 +822,19 @@ export function GamePlay({
                     </p>
                   }
                   playerStatus={
-                    <PlayerStatus
-                      compact
-                      run={run}
-                      name={playerName}
-                      player={player}
-                    />
+                    <Link
+                      to="/game/status"
+                      aria-label="プレイヤーのステータス・育成ポイントを開く"
+                      title="ステータス・育成ポイント"
+                      className="-mx-3 -my-2 flex min-h-11 items-center rounded-lg px-3 py-2 outline-none hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <PlayerStatus
+                        compact
+                        run={run}
+                        name={playerName}
+                        player={player}
+                      />
+                    </Link>
                   }
                   candidates={
                     !feedback && run.phase === "path"

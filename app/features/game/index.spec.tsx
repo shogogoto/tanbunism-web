@@ -200,9 +200,10 @@ vi.mock("~/features/gamification/ResourceGrowth", () => ({
 }));
 vi.mock("~/shared/generated/gamification/gamification", () => ({
   useGetLearningProgressUserUserIdLearningProgressGet: () => ({
-    data: { status: 200, data: { level: 1 } },
+    data: { status: 200, data: { level: playerLevel } },
   }),
 }));
+let playerLevel = 1;
 vi.mock("~/features/gamification/invalidate", () => ({
   invalidateGamification: vi.fn(async () => undefined),
 }));
@@ -235,6 +236,7 @@ vi.mock("./api", async (importOriginal) => ({
 }));
 
 beforeEach(() => {
+  playerLevel = 1;
   available = true;
   consumeCount = 0;
   stateLoadCount = 0;
@@ -643,6 +645,70 @@ it("keeps tabs and preserves the adventure across navigation and browser history
   expect(stateLoadCount).toBe(1);
   expect(consumeCount).toBe(0);
 });
+
+it.each([false, true])(
+  "opens allocation from the map HP bar (fullscreen: %s) without spending moves",
+  async (fullscreen) => {
+    playerLevel = 2;
+    state = {
+      revision: 1,
+      save: enterDungeon(newSave(), "book", "テストの本", 2),
+    };
+    const requests: unknown[] = [];
+    server.use(
+      http.put("*/game/allocation", async ({ request }) => {
+        const allocation = (await request.json()) as {
+          hp: number;
+          attack: number;
+          defense: number;
+          seconds: number;
+        };
+        requests.push(allocation);
+        state = {
+          revision: state.revision + 1,
+          save: {
+            ...state.save,
+            allocation,
+            run: state.save.run
+              ? { ...state.save.run, maxHp: 35 + allocation.hp * 5 }
+              : undefined,
+          },
+        };
+        return HttpResponse.json(state);
+      }),
+    );
+    renderGame();
+    const user = userEvent.setup();
+    await screen.findByText("HP 35/35");
+    if (fullscreen)
+      await user.click(
+        screen.getByRole("button", { name: "マップを全画面表示" }),
+      );
+    const hp = screen.getByRole("link", {
+      name: "プレイヤーのステータス・育成ポイントを開く",
+    });
+    expect(
+      within(hp).getByRole("progressbar", { name: "プレイヤーHP" }),
+    ).toBeVisible();
+    hp.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/game/status");
+    expect(
+      screen.queryByRole("dialog", { name: "冒険マップ" }),
+    ).not.toBeInTheDocument();
+    expect(await screen.findByText("育成ポイント 3 / 3")).toBeVisible();
+    const input = screen.getByRole("spinbutton", { name: "HP" });
+    await user.clear(input);
+    await user.type(input, "3");
+    await user.click(screen.getByRole("button", { name: "割り振りを保存" }));
+    await screen.findByText("現在のHP 35/50");
+    expect(requests).toEqual([{ hp: 3, attack: 0, defense: 0, seconds: 0 }]);
+    await user.click(screen.getByRole("button", { name: "ブラウザで戻る" }));
+    expect(await screen.findByText("HP 35/50")).toBeVisible();
+    expect(state.save.run?.moves).toBe(0);
+    expect(consumeCount).toBe(0);
+  },
+);
 
 it.each(["/game/status", "/game/status/"])(
   "opens status directly at %s without changing adventure state",
