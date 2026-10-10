@@ -854,7 +854,6 @@ export default function StudyPlanManager() {
                     <TableHead className="w-36">Plan</TableHead>
                     <TableHead className="w-44">Resource</TableHead>
                     <TableHead className="w-16 text-center">準備済み</TableHead>
-                    <TableHead className="w-14 text-center">1回</TableHead>
                     <TableHead className="w-14 text-center">選択肢</TableHead>
                     {quizTypeColumns.map(({ type, from, to }) => (
                       <TableHead
@@ -870,7 +869,7 @@ export default function StudyPlanManager() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6 + quizTypeColumns.length}>
+                      <TableCell colSpan={5 + quizTypeColumns.length}>
                         <Loading />
                       </TableCell>
                     </TableRow>
@@ -937,9 +936,6 @@ export default function StudyPlanManager() {
                         </TableCell>
                         <TableCell className="text-center tabular-nums">
                           {preparedCounts[plan.uid] ?? 0}
-                        </TableCell>
-                        <TableCell className="text-center tabular-nums">
-                          {plan.n_quiz}
                         </TableCell>
                         <TableCell className="text-center tabular-nums">
                           {plan.n_option}

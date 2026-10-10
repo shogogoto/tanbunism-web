@@ -106,7 +106,7 @@ it("PlanとResourceを省略可能な表として表示する", async () => {
   ).toHaveAttribute("title", "とても長いResource名");
   expect(screen.queryByRole("columnheader", { name: "操作" })).toBeNull();
   expect(screen.getByRole("columnheader", { name: "準備済み" })).toBeVisible();
-  expect(screen.getByRole("columnheader", { name: "1回" })).toBeVisible();
+  expect(screen.queryByRole("columnheader", { name: "1回" })).toBeNull();
   expect(screen.getByRole("columnheader", { name: "選択肢" })).toBeVisible();
   expect(
     screen.getByRole("columnheader", { name: "Plan" }).closest("thead"),

@@ -7,6 +7,7 @@ import { useAuth } from "~/features/auth/AuthProvider";
 import { useResourceGrowth } from "~/features/gamification/ResourceGrowth";
 import { invalidateGamification } from "~/features/gamification/invalidate";
 import QuizPreviewPrompt from "~/features/quiz/QuizPreviewPrompt";
+import { invalidateStudyPlanPreparationCache } from "~/features/quiz/api";
 import { markTanbunSeen } from "~/features/review/api";
 import { useTanbunPreview } from "~/features/tanbun/detail/Preview";
 import { canonicalSentenceId } from "~/features/tanbun/detail/cache";
@@ -190,6 +191,9 @@ export function GamePlay({
       resourceId: run.resourceId,
       regions: dungeonPreparation.prepared_regions,
     };
+    if (dungeonPreparation.prepared_regions > 0) {
+      void invalidateStudyPlanPreparationCache();
+    }
     let active = true;
     void loadDungeon(run.resourceId, dungeonPreparation.prepared_regions)
       .then((refreshed) => {

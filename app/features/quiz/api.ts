@@ -359,13 +359,17 @@ export async function listStudyPlanPreparations(
   return withQuizCache(
     "study-plan-preparations",
     {},
-    quizCachePolicy.normal,
+    quizCachePolicy.live,
     () =>
       requestStudyPlanPreparation<StudyPlanPreparationStatus[]>(
         "/quiz/study-plans/preparations",
       ),
     options,
   );
+}
+
+export function invalidateStudyPlanPreparationCache(): Promise<void> {
+  return invalidateQuizCache("study-plan-preparations");
 }
 
 export async function prepareAdditionalStudyPlanQuizzes(
