@@ -19,12 +19,14 @@ export default function BattleDialog({
   player,
   children,
   busy,
+  enemyPanel,
 }: {
   run: Run;
   playerName?: string;
   player?: UserReadPublic;
   children: ReactNode;
   busy: boolean;
+  enemyPanel?: ReactNode;
 }) {
   const [open, setOpen] = useState(true);
   return (
@@ -55,36 +57,38 @@ export default function BattleDialog({
           <div className="min-h-0 overflow-y-auto space-y-3 pr-1">
             <div className="grid grid-cols-2 gap-2">
               <PlayerStatus run={run} name={playerName} player={player} />
-              <section
-                aria-label="敵"
-                className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 space-y-2"
-              >
-                <h3 className="flex items-center gap-2 text-sm font-medium text-rose-500">
-                  <EnemyAvatar
-                    identity={run.enemyId ?? `${run.resourceId}:${run.kills}`}
-                  />
-                  敵
-                </h3>
-                <p className="text-sm tabular-nums">
-                  敵HP {run.enemyHp}/{run.enemyMaxHp}
-                </p>
-                <div
-                  role="progressbar"
-                  tabIndex={-1}
-                  aria-label="敵HP"
-                  aria-valuenow={run.enemyHp}
-                  aria-valuemin={0}
-                  aria-valuemax={run.enemyMaxHp}
-                  className="h-2 overflow-hidden rounded-full bg-rose-500/15"
+              {enemyPanel ?? (
+                <section
+                  aria-label="敵"
+                  className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 space-y-2"
                 >
+                  <h3 className="flex items-center gap-2 text-sm font-medium text-rose-500">
+                    <EnemyAvatar
+                      identity={run.enemyId ?? `${run.resourceId}:${run.kills}`}
+                    />
+                    敵
+                  </h3>
+                  <p className="text-sm tabular-nums">
+                    敵HP {run.enemyHp}/{run.enemyMaxHp}
+                  </p>
                   <div
-                    className="h-full bg-rose-500 transition-[width]"
-                    style={{
-                      width: `${Math.min(100, (run.enemyHp / run.enemyMaxHp) * 100)}%`,
-                    }}
-                  />
-                </div>
-              </section>
+                    role="progressbar"
+                    tabIndex={-1}
+                    aria-label="敵HP"
+                    aria-valuenow={run.enemyHp}
+                    aria-valuemin={0}
+                    aria-valuemax={run.enemyMaxHp}
+                    className="h-2 overflow-hidden rounded-full bg-rose-500/15"
+                  >
+                    <div
+                      className="h-full bg-rose-500 transition-[width]"
+                      style={{
+                        width: `${Math.min(100, (run.enemyHp / run.enemyMaxHp) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                </section>
+              )}
             </div>
             {children}
           </div>

@@ -1,4 +1,5 @@
 import type { DungeonContent } from "./api";
+import { type Allocation, defaultBalance, playerStats } from "./battle";
 import { type DungeonMap, ENTRANCE, type ParkedDungeon } from "./exploration";
 
 export const MOVES_PER_EVENT = 5;
@@ -31,6 +32,14 @@ export type GameSave = {
   battleFeedback?: string | null;
   maps?: Record<string, DungeonMap>;
   dungeons?: Record<string, ParkedDungeon>;
+  allocation?: Allocation;
+  battle?: {
+    id: string;
+    turn: number;
+    region: number;
+    checkpoint: string;
+    enemies: string[];
+  } | null;
 };
 export const newSave = (): GameSave => ({
   version: 2,
@@ -41,7 +50,7 @@ export function enterDungeon(
   save: GameSave,
   resourceId: string,
   name: string,
-  level: number,
+  _level: number,
 ): GameSave {
   // The caller must consume a server-side adventure right first.
   if (save.run) return save;
@@ -57,7 +66,8 @@ export function enterDungeon(
       battleFeedback: undefined,
     };
   }
-  const maxHp = 30 + level * 5;
+  const stats = playerStats(save.allocation, defaultBalance);
+  const maxHp = stats.maxHp;
   return {
     ...save,
     maps: save.maps?.[resourceId]
@@ -72,8 +82,8 @@ export function enterDungeon(
       name,
       hp: maxHp,
       maxHp,
-      attack: 8 + level * 2,
-      defense: level,
+      attack: stats.attack,
+      defense: stats.defense,
       moves: 0,
       kills: 0,
       enemyHp: 0,

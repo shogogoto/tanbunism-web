@@ -64,10 +64,10 @@ it("freezes all prepared enemies in a band and leaves older bands unchanged", ()
   expect(expanded.regionEnemies?.[0]).toEqual(first.regionEnemies?.[0]);
   expect(expanded.regionEnemies?.[1]).toHaveLength(5);
   expect(expanded.regionEnemies?.[1][0]).toMatchObject({
-    hp: 25,
-    attack: 14,
     quizIndex: 0,
   });
+  expect(expanded.regionEnemies?.[1][0]).not.toHaveProperty("hp");
+  expect(expanded.regionEnemies?.[1][0]).not.toHaveProperty("attack");
   expect(JSON.parse(JSON.stringify(expanded)).regionEnemies).toEqual(
     expanded.regionEnemies,
   );

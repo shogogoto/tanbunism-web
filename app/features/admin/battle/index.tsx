@@ -4,11 +4,26 @@ import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
 import { type BattleSettings, requestBattleSettings } from "./api";
 
-const types = {
-  sent2term: "単文 → 用語",
-  term2sent: "用語 → 単文",
-  pair2rel: "単文組 → 関係",
-  rel2pair: "関係 → 単文組",
+const fields = {
+  base_hp: ["初期HP", 1, 10000, 1],
+  base_attack: ["初期攻", 1, 1000, 1],
+  base_defense: ["初期守", 0, 1000, 1],
+  base_seconds: ["初期持ち時間（秒）", 5, 300, 1],
+  hp_per_point: ["HP / 育成ポイント", 1, 100, 1],
+  attack_per_point: ["攻 / 育成ポイント", 1, 100, 1],
+  defense_per_point: ["守 / 育成ポイント", 1, 100, 1],
+  seconds_per_point: ["秒 / 育成ポイント", 1, 30, 1],
+  enemy_hp: ["敵の基礎HP", 1, 10000, 1],
+  enemy_attack: ["敵の基礎攻", 1, 1000, 1],
+  power_hp: ["PowerのHP補正", 0, 100, 0.1],
+  power_attack: ["Powerの攻補正", 0, 100, 0.1],
+  relation_hp: ["関係数のHP補正", 0, 100, 0.1],
+  relation_attack: ["関係数の攻補正", 0, 100, 0.1],
+  relation_cap: ["関係数の上限", 0, 1000, 1],
+  region_hp: ["領域ごとのHP補正", 0, 100, 1],
+  region_attack: ["領域ごとの攻補正", 0, 100, 1],
+  max_enemies: ["同時出現数の上限", 1, 20, 1],
+  regions_per_enemy: ["敵数が増える領域間隔", 1, 100, 1],
 } as const;
 export default function BattleSettingsManager() {
   const [settings, setSettings] = useState<BattleSettings>();
@@ -31,10 +46,10 @@ export default function BattleSettingsManager() {
   }, []);
   return (
     <section className="mx-auto max-w-xl space-y-4 p-4 sm:p-6">
-      <h2 className="text-lg font-semibold">戦闘の制限時間</h2>
+      <h2 className="text-lg font-semibold">ゲームバランス</h2>
       <p className="text-sm text-muted-foreground">
-        基本秒数 ×
-        種類別の重み（秒単位に切り上げ）。新しい出題から適用。通常の復習には影響しません。
+        敵の能力 = 基礎値 + log(1 + Power) × 補正 + 関係数 × 補正 + 領域 ×
+        補正（切り上げ）。関係数は上限付き。既存の敵・戦闘中の敵にも反映します。変更の取得は最大30秒ごと。敵の残HPは回復しません。持ち時間はプレイヤー共通で、種類別の重みは使いません。
       </p>
       {error && (
         <p role="alert" className="text-destructive">
@@ -59,37 +74,18 @@ export default function BattleSettingsManager() {
               .finally(() => setSaving(false));
           }}
         >
-          <div className="space-y-2">
-            <Label htmlFor="battle-base">基本秒数</Label>
-            <Input
-              id="battle-base"
-              type="number"
-              min={5}
-              max={300}
-              step={1}
-              required
-              disabled={saving}
-              value={settings.base_seconds}
-              onChange={(event) =>
-                setSettings({
-                  ...settings,
-                  base_seconds: Number(event.target.value),
-                })
-              }
-            />
-          </div>
-          {Object.entries(types).map(([key, label]) => {
-            const kind = key as keyof typeof types;
+          {Object.entries(fields).map(([key, [label, min, max, step]]) => {
+            const kind = key as keyof BattleSettings;
             return (
               <div key={kind} className="space-y-2">
-                <Label htmlFor={`battle-${kind}`}>{label}の重み</Label>
+                <Label htmlFor={`battle-${kind}`}>{label}</Label>
                 <div className="flex items-center gap-3">
                   <Input
                     id={`battle-${kind}`}
                     type="number"
-                    min={0.5}
-                    max={5}
-                    step={0.1}
+                    min={min}
+                    max={max}
+                    step={step}
                     required
                     disabled={saving}
                     value={settings[kind]}
@@ -100,9 +96,6 @@ export default function BattleSettingsManager() {
                       })
                     }
                   />
-                  <output className="w-16 shrink-0 tabular-nums">
-                    {Math.ceil(settings.base_seconds * settings[kind])}秒
-                  </output>
                 </div>
               </div>
             );

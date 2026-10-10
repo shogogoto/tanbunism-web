@@ -19,8 +19,8 @@ export type RegionEnemy = {
   id: string;
   name: string;
   quizIndex: number;
-  hp: number;
-  attack: number;
+  hp?: number;
+  attack?: number;
 };
 
 /** Freeze the prepared quiz population per band; revisits never reroll its enemies. */
@@ -49,7 +49,9 @@ export function freezeRegionEnemies(
     ...content,
     regionEnemies: {
       ...content.regionEnemies,
-      [region]: regionEnemies(content, resourceId, region),
+      [region]: regionEnemies(content, resourceId, region).map(
+        ({ hp: _hp, attack: _attack, ...identity }) => identity,
+      ),
     },
   };
 }

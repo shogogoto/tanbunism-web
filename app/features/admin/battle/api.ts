@@ -1,16 +1,11 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
-export type BattleSettings = {
-  base_seconds: number;
-  sent2term: number;
-  term2sent: number;
-  pair2rel: number;
-  rel2pair: number;
-};
+export type { GameBalance as BattleSettings } from "~/features/game/battle";
+import type { GameBalance as BattleSettings } from "~/features/game/battle";
 export async function requestBattleSettings(
   settings?: BattleSettings,
 ): Promise<BattleSettings> {
-  const response = await fetch(`${API_BASE_URL}/admin/settings/battle`, {
+  const response = await fetch(`${API_BASE_URL}/admin/settings/game-balance`, {
     credentials: "include",
     cache: "no-store",
     ...(settings && {

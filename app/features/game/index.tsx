@@ -6,7 +6,6 @@ import AuthGuard from "~/features/auth/AuthGuard";
 import { useAuth } from "~/features/auth/AuthProvider";
 import { useResourceGrowth } from "~/features/gamification/ResourceGrowth";
 import { invalidateGamification } from "~/features/gamification/invalidate";
-import QuizAttempt from "~/features/quiz/QuizAttempt";
 import QuizPreviewPrompt from "~/features/quiz/QuizPreviewPrompt";
 import { markTanbunSeen } from "~/features/review/api";
 import { useTanbunPreview } from "~/features/tanbun/detail/Preview";
@@ -20,7 +19,9 @@ import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/ge
 import { tanbunDetailCache } from "~/shared/lib/indexed";
 import BattleDialog from "./BattleDialog";
 import ExplorationMap from "./Map";
+import MultiBattle from "./MultiBattle";
 import PlayerStatus from "./PlayerStatus";
+import StatEditor from "./StatEditor";
 import { useAdventureAccess } from "./access";
 import {
   freezeRegionEnemies,
@@ -30,10 +31,16 @@ import {
   validateKnowledge,
 } from "./api";
 import {
+  type CombatContext,
+  type GameBalance,
+  defaultBalance,
+  gameRequest,
+  playerStats,
+} from "./battle";
+import {
   ENEMIES_TO_CLEAR,
   type GameSave,
   MOVES_PER_EVENT,
-  answer,
   continueExploring,
   enterDungeon,
   move,
@@ -91,7 +98,24 @@ export function GamePlay({
   const [feedback, setFeedback] = useState<string>();
   const [answerSubmitting, setAnswerSubmitting] = useState(false);
   const answerRequestPending = useRef(false);
-  const submittedOnTime = useRef(true);
+  const localBattle = useRef<string | null>(null);
+  const { data: balance } = useSWR(
+    ["game-balance", userId],
+    () => gameRequest<GameBalance>("balance"),
+    { revalidateOnFocus: true },
+  );
+  const { data: combat, mutate: retryCombat } = useSWR(
+    stateLoaded && save.run && save.content
+      ? ["game-combat", userId, save.run.resourceId]
+      : null,
+    () => gameRequest<CombatContext>("battle/context"),
+    { refreshInterval: 30_000, revalidateOnFocus: true },
+  );
+  const applyState = useCallback((state: import("./state").GameState) => {
+    revision.current = state.revision;
+    setSave(state.save);
+    setFeedback(state.save.battleFeedback ?? undefined);
+  }, []);
   const access = useAdventureAccess(userId);
   const { data: growth, error: growthError } = useResourceGrowth();
   useEffect(() => {
@@ -164,20 +188,25 @@ export function GamePlay({
     () => loadConnectedKnowledge(run?.resourceId ?? "", map?.current ?? ""),
     { revalidateOnFocus: false, shouldRetryOnError: false },
   );
-  const serverNow = access.data
-    ? access.data.server_now + Date.now() - access.data.receivedAt
-    : Date.now();
-  const remainingSeconds = run?.answerDeadline
-    ? Math.min(
-        run.answerSeconds ?? Number.POSITIVE_INFINITY,
-        Math.max(0, Math.ceil((run.answerDeadline - serverNow) / 1000)),
-      )
-    : undefined;
   useEffect(() => {
     let active = true;
     const reload = () => {
-      if (pendingMove.current || answerRequestPending.current) return;
+      if (
+        pendingMove.current ||
+        answerRequestPending.current ||
+        localBattle.current
+      )
+        return;
       void requestGameState()
+        .then(async (state) =>
+          state.save.battle || state.save.run?.phase === "battle"
+            ? gameRequest<import("./state").GameState>(
+                "battle/abandon",
+                {},
+                "POST",
+              )
+            : state,
+        )
         .then((state) => {
           if (!active) return;
           revision.current = state.revision;
@@ -274,71 +303,6 @@ export function GamePlay({
     run,
     busy,
   ]);
-  const settleAnswer = useCallback(
-    async (correct: boolean, timedOut = false) => {
-      if (pendingMove.current || feedback || run?.phase !== "battle") return;
-      pendingMove.current = true;
-      setBusy(true);
-      setError(undefined);
-      const next = answer(save, correct);
-      const message = correct
-        ? next.run?.enemyHp === 0
-          ? "敵を倒した！"
-          : `敵に${run.attack}ダメージ！`
-        : `${timedOut ? "時間切れ" : "不正解"} · あなたのHP −${run.hp - (next.run?.hp ?? 0)}`;
-      try {
-        await update({ ...next, battleFeedback: message });
-      } catch (cause) {
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "戦闘を保存できませんでした。",
-        );
-      } finally {
-        pendingMove.current = false;
-        setBusy(false);
-      }
-    },
-    [feedback, run, save, update],
-  );
-  useEffect(() => {
-    // Older snapshots get a server-issued deadline before answers are enabled.
-    if (
-      run?.phase === "battle" &&
-      !feedback &&
-      !run.answerDeadline &&
-      content &&
-      !busy &&
-      !error
-    ) {
-      pendingMove.current = true;
-      setBusy(true);
-      void update(save)
-        .then((state) => {
-          if (!state.save.run?.answerDeadline) {
-            throw new Error(
-              "回答期限を取得できませんでした。サーバーの更新後に再読み込みしてください。",
-            );
-          }
-        })
-        .catch((cause) => setError(cause.message))
-        .finally(() => {
-          pendingMove.current = false;
-          setBusy(false);
-        });
-    }
-  }, [run, content, busy, error, feedback, save, update]);
-  useEffect(() => {
-    if (
-      remainingSeconds === 0 &&
-      !feedback &&
-      !busy &&
-      !answerSubmitting &&
-      !error
-    ) {
-      void settleAnswer(false, true);
-    }
-  }, [remainingSeconds, feedback, busy, answerSubmitting, error, settleAnswer]);
   async function advance(
     sentenceId: string,
     kind: "relation" | "detour" = "detour",
@@ -367,12 +331,26 @@ export function GamePlay({
         next.run = {
           ...next.run,
           enemyId: enemy.id,
-          enemyHp: enemy.hp,
-          enemyMaxHp: enemy.hp,
+          enemyHp: 0,
+          enemyMaxHp: 1,
           quizCursor: enemy.quizIndex,
         };
       }
-      await update({ ...next, content: frozen });
+      const state = await update({ ...next, content: frozen });
+      if (state.save.run?.phase === "battle") {
+        localBattle.current = "starting";
+        const started = await gameRequest<import("./state").GameState>(
+          "battle/start",
+          {
+            revision: state.revision,
+            region,
+            checkpoint: map?.current ?? ENTRANCE,
+          },
+        );
+        localBattle.current = started.save.battle?.id ?? null;
+        applyState(started);
+        await retryCombat();
+      }
       void invalidateGamification(mutate, { preserveData: true }).catch(
         () => undefined,
       );
@@ -453,6 +431,10 @@ export function GamePlay({
           );
       const next =
         entering.run?.phase === "rest" ? resumeEvent(entering) : entering;
+      if (!run && next.run && !parked) {
+        const stats = playerStats(save.allocation, balance ?? defaultBalance);
+        next.run = { ...next.run, ...stats, hp: stats.maxHp };
+      }
       await update(
         { ...next, content: next.content ?? content },
         !parked ||
@@ -552,6 +534,29 @@ export function GamePlay({
               "プレイヤーのLvを取得できませんでした。"}
           </p>
         )}
+        {localBattle.current === "starting" && error && (
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true);
+              void gameRequest<import("./state").GameState>(
+                "battle/abandon",
+                {},
+                "POST",
+              )
+                .then((state) => {
+                  localBattle.current = null;
+                  applyState(state);
+                  setError(undefined);
+                })
+                .catch((cause) => setError(cause.message))
+                .finally(() => setBusy(false));
+            }}
+          >
+            遭遇に失敗した戦闘から撤退
+          </Button>
+        )}
         {contentError && (
           <div role="alert" className="space-y-2 text-sm text-destructive">
             <p>{contentError.message}</p>
@@ -596,16 +601,21 @@ export function GamePlay({
                 </span>
               </div>
               <p>Lv. {level ?? "—"}</p>
-              <p>
-                HP{" "}
-                {run
-                  ? `${run.hp}/${run.maxHp}`
-                  : level
-                    ? `${30 + level * 5}/${30 + level * 5}`
-                    : "—"}{" "}
-                · 攻 {run?.attack ?? (level ? 8 + level * 2 : "—")} · 守{" "}
-                {run?.defense ?? level ?? "—"}
-              </p>
+              {run && (
+                <p>
+                  現在のHP {run.hp}/{run.maxHp}
+                </p>
+              )}
+              {level && stateLoaded && (
+                <StatEditor
+                  key={JSON.stringify(save.allocation)}
+                  level={level}
+                  allocation={save.allocation}
+                  balance={balance ?? defaultBalance}
+                  inBattle={run?.phase === "battle"}
+                  onSaved={applyState}
+                />
+              )}
               <p>
                 ダンジョン攻略{" "}
                 {Object.values(save.clears).reduce(
@@ -793,7 +803,11 @@ export function GamePlay({
                             ),
                           ].map((region) => [
                             region,
-                            regionEnemies(content, run.resourceId, region),
+                            combat
+                              ? combat.enemies.filter(
+                                  (enemy) => enemy.region === region,
+                                )
+                              : regionEnemies(content, run.resourceId, region),
                           ]),
                         )
                       : {}
@@ -850,124 +864,46 @@ export function GamePlay({
                       </Button>
                     </div>
                   )}
-                  {(feedback || run.phase === "battle") && (
-                    <BattleDialog
-                      run={run}
-                      playerName={playerName}
-                      player={player}
-                      busy={busy || answerSubmitting}
-                    >
-                      {error && (
-                        <p role="alert" className="text-sm text-destructive">
-                          {error}
-                        </p>
-                      )}
-                      {feedback ? (
-                        <div className="rounded-lg border p-4 space-y-3">
-                          <output className="block">{feedback}</output>
-                          {quiz && (
-                            <QuizPreviewPrompt quiz={quiz} showCorrectAnswer />
-                          )}
-                          <Button
-                            disabled={busy}
-                            onClick={() => {
-                              setBusy(true);
-                              void update({
-                                ...save,
-                                battleFeedback: undefined,
-                              })
-                                .catch((cause) => setError(cause.message))
-                                .finally(() => setBusy(false));
-                            }}
-                          >
-                            続ける
-                          </Button>
-                        </div>
-                      ) : quiz ? (
-                        <>
-                          <p className="text-xs text-muted-foreground">
-                            正解で敵にダメージ。不正解であなたにダメージ。
+                  {(feedback || run.phase === "battle") &&
+                    !localBattle.current && (
+                      <BattleDialog
+                        run={run}
+                        playerName={playerName}
+                        player={player}
+                        busy={busy || answerSubmitting}
+                      >
+                        {error && (
+                          <p role="alert" className="text-sm text-destructive">
+                            {error}
                           </p>
-                          <div className="flex items-center gap-3 text-sm tabular-nums">
-                            <span
-                              role="timer"
-                              className={
-                                remainingSeconds !== undefined &&
-                                remainingSeconds <= 10
-                                  ? "text-destructive"
-                                  : undefined
-                              }
-                            >
-                              {answerSubmitting
-                                ? "回答を送信中"
-                                : remainingSeconds === undefined
-                                  ? "制限時間を準備中…"
-                                  : `残り ${remainingSeconds}秒`}
-                            </span>
-                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                              <div
-                                className="h-full bg-amber-500 transition-[width]"
-                                style={{
-                                  width: `${Math.min(100, ((remainingSeconds ?? 0) / (run.answerSeconds ?? 1)) * 100)}%`,
-                                }}
+                        )}
+                        {feedback ? (
+                          <div className="rounded-lg border p-4 space-y-3">
+                            <output className="block">{feedback}</output>
+                            {quiz && (
+                              <QuizPreviewPrompt
+                                quiz={quiz}
+                                showCorrectAnswer
                               />
-                            </div>
+                            )}
+                            <Button
+                              disabled={busy}
+                              onClick={() => {
+                                setBusy(true);
+                                void update({
+                                  ...save,
+                                  battleFeedback: undefined,
+                                })
+                                  .catch((cause) => setError(cause.message))
+                                  .finally(() => setBusy(false));
+                              }}
+                            >
+                              続ける
+                            </Button>
                           </div>
-                          <QuizAttempt
-                            key={`${run.resourceId}:${run.quizCursor}`}
-                            quiz={quiz}
-                            compactMobile
-                            disabled={
-                              busy ||
-                              !run.answerDeadline ||
-                              remainingSeconds === 0
-                            }
-                            canSubmit={() =>
-                              Boolean(
-                                run.answerDeadline &&
-                                  (access.data
-                                    ? access.data.server_now +
-                                      Date.now() -
-                                      access.data.receivedAt
-                                    : Date.now()) < run.answerDeadline,
-                              )
-                            }
-                            onSubmittingChange={(submitting) => {
-                              answerRequestPending.current = submitting;
-                              if (submitting)
-                                submittedOnTime.current = Boolean(
-                                  run.answerDeadline &&
-                                    (access.data
-                                      ? access.data.server_now +
-                                        Date.now() -
-                                        access.data.receivedAt
-                                      : Date.now()) < run.answerDeadline,
-                                );
-                              setAnswerSubmitting(submitting);
-                            }}
-                            onAnswered={(correct) => {
-                              void settleAnswer(
-                                correct && submittedOnTime.current,
-                                !submittedOnTime.current,
-                              );
-                            }}
-                          />
-                        </>
-                      ) : isLoading ? (
-                        <Loading />
-                      ) : (
-                        <div className="space-y-2">
-                          <p role="alert">クイズを取得できませんでした。</p>
-                          <Button
-                            variant="outline"
-                            onClick={() => void retryContent()}
-                          >
-                            再試行
-                          </Button>
-                        </div>
-                      )}
-                    </BattleDialog>
-                  )}
+                        ) : null}
+                      </BattleDialog>
+                    )}
                   {!feedback && run.phase === "path" && content ? (
                     <>
                       {connectionsLoading && <Loading />}
@@ -1062,6 +998,46 @@ export function GamePlay({
           )}
         </div>
       </div>
+      {localBattle.current &&
+        content &&
+        combat &&
+        (feedback || run?.phase === "battle") && (
+          <MultiBattle
+            save={save}
+            content={content}
+            context={combat}
+            player={player}
+            playerName={playerName}
+            clockOffset={
+              access.data ? access.data.server_now - access.data.receivedAt : 0
+            }
+            onSaved={(state) => {
+              applyState(state);
+              void invalidateGamification(mutate, { preserveData: true }).catch(
+                () => undefined,
+              );
+            }}
+            onBusy={(value) => {
+              answerRequestPending.current = value;
+              setAnswerSubmitting(value);
+            }}
+            onFinished={async () => {
+              setBusy(true);
+              try {
+                await update({ ...save, battleFeedback: undefined });
+                localBattle.current = null;
+              } catch (cause) {
+                setError(
+                  cause instanceof Error
+                    ? cause.message
+                    : "保存できませんでした。",
+                );
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+        )}
       {preview}
     </section>
   );

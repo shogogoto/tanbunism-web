@@ -23,7 +23,7 @@ describe("adventure rules", () => {
     };
     expect(answer(save, false).run?.hp).toBe(20);
   });
-  it("derives player stats from user Lv, leaving permission to the server", () => {
+  it("starts with base stats without automatic level scaling, leaving permission to the server", () => {
     const save = entered();
     expect(save.run?.hp).toBe(35);
     expect(enterDungeon(save, "other", "別の本", 99)).toBe(save);

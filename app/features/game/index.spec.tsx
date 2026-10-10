@@ -16,6 +16,7 @@ import { GamePlay } from ".";
 import GameHeaderTabs from "./GameHeaderTabs";
 import { adventureAccessKey } from "./access";
 import { loadDungeon, validateKnowledge } from "./api";
+import { defaultBalance } from "./battle";
 import { enterDungeon, move, newSave } from "./domain";
 import type { GameState } from "./state";
 
@@ -29,6 +30,79 @@ vi.mock("~/features/auth/AuthProvider", () => ({
   useAuth: () => ({ user: { uid: "player" }, isAuthenticated: true }),
 }));
 const server = setupServer(
+  http.get("*/game/balance", () => HttpResponse.json(defaultBalance)),
+  http.get("*/game/battle/context", () =>
+    HttpResponse.json({
+      balance: defaultBalance,
+      enemies: Object.entries(state.save.content?.regionEnemies ?? {}).flatMap(
+        ([region, pool]) =>
+          pool.map((enemy) => ({
+            ...enemy,
+            hp: 20,
+            attack: 12,
+            region: Number(region),
+            relations: 0,
+          })),
+      ),
+    }),
+  ),
+  http.post("*/game/battle/start", async ({ request }) => {
+    const body = (await request.json()) as {
+      checkpoint: string;
+      region: number;
+    };
+    state = {
+      revision: state.revision + 1,
+      save: {
+        ...state.save,
+        battle: {
+          id: "battle",
+          turn: 0,
+          checkpoint: body.checkpoint,
+          region: body.region,
+          enemies: ["book:0:quiz"],
+        },
+      },
+    };
+    return HttpResponse.json(state);
+  }),
+  http.post("*/game/battle/turn", () => {
+    const run = state.save.run;
+    if (!run || !state.save.battle) throw new Error("Missing battle");
+    state = {
+      revision: state.revision + 1,
+      save: {
+        ...state.save,
+        run: { ...run, hp: run.hp - 11, answerDeadline: null },
+        battle: { ...state.save.battle, turn: state.save.battle.turn + 1 },
+        battleFeedback: "正解 0/1 · 撃破 0体 · HP -11",
+      },
+    };
+    return HttpResponse.json({
+      state,
+      results: { "book:0:quiz": false },
+      damage: 11,
+    });
+  }),
+  http.post("*/game/battle/abandon", () => {
+    const run = state.save.run;
+    if (run?.phase === "battle")
+      state = {
+        revision: state.revision + 1,
+        save: {
+          ...state.save,
+          battle: null,
+          run: {
+            ...run,
+            hp: run.hp - (state.save.battleFeedback ? 0 : 11),
+            phase: "path",
+            answerDeadline: null,
+          },
+          battleFeedback: "撤退しました。回答・XPは保持しています。",
+        },
+      };
+    return HttpResponse.json(state);
+  }),
   http.post("*/game/state/recover", () => {
     if (automaticRecovery && available && state.save.run) {
       const run = state.save.run;
@@ -137,8 +211,17 @@ vi.mock("~/features/tanbun/detail/Preview", () => ({
 }));
 const { openPreview } = vi.hoisted(() => ({ openPreview: vi.fn() }));
 vi.mock("~/features/quiz/QuizAttempt", () => ({
-  default: ({ onAnswered }: { onAnswered: (correct: boolean) => void }) => (
-    <button type="button" onClick={() => onAnswered(false)}>
+  default: ({
+    onAnswered,
+    onConfirm,
+  }: {
+    onAnswered?: (correct: boolean) => void;
+    onConfirm?: (selected: string[]) => void;
+  }) => (
+    <button
+      type="button"
+      onClick={() => (onConfirm ? onConfirm(["wrong"]) : onAnswered?.(false))}
+    >
       不正解を送信
     </button>
   ),
@@ -428,7 +511,7 @@ async function enter(select = true) {
     );
   return user;
 }
-it("records seen knowledge, takes quiz damage and restores the run after remount", async () => {
+it("records seen knowledge and a batch turn, then retreats after remount without losing saved HP", async () => {
   const view = renderGame();
   const user = await enter();
   expect(consumeCount).toBe(1);
@@ -444,14 +527,12 @@ it("records seen knowledge, takes quiz damage and restores the run after remount
       id: "book:0:quiz",
       name: "領域 1の敵 1",
       quizIndex: 0,
-      hp: 20,
-      attack: 12,
     },
   ]);
   expect(state.save.run?.enemyId).toBe("book:0:quiz");
   await user.click(screen.getByRole("button", { name: "不正解を送信" }));
   expect(
-    await screen.findByText("不正解 · あなたのHP −11"),
+    await screen.findByText("正解 0/1 · 撃破 0体 · HP -11"),
   ).toBeInTheDocument();
   expect(state.save.run).toMatchObject({
     hp: 24,
@@ -493,7 +574,7 @@ it("records seen knowledge, takes quiz damage and restores the run after remount
   expect(loadDungeon).toHaveBeenCalledTimes(loadsBeforeRemount);
 });
 
-it("times out only once and preserves feedback across reopening", async () => {
+it("abandoned timed-out combat retreats only once and preserves feedback across reopening", async () => {
   const save = move(
     enterDungeon(newSave(), "book", "テストの本", 1),
     "sentence",
@@ -506,7 +587,7 @@ it("times out only once and preserves feedback across reopening", async () => {
   const view = renderGame();
   const user = userEvent.setup();
   expect(
-    await screen.findByText("時間切れ · あなたのHP −11"),
+    await screen.findByText("撤退しました。回答・XPは保持しています。"),
   ).toBeInTheDocument();
   expect(state.save.run?.hp).toBe(24);
   expect(state.revision).toBe(2);
@@ -514,11 +595,13 @@ it("times out only once and preserves feedback across reopening", async () => {
   view.unmount();
   renderGame();
   expect(
-    await screen.findByText("時間切れ · あなたのHP −11"),
+    await screen.findByText("撤退しました。回答・XPは保持しています。"),
   ).toBeInTheDocument();
   expect(state.revision).toBe(2);
   await user.click(screen.getByRole("button", { name: "続ける" }));
-  expect(await screen.findByRole("timer")).toHaveTextContent("残り 30秒");
+  await waitFor(() =>
+    expect(screen.queryByRole("timer")).not.toBeInTheDocument(),
+  );
   expect(state.save.battleFeedback).toBeUndefined();
 });
 

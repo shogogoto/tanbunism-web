@@ -30,6 +30,8 @@ type Props = {
   disabled?: boolean;
   onSubmittingChange?: (submitting: boolean) => void;
   canSubmit?: () => boolean;
+  /** Game turns confirm locally; history and correctness arrive only at turn end. */
+  onConfirm?: (selected: string[]) => void;
 };
 
 export default function QuizAttempt({
@@ -43,6 +45,7 @@ export default function QuizAttempt({
   disabled = false,
   onSubmittingChange,
   canSubmit,
+  onConfirm,
 }: Props) {
   const { mutate } = useSWRConfig();
   const [selected, setSelected] = useState<string[]>([]);
@@ -50,12 +53,13 @@ export default function QuizAttempt({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [reviewAgain, setReviewAgain] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
   const answer = chain?.answers?.at(-1);
   const readOnly = completed && !answer && !reviewAgain;
   const quizType = chain?.quizzes[0]?.quiz_type;
 
   function toggle(optionId: string) {
-    if (answer || readOnly || disabled || isSubmitting) return;
+    if (answer || readOnly || confirmed || disabled || isSubmitting) return;
     setSelected((current) =>
       current.includes(optionId)
         ? current.filter((id) => id !== optionId)
@@ -69,9 +73,15 @@ export default function QuizAttempt({
       isSubmitting ||
       disabled ||
       answer ||
+      confirmed ||
       (canSubmit && !canSubmit())
     )
       return;
+    if (onConfirm) {
+      setConfirmed(true);
+      onConfirm([...selected]);
+      return;
+    }
     setIsSubmitting(true);
     onSubmittingChange?.(true);
     setError(undefined);
@@ -150,7 +160,7 @@ export default function QuizAttempt({
               </span>
             </>
           );
-          if (answer || readOnly) {
+          if (answer || readOnly || confirmed) {
             return (
               <div key={optionId} className={className}>
                 {content}
@@ -210,7 +220,8 @@ export default function QuizAttempt({
             </Button>
           </>
         )}
-        {!answer && !readOnly && (
+        {confirmed && <p className="text-sm">回答確定</p>}
+        {!answer && !readOnly && !confirmed && (
           <Button
             type="button"
             size="sm"
@@ -222,7 +233,7 @@ export default function QuizAttempt({
             }
             onClick={() => void submit()}
           >
-            {isSubmitting ? "送信中…" : "回答する"}
+            {isSubmitting ? "送信中…" : onConfirm ? "回答を確定" : "回答する"}
           </Button>
         )}
       </div>
