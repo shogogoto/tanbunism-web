@@ -14,6 +14,8 @@ export type PathKnowledge = Pick<Tanbun, "uid" | "sentence" | "term">;
 export type DungeonContent = {
   knowledge: PathKnowledge[];
   quizzes: ReadableQuiz[];
+  /** The exact prepared quiz population captured when each achievement band opens. */
+  regionQuizPools?: Record<string, string[]>;
   regionEnemies?: Record<string, RegionEnemy[]>;
 };
 export type DungeonPreparation = {
@@ -28,21 +30,58 @@ export type RegionEnemy = {
   attack?: number;
 };
 
-/** Freeze the prepared quiz population per band; revisits never reroll its enemies. */
+/** Quiz IDs, rather than quiz indexes, are the authoritative frozen population. */
+export function regionQuizPool(
+  content: DungeonContent,
+  region: number,
+): string[] {
+  const explicitPool = content.regionQuizPools?.[region];
+  if (explicitPool) return explicitPool;
+
+  // Migrate older snapshots, whose enemy list implicitly recorded the pool.
+  const legacyEnemies = content.regionEnemies?.[region];
+  if (legacyEnemies) {
+    return legacyEnemies.flatMap((enemy) => {
+      const quizId = content.quizzes[enemy.quizIndex]?.quiz_id;
+      return quizId ? [quizId] : [];
+    });
+  }
+  return content.quizzes.map((quiz) => quiz.quiz_id);
+}
+
+/** Build stable enemies from the frozen population; revisits never reroll it. */
 export function regionEnemies(
   content: DungeonContent,
   resourceId: string,
   region: number,
 ): RegionEnemy[] {
-  return (
-    content.regionEnemies?.[region] ??
-    content.quizzes.map((quiz, quizIndex) => ({
-      id: `${resourceId}:${region}:${quiz.quiz_id}`,
-      name: `領域 ${region + 1}の敵 ${quizIndex + 1}`,
-      quizIndex,
-      hp: 20 + region * 5,
-      attack: 12 + region * 2,
-    }))
+  const frozenEnemies = content.regionEnemies?.[region];
+  const explicitPool = content.regionQuizPools?.[region];
+  if (!explicitPool && frozenEnemies) return frozenEnemies;
+  const quizIndexes = new Map(
+    content.quizzes.map((quiz, index) => [quiz.quiz_id, index]),
+  );
+  const existingByQuizId = new Map(
+    (frozenEnemies ?? []).flatMap((enemy) => {
+      const quizId = content.quizzes[enemy.quizIndex]?.quiz_id;
+      return quizId ? [[quizId, enemy] as const] : [];
+    }),
+  );
+  return (explicitPool ?? regionQuizPool(content, region)).flatMap(
+    (quizId, enemyIndex) => {
+      const quizIndex = quizIndexes.get(quizId);
+      if (quizIndex === undefined) return [];
+      const existing = existingByQuizId.get(quizId);
+      return [
+        {
+          id: existing?.id ?? `${resourceId}:${region}:${quizId}`,
+          name: existing?.name ?? `領域 ${region + 1}の敵 ${enemyIndex + 1}`,
+          quizIndex,
+          hp: 20 + region * 5,
+          attack: 12 + region * 2,
+        },
+      ];
+    },
   );
 }
 export function freezeRegionEnemies(
@@ -50,13 +89,29 @@ export function freezeRegionEnemies(
   resourceId: string,
   region: number,
 ): DungeonContent {
+  const quizPool = regionQuizPool(content, region);
+  const quizIndexes = new Map(
+    content.quizzes.map((quiz, index) => [quiz.quiz_id, index]),
+  );
   return {
     ...content,
+    regionQuizPools: {
+      ...content.regionQuizPools,
+      [region]: quizPool,
+    },
     regionEnemies: {
       ...content.regionEnemies,
-      [region]: regionEnemies(content, resourceId, region).map(
-        ({ hp: _hp, attack: _attack, ...identity }) => identity,
-      ),
+      [region]: quizPool.flatMap((quizId, enemyIndex) => {
+        const quizIndex = quizIndexes.get(quizId);
+        if (quizIndex === undefined) return [];
+        return [
+          {
+            id: `${resourceId}:${region}:${quizId}`,
+            name: `領域 ${region + 1}の敵 ${enemyIndex + 1}`,
+            quizIndex,
+          },
+        ];
+      }),
     },
   };
 }
@@ -102,6 +157,7 @@ export function mergeDungeonContent(
         ]),
       ).values(),
     ],
+    regionQuizPools: current.regionQuizPools,
     regionEnemies: current.regionEnemies,
   };
 }
