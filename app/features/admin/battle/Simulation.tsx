@@ -147,6 +147,9 @@ export default function Simulation({
               結果をクリア
             </Button>
           </div>
+          <p className="text-sm text-muted-foreground">
+            試算の行を選ぶと、そのときの設定と敵一覧を下に表示します。
+          </p>
           <div className="overflow-x-auto rounded-md border">
             <Table aria-label="試算比較" className="whitespace-nowrap">
               <TableHeader>
@@ -170,16 +173,25 @@ export default function Simulation({
                   <TableRow
                     key={result.id}
                     data-state={selected === index ? "selected" : undefined}
+                    className="cursor-pointer"
+                    onClick={() => setSelected(index)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") setSelected(index);
+                    }}
                   >
                     <TableCell>
                       <Button
                         type="button"
                         size="sm"
-                        variant={selected === index ? "secondary" : "ghost"}
+                        variant={selected === index ? "secondary" : "outline"}
+                        aria-label={`試算 ${index + 1}`}
                         aria-pressed={selected === index}
                         onClick={() => setSelected(index)}
                       >
                         試算 {index + 1}
+                        {selected === index && (
+                          <span className="text-xs">表示中</span>
+                        )}
                       </Button>
                     </TableCell>
                     <TableCell>{result.power}</TableCell>

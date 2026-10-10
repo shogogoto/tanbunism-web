@@ -113,7 +113,11 @@ it("retains trials for comparison and lets users revisit their original settings
   expect(
     within(snapshot).getByText("PowerのHP補正").nextElementSibling,
   ).toHaveTextContent("2");
-  await user.click(screen.getByRole("button", { name: "試算 1" }));
+  await user.click(within(comparison).getByText("100"));
+  expect(screen.getByRole("button", { name: "試算 1" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   expect(
     within(snapshot).getByText("PowerのHP補正").nextElementSibling,
   ).toHaveTextContent("1");
