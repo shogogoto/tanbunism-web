@@ -1,5 +1,6 @@
 import {
   type ReadableQuiz,
+  type StudyPlan,
   listStudyPlans,
   recommendQuizzes,
 } from "~/features/quiz/api";
@@ -14,6 +15,10 @@ export type DungeonContent = {
   knowledge: PathKnowledge[];
   quizzes: ReadableQuiz[];
   regionEnemies?: Record<string, RegionEnemy[]>;
+};
+export type DungeonPreparation = {
+  prepared_regions: number;
+  target_regions: number;
 };
 export type RegionEnemy = {
   id: string;
@@ -60,6 +65,46 @@ const sameId = (a: string, b: string) =>
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
+
+export async function loadDungeonPreparation(
+  resourceId: string,
+): Promise<DungeonPreparation> {
+  const response = await fetch(
+    `${API_BASE_URL}/game/dungeons/${encodeURIComponent(resourceId)}/preparation`,
+    { credentials: "include", cache: "no-store" },
+  );
+  const body = await response.json();
+  if (!response.ok)
+    throw new Error(body?.detail ?? "クイズの準備状況を取得できませんでした。");
+  return body as DungeonPreparation;
+}
+
+export function mergeDungeonContent(
+  current: DungeonContent,
+  refreshed: DungeonContent,
+): DungeonContent {
+  return {
+    ...refreshed,
+    knowledge: [
+      ...new Map(
+        [...current.knowledge, ...refreshed.knowledge].map((item) => [
+          item.uid,
+          item,
+        ]),
+      ).values(),
+    ],
+    // Frozen enemy quizIndex values depend on the old quiz order; append new IDs.
+    quizzes: [
+      ...new Map(
+        [...current.quizzes, ...refreshed.quizzes].map((quiz) => [
+          quiz.quiz_id,
+          quiz,
+        ]),
+      ).values(),
+    ],
+    regionEnemies: current.regionEnemies,
+  };
+}
 
 /** Always check current ownership/location, even when the displayed text is cached. */
 export async function validateKnowledge(
@@ -143,7 +188,10 @@ export async function loadConnectedKnowledge(
   );
 }
 
-export async function loadDungeon(resourceId: string): Promise<DungeonContent> {
+export async function loadDungeon(
+  resourceId: string,
+  preparedRegions = 0,
+): Promise<DungeonContent> {
   const params = { resource_id: resourceId, q: "", page: 1, size: 100 };
   const [knowledge, plans] = await Promise.all([
     searchByTextTanbunGet(params, { credentials: "include" }),
@@ -151,7 +199,18 @@ export async function loadDungeon(resourceId: string): Promise<DungeonContent> {
   ]);
   if (knowledge.status !== 200)
     throw new Error("ダンジョンの知識を取得できませんでした。");
+  const isDefaultResourcePlan = (plan: (typeof plans)[number]) =>
+    Boolean(
+      (plan as StudyPlan & { default_resource_plan?: boolean })
+        .default_resource_plan,
+    );
   const plan =
+    plans.find(
+      (plan) =>
+        isDefaultResourcePlan(plan) &&
+        plan.resource_ids.length === 1 &&
+        sameId(plan.resource_ids[0], resourceId),
+    ) ??
     plans.find(
       (plan) =>
         plan.resource_ids.length === 1 &&
@@ -161,11 +220,27 @@ export async function loadDungeon(resourceId: string): Promise<DungeonContent> {
       plan.resource_ids.some((id) => sameId(id, resourceId)),
     );
   // Use prepared quizzes only; opening a dungeon never triggers expensive generation.
+  const quizLimit = plan
+    ? Math.min(
+        100,
+        Math.max(
+          plan.quiz_types.length,
+          plan.n_quiz || 5,
+          (plan.n_quiz || 5) + preparedRegions * 5,
+        ),
+      )
+    : undefined;
   const recommendations = plan
     ? (
         await Promise.all(
           plan.quiz_types.map((type) =>
-            recommendQuizzes(plan.uid, type, { generateMissing: false }),
+            recommendQuizzes(
+              plan.uid,
+              type,
+              quizLimit === Math.max(plan.quiz_types.length, plan.n_quiz)
+                ? { generateMissing: false }
+                : { generateMissing: false, limit: quizLimit },
+            ),
           ),
         )
       )

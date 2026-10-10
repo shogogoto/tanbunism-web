@@ -451,9 +451,11 @@ export async function recommendQuizzes(
   {
     generateMissing = true,
     signal,
+    limit,
   }: {
     generateMissing?: boolean;
     signal?: AbortSignal;
+    limit?: number;
   } = {},
 ): Promise<QuizRecommendation[]> {
   const url =
@@ -461,7 +463,7 @@ export async function recommendQuizzes(
       planId,
     );
   const response = await fetch(
-    `${url}?quiz_type=${encodeURIComponent(quizType)}&generate_missing=${generateMissing}`,
+    `${url}?quiz_type=${encodeURIComponent(quizType)}&generate_missing=${generateMissing}${limit === undefined ? "" : `&limit=${encodeURIComponent(limit)}`}`,
     {
       method: "POST",
       credentials: "include",

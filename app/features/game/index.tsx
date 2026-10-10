@@ -34,6 +34,8 @@ import {
   freezeRegionEnemies,
   loadConnectedKnowledge,
   loadDungeon,
+  loadDungeonPreparation,
+  mergeDungeonContent,
   regionEnemies,
   validateKnowledge,
 } from "./api";
@@ -56,6 +58,7 @@ import {
 } from "./domain";
 import {
   ENTRANCE,
+  PLACES_PER_REGION,
   dungeonMap,
   explore,
   knownKnowledge,
@@ -151,6 +154,13 @@ export function GamePlay({
   const run = save.run;
   const resourceId = run?.resourceId ?? selectedId;
   const parked = save.dungeons?.[resourceId];
+  const { data: dungeonPreparation } = useSWR(
+    stateLoaded && resourceId
+      ? ["game-dungeon-preparation", userId, resourceId]
+      : null,
+    () => loadDungeonPreparation(resourceId),
+    { refreshInterval: 5_000, revalidateOnFocus: true },
+  );
   const {
     data: loadedContent,
     error: contentError,
@@ -166,6 +176,38 @@ export function GamePlay({
   const content = run
     ? (save.content ?? loadedContent)
     : (parked?.content ?? loadedContent);
+  const refreshedRegion = useRef({ resourceId: "", regions: 0 });
+  useEffect(() => {
+    if (
+      !run ||
+      !save.content ||
+      !dungeonPreparation ||
+      (refreshedRegion.current.resourceId === run.resourceId &&
+        dungeonPreparation.prepared_regions <= refreshedRegion.current.regions)
+    )
+      return;
+    refreshedRegion.current = {
+      resourceId: run.resourceId,
+      regions: dungeonPreparation.prepared_regions,
+    };
+    let active = true;
+    void loadDungeon(run.resourceId, dungeonPreparation.prepared_regions)
+      .then((refreshed) => {
+        if (!active) return;
+        setSave((current) =>
+          current.content
+            ? {
+                ...current,
+                content: mergeDungeonContent(current.content, refreshed),
+              }
+            : current,
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [dungeonPreparation, run, save.content]);
   const map = run ? dungeonMap(save, run) : undefined;
   const validationIds = [
     ...new Set([
@@ -324,6 +366,21 @@ export function GamePlay({
     kind: "relation" | "detour" = "detour",
   ) {
     if (pendingMove.current || !run || run.phase !== "path" || !content) return;
+    const currentMap = dungeonMap(save, run);
+    const isNewPlace =
+      sentenceId !== ENTRANCE &&
+      !currentMap.places.some((place) => place.id === sentenceId);
+    const destinationRegion = Math.floor(
+      currentMap.places.length / PLACES_PER_REGION,
+    );
+    if (
+      isNewPlace &&
+      destinationRegion < 20 &&
+      destinationRegion > (dungeonPreparation?.prepared_regions ?? 0)
+    ) {
+      setError("この領域のクイズを準備中です。少し待ってから進んでください。");
+      return;
+    }
     pendingMove.current = true;
     setBusy(true);
     setError(undefined);
@@ -766,6 +823,14 @@ export function GamePlay({
             </>
           ) : (
             <>
+              {dungeonPreparation &&
+                dungeonPreparation.target_regions >
+                  dungeonPreparation.prepared_regions && (
+                  <output className="text-sm text-muted-foreground">
+                    領域 {dungeonPreparation.prepared_regions + 1}{" "}
+                    のクイズを準備中です。
+                  </output>
+                )}
               {map && (
                 <ExplorationMap
                   key={run.resourceId}
