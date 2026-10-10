@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, ChevronsUpDown, Swords } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -397,8 +398,15 @@ function GameDungeonManager() {
 }
 
 export default function GameAdminManager() {
+  const { subtab } = useParams();
+  const navigate = useNavigate();
+  const activeTab = subtab === "dungeons" ? "dungeons" : "balance";
   return (
-    <Tabs defaultValue="balance" className="gap-0">
+    <Tabs
+      value={activeTab}
+      onValueChange={(value) => navigate(`/admin/game/${value}`)}
+      className="gap-0"
+    >
       <div className="flex justify-center border-b px-4 py-2">
         <TabsList className="h-auto flex-wrap justify-center">
           <TabsTrigger value="balance">ゲームバランス</TabsTrigger>

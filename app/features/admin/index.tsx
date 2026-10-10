@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useEffect } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import {
   Tabs,
@@ -19,12 +19,32 @@ import WorkloadSettingsManager from "./workload";
 
 export default function Admin() {
   const { user, isLoading } = useAuth();
+  const { tab: routeTab } = useParams();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const view = searchParams.get("view");
-  const [tab, setTab] = useState(view === "pagerank" ? "pagerank" : "orphans");
   useEffect(() => {
-    if (view === "pagerank") setTab("pagerank");
-  }, [view]);
+    if (!routeTab && view) {
+      navigate(`/admin/${view}`, { replace: true });
+    } else if (!routeTab) {
+      navigate("/admin/orphans", { replace: true });
+    }
+  }, [navigate, routeTab, view]);
+
+  const tab = routeTab || "orphans";
+  const allowedTabs = [
+    "orphans",
+    "misplaced",
+    "broken-quizzes",
+    "users",
+    "workload",
+    "levels",
+    "game",
+    "power",
+    "pagerank",
+    "images",
+  ];
+  const activeTab = allowedTabs.includes(tab) ? tab : "orphans";
 
   if (isLoading) {
     return <p className="p-6 text-sm text-muted-foreground">確認中…</p>;
@@ -39,7 +59,13 @@ export default function Admin() {
     );
   }
   return (
-    <Tabs value={tab} onValueChange={setTab} className="gap-0">
+    <Tabs
+      value={activeTab}
+      onValueChange={(value) =>
+        navigate(value === "game" ? "/admin/game/balance" : `/admin/${value}`)
+      }
+      className="gap-0"
+    >
       <div className="flex justify-center border-b px-4 py-2 sm:px-6">
         <TabsList className="h-auto flex-wrap justify-center">
           <TabsTrigger value="orphans">孤立Tanbun</TabsTrigger>
@@ -48,7 +74,7 @@ export default function Admin() {
           <TabsTrigger value="users">ユーザー</TabsTrigger>
           <TabsTrigger value="workload">負荷制御</TabsTrigger>
           <TabsTrigger value="levels">レベル</TabsTrigger>
-          <TabsTrigger value="battle">ゲーム</TabsTrigger>
+          <TabsTrigger value="game">ゲーム</TabsTrigger>
           <TabsTrigger value="power">Power</TabsTrigger>
           <TabsTrigger value="pagerank">PageRank</TabsTrigger>
           <TabsTrigger value="images">画像</TabsTrigger>
@@ -72,7 +98,7 @@ export default function Admin() {
       <TabsContent value="levels" className="mt-0">
         <LevelSettingsManager />
       </TabsContent>
-      <TabsContent value="battle" className="mt-0">
+      <TabsContent value="game" className="mt-0">
         <GameAdminManager />
       </TabsContent>
       <TabsContent value="power" className="mt-0">
