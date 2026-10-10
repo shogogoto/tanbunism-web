@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Outlet, useMatch, useRevalidator } from "react-router";
+import { Outlet, useLocation, useMatch, useRevalidator } from "react-router";
 import { useSWRConfig } from "swr";
 import { useAuth } from "~/features/auth/AuthProvider";
 import GlobalHotkeys, {
@@ -64,6 +64,7 @@ function SidebarShell({ isMobile }: { isMobile: boolean }) {
     };
   }, []);
   const { user } = useAuth();
+  const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const isDocMode = useMatch("/docs/*");
@@ -71,6 +72,12 @@ function SidebarShell({ isMobile }: { isMobile: boolean }) {
   const { mutate } = useSWRConfig();
   const { refreshNotifications } = useNotifications();
   const revalidator = useRevalidator();
+  const isGamePage =
+    location.pathname === "/game" || location.pathname.startsWith("/game/");
+  const isReviewQuiz =
+    location.pathname === "/review" &&
+    new URLSearchParams(location.search).get("view") === "quiz";
+  const disablePullToRefresh = isGamePage || isReviewQuiz;
 
   const refreshPage = useCallback(async () => {
     setRefreshVersion((current) => current + 1);
@@ -93,8 +100,10 @@ function SidebarShell({ isMobile }: { isMobile: boolean }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <AppHeader />
         <PullToRefresh
-          enabled={isMobile}
-          className={`min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-background ${docStyle}`}
+          enabled={isMobile && !disablePullToRefresh}
+          className={`min-h-0 flex-1 overflow-y-auto ${
+            disablePullToRefresh ? "overscroll-y-none" : "overscroll-y-contain"
+          } bg-background ${docStyle}`}
           onRefresh={refreshPage}
           childrenKey={refreshVersion}
         >
