@@ -46,7 +46,7 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   expect(
     screen.getByRole("region", { name: "敵ステータスの計算" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("spinbutton")).toHaveLength(22);
+  expect(screen.getAllByRole("spinbutton")).toHaveLength(25);
   expect(base).toHaveAttribute("min", "5");
   expect(base).toHaveAttribute("max", "300");
   const weight = screen.getByLabelText("PowerのHP補正");
@@ -69,7 +69,7 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   });
 });
 it("simulates roster sizes and enemy stats from power, achievement, and relation count", async () => {
-  render(<BattleSettingsManager view="simulation" />);
+  render(<BattleSettingsManager />);
   await waitFor(() =>
     expect(
       screen.getByRole("button", { name: "敵ステータスを試算" }),
@@ -80,11 +80,9 @@ it("simulates roster sizes and enemy stats from power, achievement, and relation
   expect(
     await screen.findByRole("table", { name: "敵ステータス結果" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("row")).toHaveLength(11);
+  expect(screen.getAllByRole("row")).toHaveLength(4);
   expect(screen.getAllByText("28")).toHaveLength(3);
   expect(screen.getAllByText("16")).toHaveLength(3);
-  expect(screen.getAllByRole("table", { name: "試算条件" })).toHaveLength(1);
-  expect(screen.getByText("100")).toBeInTheDocument();
   expect(
     screen.queryByRole("table", { name: "敵ロスター結果" }),
   ).not.toBeInTheDocument();
@@ -92,10 +90,12 @@ it("simulates roster sizes and enemy stats from power, achievement, and relation
   expect(
     await screen.findByRole("table", { name: "敵ロスター結果" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("table", { name: "試算条件" })).toHaveLength(2);
-  expect(screen.getAllByRole("row")).toHaveLength(22);
+  expect(screen.getAllByRole("row")).toHaveLength(8);
   expect(screen.getAllByText("28")).toHaveLength(6);
   expect(screen.getAllByText("16")).toHaveLength(6);
+  expect(
+    screen.getByRole("table", { name: "敵ロスター結果" }),
+  ).toHaveTextContent("100");
   const power = screen.getByLabelText("試算するPower");
   await user.clear(power);
   await user.type(power, "250");
@@ -103,7 +103,7 @@ it("simulates roster sizes and enemy stats from power, achievement, and relation
     screen.getByRole("table", { name: "敵ロスター結果" }),
   ).toBeInTheDocument();
   expect(
-    screen.getAllByRole("table", { name: "試算条件" })[1],
+    screen.getByRole("table", { name: "敵ロスター結果" }),
   ).toHaveTextContent("100");
   expect(simulated).toHaveBeenNthCalledWith(1, {
     balance: defaults,
