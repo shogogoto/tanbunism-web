@@ -26,8 +26,8 @@ const server = setupServer(
       max_encounter_enemies: 3,
       enemies: [
         { index: 1, quiz_count: 2, hp: 28, attack: 16, relations: 3 },
-        { index: 2, quiz_count: 2, hp: 28, attack: 16, relations: 3 },
-        { index: 3, quiz_count: 1, hp: 28, attack: 16, relations: 3 },
+        { index: 2, quiz_count: 2, hp: 30, attack: 17, relations: 3 },
+        { index: 3, quiz_count: 1, hp: 26, attack: 15, relations: 3 },
       ],
     });
   }),
@@ -46,7 +46,8 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   expect(
     screen.getByRole("region", { name: "敵ステータスの計算" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("spinbutton")).toHaveLength(25);
+  expect(screen.getAllByRole("spinbutton")).toHaveLength(26);
+  expect(screen.getByLabelText("敵能力のばらつき（±%）")).toHaveValue(10);
   expect(base).toHaveAttribute("min", "5");
   expect(base).toHaveAttribute("max", "300");
   const weight = screen.getByLabelText("PowerのHP補正");
@@ -81,8 +82,9 @@ it("simulates roster sizes and enemy stats from power, achievement, and relation
     await screen.findByRole("table", { name: "敵ステータス結果" }),
   ).toBeInTheDocument();
   expect(screen.getAllByRole("row")).toHaveLength(4);
-  expect(screen.getAllByText("28")).toHaveLength(3);
-  expect(screen.getAllByText("16")).toHaveLength(3);
+  expect(screen.getAllByText("28")).toHaveLength(1);
+  expect(screen.getAllByText("30")).toHaveLength(1);
+  expect(screen.getAllByText("26")).toHaveLength(1);
   expect(
     screen.queryByRole("table", { name: "敵ロスター結果" }),
   ).not.toBeInTheDocument();
@@ -91,8 +93,9 @@ it("simulates roster sizes and enemy stats from power, achievement, and relation
     await screen.findByRole("table", { name: "敵ロスター結果" }),
   ).toBeInTheDocument();
   expect(screen.getAllByRole("row")).toHaveLength(8);
-  expect(screen.getAllByText("28")).toHaveLength(6);
-  expect(screen.getAllByText("16")).toHaveLength(6);
+  expect(screen.getAllByText("28")).toHaveLength(2);
+  expect(screen.getAllByText("30")).toHaveLength(2);
+  expect(screen.getAllByText("26")).toHaveLength(2);
   expect(
     screen.getByRole("table", { name: "敵ロスター結果" }),
   ).toHaveTextContent("100");

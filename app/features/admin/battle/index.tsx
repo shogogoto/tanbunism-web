@@ -35,6 +35,7 @@ const fields = {
   relation_cap: ["関係数の上限", 0, 1000, 1],
   region_hp: ["達成度帯ごとのHP上昇", 0, 100, 1],
   region_attack: ["達成度帯ごとの攻上昇", 0, 100, 1],
+  enemy_variance_percent: ["敵能力のばらつき（±%）", 0, 50, 1],
   enemy_types: ["領域ごとの敵の種類数", 1, 20, 1],
   min_quizzes_per_enemy: ["敵ごとのクイズ数（下限）", 1, 100, 1],
   max_quizzes_per_enemy: ["敵ごとのクイズ数（上限）", 1, 100, 1],
@@ -58,7 +59,7 @@ const groups = [
   {
     label: "敵ステータスの計算",
     description:
-      "敵のHP・攻撃力は固定値ではありません。各敵のクイズセットとダンジョンのPowerから導出し、達成度帯が上がるごとに補正します。設定変更は既存の敵にも即時反映されます。",
+      "敵のHP・攻撃力は固定値ではありません。各敵のクイズセットとダンジョンのPowerから導出し、達成度帯が上がるごとに補正します。敵ごとのばらつきはIDに基づいて固定され、設定変更は既存の敵にも即時反映されます。",
     keys: [
       "enemy_hp",
       "enemy_attack",
@@ -69,6 +70,7 @@ const groups = [
       "relation_cap",
       "region_hp",
       "region_attack",
+      "enemy_variance_percent",
     ],
   },
   {
@@ -335,6 +337,7 @@ export default function BattleSettingsManager() {
                           <TableHead>Power</TableHead>
                           <TableHead>達成度</TableHead>
                           <TableHead>平均関係数</TableHead>
+                          <TableHead>ばらつき（±%）</TableHead>
                           <TableHead>敵</TableHead>
                           <TableHead>HP</TableHead>
                           <TableHead>攻撃力</TableHead>
@@ -348,6 +351,9 @@ export default function BattleSettingsManager() {
                             <TableCell>{statsSimulation.achievement}</TableCell>
                             <TableCell>
                               {statsSimulation.average_relations}
+                            </TableCell>
+                            <TableCell>
+                              ±{statsSimulation.balance.enemy_variance_percent}%
                             </TableCell>
                             <TableCell>敵 {enemy.index}</TableCell>
                             <TableCell>{enemy.hp}</TableCell>
@@ -381,6 +387,7 @@ export default function BattleSettingsManager() {
                             <TableHead>Power</TableHead>
                             <TableHead>達成度</TableHead>
                             <TableHead>平均関係数</TableHead>
+                            <TableHead>ばらつき（±%）</TableHead>
                             <TableHead>母集団クイズ数</TableHead>
                             <TableHead>敵の種類</TableHead>
                             <TableHead>固定クイズ数</TableHead>
@@ -398,6 +405,14 @@ export default function BattleSettingsManager() {
                               </TableCell>
                               <TableCell>
                                 {rosterSimulation.average_relations}
+                              </TableCell>
+                              <TableCell>
+                                ±
+                                {
+                                  rosterSimulation.balance
+                                    .enemy_variance_percent
+                                }
+                                %
                               </TableCell>
                               <TableCell>
                                 {rosterSimulation.pool_quiz_count}

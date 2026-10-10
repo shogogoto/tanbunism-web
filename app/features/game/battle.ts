@@ -31,6 +31,7 @@ export const defaultBalance = {
   relation_cap: 30,
   region_hp: 5,
   region_attack: 2,
+  enemy_variance_percent: 10,
   enemy_types: 3,
   min_quizzes_per_enemy: 1,
   max_quizzes_per_enemy: 100,
