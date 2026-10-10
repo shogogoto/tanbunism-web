@@ -60,10 +60,22 @@ export default function MultiBattle({
   const [retry, setRetry] = useState<TurnInput>();
   const sending = useRef(false);
   const resultEnemies = useRef(battle?.enemies ?? []);
-  if (!result) resultEnemies.current = battle?.enemies ?? [];
-  const live = context.enemies.filter((enemy) =>
-    (result ? resultEnemies.current : battle?.enemies)?.includes(enemy.id),
-  );
+  const resultQuizIndices = useRef(battle?.quizIndices);
+  if (!result) {
+    resultEnemies.current = battle?.enemies ?? [];
+    resultQuizIndices.current = battle?.quizIndices;
+  }
+  // The turn response already contains its sealed assignments. A background
+  // context refresh must never display the previous turn's question meanwhile.
+  const quizIndices = result ? resultQuizIndices.current : battle?.quizIndices;
+  const live = context.enemies
+    .filter((enemy) =>
+      (result ? resultEnemies.current : battle?.enemies)?.includes(enemy.id),
+    )
+    .map((enemy) => ({
+      ...enemy,
+      quizIndex: quizIndices?.[enemy.id] ?? enemy.quizIndex,
+    }));
   const currentHp = remainingHp(hp, live);
   const stats = playerStats(save.allocation, context.balance);
   const remaining = run?.answerDeadline
@@ -295,7 +307,10 @@ export default function MultiBattle({
             敵を切り替えて回答。一度確定した答えは変更できません。全問回答か時間切れで一括精算します。
           </p>
           {live.map((enemy, index) => (
-            <div key={`${enemy.id}:${battle.turn}`} hidden={index !== active}>
+            <div
+              key={`${enemy.id}:${battle.turn}:${enemy.quizIndex}`}
+              hidden={index !== active}
+            >
               <QuizAttempt
                 quiz={content.quizzes[enemy.quizIndex]}
                 compactMobile

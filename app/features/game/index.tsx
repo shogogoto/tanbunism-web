@@ -179,41 +179,50 @@ export function GamePlay({
   const content = run
     ? (save.content ?? loadedContent)
     : (parked?.content ?? loadedContent);
-  const refreshedRegion = useRef({ resourceId: "", regions: 0 });
+  const refreshResource = run?.resourceId;
+  const refreshRegions = dungeonPreparation?.prepared_regions;
+  const {
+    data: refreshedContent,
+    error: refreshError,
+    mutate: retryRefresh,
+  } = useSWR(
+    stateLoaded &&
+      refreshResource &&
+      save.content &&
+      refreshRegions !== undefined
+      ? ["game-dungeon-refresh", userId, refreshResource, refreshRegions]
+      : null,
+    () => loadDungeon(refreshResource ?? "", refreshRegions),
+    { revalidateOnFocus: false, errorRetryCount: 3, errorRetryInterval: 5000 },
+  );
+  const appliedRefresh = useRef<{
+    source?: typeof refreshedContent;
+    merged?: typeof refreshedContent;
+  }>({});
   useEffect(() => {
     if (
-      !run ||
+      !refreshedContent ||
       !save.content ||
-      !dungeonPreparation ||
-      (refreshedRegion.current.resourceId === run.resourceId &&
-        dungeonPreparation.prepared_regions <= refreshedRegion.current.regions)
+      (appliedRefresh.current.source === refreshedContent &&
+        appliedRefresh.current.merged === save.content)
     )
       return;
-    refreshedRegion.current = {
-      resourceId: run.resourceId,
-      regions: dungeonPreparation.prepared_regions,
-    };
-    if (dungeonPreparation.prepared_regions > 0) {
+    const original = save.content;
+    const merged = mergeDungeonContent(original, refreshedContent);
+    appliedRefresh.current = { source: refreshedContent, merged };
+    if ((refreshRegions ?? 0) > 0) {
       void invalidateStudyPlanPreparationCache();
     }
-    let active = true;
-    void loadDungeon(run.resourceId, dungeonPreparation.prepared_regions)
-      .then((refreshed) => {
-        if (!active) return;
-        setSave((current) =>
-          current.content
-            ? {
-                ...current,
-                content: mergeDungeonContent(current.content, refreshed),
-              }
-            : current,
-        );
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, [dungeonPreparation, run, save.content]);
+    setSave((current) =>
+      current.content === original &&
+      current.run?.resourceId === refreshResource
+        ? {
+            ...current,
+            content: merged,
+          }
+        : current,
+    );
+  }, [refreshedContent, refreshResource, refreshRegions, save.content]);
   const map = run ? dungeonMap(save, run) : undefined;
   const validationIds = [
     ...new Set([
@@ -668,6 +677,17 @@ export function GamePlay({
               growthError?.message ??
               "プレイヤーのLvを取得できませんでした。"}
           </p>
+        )}
+        {refreshError && (
+          <div role="alert" className="text-sm text-destructive">
+            クイズの更新に失敗しました。現在の進行は保持しています。
+            <Button
+              variant="outline"
+              onClick={() => void retryRefresh().catch(() => undefined)}
+            >
+              クイズ更新を再試行
+            </Button>
+          </div>
         )}
         {localBattle.current === "starting" && error && (
           <Button

@@ -40,6 +40,9 @@ vi.mock("~/features/auth/AuthProvider", () => ({
   useAuth: () => ({ user: { uid: "player" }, isAuthenticated: true }),
 }));
 const server = setupServer(
+  http.get("*/game/dungeons/:resource/preparation", () =>
+    HttpResponse.json({ prepared_regions: 0, target_regions: 0 }),
+  ),
   http.get("*/game/balance", () => HttpResponse.json(defaultBalance)),
   http.get("*/game/battle/context", () =>
     HttpResponse.json({
@@ -344,6 +347,71 @@ function renderGame(path = "/game") {
   );
 }
 
+it("keeps a delayed quiz refresh through a move and merges it without losing progress", async () => {
+  const content = await loadDungeon("book");
+  state = {
+    revision: 1,
+    save: { ...enterDungeon(newSave(), "book", "テストの本", 1), content },
+  };
+  vi.spyOn(Math, "random").mockReturnValue(0.9);
+  let finish!: (value: typeof content) => void;
+  vi.mocked(loadDungeon).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const user = userEvent.setup();
+  renderGame();
+  await waitFor(() => expect(finish).toBeDefined());
+  await user.click(
+    await screen.findByRole("button", { name: /未探索.*進路の用語/ }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "見たよ · この道へ" }),
+  );
+  await waitFor(() => expect(state.save.run?.moves).toBe(1));
+  finish({
+    ...content,
+    knowledge: [
+      ...content.knowledge,
+      { uid: "added-place", sentence: "更新された知識" },
+    ],
+    quizzes: [...content.quizzes, { ...content.quizzes[0], quiz_id: "added" }],
+  });
+  await screen.findByRole("button", { name: /未探索.*更新された知識/ });
+  // Persist another move after the delayed refresh; the new quiz must be included.
+  await user.click(screen.getByRole("button", { name: /^入口\s*入口$/ }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: /入口へ移動/ })).toBeEnabled(),
+  );
+  await user.click(screen.getByRole("button", { name: /入口へ移動/ }));
+  await waitFor(() => expect(state.save.content?.quizzes).toHaveLength(2));
+  expect(state.save.run?.moves).toBe(2);
+});
+
+it("retains progress after a failed content refresh and allows a successful retry", async () => {
+  const content = await loadDungeon("book");
+  state = {
+    revision: 1,
+    save: { ...enterDungeon(newSave(), "book", "テストの本", 1), content },
+  };
+  vi.mocked(loadDungeon).mockRejectedValueOnce(new Error("temporary failure"));
+  renderGame();
+  const retry = await screen.findByRole("button", {
+    name: "クイズ更新を再試行",
+  });
+  expect(state.save.run?.moves).toBe(0);
+  expect(state.revision).toBe(1);
+  await userEvent.setup().click(retry);
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("button", { name: "クイズ更新を再試行" }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(loadDungeon).toHaveBeenLastCalledWith("book", 0);
+});
+
 it("refreshes a candidate deleted after display without spending moves or resetting the run", async () => {
   const save = enterDungeon(newSave(), "book", "テストの本", 1);
   state = {
@@ -549,7 +617,8 @@ it("records seen knowledge and a batch turn, then retreats after remount without
   expect(
     screen.getByRole("button", { name: /現在地.*進路の用語/ }),
   ).toBeInTheDocument();
-  expect(loadDungeon).toHaveBeenCalledTimes(loadsBeforeRemount);
+  // Reopening revalidates prepared content without replacing saved progress.
+  expect(loadDungeon).toHaveBeenCalledTimes(loadsBeforeRemount + 1);
 });
 
 it("abandoned timed-out combat retreats only once and preserves feedback across reopening", async () => {

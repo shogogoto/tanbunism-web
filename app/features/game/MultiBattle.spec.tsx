@@ -104,6 +104,37 @@ function Fixture({ deadline }: { deadline?: number }) {
     </MemoryRouter>
   );
 }
+it("uses sealed turn assignments immediately even while context still has the old question", async () => {
+  function AssignedFixture() {
+    const save = initial();
+    if (save.battle) {
+      save.battle.enemies = ["enemy0"];
+      save.battle.quizIndices = { enemy0: 1 };
+    }
+    return (
+      <MemoryRouter>
+        <MultiBattle
+          save={save}
+          content={content}
+          context={{ balance: defaultBalance, enemies }}
+          onSaved={() => undefined}
+          onFinished={async () => undefined}
+          onBusy={() => undefined}
+        />
+      </MemoryRouter>
+    );
+  }
+  render(<AssignedFixture />);
+  expect(
+    screen.queryByRole("button", { name: "選択肢一" }),
+  ).not.toBeInTheDocument();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "選択肢二" }));
+  await user.click(screen.getByRole("button", { name: "回答を確定" }));
+  await waitFor(() => expect(requests).toHaveLength(1));
+  expect(requests[0].answers).toEqual({ enemy0: ["a1"] });
+  expect(requests[0].defeated).toEqual(["enemy0"]);
+});
 it("confirms locally without revealing correctness, locks answers, and sends once at turn end", async () => {
   const user = userEvent.setup();
   render(<Fixture />);
@@ -176,7 +207,10 @@ it("keeps damaged enemy HP across turns without sending it to the server", async
     }),
     http.post("*/game/battle/next", () => {
       const save = initial();
-      if (save.battle) save.battle.turn = 1;
+      if (save.battle) {
+        save.battle.turn = 1;
+        save.battle.quizIndices = { enemy0: 1, enemy1: 0 };
+      }
       return HttpResponse.json({ revision: 3, save });
     }),
   );
@@ -200,10 +234,14 @@ it("keeps damaged enemy HP across turns without sending it to the server", async
   }
   render(<TwoTurnFixture />);
   const user = userEvent.setup();
-  async function answerBoth() {
-    await user.click(screen.getByRole("button", { name: "選択肢一" }));
+  async function answerBoth(reverse = false) {
+    await user.click(
+      screen.getByRole("button", { name: reverse ? "選択肢二" : "選択肢一" }),
+    );
     await user.click(screen.getByRole("button", { name: "回答を確定" }));
-    await user.click(screen.getByRole("button", { name: "選択肢二" }));
+    await user.click(
+      screen.getByRole("button", { name: reverse ? "選択肢一" : "選択肢二" }),
+    );
     await user.click(screen.getByRole("button", { name: "回答を確定" }));
     await screen.findByText("ターン精算完了");
   }
@@ -211,8 +249,9 @@ it("keeps damaged enemy HP across turns without sending it to the server", async
   expect(requests[0].defeated).toEqual([]);
   expect(screen.getByText(/HP 5\/15/)).toBeVisible();
   await user.click(screen.getByRole("button", { name: "次のターン" }));
-  await answerBoth();
+  await answerBoth(true);
   expect(requests[1].turn).toBe(1);
+  expect(requests[1].answers).toEqual({ enemy0: ["a1"], enemy1: ["a0"] });
   expect(requests[1].defeated).toEqual(["enemy0", "enemy1"]);
   expect(requests[1]).not.toHaveProperty("hp");
 });
