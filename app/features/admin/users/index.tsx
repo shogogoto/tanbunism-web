@@ -5,7 +5,6 @@ import {
   KeyRound,
   RotateCcw,
   ShieldCheck,
-  Swords,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -52,7 +51,6 @@ import {
   grantAdminUser,
   listAdminUserResources,
   listAdminUsers,
-  rebuildAdminUserEnemyPools,
   resetAdminUserAdventure,
   resetAdminUserPassword,
   updateAdminUserStatus,
@@ -67,7 +65,6 @@ export default function AdminUserManager() {
   const [statusTarget, setStatusTarget] = useState<AdminUserItem>();
   const [adminTarget, setAdminTarget] = useState<AdminUserItem>();
   const [adventureTarget, setAdventureTarget] = useState<AdminUserItem>();
-  const [enemyPoolTarget, setEnemyPoolTarget] = useState<AdminUserItem>();
   const [adminConfirmation, setAdminConfirmation] = useState("");
   const [resourceOwner, setResourceOwner] = useState<AdminUserItem>();
   const [passwordTarget, setPasswordTarget] = useState<AdminUserItem>();
@@ -159,25 +156,6 @@ export default function AdminUserManager() {
       );
       toast.success(`${adventureTarget.email} の冒険待ち時間を解除しました`);
       setAdventureTarget(undefined);
-    } catch (cause) {
-      setError(errorMessage(cause));
-    } finally {
-      setIsMutating(false);
-    }
-  }
-
-  async function rebuildEnemyPools() {
-    if (!enemyPoolTarget || isMutating) return;
-    setIsMutating(true);
-    setError(undefined);
-    try {
-      const result = await rebuildAdminUserEnemyPools(enemyPoolTarget.uid);
-      toast.success(
-        result.dungeon_count
-          ? `${result.dungeon_count}ダンジョン・${result.region_count}領域、クイズ${result.quiz_count}問の敵セットを再構築しました`
-          : "再構築できる保存済みの敵セットがありません",
-      );
-      setEnemyPoolTarget(undefined);
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -388,16 +366,6 @@ export default function AdminUserManager() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        disabled={isMutating || !user.is_active}
-                        aria-label={`${user.email}の敵セットを再構築`}
-                        onClick={() => setEnemyPoolTarget(user)}
-                      >
-                        <Swords /> 敵セット
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
                         onClick={() => void openResources(user)}
                       >
                         <Database />
@@ -468,39 +436,6 @@ export default function AdminUserManager() {
               }}
             >
               待ち時間を解除する
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={Boolean(enemyPoolTarget)}
-        onOpenChange={(open) =>
-          !open && !isMutating && setEnemyPoolTarget(undefined)
-        }
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              領域ごとの敵セットを再構築しますか？
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {enemyPoolTarget?.email}{" "}
-              の攻略中・中断中ダンジョンについて、各領域で使うクイズ母集団を保存し直し、敵を再構成します。クイズ母集団・攻略状況・HP・復習履歴は変更しません。戦闘中は実行できません。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isMutating}>
-              キャンセル
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isMutating}
-              onClick={(event) => {
-                event.preventDefault();
-                void rebuildEnemyPools();
-              }}
-            >
-              再構築する
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

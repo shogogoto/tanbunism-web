@@ -7,8 +7,8 @@ import {
   TabsList,
   TabsTrigger,
 } from "~/shared/components/ui/tabs";
-import BattleSettingsManager from "./battle";
 import BrokenQuizManager from "./brokenQuizzes";
+import GameAdminManager from "./game";
 import ImageManager from "./images";
 import LevelSettingsManager from "./levels";
 import OrphanedTanbunManager from "./orphanedTanbuns";
@@ -73,7 +73,7 @@ export default function Admin() {
         <LevelSettingsManager />
       </TabsContent>
       <TabsContent value="battle" className="mt-0">
-        <BattleSettingsManager />
+        <GameAdminManager />
       </TabsContent>
       <TabsContent value="power" className="mt-0">
         <PowerSettingsManager />
