@@ -38,6 +38,7 @@ it("Planに含まれるリソースだけのLv・XPを表示する", () => {
           n_quiz: 5,
           n_option: 4,
           created: "2026-10-07",
+          default_resource_plan: false,
         }}
       />
     </MemoryRouter>,

@@ -263,6 +263,9 @@ export default function StudyPlanManager() {
   }
 
   const selectedPlans = plans.filter(({ uid }) => selectedPlanIds.has(uid));
+  const removableSelectedPlans = selectedPlans.filter(
+    ({ default_resource_plan }) => !default_resource_plan,
+  );
   const selectedPlan =
     selectedPlans.length === 1 ? selectedPlans[0] : undefined;
   const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -448,7 +451,8 @@ export default function StudyPlanManager() {
   }, [currentPlanId]);
 
   async function removeSelectedPlans() {
-    const selected = new Set(selectedPlanIds);
+    const selected = new Set(removableSelectedPlans.map(({ uid }) => uid));
+    if (selected.size === 0) return;
     setBulkAction("delete");
     setError(undefined);
     try {
@@ -460,6 +464,13 @@ export default function StudyPlanManager() {
       setSelectedPlanIds(new Set());
       if (editingPlan && selected.has(editingPlan.uid))
         setEditingPlan(undefined);
+      if (
+        selectedPlans.some(({ default_resource_plan }) => default_resource_plan)
+      ) {
+        toast.info(
+          "ゲーム連携された既定の学習計画は削除対象から除外しました。",
+        );
+      }
     } catch (deleteError) {
       setError(
         deleteError instanceof Error
@@ -853,36 +864,39 @@ export default function StudyPlanManager() {
                     >
                       {bulkAction === "types" ? "変更中…" : "4形式に変更"}
                     </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          disabled={Boolean(bulkAction)}
-                        >
-                          {selectedPlanIds.size}件を削除
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            選択した{selectedPlanIds.size}件を削除しますか？
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            クイズや回答履歴は削除されません。
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => void removeSelectedPlans()}
+                    {removableSelectedPlans.length > 0 && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            disabled={Boolean(bulkAction)}
                           >
-                            {bulkAction === "delete" ? "削除中…" : "削除する"}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            {removableSelectedPlans.length}件を削除
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              選択した{removableSelectedPlans.length}
+                              件を削除しますか？
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              クイズや回答履歴は削除されません。ゲーム連携された既定の学習計画は削除されません。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => void removeSelectedPlans()}
+                            >
+                              {bulkAction === "delete" ? "削除中…" : "削除する"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </>
                 )}
               </div>
@@ -943,8 +957,18 @@ export default function StudyPlanManager() {
                         }
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium" title={plan.name}>
-                          {plan.name}
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div
+                            className="truncate font-medium"
+                            title={plan.name}
+                          >
+                            {plan.name}
+                          </div>
+                          {plan.default_resource_plan && (
+                            <Badge variant="secondary" className="shrink-0">
+                              ゲーム連携・削除不可
+                            </Badge>
+                          )}
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
                           <strong className="text-sm tabular-nums text-foreground">
@@ -1105,11 +1129,18 @@ export default function StudyPlanManager() {
                           />
                         </TableCell>
                         <TableCell className="min-w-0 whitespace-normal">
-                          <div
-                            className="max-w-44 truncate font-medium"
-                            title={plan.name}
-                          >
-                            {plan.name}
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="max-w-44 truncate font-medium"
+                              title={plan.name}
+                            >
+                              {plan.name}
+                            </div>
+                            {plan.default_resource_plan && (
+                              <Badge variant="secondary" className="shrink-0">
+                                ゲーム連携・削除不可
+                              </Badge>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="min-w-0 whitespace-normal">

@@ -1444,6 +1444,7 @@ export interface StudyPlan {
   n_option: number;
   uid: string;
   created: string;
+  default_resource_plan: boolean;
 }
 
 /**

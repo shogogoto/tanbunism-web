@@ -913,6 +913,7 @@ export const getListStudyPlansApiQuizStudyPlansGetResponseMock =
       n_option: faker.number.int({ min: 1, max: 6 }),
       uid: faker.string.uuid(),
       created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
+      default_resource_plan: faker.datatype.boolean(),
     }));
 
 export const getCreateStudyPlanApiQuizStudyPlansPostResponseMock = (
@@ -928,6 +929,7 @@ export const getCreateStudyPlanApiQuizStudyPlansPostResponseMock = (
   n_option: faker.number.int({ min: 1, max: 6 }),
   uid: faker.string.uuid(),
   created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
+  default_resource_plan: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -961,6 +963,7 @@ export const getGetStudyPlanApiQuizStudyPlansPlanIdGetResponseMock = (
   n_option: faker.number.int({ min: 1, max: 6 }),
   uid: faker.string.uuid(),
   created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
+  default_resource_plan: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -977,6 +980,7 @@ export const getUpdateStudyPlanApiQuizStudyPlansPlanIdPutResponseMock = (
   n_option: faker.number.int({ min: 1, max: 6 }),
   uid: faker.string.uuid(),
   created: `${faker.date.past().toISOString().slice(0, 19)}Z`,
+  default_resource_plan: faker.datatype.boolean(),
   ...overrideResponse,
 });
 

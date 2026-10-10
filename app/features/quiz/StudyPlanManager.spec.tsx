@@ -43,6 +43,7 @@ const plan = {
   n_quiz: 2,
   n_option: 4,
   created: "2026-10-02T00:00:00Z",
+  default_resource_plan: false,
 };
 
 const secondPlan = {
@@ -368,4 +369,20 @@ it("行内ボタンではなく選択ツールバーからStudyPlanを削除す�
   expect(
     screen.queryByText("とても長い学習計画の名前"),
   ).not.toBeInTheDocument();
+});
+
+it("ゲーム連携された既定StudyPlanは削除できない", async () => {
+  const user = userEvent.setup();
+  const defaultPlan = { ...plan, default_resource_plan: true };
+  vi.mocked(listStudyPlans).mockResolvedValue([defaultPlan]);
+  renderManager();
+
+  expect(await screen.findByText("ゲーム連携・削除不可")).toBeVisible();
+  await user.click(
+    screen.getByRole("checkbox", {
+      name: `${defaultPlan.name}を選択`,
+    }),
+  );
+
+  expect(screen.queryByRole("button", { name: "1件を削除" })).toBeNull();
 });

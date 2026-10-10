@@ -103,6 +103,7 @@ it("scopes knowledge and prepared quizzes to one resource without generation", a
       n_quiz: 20,
       n_option: 4,
       created: "2026-10-08T00:00:00Z",
+      default_resource_plan: false,
     },
   ]);
   vi.mocked(recommendQuizzes).mockResolvedValue([]);
