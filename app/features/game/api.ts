@@ -22,6 +22,13 @@ export type DungeonPreparation = {
   prepared_regions: number;
   target_regions: number;
 };
+export type DungeonRegionQuizPool = {
+  ready: boolean;
+  level: number;
+  required_quizzes: number;
+  available_quizzes: number;
+  quiz_ids: string[];
+};
 export type RegionEnemy = {
   id: string;
   name: string;
@@ -88,8 +95,9 @@ export function freezeRegionEnemies(
   content: DungeonContent,
   resourceId: string,
   region: number,
+  storedQuizPool?: string[],
 ): DungeonContent {
-  const quizPool = regionQuizPool(content, region);
+  const quizPool = storedQuizPool ?? regionQuizPool(content, region);
   const quizIndexes = new Map(
     content.quizzes.map((quiz, index) => [quiz.quiz_id, index]),
   );
@@ -132,6 +140,34 @@ export async function loadDungeonPreparation(
   if (!response.ok)
     throw new Error(body?.detail ?? "クイズの準備状況を取得できませんでした。");
   return body as DungeonPreparation;
+}
+
+export async function loadDungeonRegionQuizPool(
+  resourceId: string,
+  level: number,
+  legacyQuizIds?: string[],
+): Promise<DungeonRegionQuizPool> {
+  const method = legacyQuizIds ? "POST" : "GET";
+  const response = await fetch(
+    `${API_BASE_URL}/game/dungeons/${encodeURIComponent(resourceId)}/regions/${level}/quiz-pool`,
+    {
+      method,
+      credentials: "include",
+      cache: "no-store",
+      ...(legacyQuizIds
+        ? {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ quiz_ids: legacyQuizIds }),
+          }
+        : {}),
+    },
+  );
+  const body = await response.json();
+  if (!response.ok)
+    throw new Error(
+      body?.detail ?? "領域のクイズ母集団を取得できませんでした。",
+    );
+  return body as DungeonRegionQuizPool;
 }
 
 export function mergeDungeonContent(

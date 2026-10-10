@@ -17,10 +17,13 @@ No active outing means the right stays available for entry. Admin resets use the
 same automatic refill. Revision/slot locks prevent two devices from double-refilling.
 The map retains the current place's region label. “領域の敵” opens a responsive
 list for each discovered band, including stable icons, HP, attack and quiz type.
-`content.regionQuizPools` explicitly pins the prepared quiz IDs available to each
-achievement band when first entered; `content.regionEnemies` is derived from and
-keeps the stable enemy identities for that pool. Each enemy uses its pinned quiz
-on every appearance. Combat and the enemy list share that pool, with provisional
+Neo4j's user/resource-scoped `DungeonRegion` nodes explicitly pin the cumulative
+prepared quiz IDs available at each achievement level, five additional quizzes
+per level. The API validates and migrates legacy snapshot pools on first entry.
+`content.regionQuizPools` and `content.regionEnemies` remain synchronized
+projections for combat rendering and keep stable enemy identities. Each enemy
+uses its pinned quiz on every appearance. Combat and the enemy list share that
+pool, with provisional
 HP/attack scaling by region, not player Lv. Legacy bands migrate their pool from
 the saved enemy list (or the existing frozen quiz content); opening the list never
 triggers quiz generation. Later-prepared quizzes expand only newly entered bands.

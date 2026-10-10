@@ -36,8 +36,10 @@ import {
   loadConnectedKnowledge,
   loadDungeon,
   loadDungeonPreparation,
+  loadDungeonRegionQuizPool,
   mergeDungeonContent,
   regionEnemies,
+  regionQuizPool,
   validateKnowledge,
 } from "./api";
 import {
@@ -391,16 +393,43 @@ export function GamePlay({
     try {
       const explored = explore(save, sentenceId, kind);
       if (explored === save) return;
-      if (sentenceId !== ENTRANCE) await markTanbunSeen(sentenceId);
       const region =
         dungeonMap(explored, explored.run ?? run).places.find(
           (place) => place.id === sentenceId,
         )?.region ?? 0;
+      const dungeonContent = knownKnowledge(content, connected ?? []);
+      const legacyPool =
+        dungeonContent.regionQuizPools?.[region] ??
+        (dungeonContent.regionEnemies?.[region]
+          ? regionQuizPool(dungeonContent, region)
+          : undefined);
+      const population = await loadDungeonRegionQuizPool(
+        run.resourceId,
+        region + 1,
+        legacyPool,
+      );
+      if (!population.ready) {
+        setError(
+          `領域${region + 1}のクイズを準備中です（${population.available_quizzes}/${population.required_quizzes}問）。少し待ってから進んでください。`,
+        );
+        return;
+      }
+      const availableQuizIds = new Set(
+        dungeonContent.quizzes.map((quiz) => quiz.quiz_id),
+      );
+      if (population.quiz_ids.some((quizId) => !availableQuizIds.has(quizId))) {
+        setError(
+          "領域のクイズを読み込めませんでした。画面を再読み込みしてください。",
+        );
+        return;
+      }
       const frozen = freezeRegionEnemies(
-        knownKnowledge(content, connected ?? []),
+        dungeonContent,
         run.resourceId,
         region,
+        population.quiz_ids,
       );
+      if (sentenceId !== ENTRANCE) await markTanbunSeen(sentenceId);
       const next = move(explored, sentenceId, Math.random());
       const pool = regionEnemies(frozen, run.resourceId, region);
       if (next.run?.phase === "battle" && pool.length) {

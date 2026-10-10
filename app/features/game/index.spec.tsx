@@ -21,7 +21,11 @@ import { markTanbunSeen } from "~/features/review/api";
 import { GamePlay } from ".";
 
 import { adventureAccessKey } from "./access";
-import { loadDungeon, validateKnowledge } from "./api";
+import {
+  loadDungeon,
+  loadDungeonRegionQuizPool,
+  validateKnowledge,
+} from "./api";
 import { defaultBalance } from "./battle";
 import { enterDungeon, move, newSave } from "./domain";
 import type { GameState } from "./state";
@@ -237,6 +241,7 @@ vi.mock("~/features/review/api", () => ({ markTanbunSeen: vi.fn() }));
 vi.mock("./api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./api")>()),
   loadDungeon: vi.fn(),
+  loadDungeonRegionQuizPool: vi.fn(),
   loadConnectedKnowledge: vi.fn(async () => []),
   validateKnowledge: vi.fn(async (_resource: string, ids: string[]) => ids),
 }));
@@ -255,6 +260,13 @@ beforeEach(() => {
   vi.mocked(validateKnowledge).mockImplementation(
     async (_resource, ids) => ids,
   );
+  vi.mocked(loadDungeonRegionQuizPool).mockResolvedValue({
+    ready: true,
+    level: 1,
+    required_quizzes: 5,
+    available_quizzes: 5,
+    quiz_ids: ["quiz"],
+  });
   vi.mocked(loadDungeon).mockResolvedValue({
     knowledge: [
       {
