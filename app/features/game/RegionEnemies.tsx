@@ -53,7 +53,7 @@ export default function RegionEnemies({
           <DialogHeader>
             <DialogTitle>領域の敵一覧</DialogTitle>
             <DialogDescription>
-              開拓済みの領域で遭遇する敵です。同じ敵は同じクイズで攻撃します。
+              領域ごとのクイズ母集団です。各クイズに対応する敵が出現し、同じ敵は同じクイズで攻撃します。
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-wrap gap-2" aria-label="領域選択">
@@ -70,6 +70,9 @@ export default function RegionEnemies({
               </Button>
             ))}
           </div>
+          <p className="text-xs text-muted-foreground">
+            領域 {selected + 1} の母集団: {enemies[selected]?.length ?? 0}問
+          </p>
           <ul className="space-y-2">
             {(enemies[selected] ?? []).map((enemy) => (
               <li
@@ -86,6 +89,9 @@ export default function RegionEnemies({
                     {types[
                       quizzes[enemy.quizIndex]?.quiz_type as keyof typeof types
                     ] ?? "クイズ準備中"}
+                  </p>
+                  <p className="text-sm leading-snug">
+                    {quizzes[enemy.quizIndex]?.statement ?? "クイズ準備中"}
                   </p>
                 </div>
               </li>

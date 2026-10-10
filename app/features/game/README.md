@@ -24,6 +24,9 @@ on every appearance. Combat and the enemy list share that pool, with provisional
 HP/attack scaling by region, not player Lv. Legacy bands migrate their pool from
 the saved enemy list (or the existing frozen quiz content); opening the list never
 triggers quiz generation. Later-prepared quizzes expand only newly entered bands.
+Superusers can normalize a user's saved active and parked enemy sets from the
+admin user list; the operation refuses to run during combat and does not change
+the captured populations or adventure progress.
 Dungeon switching parks the run on the server, never resetting HP or learning XP.
 Dungeon clearing counts laps, not resource levels.
 

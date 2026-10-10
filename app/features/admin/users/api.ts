@@ -11,6 +11,21 @@ export function resetAdminUserAdventure(
   });
 }
 
+export type EnemyPoolRebuildResult = {
+  dungeon_count: number;
+  region_count: number;
+  quiz_count: number;
+};
+
+export function rebuildAdminUserEnemyPools(
+  userId: string,
+): Promise<EnemyPoolRebuildResult> {
+  return request(
+    `/admin/users/${encodeURIComponent(userId)}/game/enemies/rebuild`,
+    { method: "POST" },
+  );
+}
+
 export type AdminUserItem = {
   uid: string;
   email: string;
