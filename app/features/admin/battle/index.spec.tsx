@@ -21,6 +21,7 @@ const server = setupServer(
       achievement: 1,
       pool_quiz_count: 5,
       average_relations: 3,
+      balance: defaults,
       min_encounter_enemies: 1,
       max_encounter_enemies: 3,
       enemies: [
@@ -45,7 +46,7 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   expect(
     screen.getByRole("region", { name: "敵ステータスの計算" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("spinbutton")).toHaveLength(25);
+  expect(screen.getAllByRole("spinbutton")).toHaveLength(22);
   expect(base).toHaveAttribute("min", "5");
   expect(base).toHaveAttribute("max", "300");
   const weight = screen.getByLabelText("PowerのHP補正");
@@ -70,15 +71,30 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
 it("simulates roster sizes and enemy stats from power, achievement, and relation count", async () => {
   render(<BattleSettingsManager />);
   await screen.findByLabelText("初期持ち時間（秒）");
-  await userEvent
-    .setup()
-    .click(screen.getByRole("button", { name: "試算する" }));
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("tab", { name: "試算" }));
+  await user.click(screen.getByRole("button", { name: "試算する" }));
+  expect(
+    await screen.findByRole("table", { name: "敵ステータス試算" }),
+  ).toBeInTheDocument();
+  expect(screen.getAllByRole("row")).toHaveLength(11);
+  expect(screen.getAllByText("28")).toHaveLength(3);
+  expect(screen.getAllByText("16")).toHaveLength(3);
+  expect(screen.getByText("前回の試算条件")).toBeInTheDocument();
+  expect(screen.getByText("100")).toBeInTheDocument();
+  await user.click(screen.getByRole("tab", { name: "敵ロスター" }));
   expect(
     await screen.findByRole("table", { name: "敵ロスター試算" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("row")).toHaveLength(4);
-  expect(screen.getAllByText("28")).toHaveLength(3);
-  expect(screen.getAllByText("16")).toHaveLength(3);
+  const power = screen.getByLabelText("試算するPower");
+  await user.clear(power);
+  await user.type(power, "250");
+  expect(
+    screen.getByRole("table", { name: "敵ロスター試算" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("前回の試算条件").parentElement).toHaveTextContent(
+    "100",
+  );
   expect(simulated).toHaveBeenCalledWith({
     balance: defaults,
     power: 100,

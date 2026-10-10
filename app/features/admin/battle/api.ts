@@ -8,6 +8,7 @@ export type EnemyBalanceSimulation = {
   achievement: number;
   pool_quiz_count: number;
   average_relations: number;
+  balance: BattleSettings;
   min_encounter_enemies: number;
   max_encounter_enemies: number;
   enemies: {
