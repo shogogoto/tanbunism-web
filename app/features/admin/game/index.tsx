@@ -400,7 +400,12 @@ function GameDungeonManager() {
 export default function GameAdminManager() {
   const { subtab } = useParams();
   const navigate = useNavigate();
-  const activeTab = subtab === "dungeons" ? "dungeons" : "balance";
+  const activeTab =
+    subtab === "dungeons"
+      ? "dungeons"
+      : subtab === "simulation"
+        ? "simulation"
+        : "balance";
   return (
     <Tabs
       value={activeTab}
@@ -410,11 +415,15 @@ export default function GameAdminManager() {
       <div className="flex justify-center border-b px-4 py-2">
         <TabsList className="h-auto flex-wrap justify-center">
           <TabsTrigger value="balance">ゲームバランス</TabsTrigger>
+          <TabsTrigger value="simulation">試算</TabsTrigger>
           <TabsTrigger value="dungeons">ダンジョン母集団</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="balance" className="mt-0">
         <BattleSettingsManager />
+      </TabsContent>
+      <TabsContent value="simulation" className="mt-0">
+        <BattleSettingsManager view="simulation" />
       </TabsContent>
       <TabsContent value="dungeons" className="mt-0">
         <GameDungeonManager />

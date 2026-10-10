@@ -84,7 +84,12 @@ const groups = [
     ],
   },
 ] as const;
-export default function BattleSettingsManager() {
+type BattleSettingsManagerProps = { view?: "settings" | "simulation" };
+
+export default function BattleSettingsManager({
+  view = "settings",
+}: BattleSettingsManagerProps) {
+  const showingSimulation = view === "simulation";
   const [settings, setSettings] = useState<BattleSettings>();
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
@@ -111,18 +116,26 @@ export default function BattleSettingsManager() {
   }, []);
   return (
     <section className="mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
-      <h2 className="text-lg font-semibold">ゲームバランス</h2>
+      <h2 className="text-lg font-semibold">
+        {showingSimulation ? "敵の試算" : "ゲームバランス"}
+      </h2>
       {error && (
         <p role="alert" className="text-destructive">
           {error}
         </p>
       )}
       <div className="space-y-6">
-        <p className="text-sm text-muted-foreground">
-          敵の強さはランダム値ではなく、以下の補正値から計算されます。ランダムなのはロスター再選出時のクイズ割当てと、戦闘時の敵・出題クイズの抽選です。
-        </p>
-        {saved && <output className="block">ゲーム設定を保存しました</output>}
-        {settings && (
+        {!showingSimulation && (
+          <>
+            <p className="text-sm text-muted-foreground">
+              敵の強さはランダム値ではなく、以下の補正値から計算されます。ランダムなのはロスター再選出時のクイズ割当てと、戦闘時の敵・出題クイズの抽選です。
+            </p>
+            {saved && (
+              <output className="block">ゲーム設定を保存しました</output>
+            )}
+          </>
+        )}
+        {!showingSimulation && settings && (
           <form
             className="space-y-4"
             onSubmit={(event) => {
@@ -210,7 +223,7 @@ export default function BattleSettingsManager() {
             </Button>
           </form>
         )}
-        {settings && (
+        {showingSimulation && settings && (
           <section
             aria-labelledby="battle-simulation-title"
             className="space-y-4 rounded-lg border p-4 sm:p-5"

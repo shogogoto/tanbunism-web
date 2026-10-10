@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -46,7 +46,7 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   expect(
     screen.getByRole("region", { name: "敵ステータスの計算" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("spinbutton")).toHaveLength(25);
+  expect(screen.getAllByRole("spinbutton")).toHaveLength(22);
   expect(base).toHaveAttribute("min", "5");
   expect(base).toHaveAttribute("max", "300");
   const weight = screen.getByLabelText("PowerのHP補正");
@@ -69,8 +69,10 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   });
 });
 it("simulates roster sizes and enemy stats from power, achievement, and relation count", async () => {
-  render(<BattleSettingsManager />);
-  await screen.findByLabelText("初期持ち時間（秒）");
+  render(<BattleSettingsManager view="simulation" />);
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "試算する" })).toBeEnabled(),
+  );
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "試算する" }));
   expect(
