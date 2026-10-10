@@ -84,6 +84,82 @@ const groups = [
     ],
   },
 ] as const;
+
+function SimulationConditions({
+  simulation,
+}: {
+  simulation: EnemyBalanceSimulation;
+}) {
+  return (
+    <div className="overflow-x-auto rounded-md border">
+      <Table aria-label="試算条件" className="min-w-[28rem]">
+        <TableHeader>
+          <TableRow>
+            <TableHead>条件</TableHead>
+            <TableHead>試算に使った値</TableHead>
+            <TableHead>条件</TableHead>
+            <TableHead>試算に使った値</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow>
+            <TableCell>ダンジョンPower</TableCell>
+            <TableCell>{simulation.power}</TableCell>
+            <TableCell>達成度</TableCell>
+            <TableCell>{simulation.achievement}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>母集団クイズ数</TableCell>
+            <TableCell>{simulation.pool_quiz_count}</TableCell>
+            <TableCell>平均関係数</TableCell>
+            <TableCell>{simulation.average_relations}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>敵の基礎HP / 攻</TableCell>
+            <TableCell>
+              {simulation.balance.enemy_hp} / {simulation.balance.enemy_attack}
+            </TableCell>
+            <TableCell>敵の種類数</TableCell>
+            <TableCell>{simulation.balance.enemy_types}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>Power補正 HP / 攻</TableCell>
+            <TableCell>
+              {simulation.balance.power_hp} / {simulation.balance.power_attack}
+            </TableCell>
+            <TableCell>関係数補正 HP / 攻</TableCell>
+            <TableCell>
+              {simulation.balance.relation_hp} /{" "}
+              {simulation.balance.relation_attack}
+            </TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>関係数の上限</TableCell>
+            <TableCell>{simulation.balance.relation_cap}</TableCell>
+            <TableCell>達成度補正 HP / 攻</TableCell>
+            <TableCell>
+              {simulation.balance.region_hp} /{" "}
+              {simulation.balance.region_attack}
+            </TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>敵ごとのクイズ数</TableCell>
+            <TableCell>
+              {simulation.balance.min_quizzes_per_enemy}〜
+              {simulation.balance.max_quizzes_per_enemy}
+            </TableCell>
+            <TableCell>同時出現数</TableCell>
+            <TableCell>
+              {simulation.balance.min_enemies}〜
+              {simulation.balance.max_encounter_enemies}
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 type BattleSettingsManagerProps = { view?: "settings" | "simulation" };
 
 export default function BattleSettingsManager({
@@ -97,7 +173,10 @@ export default function BattleSettingsManager({
   const [samplePower, setSamplePower] = useState(100);
   const [sampleAchievement, setSampleAchievement] = useState(1);
   const [sampleRelations, setSampleRelations] = useState(3);
-  const [simulation, setSimulation] = useState<EnemyBalanceSimulation>();
+  const [statsSimulation, setStatsSimulation] =
+    useState<EnemyBalanceSimulation>();
+  const [rosterSimulation, setRosterSimulation] =
+    useState<EnemyBalanceSimulation>();
   const [simulationError, setSimulationError] = useState<string>();
   const [simulating, setSimulating] = useState(false);
   useEffect(() => {
@@ -114,6 +193,27 @@ export default function BattleSettingsManager({
       active = false;
     };
   }, []);
+  const runSimulation = (target: "stats" | "roster") => {
+    if (!settings) return;
+    setSimulationError(undefined);
+    setSimulating(true);
+    void requestEnemyBalanceSimulation({
+      balance: settings,
+      power: samplePower,
+      achievement: sampleAchievement,
+      average_relations: sampleRelations,
+    })
+      .then((result) => {
+        if (target === "stats") setStatsSimulation(result);
+        else setRosterSimulation(result);
+      })
+      .catch((cause) =>
+        setSimulationError(
+          cause instanceof Error ? cause.message : "敵を試算できませんでした。",
+        ),
+      )
+      .finally(() => setSimulating(false));
+  };
   return (
     <section className="mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
       <h2 className="text-lg font-semibold">
@@ -230,10 +330,10 @@ export default function BattleSettingsManager({
           >
             <div>
               <h3 id="battle-simulation-title" className="font-semibold">
-                敵の試算
+                試算条件
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                設定値と条件を使い、本番と同じ敵編成・能力計算で試算します。平均関係数は敵ごとに同じ値と仮定します。試算結果はこの画面を離れるまで保持され、設定変更後も消えません。
+                条件を設定し、敵ステータスと敵ロスターを個別に試算できます。平均関係数は敵ごとに同じ値と仮定します。各結果は条件変更後もこの画面を離れるまで保持されます。
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -284,144 +384,74 @@ export default function BattleSettingsManager({
                 />
               </div>
             </div>
-            <Button
-              type="button"
-              disabled={simulating || !settings}
-              onClick={() => {
-                if (!settings) return;
-                setSimulationError(undefined);
-                setSimulating(true);
-                void requestEnemyBalanceSimulation({
-                  balance: settings,
-                  power: samplePower,
-                  achievement: sampleAchievement,
-                  average_relations: sampleRelations,
-                })
-                  .then(setSimulation)
-                  .catch((cause) =>
-                    setSimulationError(
-                      cause instanceof Error
-                        ? cause.message
-                        : "敵を試算できませんでした。",
-                    ),
-                  )
-                  .finally(() => setSimulating(false));
-              }}
-            >
-              {simulating ? "試算中…" : "試算する"}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                disabled={simulating || !settings}
+                onClick={() => runSimulation("stats")}
+              >
+                {simulating ? "試算中…" : "敵ステータスを試算"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={simulating || !settings}
+                onClick={() => runSimulation("roster")}
+              >
+                {simulating ? "試算中…" : "敵ロスターを試算"}
+              </Button>
+            </div>
             {simulationError && (
               <p role="alert" className="text-sm text-destructive">
                 {simulationError}
               </p>
             )}
-            {simulation ? (
-              <div className="space-y-4 rounded-md border p-3 sm:p-4">
-                <h4 className="font-medium">前回の試算条件</h4>
-                <div className="overflow-x-auto rounded-md border">
-                  <Table aria-label="前回の試算条件" className="min-w-[28rem]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>条件</TableHead>
-                        <TableHead>試算に使った値</TableHead>
-                        <TableHead>条件</TableHead>
-                        <TableHead>試算に使った値</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>ダンジョンPower</TableCell>
-                        <TableCell>{simulation.power}</TableCell>
-                        <TableCell>達成度</TableCell>
-                        <TableCell>{simulation.achievement}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>母集団クイズ数</TableCell>
-                        <TableCell>{simulation.pool_quiz_count}</TableCell>
-                        <TableCell>平均関係数</TableCell>
-                        <TableCell>{simulation.average_relations}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>敵の基礎HP / 攻</TableCell>
-                        <TableCell>
-                          {simulation.balance.enemy_hp} /{" "}
-                          {simulation.balance.enemy_attack}
-                        </TableCell>
-                        <TableCell>敵の種類数</TableCell>
-                        <TableCell>{simulation.balance.enemy_types}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Power補正 HP / 攻</TableCell>
-                        <TableCell>
-                          {simulation.balance.power_hp} /{" "}
-                          {simulation.balance.power_attack}
-                        </TableCell>
-                        <TableCell>関係数補正 HP / 攻</TableCell>
-                        <TableCell>
-                          {simulation.balance.relation_hp} /{" "}
-                          {simulation.balance.relation_attack}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>関係数の上限</TableCell>
-                        <TableCell>{simulation.balance.relation_cap}</TableCell>
-                        <TableCell>達成度補正 HP / 攻</TableCell>
-                        <TableCell>
-                          {simulation.balance.region_hp} /{" "}
-                          {simulation.balance.region_attack}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>敵ごとのクイズ数</TableCell>
-                        <TableCell>
-                          {simulation.balance.min_quizzes_per_enemy}〜
-                          {simulation.balance.max_quizzes_per_enemy}
-                        </TableCell>
-                        <TableCell>同時出現数</TableCell>
-                        <TableCell>
-                          {simulation.balance.min_enemies}〜
-                          {simulation.balance.max_encounter_enemies}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </div>
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <section aria-label="敵ステータス試算" className="space-y-2">
-                    <h4 className="font-medium">敵ステータス試算</h4>
-                    <div className="overflow-x-auto rounded-md border">
-                      <Table
-                        aria-label="敵ステータス結果"
-                        className="min-w-[32rem]"
-                      >
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>敵</TableHead>
-                            <TableHead>HP</TableHead>
-                            <TableHead>攻撃力</TableHead>
-                            <TableHead>関係数</TableHead>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <section
+                aria-label="敵ステータス試算"
+                className="space-y-3 rounded-md border p-3 sm:p-4"
+              >
+                <h4 className="font-medium">敵ステータス試算</h4>
+                {statsSimulation ? (
+                  <>
+                    <SimulationConditions simulation={statsSimulation} />
+                    <Table aria-label="敵ステータス結果" className="min-w-80">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>敵</TableHead>
+                          <TableHead>HP</TableHead>
+                          <TableHead>攻撃力</TableHead>
+                          <TableHead>関係数</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {statsSimulation.enemies.map((enemy) => (
+                          <TableRow key={enemy.index}>
+                            <TableCell>敵 {enemy.index}</TableCell>
+                            <TableCell>{enemy.hp}</TableCell>
+                            <TableCell>{enemy.attack}</TableCell>
+                            <TableCell>{enemy.relations}</TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {simulation.enemies.map((enemy) => (
-                            <TableRow key={enemy.index}>
-                              <TableCell>敵 {enemy.index}</TableCell>
-                              <TableCell>{enemy.hp}</TableCell>
-                              <TableCell>{enemy.attack}</TableCell>
-                              <TableCell>{enemy.relations}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </section>
-                  <section aria-label="敵ロスター試算" className="space-y-2">
-                    <h4 className="font-medium">敵ロスター試算</h4>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    条件を入力し、「敵ステータスを試算」を押してください。
+                  </p>
+                )}
+              </section>
+              <section
+                aria-label="敵ロスター試算"
+                className="space-y-3 rounded-md border p-3 sm:p-4"
+              >
+                <h4 className="font-medium">敵ロスター試算</h4>
+                {rosterSimulation ? (
+                  <>
+                    <SimulationConditions simulation={rosterSimulation} />
                     <div className="overflow-x-auto rounded-md border">
-                      <Table
-                        aria-label="敵ロスター結果"
-                        className="min-w-[28rem]"
-                      >
+                      <Table aria-label="敵ロスター結果" className="min-w-80">
                         <TableHeader>
                           <TableRow>
                             <TableHead>敵の種類</TableHead>
@@ -431,7 +461,7 @@ export default function BattleSettingsManager({
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {simulation.enemies.map((enemy) => (
+                          {rosterSimulation.enemies.map((enemy) => (
                             <TableRow key={enemy.index}>
                               <TableCell>敵 {enemy.index}</TableCell>
                               <TableCell>{enemy.quiz_count}問</TableCell>
@@ -443,18 +473,18 @@ export default function BattleSettingsManager({
                       </Table>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      遭遇人数は {simulation.min_encounter_enemies}〜
-                      {simulation.max_encounter_enemies}
-                      体から抽選されます。クイズの内容自体は母集団から再選出されるため、この試算では種類ごとのクイズ数を表示します。
+                      遭遇人数は {rosterSimulation.min_encounter_enemies}〜
+                      {rosterSimulation.max_encounter_enemies}
+                      体から抽選されます。クイズ内容は母集団から再選出されるため、ここでは敵の種類ごとの固定クイズ数を表示します。
                     </p>
-                  </section>
-                </div>
-              </div>
-            ) : !simulationError ? (
-              <output className="block text-sm text-muted-foreground">
-                条件と設定を入力し、「試算する」を押してください。
-              </output>
-            ) : null}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    条件を入力し、「敵ロスターを試算」を押してください。
+                  </p>
+                )}
+              </section>
+            </div>
           </section>
         )}
       </div>

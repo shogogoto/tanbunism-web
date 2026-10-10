@@ -71,31 +71,47 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
 it("simulates roster sizes and enemy stats from power, achievement, and relation count", async () => {
   render(<BattleSettingsManager view="simulation" />);
   await waitFor(() =>
-    expect(screen.getByRole("button", { name: "試算する" })).toBeEnabled(),
+    expect(
+      screen.getByRole("button", { name: "敵ステータスを試算" }),
+    ).toBeEnabled(),
   );
   const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "試算する" }));
+  await user.click(screen.getByRole("button", { name: "敵ステータスを試算" }));
   expect(
     await screen.findByRole("table", { name: "敵ステータス結果" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("row")).toHaveLength(15);
-  expect(screen.getAllByText("28")).toHaveLength(6);
-  expect(screen.getAllByText("16")).toHaveLength(6);
-  expect(screen.getByText("前回の試算条件")).toBeInTheDocument();
+  expect(screen.getAllByRole("row")).toHaveLength(11);
+  expect(screen.getAllByText("28")).toHaveLength(3);
+  expect(screen.getAllByText("16")).toHaveLength(3);
+  expect(screen.getAllByRole("table", { name: "試算条件" })).toHaveLength(1);
   expect(screen.getByText("100")).toBeInTheDocument();
+  expect(
+    screen.queryByRole("table", { name: "敵ロスター結果" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "敵ロスターを試算" }));
   expect(
     await screen.findByRole("table", { name: "敵ロスター結果" }),
   ).toBeInTheDocument();
+  expect(screen.getAllByRole("table", { name: "試算条件" })).toHaveLength(2);
+  expect(screen.getAllByRole("row")).toHaveLength(22);
+  expect(screen.getAllByText("28")).toHaveLength(6);
+  expect(screen.getAllByText("16")).toHaveLength(6);
   const power = screen.getByLabelText("試算するPower");
   await user.clear(power);
   await user.type(power, "250");
   expect(
     screen.getByRole("table", { name: "敵ロスター結果" }),
   ).toBeInTheDocument();
-  expect(screen.getByText("前回の試算条件").parentElement).toHaveTextContent(
-    "100",
-  );
-  expect(simulated).toHaveBeenCalledWith({
+  expect(
+    screen.getAllByRole("table", { name: "試算条件" })[1],
+  ).toHaveTextContent("100");
+  expect(simulated).toHaveBeenNthCalledWith(1, {
+    balance: defaults,
+    power: 100,
+    achievement: 1,
+    average_relations: 3,
+  });
+  expect(simulated).toHaveBeenNthCalledWith(2, {
     balance: defaults,
     power: 100,
     achievement: 1,
