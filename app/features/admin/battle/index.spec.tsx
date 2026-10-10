@@ -28,12 +28,15 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   expect(
     screen.getByRole("table", { name: "ゲームバランス設定" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("spinbutton")).toHaveLength(19);
+  expect(screen.getAllByRole("spinbutton")).toHaveLength(22);
   expect(base).toHaveAttribute("min", "5");
   expect(base).toHaveAttribute("max", "300");
   const weight = screen.getByLabelText("PowerのHP補正");
   await user.clear(weight);
   await user.type(weight, "2");
+  const enemyTypes = screen.getByLabelText("領域ごとの敵の種類数");
+  await user.clear(enemyTypes);
+  await user.type(enemyTypes, "4");
   expect(
     screen.queryByLabelText("単文組 → 関係の重み"),
   ).not.toBeInTheDocument();
@@ -41,7 +44,11 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   expect(
     await screen.findByText("ゲーム設定を保存しました"),
   ).toBeInTheDocument();
-  expect(saved).toHaveBeenCalledWith({ ...defaults, power_hp: 2 });
+  expect(saved).toHaveBeenCalledWith({
+    ...defaults,
+    power_hp: 2,
+    enemy_types: 4,
+  });
 });
 it("reports failures without claiming settings were saved", async () => {
   server.use(

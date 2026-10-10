@@ -30,8 +30,11 @@ const fields = {
   relation_cap: ["関係数の上限", 0, 1000, 1],
   region_hp: ["領域ごとのHP補正", 0, 100, 1],
   region_attack: ["領域ごとの攻補正", 0, 100, 1],
-  max_enemies: ["同時出現数の上限", 1, 20, 1],
-  regions_per_enemy: ["敵数が増える領域間隔", 1, 100, 1],
+  enemy_types: ["領域ごとの敵の種類数", 1, 20, 1],
+  min_quizzes_per_enemy: ["敵ごとのクイズ数（下限）", 1, 100, 1],
+  max_quizzes_per_enemy: ["敵ごとのクイズ数（上限）", 1, 100, 1],
+  min_enemies: ["同時出現数（下限）", 1, 20, 1],
+  max_encounter_enemies: ["同時出現数（上限）", 1, 20, 1],
 } as const;
 const groups = [
   {
@@ -61,7 +64,16 @@ const groups = [
       "region_attack",
     ],
   },
-  { label: "敵の出現数", keys: ["max_enemies", "regions_per_enemy"] },
+  {
+    label: "敵ロスターと遭遇数",
+    keys: [
+      "enemy_types",
+      "min_quizzes_per_enemy",
+      "max_quizzes_per_enemy",
+      "min_enemies",
+      "max_encounter_enemies",
+    ],
+  },
 ] as const;
 export default function BattleSettingsManager() {
   const [settings, setSettings] = useState<BattleSettings>();
@@ -86,8 +98,9 @@ export default function BattleSettingsManager() {
     <section className="mx-auto max-w-3xl space-y-4 p-4 sm:p-6">
       <h2 className="text-lg font-semibold">ゲームバランス</h2>
       <p className="text-sm text-muted-foreground">
-        敵の能力 = 基礎値 + log(1 + Power) × 補正 + 関係数 × 補正 + 領域 ×
-        補正（切り上げ）。関係数は上限付き。既存の敵・戦闘中の敵にも反映します。変更の取得は最大30秒ごと。敵の残HPは回復しません。持ち時間はプレイヤー共通で、種類別の重みは使いません。
+        敵の能力 = 基礎値 + log(1 + Power) × 補正 +
+        敵の固定クイズセット内の平均関係数 × 補正 + 領域 ×
+        補正（切り上げ）。母集団クイズは種類数分の敵へ重複なく割り当て、各敵のクイズセットは固定します。遭遇時は敵ロスターから同時出現数の範囲で抽選し、敵ごとのクイズセットから1問を選びます。関係数は上限付き。既存の敵にも設定変更を即時反映し、残HPは回復しません。
       </p>
       {error && (
         <p role="alert" className="text-destructive">
@@ -100,9 +113,16 @@ export default function BattleSettingsManager() {
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
-            setSaving(true);
             setError(undefined);
             setSaved(false);
+            if (
+              settings.min_quizzes_per_enemy > settings.max_quizzes_per_enemy ||
+              settings.min_enemies > settings.max_encounter_enemies
+            ) {
+              setError("下限は上限以下にしてください。");
+              return;
+            }
+            setSaving(true);
             void requestBattleSettings(settings)
               .then((value) => {
                 setSettings(value);

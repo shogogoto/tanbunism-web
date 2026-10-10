@@ -428,6 +428,7 @@ export function GamePlay({
         run.resourceId,
         region,
         population.quiz_ids,
+        population,
       );
       if (sentenceId !== ENTRANCE) await markTanbunSeen(sentenceId);
       const next = move(explored, sentenceId, Math.random());
@@ -1107,6 +1108,7 @@ export function GamePlay({
             }
             onSaved={(state) => {
               applyState(state);
+              void retryCombat();
               void invalidateGamification(mutate, { preserveData: true }).catch(
                 () => undefined,
               );

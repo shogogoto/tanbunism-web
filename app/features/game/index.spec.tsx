@@ -70,7 +70,8 @@ const server = setupServer(
           turn: 0,
           checkpoint: body.checkpoint,
           region: body.region,
-          enemies: ["book:0:quiz"],
+          enemies: ["book:0:enemy:0"],
+          quizIndices: { "book:0:enemy:0": 0 },
         },
       },
     };
@@ -90,7 +91,7 @@ const server = setupServer(
     };
     return HttpResponse.json({
       state,
-      results: { "book:0:quiz": false },
+      results: { "book:0:enemy:0": false },
       damage: 11,
     });
   }),
@@ -266,6 +267,9 @@ beforeEach(() => {
     required_quizzes: 5,
     available_quizzes: 5,
     quiz_ids: ["quiz"],
+    enemy_types: 3,
+    min_quizzes_per_enemy: 1,
+    max_quizzes_per_enemy: 100,
   });
   vi.mocked(loadDungeon).mockResolvedValue({
     knowledge: [
@@ -494,12 +498,13 @@ it("records seen knowledge and a batch turn, then retreats after remount without
   expect(markTanbunSeen).toHaveBeenCalledWith("sentence");
   expect(state.save.content?.regionEnemies?.[0]).toEqual([
     {
-      id: "book:0:quiz",
+      id: "book:0:enemy:0",
       name: "領域 1の敵 1",
       quizIndex: 0,
+      quizIndexes: [0],
     },
   ]);
-  expect(state.save.run?.enemyId).toBe("book:0:quiz");
+  expect(state.save.run?.enemyId).toBe("book:0:enemy:0");
   await user.click(screen.getByRole("button", { name: "不正解を送信" }));
   expect(
     await screen.findByText("正解 0/1 · 撃破 0体 · HP -11"),

@@ -39,6 +39,7 @@ export type GameSave = {
     region: number;
     checkpoint: string;
     enemies: string[];
+    quizIndices?: Record<string, number>;
   } | null;
 };
 export const newSave = (): GameSave => ({

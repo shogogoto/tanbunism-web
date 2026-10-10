@@ -52,7 +52,7 @@ it("freezes all prepared enemies in a band and leaves older bands unchanged", ()
     quizzes: [quiz("q1"), quiz("q2"), quiz("q3"), quiz("q4")],
   };
   const first = freezeRegionEnemies(content, "book", 0);
-  expect(regionEnemies(first, "book", 0)).toHaveLength(4);
+  expect(regionEnemies(first, "book", 0)).toHaveLength(3);
   expect(first.regionQuizPools?.[0]).toEqual(["q1", "q2", "q3", "q4"]);
   const expanded = freezeRegionEnemies(
     {
@@ -64,10 +64,11 @@ it("freezes all prepared enemies in a band and leaves older bands unchanged", ()
   );
   expect(expanded.regionEnemies?.[0]).toEqual(first.regionEnemies?.[0]);
   expect(expanded.regionQuizPools?.[0]).toEqual(["q1", "q2", "q3", "q4"]);
-  expect(expanded.regionEnemies?.[1]).toHaveLength(5);
+  expect(expanded.regionEnemies?.[1]).toHaveLength(3);
   expect(expanded.regionQuizPools?.[1]).toEqual(["q1", "q2", "q3", "q4", "q5"]);
   expect(expanded.regionEnemies?.[1][0]).toMatchObject({
     quizIndex: 0,
+    quizIndexes: [0, 3],
   });
   expect(expanded.regionEnemies?.[1][0]).not.toHaveProperty("hp");
   expect(expanded.regionEnemies?.[1][0]).not.toHaveProperty("attack");

@@ -53,7 +53,7 @@ export default function RegionEnemies({
           <DialogHeader>
             <DialogTitle>領域の敵一覧</DialogTitle>
             <DialogDescription>
-              領域ごとのクイズ母集団です。各クイズに対応する敵が出現し、同じ敵は同じクイズで攻撃します。
+              領域ごとの敵ロスターです。敵は固定クイズセットを持ち、遭遇時にその中から1問が選ばれます。
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-wrap gap-2" aria-label="領域選択">
@@ -71,7 +71,7 @@ export default function RegionEnemies({
             ))}
           </div>
           <p className="text-xs text-muted-foreground">
-            領域 {selected + 1} の母集団: {enemies[selected]?.length ?? 0}問
+            領域 {selected + 1} の敵: {enemies[selected]?.length ?? 0}種類
           </p>
           <ul className="space-y-2">
             {(enemies[selected] ?? []).map((enemy) => (
@@ -85,14 +85,20 @@ export default function RegionEnemies({
                   <p className="text-sm tabular-nums">
                     HP {enemy.hp} · 攻 {enemy.attack}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {types[
-                      quizzes[enemy.quizIndex]?.quiz_type as keyof typeof types
-                    ] ?? "クイズ準備中"}
-                  </p>
-                  <p className="text-sm leading-snug">
-                    {quizzes[enemy.quizIndex]?.statement ?? "クイズ準備中"}
-                  </p>
+                  <ul className="mt-1 space-y-1">
+                    {(enemy.quizIndexes ?? [enemy.quizIndex]).map((index) => (
+                      <li key={index} className="text-sm leading-snug">
+                        <span className="text-xs text-muted-foreground">
+                          {types[
+                            quizzes[index]?.quiz_type as keyof typeof types
+                          ] ?? "クイズ準備中"}
+                        </span>
+                        <span className="ml-2">
+                          {quizzes[index]?.statement ?? "クイズ準備中"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </li>
             ))}

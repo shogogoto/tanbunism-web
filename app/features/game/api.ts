@@ -28,11 +28,15 @@ export type DungeonRegionQuizPool = {
   required_quizzes: number;
   available_quizzes: number;
   quiz_ids: string[];
+  enemy_types?: number;
+  min_quizzes_per_enemy?: number;
+  max_quizzes_per_enemy?: number;
 };
 export type RegionEnemy = {
   id: string;
   name: string;
   quizIndex: number;
+  quizIndexes?: number[];
   hp?: number;
   attack?: number;
 };
@@ -49,8 +53,10 @@ export function regionQuizPool(
   const legacyEnemies = content.regionEnemies?.[region];
   if (legacyEnemies) {
     return legacyEnemies.flatMap((enemy) => {
-      const quizId = content.quizzes[enemy.quizIndex]?.quiz_id;
-      return quizId ? [quizId] : [];
+      return (enemy.quizIndexes ?? [enemy.quizIndex]).flatMap((index) => {
+        const quizId = content.quizzes[index]?.quiz_id;
+        return quizId ? [quizId] : [];
+      });
     });
   }
   return content.quizzes.map((quiz) => quiz.quiz_id);
@@ -64,31 +70,10 @@ export function regionEnemies(
 ): RegionEnemy[] {
   const frozenEnemies = content.regionEnemies?.[region];
   const explicitPool = content.regionQuizPools?.[region];
-  if (!explicitPool && frozenEnemies) return frozenEnemies;
-  const quizIndexes = new Map(
-    content.quizzes.map((quiz, index) => [quiz.quiz_id, index]),
-  );
-  const existingByQuizId = new Map(
-    (frozenEnemies ?? []).flatMap((enemy) => {
-      const quizId = content.quizzes[enemy.quizIndex]?.quiz_id;
-      return quizId ? [[quizId, enemy] as const] : [];
-    }),
-  );
-  return (explicitPool ?? regionQuizPool(content, region)).flatMap(
-    (quizId, enemyIndex) => {
-      const quizIndex = quizIndexes.get(quizId);
-      if (quizIndex === undefined) return [];
-      const existing = existingByQuizId.get(quizId);
-      return [
-        {
-          id: existing?.id ?? `${resourceId}:${region}:${quizId}`,
-          name: existing?.name ?? `領域 ${region + 1}の敵 ${enemyIndex + 1}`,
-          quizIndex,
-          hp: 20 + region * 5,
-          attack: 12 + region * 2,
-        },
-      ];
-    },
+  if (frozenEnemies) return frozenEnemies;
+  return (
+    freezeRegionEnemies(content, resourceId, region, explicitPool)
+      .regionEnemies?.[region] ?? []
   );
 }
 export function freezeRegionEnemies(
@@ -96,6 +81,14 @@ export function freezeRegionEnemies(
   resourceId: string,
   region: number,
   storedQuizPool?: string[],
+  config: Pick<
+    DungeonRegionQuizPool,
+    "enemy_types" | "min_quizzes_per_enemy" | "max_quizzes_per_enemy"
+  > = {
+    enemy_types: 3,
+    min_quizzes_per_enemy: 1,
+    max_quizzes_per_enemy: 100,
+  },
 ): DungeonContent {
   const quizPool = storedQuizPool ?? regionQuizPool(content, region);
   const quizIndexes = new Map(
@@ -109,17 +102,45 @@ export function freezeRegionEnemies(
     },
     regionEnemies: {
       ...content.regionEnemies,
-      [region]: quizPool.flatMap((quizId, enemyIndex) => {
-        const quizIndex = quizIndexes.get(quizId);
-        if (quizIndex === undefined) return [];
-        return [
-          {
-            id: `${resourceId}:${region}:${quizId}`,
-            name: `領域 ${region + 1}の敵 ${enemyIndex + 1}`,
-            quizIndex,
-          },
-        ];
-      }),
+      [region]: (() => {
+        const indices = quizPool.flatMap((quizId) => {
+          const index = quizIndexes.get(quizId);
+          return index === undefined ? [] : [index];
+        });
+        const count = Math.min(
+          config.enemy_types ?? 3,
+          Math.max(
+            1,
+            Math.floor(indices.length / (config.min_quizzes_per_enemy ?? 1)),
+          ),
+        );
+        const max = Math.max(1, config.max_quizzes_per_enemy ?? 100);
+        const assigned = indices.slice(0, count * max);
+        const groups: number[][] = Array.from({ length: count }, () => []);
+        const minimum = Math.min(
+          config.min_quizzes_per_enemy ?? 1,
+          Math.floor(assigned.length / count),
+        );
+        let cursor = 0;
+        for (const group of groups) {
+          for (let i = 0; i < minimum; i += 1) group.push(assigned[cursor++]);
+        }
+        while (cursor < assigned.length) {
+          const eligible = groups.filter((item) => item.length < max);
+          const minSize = Math.min(...eligible.map((item) => item.length));
+          const group = eligible.find((item) => item.length === minSize);
+          if (!group) break;
+          group.push(assigned[cursor++]);
+        }
+        return groups
+          .filter((group) => group.length)
+          .map((group, index) => ({
+            id: `${resourceId}:${region}:enemy:${index}`,
+            name: `領域 ${region + 1}の敵 ${index + 1}`,
+            quizIndex: group[0],
+            quizIndexes: group,
+          }));
+      })(),
     },
   };
 }

@@ -16,15 +16,17 @@ are untouched. Recovery consumes one shared slot and also refills parked outings
 No active outing means the right stays available for entry. Admin resets use the
 same automatic refill. Revision/slot locks prevent two devices from double-refilling.
 The map retains the current place's region label. “領域の敵” opens a responsive
-list for each discovered band, including stable icons, HP, attack and quiz type.
+list for each discovered band, including its enemy roster, live HP/attack and
+each enemy's fixed quiz set.
 Neo4j's user/resource-scoped `DungeonRegion` nodes explicitly pin the cumulative
 prepared quiz IDs available at each achievement level, five additional quizzes
 per level. The API validates and migrates legacy snapshot pools on first entry.
 `content.regionQuizPools` and `content.regionEnemies` remain synchronized
-projections for combat rendering and keep stable enemy identities. Each enemy
-uses its pinned quiz on every appearance. Combat and the enemy list share that
-pool, with provisional
-HP/attack scaling by region, not player Lv. Legacy bands migrate their pool from
+projections for combat rendering. Each region has a configurable number of
+enemy types; the mother-pool quizzes are assigned without duplication to each
+enemy's fixed quiz set. Encounters draw a configurable count from that roster,
+then select one quiz from each enemy's set per turn. HP/attack use Power and the
+average relationship count in that fixed set, not player Lv. Legacy bands migrate their pool from
 the saved enemy list (or the existing frozen quiz content); opening the list never
 triggers quiz generation. Later-prepared quizzes expand only newly entered bands.
 Superusers can normalize a user's saved active and parked enemy sets from the
@@ -105,12 +107,7 @@ system. Learning answers/exposures and game saves are separate requests: a faile
 game save never removes recorded learning XP. No competitive rewards should use
 these snapshots until server-authoritative combat is implemented.
 
-Next slices: persist fixed enemy sets per achievement region, widen prepared quiz
-populations by five at each achievement increase via a bounded queue, and gate NEW
-exploration until preparation finishes (known places remain traversable).
-The current slice records regions but does NOT implement that preparation gate or
-region-based enemies yet. Also pending: protect the default single-resource StudyPlan;
-server-authoritative combat and replay protection; choosing a captured quiz weapon
-on clearing, MP and attack turns; capped global-accuracy weapon damage; larger
-Power dungeon game-only rewards; skill allocation; quiz-type-specific timers;
+Next slices: choosing a captured quiz weapon on clearing, MP and attack turns;
+capped global-accuracy weapon damage; larger Power dungeon game-only rewards;
+skill allocation; quiz-type-specific timers;
 multiple enemies. No extra game XP is mixed into learning XP.
