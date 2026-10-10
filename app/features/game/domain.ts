@@ -20,6 +20,7 @@ export type Run = {
   phase: "path" | "battle" | "rest" | "defeated" | "cleared";
   answerDeadline?: number | null;
   answerSeconds?: number | null;
+  enemyId?: string | null;
 };
 export type GameSave = {
   version: 2;
@@ -138,7 +139,17 @@ export function answer(save: GameSave, correct: boolean): GameSave {
   const enemyHp = correct ? Math.max(0, run.enemyHp - run.attack) : run.enemyHp;
   const hp = correct
     ? run.hp
-    : Math.max(0, run.hp - Math.max(1, 12 - run.defense));
+    : Math.max(
+        0,
+        run.hp -
+          Math.max(
+            1,
+            (Object.values(save.content?.regionEnemies ?? {})
+              .flat()
+              .find((enemy) => enemy.id === run.enemyId)?.attack ?? 12) -
+              run.defense,
+          ),
+      );
   const kills = run.kills + (enemyHp === 0 ? 1 : 0);
   const phase =
     hp === 0

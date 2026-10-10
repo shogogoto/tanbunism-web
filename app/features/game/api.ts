@@ -13,7 +13,46 @@ export type PathKnowledge = Pick<Tanbun, "uid" | "sentence" | "term">;
 export type DungeonContent = {
   knowledge: PathKnowledge[];
   quizzes: ReadableQuiz[];
+  regionEnemies?: Record<string, RegionEnemy[]>;
 };
+export type RegionEnemy = {
+  id: string;
+  name: string;
+  quizIndex: number;
+  hp: number;
+  attack: number;
+};
+
+/** Freeze the prepared quiz population per band; revisits never reroll its enemies. */
+export function regionEnemies(
+  content: DungeonContent,
+  resourceId: string,
+  region: number,
+): RegionEnemy[] {
+  return (
+    content.regionEnemies?.[region] ??
+    content.quizzes.map((quiz, quizIndex) => ({
+      id: `${resourceId}:${region}:${quiz.quiz_id}`,
+      name: `領域 ${region + 1}の敵 ${quizIndex + 1}`,
+      quizIndex,
+      hp: 20 + region * 5,
+      attack: 12 + region * 2,
+    }))
+  );
+}
+export function freezeRegionEnemies(
+  content: DungeonContent,
+  resourceId: string,
+  region: number,
+): DungeonContent {
+  return {
+    ...content,
+    regionEnemies: {
+      ...content.regionEnemies,
+      [region]: regionEnemies(content, resourceId, region),
+    },
+  };
+}
 const sameId = (a: string, b: string) =>
   a.replaceAll("-", "").toLowerCase() === b.replaceAll("-", "").toLowerCase();
 

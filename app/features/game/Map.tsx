@@ -17,7 +17,8 @@ import {
 } from "~/shared/components/ui/dialog";
 import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import PathTerms from "./PathTerms";
-import type { PathKnowledge } from "./api";
+import RegionEnemies from "./RegionEnemies";
+import type { DungeonContent, PathKnowledge, RegionEnemy } from "./api";
 import { type DungeonMap, ENTRANCE } from "./exploration";
 import { directionalPlace } from "./navigation";
 
@@ -31,6 +32,8 @@ export default function ExplorationMap({
   knowledge,
   candidates = [],
   unavailableIds = [],
+  enemiesByRegion = {},
+  quizzes = [],
   onOpen,
   onMove,
   disabled,
@@ -45,6 +48,8 @@ export default function ExplorationMap({
   knowledge: PathKnowledge[];
   candidates?: MapCandidate[];
   unavailableIds?: string[];
+  enemiesByRegion?: Record<string, RegionEnemy[]>;
+  quizzes?: DungeonContent["quizzes"];
   onOpen: (id: string) => void;
   onMove: (id: string, kind?: "relation" | "detour") => void;
   disabled: boolean;
@@ -408,7 +413,9 @@ export default function ExplorationMap({
                     )}
                     <span className="block text-xs text-muted-foreground">
                       {current
-                        ? "現在地"
+                        ? id === ENTRANCE
+                          ? "現在地 · 入口"
+                          : `現在地 · 領域 ${map.places[i - 1].region + 1}`
                         : unexplored
                           ? "未探索"
                           : id === ENTRANCE
@@ -450,6 +457,13 @@ export default function ExplorationMap({
           </span>
         </div>
         <div className="pointer-events-auto flex shrink-0 gap-1">
+          <RegionEnemies
+            enemies={enemiesByRegion}
+            quizzes={quizzes}
+            currentRegion={
+              map.places.find((place) => place.id === map.current)?.region
+            }
+          />
           <Button
             size="icon"
             variant="ghost"

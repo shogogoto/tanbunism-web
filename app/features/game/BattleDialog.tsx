@@ -60,7 +60,10 @@ export default function BattleDialog({
                 className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 space-y-2"
               >
                 <h3 className="flex items-center gap-2 text-sm font-medium text-rose-500">
-                  <EnemyAvatar identity={`${run.resourceId}:${run.kills}`} />敵
+                  <EnemyAvatar
+                    identity={run.enemyId ?? `${run.resourceId}:${run.kills}`}
+                  />
+                  敵
                 </h3>
                 <p className="text-sm tabular-nums">
                   敵HP {run.enemyHp}/{run.enemyMaxHp}

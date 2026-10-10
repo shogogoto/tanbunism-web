@@ -5,7 +5,14 @@ import {
   searchByTextTanbunGet,
 } from "~/shared/generated/tanbun/tanbun";
 import { tanbunDetailCache } from "~/shared/lib/indexed";
-import { loadConnectedKnowledge, loadDungeon, validateKnowledge } from "./api";
+import {
+  type DungeonContent,
+  freezeRegionEnemies,
+  loadConnectedKnowledge,
+  loadDungeon,
+  regionEnemies,
+  validateKnowledge,
+} from "./api";
 
 vi.mock("~/features/quiz/api", () => ({
   listStudyPlans: vi.fn(),
@@ -29,6 +36,42 @@ beforeEach(() => {
   );
 });
 afterEach(() => vi.unstubAllGlobals());
+it("freezes all prepared enemies in a band and leaves older bands unchanged", () => {
+  const quiz = (quiz_id: string): DungeonContent["quizzes"][number] => ({
+    quiz_id,
+    quiz_type: "sent2term",
+    prompt: { subject: "知識", answer_kind: "term" },
+    statement: "知識",
+    options: { a: "用語" },
+    correct: ["a"],
+    created: "2026-10-10T00:00:00Z",
+    no_correct_option: false,
+  });
+  const content: DungeonContent = {
+    knowledge: [],
+    quizzes: [quiz("q1"), quiz("q2"), quiz("q3"), quiz("q4")],
+  };
+  const first = freezeRegionEnemies(content, "book", 0);
+  expect(regionEnemies(first, "book", 0)).toHaveLength(4);
+  const expanded = freezeRegionEnemies(
+    {
+      ...first,
+      quizzes: [...content.quizzes, quiz("q5")],
+    },
+    "book",
+    1,
+  );
+  expect(expanded.regionEnemies?.[0]).toEqual(first.regionEnemies?.[0]);
+  expect(expanded.regionEnemies?.[1]).toHaveLength(5);
+  expect(expanded.regionEnemies?.[1][0]).toMatchObject({
+    hp: 25,
+    attack: 14,
+    quizIndex: 0,
+  });
+  expect(JSON.parse(JSON.stringify(expanded)).regionEnemies).toEqual(
+    expanded.regionEnemies,
+  );
+});
 it("scopes knowledge and prepared quizzes to one resource without generation", async () => {
   const tanbun = {
     uid: "sentence",

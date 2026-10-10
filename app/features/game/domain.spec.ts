@@ -10,6 +10,19 @@ import {
 
 const entered = () => enterDungeon(newSave(), "resource", "本", 1);
 describe("adventure rules", () => {
+  it("uses the fixed regional enemy attack rather than the player level", () => {
+    const save = move(entered(), "s", 0.1);
+    if (!save.run) throw new Error("Missing run");
+    save.run.enemyId = "enemy";
+    save.content = {
+      knowledge: [],
+      quizzes: [],
+      regionEnemies: {
+        2: [{ id: "enemy", name: "敵", quizIndex: 0, hp: 30, attack: 16 }],
+      },
+    };
+    expect(answer(save, false).run?.hp).toBe(20);
+  });
   it("derives player stats from user Lv, leaving permission to the server", () => {
     const save = entered();
     expect(save.run?.hp).toBe(35);

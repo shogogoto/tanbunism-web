@@ -9,6 +9,19 @@ chance, turn-based correct-answer damage, wrong-answer player damage, five moves
 per event (including finishing the final encounter), three enemies per clear.
 Player Lv affects HP/attack/defense. No in-dungeon healing. Adventure rights recover
 at each clock :00/:30 boundary, capacity one; ongoing HP/kills persist between events.
+An active outing automatically calls the server's atomic `/game/state/recover`
+when a clock slot becomes available (including after reopening). Remaining steps
+are replaced with five, never added; HP, enemy HP, current place and deadlines
+are untouched. Recovery consumes one shared slot and also refills parked outings.
+No active outing means the right stays available for entry. Admin resets use the
+same automatic refill. Revision/slot locks prevent two devices from double-refilling.
+The map retains the current place's region label. “領域の敵” opens a responsive
+list for each discovered band, including stable icons, HP, attack and quiz type.
+`content.regionEnemies` pins the prepared quiz-index enemy pool when a band is
+first entered; each enemy uses its pinned quiz on every appearance. Combat and
+the list share that pool, with provisional HP/attack scaling by region, not player Lv.
+Legacy bands lazily derive their pool from the existing frozen dungeon content;
+no new quiz generation is triggered by opening the list.
 Dungeon switching parks the run on the server, never resetting HP or learning XP.
 Dungeon clearing counts laps, not resource levels.
 

@@ -22,11 +22,32 @@ import type { GameState } from "./state";
 let available = true;
 let consumeCount = 0;
 let stateLoadCount = 0;
+let automaticRecovery = false;
+let nextAvailableAt = Date.now() + 600000;
 let state: GameState = { revision: 0, save: newSave() };
 vi.mock("~/features/auth/AuthProvider", () => ({
   useAuth: () => ({ user: { uid: "player" }, isAuthenticated: true }),
 }));
 const server = setupServer(
+  http.post("*/game/state/recover", () => {
+    if (automaticRecovery && available && state.save.run) {
+      const run = state.save.run;
+      state = {
+        revision: state.revision + 1,
+        save: {
+          ...state.save,
+          run: {
+            ...run,
+            moves: 0,
+            phase: run.phase === "rest" ? "path" : run.phase,
+          },
+        },
+      };
+      available = false;
+      consumeCount++;
+    }
+    return HttpResponse.json(state);
+  }),
   http.get("*/game/state", () => {
     stateLoadCount++;
     return HttpResponse.json(state);
@@ -64,7 +85,7 @@ const server = setupServer(
     HttpResponse.json({
       available,
       server_now: Date.now(),
-      next_available_at: Date.now() + 600000,
+      next_available_at: nextAvailableAt,
     }),
   ),
   http.post("*/game/adventure-access/consume", () => {
@@ -75,7 +96,7 @@ const server = setupServer(
     return HttpResponse.json({
       available,
       server_now: Date.now(),
-      next_available_at: Date.now() + 600000,
+      next_available_at: nextAvailableAt,
     });
   }),
 );
@@ -123,7 +144,8 @@ vi.mock("~/features/quiz/QuizAttempt", () => ({
   ),
 }));
 vi.mock("~/features/review/api", () => ({ markTanbunSeen: vi.fn() }));
-vi.mock("./api", () => ({
+vi.mock("./api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./api")>()),
   loadDungeon: vi.fn(),
   loadConnectedKnowledge: vi.fn(async () => []),
   validateKnowledge: vi.fn(async (_resource: string, ids: string[]) => ids),
@@ -133,6 +155,8 @@ beforeEach(() => {
   available = true;
   consumeCount = 0;
   stateLoadCount = 0;
+  automaticRecovery = false;
+  nextAvailableAt = Date.now() + 600000;
   state = { revision: 0, save: newSave() };
   localStorage.clear();
   vi.restoreAllMocks();
@@ -415,6 +439,16 @@ it("records seen knowledge, takes quiz damage and restores the run after remount
     await screen.findByRole("heading", { name: /敵と遭遇/ }),
   ).toBeInTheDocument();
   expect(markTanbunSeen).toHaveBeenCalledWith("sentence");
+  expect(state.save.content?.regionEnemies?.[0]).toEqual([
+    {
+      id: "book:0:quiz",
+      name: "領域 1の敵 1",
+      quizIndex: 0,
+      hp: 20,
+      attack: 12,
+    },
+  ]);
+  expect(state.save.run?.enemyId).toBe("book:0:quiz");
   await user.click(screen.getByRole("button", { name: "不正解を送信" }));
   expect(
     await screen.findByText("不正解 · あなたのHP −11"),
@@ -716,6 +750,7 @@ it("parks a dungeon in the server snapshot and resumes its HP/location without a
 });
 
 it("admin unlock is applied without healing or erasing progress", async () => {
+  automaticRecovery = true;
   const save = enterDungeon(newSave(), "book", "テストの本", 1);
   if (!save.run) throw new Error("Missing run");
   state = {
@@ -733,7 +768,6 @@ it("admin unlock is applied without healing or erasing progress", async () => {
   ).toBeDisabled();
   available = true;
   await user.click(screen.getByRole("button", { name: "冒険権を再確認" }));
-  await user.click(await screen.findByRole("button", { name: "冒険を再開" }));
   expect(
     await screen.findByRole("heading", { name: "現在地 · 入口" }),
   ).toBeInTheDocument();
@@ -743,5 +777,26 @@ it("admin unlock is applied without healing or erasing progress", async () => {
     kills: 2,
     phase: "path",
   });
+  expect(consumeCount).toBe(1);
+});
+
+it("automatically fills remaining moves on clock recovery without pressing resume", async () => {
+  automaticRecovery = true;
+  const save = enterDungeon(newSave(), "book", "テストの本", 1);
+  if (!save.run) throw new Error("Missing run");
+  state = {
+    revision: 1,
+    save: { ...save, run: { ...save.run, hp: 24, moves: 2, kills: 1 } },
+  };
+  available = false;
+  renderGame();
+  await screen.findByLabelText("ダンジョン情報");
+  expect(state.save.run?.moves).toBe(2);
+  available = true;
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "冒険権を再確認" }));
+  await waitFor(() => expect(state.save.run?.moves).toBe(0));
+  expect(state.save.run).toMatchObject({ hp: 24, kills: 1, phase: "path" });
   expect(consumeCount).toBe(1);
 });

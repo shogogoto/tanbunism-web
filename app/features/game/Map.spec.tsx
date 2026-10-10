@@ -15,6 +15,48 @@ const map: DungeonMap = {
     { from: "a", to: "b", kind: "relation" },
   ],
 };
+it("retains the current region and opens the enemy list for each discovered band", async () => {
+  render(
+    <ExplorationMap
+      map={map}
+      knowledge={[]}
+      onMove={vi.fn()}
+      onOpen={vi.fn()}
+      disabled={false}
+      enemiesByRegion={{
+        0: [
+          {
+            id: "enemy-a",
+            name: "領域1の敵",
+            quizIndex: 0,
+            hp: 20,
+            attack: 12,
+          },
+        ],
+        1: [
+          {
+            id: "enemy-b",
+            name: "領域2の敵",
+            quizIndex: 0,
+            hp: 25,
+            attack: 14,
+          },
+        ],
+      }}
+    />,
+  );
+  expect(screen.getByRole("button", { name: /現在地 · 領域 1/ })).toBeVisible();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "領域の敵" }));
+  expect(screen.getByText("領域1の敵")).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "領域 2" }));
+  expect(screen.getByText("領域2の敵")).toBeVisible();
+  expect(screen.getByText("HP 25 · 攻 14")).toBeVisible();
+  await user.keyboard("{Escape}");
+  expect(
+    screen.queryByRole("dialog", { name: "領域の敵一覧" }),
+  ).not.toBeInTheDocument();
+});
 it("toggles fullscreen with f without intercepting text inputs or other dialogs", async () => {
   render(
     <>

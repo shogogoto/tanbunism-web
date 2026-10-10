@@ -22,7 +22,13 @@ import BattleDialog from "./BattleDialog";
 import ExplorationMap from "./Map";
 import PlayerStatus from "./PlayerStatus";
 import { useAdventureAccess } from "./access";
-import { loadConnectedKnowledge, loadDungeon, validateKnowledge } from "./api";
+import {
+  freezeRegionEnemies,
+  loadConnectedKnowledge,
+  loadDungeon,
+  regionEnemies,
+  validateKnowledge,
+} from "./api";
 import {
   ENEMIES_TO_CLEAR,
   type GameSave,
@@ -42,7 +48,7 @@ import {
   neighbours,
   parkDungeon,
 } from "./exploration";
-import { requestGameState } from "./state";
+import { recoverGameState, requestGameState } from "./state";
 import { readGameSave } from "./storage";
 
 export default function Game() {
@@ -80,6 +86,7 @@ export function GamePlay({
   const [selectedId, setSelectedId] = useState("");
   const [busy, setBusy] = useState(false);
   const pendingMove = useRef(false);
+  const recoveryAttempt = useRef<string | undefined>(undefined);
   const [error, setError] = useState<string>();
   const [feedback, setFeedback] = useState<string>();
   const [answerSubmitting, setAnswerSubmitting] = useState(false);
@@ -222,6 +229,51 @@ export function GamePlay({
     },
     [content],
   );
+  useEffect(() => {
+    if (!access.data?.available) {
+      recoveryAttempt.current = undefined;
+      return;
+    }
+    if (
+      !stateLoaded ||
+      !run ||
+      run.phase === "defeated" ||
+      !run.hp ||
+      busy ||
+      pendingMove.current ||
+      answerRequestPending.current
+    )
+      return;
+    const key = `${run.resourceId}:${access.data.next_available_at}:${access.data.receivedAt}`;
+    if (recoveryAttempt.current === key) return;
+    recoveryAttempt.current = key;
+    pendingMove.current = true;
+    setBusy(true);
+    const previousRevision = revision.current;
+    void recoverGameState()
+      .then((state) => {
+        revision.current = state.revision;
+        setSave(state.save);
+        setFeedback(state.save.battleFeedback ?? undefined);
+        if (state.revision !== previousRevision)
+          void access.mutate().catch(() => undefined);
+      })
+      .catch((cause) => {
+        setError(cause.message);
+      })
+      .finally(() => {
+        pendingMove.current = false;
+        setBusy(false);
+      });
+  }, [
+    access.data?.available,
+    access.data?.next_available_at,
+    access.data?.receivedAt,
+    access.mutate,
+    stateLoaded,
+    run,
+    busy,
+  ]);
   const settleAnswer = useCallback(
     async (correct: boolean, timedOut = false) => {
       if (pendingMove.current || feedback || run?.phase !== "battle") return;
@@ -299,10 +351,28 @@ export function GamePlay({
       const explored = explore(save, sentenceId, kind);
       if (explored === save) return;
       if (sentenceId !== ENTRANCE) await markTanbunSeen(sentenceId);
-      await update({
-        ...move(explored, sentenceId, Math.random()),
-        content: knownKnowledge(content, connected ?? []),
-      });
+      const region =
+        dungeonMap(explored, explored.run ?? run).places.find(
+          (place) => place.id === sentenceId,
+        )?.region ?? 0;
+      const frozen = freezeRegionEnemies(
+        knownKnowledge(content, connected ?? []),
+        run.resourceId,
+        region,
+      );
+      const next = move(explored, sentenceId, Math.random());
+      const pool = regionEnemies(frozen, run.resourceId, region);
+      if (next.run?.phase === "battle" && pool.length) {
+        const enemy = pool[Math.floor(Math.random() * pool.length)];
+        next.run = {
+          ...next.run,
+          enemyId: enemy.id,
+          enemyHp: enemy.hp,
+          enemyMaxHp: enemy.hp,
+          quizCursor: enemy.quizIndex,
+        };
+      }
+      await update({ ...next, content: frozen });
       void invalidateGamification(mutate, { preserveData: true }).catch(
         () => undefined,
       );
@@ -444,12 +514,17 @@ export function GamePlay({
             !paths.some((path) => path.uid === item.uid),
         )
       : undefined;
-  const quiz = content?.quizzes.length
-    ? content.quizzes[
-        Math.max(0, (run?.quizCursor ?? 0) - (feedback ? 1 : 0)) %
-          content.quizzes.length
-      ]
-    : undefined;
+  const activeEnemy = Object.values(content?.regionEnemies ?? {})
+    .flat()
+    .find((enemy) => enemy.id === run?.enemyId);
+  const quiz = activeEnemy
+    ? content?.quizzes[activeEnemy.quizIndex]
+    : content?.quizzes.length
+      ? content.quizzes[
+          Math.max(0, (run?.quizCursor ?? 0) - (feedback ? 1 : 0)) %
+            content.quizzes.length
+        ]
+      : undefined;
   const resources = [...(growth?.resources ?? [])].sort((a, b) =>
     (a.last_reviewed_on ?? "").localeCompare(b.last_reviewed_on ?? ""),
   );
@@ -709,6 +784,21 @@ export function GamePlay({
                     Boolean(validationError)
                   }
                   unavailableIds={unavailableIds}
+                  enemiesByRegion={
+                    content
+                      ? Object.fromEntries(
+                          [
+                            ...new Set(
+                              map?.places.map((place) => place.region) ?? [],
+                            ),
+                          ].map((region) => [
+                            region,
+                            regionEnemies(content, run.resourceId, region),
+                          ]),
+                        )
+                      : {}
+                  }
+                  quizzes={content?.quizzes ?? []}
                   player={player}
                   title={run.name}
                   remainingMoves={Math.max(0, MOVES_PER_EVENT - run.moves)}
