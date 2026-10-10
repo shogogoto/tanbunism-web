@@ -26,11 +26,13 @@ Dungeon switching parks the run on the server, never resetting HP or learning XP
 Dungeon clearing counts laps, not resource levels.
 
 Numbers are provisional balancing constants, not a finalized level design.
-Game tabs are removed. The map's lower-left player HP opens a floating stat editor
-without navigating or leaving fullscreen. Escape closes only that editor.
-The entrance offers status/item buttons; legacy `/game/status` and `/game/item`
-links open the corresponding floating panel over the adventure. Recovery status
-appears next to the map's remaining-step HUD (or at the entrance).
+Game tabs are removed. `/game` is the map; `/game/status` and `/game/item`
+open floating panels over the same mounted adventure. The upper-left HP opens
+the stat editor without leaving fullscreen. Back closes the panel and Forward
+reopens it. Escape/close returns to the map's history entry; direct panel links
+replace their entry with `/game` on close. Legacy `/game/adventure` redirects to
+`/game`. Recovery, current location, discovered count and achievement appear
+below the remaining-step HUD on the right; the header retains the dungeon title.
 Adventure resumes the current
 dungeon; new destinations appear only after explicitly opening the destination picker.
 Items are a placeholder, not implemented weapons.

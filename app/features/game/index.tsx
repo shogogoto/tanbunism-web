@@ -1,6 +1,6 @@
 import { BookOpen } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import useSWR, { useSWRConfig } from "swr";
 import AuthGuard from "~/features/auth/AuthGuard";
 import { useAuth } from "~/features/auth/AuthProvider";
@@ -91,17 +91,16 @@ export function GamePlay({
   const [stateLoaded, setStateLoaded] = useState(false);
   const revision = useRef(0);
   const { menu: routeMenu } = useParams();
-  const [panel, setPanel] = useState<string | undefined>(
-    routeMenu === "status" || routeMenu === "item" ? routeMenu : undefined,
-  );
+  const panel =
+    routeMenu === "status" || routeMenu === "item" ? routeMenu : undefined;
   const navigate = useNavigate();
-  useEffect(() => {
-    if (routeMenu === "status" || routeMenu === "item") setPanel(routeMenu);
-  }, [routeMenu]);
+  const location = useLocation();
+  function openPanel(panel: "status" | "item") {
+    void navigate(`/game/${panel}`, { state: { gamePanelFromMap: true } });
+  }
   function closePanel() {
-    setPanel(undefined);
-    if (routeMenu === "status" || routeMenu === "item")
-      void navigate("/game/adventure", { replace: true });
+    if (location.state?.gamePanelFromMap) void navigate(-1);
+    else void navigate("/game", { replace: true });
   }
   const [showDestinations, setShowDestinations] = useState(false);
   const [legacy, setLegacy] = useState<GameSave>();
@@ -414,7 +413,7 @@ export function GamePlay({
     }
     setFeedback(undefined);
     setSelectedId("");
-    void navigate("/game/adventure");
+    void navigate("/game");
   }
   async function startEvent() {
     const needsAccess = !parked || parked.run.phase !== "path";
@@ -556,10 +555,10 @@ export function GamePlay({
       <div className="space-y-4">
         {!run && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setPanel("status")}>
+            <Button variant="outline" onClick={() => openPanel("status")}>
               ステータス
             </Button>
-            <Button variant="outline" onClick={() => setPanel("item")}>
+            <Button variant="outline" onClick={() => openPanel("item")}>
               アイテム
             </Button>
             <div className="ml-auto text-xs">{recoveryStatus}</div>
@@ -813,7 +812,7 @@ export function GamePlay({
                   playerStatus={
                     <Button
                       variant="ghost"
-                      onClick={() => setPanel("status")}
+                      onClick={() => openPanel("status")}
                       aria-label="プレイヤーのステータス・育成ポイントを開く"
                       title="ステータス・育成ポイント"
                       className="-mx-3 -my-2 flex min-h-11 items-center rounded-lg px-3 py-2 outline-none hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"

@@ -441,22 +441,12 @@ export default function ExplorationMap({
         aria-label="ダンジョン情報"
         className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-3 border-b bg-background/95 px-3 py-2 shadow-sm"
       >
-        <div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-3 overflow-x-auto whitespace-nowrap">
+        <div className="pointer-events-auto min-w-0 flex-1">
           {title && (
-            <h2
-              className="max-w-64 shrink-0 truncate text-sm font-semibold"
-              title={title}
-            >
+            <h2 className="truncate text-sm font-semibold" title={title}>
               {title}
             </h2>
           )}
-          <h3 className="shrink-0 text-xs text-muted-foreground">
-            現在地 · {map.current === ENTRANCE ? "入口" : `第${index + 1}地点`}
-          </h3>
-          <span className="shrink-0 text-xs text-muted-foreground">
-            開拓 {map.places.length}地点 · 達成度{" "}
-            {Math.floor(map.places.length / 5)}
-          </span>
         </div>
         <div className="pointer-events-auto flex shrink-0 gap-1">
           <RegionEnemies
@@ -504,41 +494,51 @@ export default function ExplorationMap({
           </Button>
         </div>
       </header>
-      {(remainingMoves !== undefined || status) && (
-        <aside
-          aria-label="冒険の進行状況"
-          className="absolute right-3 top-16 rounded-xl border bg-background/95 px-3 py-2 shadow-lg"
+      {playerStatus && (
+        <div
+          aria-label="プレイヤー情報"
+          className="absolute left-3 top-16 max-w-[calc(50%-1.125rem)] rounded-lg border bg-background/95 px-3 py-2 shadow-lg"
         >
-          {remainingMoves !== undefined && (
-            <output
-              aria-label="残り移動数"
-              className="flex items-center justify-center gap-2 text-primary"
-              title="残り移動数"
-            >
-              <Footprints aria-hidden="true" className="size-7" />
-              <span className="text-4xl font-bold leading-none tabular-nums">
-                {remainingMoves}
-              </span>
-              <span className="sr-only">歩</span>
-            </output>
-          )}
-          {status && <div className="mt-1 text-center">{status}</div>}
-          {recoveryStatus && (
-            <div className="mt-2 text-center text-xs text-muted-foreground">
-              {recoveryStatus}
-            </div>
-          )}
-        </aside>
+          {playerStatus}
+        </div>
       )}
-      <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col items-center gap-2">
-        {playerStatus && (
-          <div
-            aria-label="プレイヤー情報"
-            className="pointer-events-auto self-start rounded-lg border bg-background/95 px-3 py-2 shadow-lg lg:absolute lg:bottom-0 lg:left-0"
+      <aside
+        aria-label="冒険の進行状況"
+        className="absolute right-3 top-16 max-w-[calc(50%-1.125rem)] rounded-xl border bg-background/95 px-3 py-2 shadow-lg"
+      >
+        {remainingMoves !== undefined && (
+          <output
+            aria-label="残り移動数"
+            className="flex items-center justify-center gap-2 text-primary"
+            title="残り移動数"
           >
-            {playerStatus}
+            <Footprints aria-hidden="true" className="size-7" />
+            <span className="text-4xl font-bold leading-none tabular-nums">
+              {remainingMoves}
+            </span>
+            <span className="sr-only">歩</span>
+          </output>
+        )}
+        <div className="mt-2 space-y-1 text-center text-xs text-muted-foreground tabular-nums">
+          <h3>
+            現在地 · {map.current === ENTRANCE ? "入口" : `第${index + 1}地点`}
+          </h3>
+          <p>
+            開拓 {map.places.length}地点
+            <span className="hidden sm:inline"> · </span>
+            <span className="block sm:inline">
+              達成度 {Math.floor(map.places.length / 5)}
+            </span>
+          </p>
+        </div>
+        {status && <div className="mt-1 text-center">{status}</div>}
+        {recoveryStatus && (
+          <div className="mt-2 text-center text-xs text-muted-foreground">
+            {recoveryStatus}
           </div>
         )}
+      </aside>
+      <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col items-center gap-2">
         <div className="pointer-events-auto max-w-full space-y-2 text-xs">
           {children}
           <p className="hidden w-fit rounded bg-background/90 px-2 py-1 text-muted-foreground sm:block">

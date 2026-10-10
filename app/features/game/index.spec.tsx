@@ -1,4 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -291,7 +297,7 @@ it("does not enter or lose local progress when another device consumed the right
   );
   expect(state.save.run).toBeUndefined();
 });
-function renderGame(path = "/game/adventure") {
+function renderGame(path = "/game") {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <SWRConfig value={{ provider: () => new Map() }}>
@@ -606,7 +612,7 @@ it.each([false, true])(
       hp.focus();
       await user.keyboard("{Enter}");
     }
-    expect(screen.getByTestId("pathname")).toHaveTextContent("/game/adventure");
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/game/status");
     expect(screen.getByRole("dialog", { name: "ステータス" })).toBeVisible();
     expect(await screen.findByText("育成ポイント 3 / 3")).toBeVisible();
     const input = screen.getByRole("spinbutton", { name: "HP" });
@@ -615,6 +621,20 @@ it.each([false, true])(
     await user.click(screen.getByRole("button", { name: "割り振りを保存" }));
     await screen.findByText("現在のHP 35/50");
     expect(requests).toEqual([{ hp: 3, attack: 0, defense: 0, seconds: 0 }]);
+    fireEvent.click(
+      screen.getByRole("button", { name: "ブラウザで戻る", hidden: true }),
+    );
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/game");
+    expect(
+      screen.queryByRole("dialog", { name: "ステータス" }),
+    ).not.toBeInTheDocument();
+    if (fullscreen)
+      expect(screen.getByRole("dialog", { name: "冒険マップ" })).toBeVisible();
+    fireEvent.click(
+      screen.getByRole("button", { name: "ブラウザで進む", hidden: true }),
+    );
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/game/status");
+    expect(screen.getByRole("dialog", { name: "ステータス" })).toBeVisible();
     await user.keyboard("{Escape}");
     expect(
       screen.queryByRole("dialog", { name: "ステータス" }),
@@ -650,6 +670,28 @@ it("opens the item URL directly", async () => {
   ).toBeInTheDocument();
 });
 
+it("records floating item navigation in history and closes direct status links safely", async () => {
+  const view = renderGame("/game/status");
+  const user = userEvent.setup();
+  await screen.findByRole("dialog", { name: "ステータス" });
+  await user.keyboard("{Escape}");
+  expect(screen.getByTestId("pathname")).toHaveTextContent("/game");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "アイテム" }));
+  expect(screen.getByTestId("pathname")).toHaveTextContent("/game/item");
+  expect(screen.getByRole("dialog", { name: "アイテム" })).toBeVisible();
+  fireEvent.click(
+    screen.getByRole("button", { name: "ブラウザで戻る", hidden: true }),
+  );
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "ブラウザで進む", hidden: true }),
+  );
+  expect(screen.getByRole("dialog", { name: "アイテム" })).toBeVisible();
+  expect(consumeCount).toBe(0);
+  view.unmount();
+});
+
 it("shows recovery beside remaining steps instead of a tab header", async () => {
   available = false;
   state = {
@@ -665,7 +707,7 @@ it("shows recovery beside remaining steps instead of a tab header", async () => 
 });
 
 it("selects a destination when adventure is opened directly", async () => {
-  renderGame("/game/adventure");
+  renderGame("/game");
   const user = userEvent.setup();
   await user.click(
     await screen.findByRole("button", { name: "ダンジョンに入る" }),
@@ -678,7 +720,7 @@ it("selects a destination when adventure is opened directly", async () => {
     }),
   );
   await user.keyboard("{Escape}");
-  expect(screen.getByTestId("pathname").textContent).toBe("/game/adventure");
+  expect(screen.getByTestId("pathname").textContent).toBe("/game");
   expect(
     screen.getByRole("button", { name: /未探索.*進路の用語/ }),
   ).toBeVisible();
@@ -730,7 +772,7 @@ it("selects an uncleared previous dungeon without consuming access until entry",
     revision: 1,
     save: { ...newSave(), visitedDungeons: ["previous", "gone"] },
   };
-  renderGame("/game/adventure");
+  renderGame("/game");
   const user = userEvent.setup();
   const history = await screen.findByRole("combobox", {
     name: "過去のダンジョン",
@@ -755,7 +797,7 @@ it("selects an uncleared previous dungeon without consuming access until entry",
 
 it("includes legacy cleared dungeons in the previous dungeon picker", async () => {
   state = { revision: 1, save: { ...newSave(), clears: { previous: 2 } } };
-  renderGame("/game/adventure");
+  renderGame("/game");
   const history = await screen.findByRole("combobox", {
     name: "過去のダンジョン",
   });
@@ -765,7 +807,7 @@ it("includes legacy cleared dungeons in the previous dungeon picker", async () =
 });
 
 it("shows an explicit empty history instead of hiding the section", async () => {
-  renderGame("/game/adventure");
+  renderGame("/game");
   expect(await screen.findByText("訪問履歴はまだありません。")).toBeVisible();
   expect(
     screen.getByRole("region", { name: "過去のダンジョン" }),
@@ -774,7 +816,7 @@ it("shows an explicit empty history instead of hiding the section", async () => 
 
 it("explains when past dungeons are no longer available", async () => {
   state = { revision: 1, save: { ...newSave(), visitedDungeons: ["removed"] } };
-  renderGame("/game/adventure");
+  renderGame("/game");
   expect(
     await screen.findByText("参照できるダンジョンがありません。"),
   ).toBeVisible();
@@ -788,7 +830,7 @@ it("does not offer dungeon switching while an adventure is in progress", async (
       visitedDungeons: ["previous"],
     },
   };
-  renderGame("/game/adventure");
+  renderGame("/game");
   expect(await screen.findByText("HP 35/35")).toBeVisible();
   expect(
     screen.queryByRole("combobox", { name: "過去のダンジョン" }),

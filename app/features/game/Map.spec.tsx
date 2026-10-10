@@ -116,6 +116,18 @@ it("separates the dungeon header and player HUD, and offers non-adjacent known t
   expect(screen.getByLabelText("残り移動数")).toHaveTextContent("3歩");
   expect(header).not.toHaveTextContent("HP");
   expect(screen.getByLabelText("プレイヤー情報")).toHaveTextContent("HP 20/35");
+  expect(screen.getByLabelText("プレイヤー情報")).toHaveClass(
+    "left-3",
+    "top-16",
+  );
+  expect(header).not.toHaveTextContent("現在地");
+  expect(header).not.toHaveTextContent("開拓");
+  expect(screen.getByLabelText("冒険の進行状況")).toHaveTextContent(
+    "現在地 · 第2地点",
+  );
+  expect(screen.getByLabelText("冒険の進行状況")).toHaveTextContent(
+    "開拓 2地点",
+  );
   await userEvent
     .setup()
     .click(screen.getByRole("button", { name: /入口\s*入口/ }));
