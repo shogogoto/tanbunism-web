@@ -26,7 +26,7 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   const base = await screen.findByLabelText("初期持ち時間（秒）");
   expect(base).toHaveValue(45);
   expect(
-    screen.getByRole("table", { name: "ゲームバランス設定" }),
+    screen.getByRole("region", { name: "敵ステータスの計算" }),
   ).toBeInTheDocument();
   expect(screen.getAllByRole("spinbutton")).toHaveLength(22);
   expect(base).toHaveAttribute("min", "5");

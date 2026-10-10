@@ -2,14 +2,6 @@ import { useEffect, useState } from "react";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/shared/components/ui/table";
 import { type BattleSettings, requestBattleSettings } from "./api";
 
 const fields = {
@@ -28,8 +20,8 @@ const fields = {
   relation_hp: ["関係数のHP補正", 0, 100, 0.1],
   relation_attack: ["関係数の攻補正", 0, 100, 0.1],
   relation_cap: ["関係数の上限", 0, 1000, 1],
-  region_hp: ["領域ごとのHP補正", 0, 100, 1],
-  region_attack: ["領域ごとの攻補正", 0, 100, 1],
+  region_hp: ["達成度帯ごとのHP上昇", 0, 100, 1],
+  region_attack: ["達成度帯ごとの攻上昇", 0, 100, 1],
   enemy_types: ["領域ごとの敵の種類数", 1, 20, 1],
   min_quizzes_per_enemy: ["敵ごとのクイズ数（下限）", 1, 100, 1],
   max_quizzes_per_enemy: ["敵ごとのクイズ数（上限）", 1, 100, 1],
@@ -51,7 +43,9 @@ const groups = [
     ],
   },
   {
-    label: "敵の能力",
+    label: "敵ステータスの計算",
+    description:
+      "敵のHP・攻撃力は固定値ではありません。各敵のクイズセットとダンジョンのPowerから導出し、達成度帯が上がるごとに補正します。設定変更は既存の敵にも即時反映されます。",
     keys: [
       "enemy_hp",
       "enemy_attack",
@@ -65,7 +59,9 @@ const groups = [
     ],
   },
   {
-    label: "敵ロスターと遭遇数",
+    label: "敵ロスターと遭遇の抽選",
+    description:
+      "母集団クイズを敵の種類に分け、各敵に固定セットとして持たせます。再選出時にクイズの割当てが変わり、戦闘時にはロスターから敵数・敵の種類を抽選します。",
     keys: [
       "enemy_types",
       "min_quizzes_per_enemy",
@@ -98,9 +94,7 @@ export default function BattleSettingsManager() {
     <section className="mx-auto max-w-3xl space-y-4 p-4 sm:p-6">
       <h2 className="text-lg font-semibold">ゲームバランス</h2>
       <p className="text-sm text-muted-foreground">
-        敵の能力 = 基礎値 + log(1 + Power) × 補正 +
-        敵の固定クイズセット内の平均関係数 × 補正 + 領域 ×
-        補正（切り上げ）。母集団クイズは種類数分の敵へ重複なく割り当て、各敵のクイズセットは固定します。遭遇時は敵ロスターから同時出現数の範囲で抽選し、敵ごとのクイズセットから1問を選びます。関係数は上限付き。既存の敵にも設定変更を即時反映し、残HPは回復しません。
+        敵の強さはランダム値ではなく、以下の補正値から計算されます。ランダムなのはロスター再選出時のクイズ割当てと、戦闘時の敵・出題クイズの抽選です。
       </p>
       {error && (
         <p role="alert" className="text-destructive">
@@ -132,36 +126,40 @@ export default function BattleSettingsManager() {
               .finally(() => setSaving(false));
           }}
         >
-          <Table aria-label="ゲームバランス設定" className="table-fixed">
-            <TableHeader>
-              <TableRow>
-                <TableHead scope="col">項目</TableHead>
-                <TableHead scope="col" className="w-28">
-                  設定値
-                </TableHead>
-                <TableHead scope="col" className="hidden w-28 sm:table-cell">
-                  範囲
-                </TableHead>
-              </TableRow>
-            </TableHeader>
+          <div className="space-y-5">
             {groups.map((group) => (
-              <TableBody key={group.label}>
-                <TableRow className="bg-muted/50">
-                  <TableHead colSpan={3} scope="colgroup">
-                    {group.label}
-                  </TableHead>
-                </TableRow>
-                {group.keys.map((kind) => {
-                  const [label, min, max, step] = fields[kind];
-                  return (
-                    <TableRow key={kind}>
-                      <TableHead scope="row" className="whitespace-normal py-2">
-                        <Label htmlFor={`battle-${kind}`}>{label}</Label>
-                        <span className="mt-1 block text-xs font-normal text-muted-foreground sm:hidden">
-                          {min}–{max}
-                        </span>
-                      </TableHead>
-                      <TableCell>
+              <section
+                key={group.label}
+                aria-label={group.label}
+                className="overflow-hidden rounded-lg border"
+              >
+                <div className="border-b bg-muted/40 px-4 py-3">
+                  <h3 className="font-medium">{group.label}</h3>
+                  {"description" in group && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {group.description}
+                    </p>
+                  )}
+                </div>
+                <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                  {group.keys.map((kind) => {
+                    const [label, min, max, step] = fields[kind];
+                    return (
+                      <div
+                        key={kind}
+                        className="flex min-w-0 items-center justify-between gap-4 px-4 py-3"
+                      >
+                        <div className="min-w-0">
+                          <Label
+                            htmlFor={`battle-${kind}`}
+                            className="whitespace-normal"
+                          >
+                            {label}
+                          </Label>
+                          <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                            範囲 {min}–{max}
+                          </span>
+                        </div>
                         <Input
                           id={`battle-${kind}`}
                           type="number"
@@ -170,6 +168,7 @@ export default function BattleSettingsManager() {
                           step={step}
                           required
                           disabled={saving}
+                          className="w-28 shrink-0"
                           value={settings[kind]}
                           onChange={(event) =>
                             setSettings({
@@ -178,16 +177,13 @@ export default function BattleSettingsManager() {
                             })
                           }
                         />
-                      </TableCell>
-                      <TableCell className="hidden text-muted-foreground sm:table-cell">
-                        {min}–{max}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
             ))}
-          </Table>
+          </div>
           <Button disabled={saving} type="submit">
             {saving ? "保存中…" : "保存"}
           </Button>
