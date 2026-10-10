@@ -11,12 +11,6 @@ import {
   TableRow,
 } from "~/shared/components/ui/table";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "~/shared/components/ui/tabs";
-import {
   type BattleSettings,
   type EnemyBalanceSimulation,
   requestBattleSettings,
@@ -116,360 +110,341 @@ export default function BattleSettingsManager() {
     };
   }, []);
   return (
-    <section className="mx-auto max-w-3xl space-y-4 p-4 sm:p-6">
+    <section className="mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
       <h2 className="text-lg font-semibold">ゲームバランス</h2>
       {error && (
         <p role="alert" className="text-destructive">
           {error}
         </p>
       )}
-      <Tabs defaultValue="settings" className="gap-0">
-        <TabsList aria-label="ゲームバランス" className="mx-auto">
-          <TabsTrigger value="settings">設定</TabsTrigger>
-          <TabsTrigger value="simulation">試算</TabsTrigger>
-        </TabsList>
-        <TabsContent value="settings" className="space-y-4 pt-4">
-          <p className="text-sm text-muted-foreground">
-            敵の強さはランダム値ではなく、以下の補正値から計算されます。ランダムなのはロスター再選出時のクイズ割当てと、戦闘時の敵・出題クイズの抽選です。
-          </p>
-          {saved && <output className="block">ゲーム設定を保存しました</output>}
-          {settings && (
-            <form
-              className="space-y-4"
-              onSubmit={(event) => {
-                event.preventDefault();
-                setError(undefined);
-                setSaved(false);
-                if (
-                  settings.min_quizzes_per_enemy >
-                    settings.max_quizzes_per_enemy ||
-                  settings.min_enemies > settings.max_encounter_enemies
-                ) {
-                  setError("下限は上限以下にしてください。");
-                  return;
-                }
-                setSaving(true);
-                void requestBattleSettings(settings)
-                  .then((value) => {
-                    setSettings(value);
-                    setSaved(true);
-                  })
-                  .catch((cause) => setError(cause.message))
-                  .finally(() => setSaving(false));
+      <div className="space-y-6">
+        <p className="text-sm text-muted-foreground">
+          敵の強さはランダム値ではなく、以下の補正値から計算されます。ランダムなのはロスター再選出時のクイズ割当てと、戦闘時の敵・出題クイズの抽選です。
+        </p>
+        {saved && <output className="block">ゲーム設定を保存しました</output>}
+        {settings && (
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setError(undefined);
+              setSaved(false);
+              if (
+                settings.min_quizzes_per_enemy >
+                  settings.max_quizzes_per_enemy ||
+                settings.min_enemies > settings.max_encounter_enemies
+              ) {
+                setError("下限は上限以下にしてください。");
+                return;
+              }
+              setSaving(true);
+              void requestBattleSettings(settings)
+                .then((value) => {
+                  setSettings(value);
+                  setSaved(true);
+                })
+                .catch((cause) => setError(cause.message))
+                .finally(() => setSaving(false));
+            }}
+          >
+            <div className="space-y-5">
+              {groups.map((group) => (
+                <section
+                  key={group.label}
+                  aria-label={group.label}
+                  className="overflow-hidden rounded-lg border"
+                >
+                  <div className="border-b bg-muted/40 px-4 py-3">
+                    <h3 className="font-medium">{group.label}</h3>
+                    {"description" in group && (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {group.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                    {group.keys.map((kind) => {
+                      const [label, min, max, step] = fields[kind];
+                      return (
+                        <div
+                          key={kind}
+                          className="flex min-w-0 items-center justify-between gap-4 px-4 py-3"
+                        >
+                          <div className="min-w-0">
+                            <Label
+                              htmlFor={`battle-${kind}`}
+                              className="whitespace-normal"
+                            >
+                              {label}
+                            </Label>
+                            <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                              範囲 {min}–{max}
+                            </span>
+                          </div>
+                          <Input
+                            id={`battle-${kind}`}
+                            type="number"
+                            min={min}
+                            max={max}
+                            step={step}
+                            required
+                            disabled={saving}
+                            className="w-28 shrink-0"
+                            value={settings[kind]}
+                            onChange={(event) => {
+                              setSettings({
+                                ...settings,
+                                [kind]: Number(event.target.value),
+                              });
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+            <Button disabled={saving} type="submit">
+              {saving ? "保存中…" : "保存"}
+            </Button>
+          </form>
+        )}
+        {settings && (
+          <section
+            aria-labelledby="battle-simulation-title"
+            className="space-y-4 rounded-lg border p-4 sm:p-5"
+          >
+            <div>
+              <h3 id="battle-simulation-title" className="font-semibold">
+                敵の試算
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                設定値と条件を使い、本番と同じ敵編成・能力計算で試算します。平均関係数は敵ごとに同じ値と仮定します。試算結果はこの画面を離れるまで保持され、設定変更後も消えません。
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1 text-sm">
+                <Label htmlFor="simulation-power">ダンジョンのPower</Label>
+                <Input
+                  id="simulation-power"
+                  aria-label="試算するPower"
+                  type="number"
+                  min={0}
+                  max={1000000000}
+                  value={samplePower}
+                  onChange={(event) => {
+                    setSamplePower(Math.max(0, Number(event.target.value)));
+                  }}
+                />
+              </div>
+              <div className="space-y-1 text-sm">
+                <Label htmlFor="simulation-achievement">達成度</Label>
+                <Input
+                  id="simulation-achievement"
+                  aria-label="試算する達成度"
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={sampleAchievement}
+                  onChange={(event) => {
+                    setSampleAchievement(
+                      Math.min(20, Math.max(1, Number(event.target.value))),
+                    );
+                  }}
+                />
+              </div>
+              <div className="space-y-1 text-sm">
+                <Label htmlFor="simulation-relations">
+                  敵1体あたりの平均関係数
+                </Label>
+                <Input
+                  id="simulation-relations"
+                  aria-label="試算する平均関係数"
+                  type="number"
+                  min={0}
+                  max={1000000}
+                  value={sampleRelations}
+                  onChange={(event) => {
+                    setSampleRelations(Math.max(0, Number(event.target.value)));
+                  }}
+                />
+              </div>
+            </div>
+            <Button
+              type="button"
+              disabled={simulating || !settings}
+              onClick={() => {
+                if (!settings) return;
+                setSimulationError(undefined);
+                setSimulating(true);
+                void requestEnemyBalanceSimulation({
+                  balance: settings,
+                  power: samplePower,
+                  achievement: sampleAchievement,
+                  average_relations: sampleRelations,
+                })
+                  .then(setSimulation)
+                  .catch((cause) =>
+                    setSimulationError(
+                      cause instanceof Error
+                        ? cause.message
+                        : "敵を試算できませんでした。",
+                    ),
+                  )
+                  .finally(() => setSimulating(false));
               }}
             >
-              <div className="space-y-5">
-                {groups.map((group) => (
-                  <section
-                    key={group.label}
-                    aria-label={group.label}
-                    className="overflow-hidden rounded-lg border"
-                  >
-                    <div className="border-b bg-muted/40 px-4 py-3">
-                      <h3 className="font-medium">{group.label}</h3>
-                      {"description" in group && (
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {group.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-                      {group.keys.map((kind) => {
-                        const [label, min, max, step] = fields[kind];
-                        return (
-                          <div
-                            key={kind}
-                            className="flex min-w-0 items-center justify-between gap-4 px-4 py-3"
-                          >
-                            <div className="min-w-0">
-                              <Label
-                                htmlFor={`battle-${kind}`}
-                                className="whitespace-normal"
-                              >
-                                {label}
-                              </Label>
-                              <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                                範囲 {min}–{max}
-                              </span>
-                            </div>
-                            <Input
-                              id={`battle-${kind}`}
-                              type="number"
-                              min={min}
-                              max={max}
-                              step={step}
-                              required
-                              disabled={saving}
-                              className="w-28 shrink-0"
-                              value={settings[kind]}
-                              onChange={(event) => {
-                                setSettings({
-                                  ...settings,
-                                  [kind]: Number(event.target.value),
-                                });
-                              }}
-                            />
-                          </div>
-                        );
-                      })}
+              {simulating ? "試算中…" : "試算する"}
+            </Button>
+            {simulationError && (
+              <p role="alert" className="text-sm text-destructive">
+                {simulationError}
+              </p>
+            )}
+            {simulation ? (
+              <div className="space-y-4 rounded-md border p-3 sm:p-4">
+                <h4 className="font-medium">前回の試算条件</h4>
+                <div className="overflow-x-auto rounded-md border">
+                  <Table aria-label="前回の試算条件" className="min-w-[28rem]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>条件</TableHead>
+                        <TableHead>試算に使った値</TableHead>
+                        <TableHead>条件</TableHead>
+                        <TableHead>試算に使った値</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>ダンジョンPower</TableCell>
+                        <TableCell>{simulation.power}</TableCell>
+                        <TableCell>達成度</TableCell>
+                        <TableCell>{simulation.achievement}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>母集団クイズ数</TableCell>
+                        <TableCell>{simulation.pool_quiz_count}</TableCell>
+                        <TableCell>平均関係数</TableCell>
+                        <TableCell>{simulation.average_relations}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>敵の基礎HP / 攻</TableCell>
+                        <TableCell>
+                          {simulation.balance.enemy_hp} /{" "}
+                          {simulation.balance.enemy_attack}
+                        </TableCell>
+                        <TableCell>敵の種類数</TableCell>
+                        <TableCell>{simulation.balance.enemy_types}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Power補正 HP / 攻</TableCell>
+                        <TableCell>
+                          {simulation.balance.power_hp} /{" "}
+                          {simulation.balance.power_attack}
+                        </TableCell>
+                        <TableCell>関係数補正 HP / 攻</TableCell>
+                        <TableCell>
+                          {simulation.balance.relation_hp} /{" "}
+                          {simulation.balance.relation_attack}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>関係数の上限</TableCell>
+                        <TableCell>{simulation.balance.relation_cap}</TableCell>
+                        <TableCell>達成度補正 HP / 攻</TableCell>
+                        <TableCell>
+                          {simulation.balance.region_hp} /{" "}
+                          {simulation.balance.region_attack}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>敵ごとのクイズ数</TableCell>
+                        <TableCell>
+                          {simulation.balance.min_quizzes_per_enemy}〜
+                          {simulation.balance.max_quizzes_per_enemy}
+                        </TableCell>
+                        <TableCell>同時出現数</TableCell>
+                        <TableCell>
+                          {simulation.balance.min_enemies}〜
+                          {simulation.balance.max_encounter_enemies}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <section aria-label="敵ステータス試算" className="space-y-2">
+                    <h4 className="font-medium">敵ステータス試算</h4>
+                    <div className="overflow-x-auto rounded-md border">
+                      <Table
+                        aria-label="敵ステータス結果"
+                        className="min-w-[32rem]"
+                      >
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>敵</TableHead>
+                            <TableHead>HP</TableHead>
+                            <TableHead>攻撃力</TableHead>
+                            <TableHead>関係数</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {simulation.enemies.map((enemy) => (
+                            <TableRow key={enemy.index}>
+                              <TableCell>敵 {enemy.index}</TableCell>
+                              <TableCell>{enemy.hp}</TableCell>
+                              <TableCell>{enemy.attack}</TableCell>
+                              <TableCell>{enemy.relations}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
                     </div>
                   </section>
-                ))}
-              </div>
-              <Button disabled={saving} type="submit">
-                {saving ? "保存中…" : "保存"}
-              </Button>
-            </form>
-          )}
-        </TabsContent>
-        <TabsContent value="simulation" className="pt-4">
-          {settings && (
-            <section
-              aria-labelledby="battle-simulation-title"
-              className="space-y-4 rounded-lg border p-4 sm:p-5"
-            >
-              <div>
-                <h3 id="battle-simulation-title" className="font-semibold">
-                  敵の試算
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  設定値と条件を使い、本番と同じ敵編成・能力計算で試算します。平均関係数は敵ごとに同じ値と仮定します。試算結果はこの画面を離れるまで保持され、設定変更後も消えません。
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-1 text-sm">
-                  <Label htmlFor="simulation-power">ダンジョンのPower</Label>
-                  <Input
-                    id="simulation-power"
-                    aria-label="試算するPower"
-                    type="number"
-                    min={0}
-                    max={1000000000}
-                    value={samplePower}
-                    onChange={(event) => {
-                      setSamplePower(Math.max(0, Number(event.target.value)));
-                    }}
-                  />
-                </div>
-                <div className="space-y-1 text-sm">
-                  <Label htmlFor="simulation-achievement">達成度</Label>
-                  <Input
-                    id="simulation-achievement"
-                    aria-label="試算する達成度"
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={sampleAchievement}
-                    onChange={(event) => {
-                      setSampleAchievement(
-                        Math.min(20, Math.max(1, Number(event.target.value))),
-                      );
-                    }}
-                  />
-                </div>
-                <div className="space-y-1 text-sm">
-                  <Label htmlFor="simulation-relations">
-                    敵1体あたりの平均関係数
-                  </Label>
-                  <Input
-                    id="simulation-relations"
-                    aria-label="試算する平均関係数"
-                    type="number"
-                    min={0}
-                    max={1000000}
-                    value={sampleRelations}
-                    onChange={(event) => {
-                      setSampleRelations(
-                        Math.max(0, Number(event.target.value)),
-                      );
-                    }}
-                  />
-                </div>
-              </div>
-              <Button
-                type="button"
-                disabled={simulating || !settings}
-                onClick={() => {
-                  if (!settings) return;
-                  setSimulationError(undefined);
-                  setSimulating(true);
-                  void requestEnemyBalanceSimulation({
-                    balance: settings,
-                    power: samplePower,
-                    achievement: sampleAchievement,
-                    average_relations: sampleRelations,
-                  })
-                    .then(setSimulation)
-                    .catch((cause) =>
-                      setSimulationError(
-                        cause instanceof Error
-                          ? cause.message
-                          : "敵を試算できませんでした。",
-                      ),
-                    )
-                    .finally(() => setSimulating(false));
-                }}
-              >
-                {simulating ? "試算中…" : "試算する"}
-              </Button>
-              {simulationError && (
-                <p role="alert" className="text-sm text-destructive">
-                  {simulationError}
-                </p>
-              )}
-              {simulation ? (
-                <div className="space-y-4 rounded-md border p-3 sm:p-4">
-                  <h4 className="font-medium">前回の試算条件</h4>
-                  <div className="overflow-x-auto rounded-md border">
-                    <Table
-                      aria-label="前回の試算条件"
-                      className="min-w-[28rem]"
-                    >
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>条件</TableHead>
-                          <TableHead>試算に使った値</TableHead>
-                          <TableHead>条件</TableHead>
-                          <TableHead>試算に使った値</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell>ダンジョンPower</TableCell>
-                          <TableCell>{simulation.power}</TableCell>
-                          <TableCell>達成度</TableCell>
-                          <TableCell>{simulation.achievement}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>母集団クイズ数</TableCell>
-                          <TableCell>{simulation.pool_quiz_count}</TableCell>
-                          <TableCell>平均関係数</TableCell>
-                          <TableCell>{simulation.average_relations}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>敵の基礎HP / 攻</TableCell>
-                          <TableCell>
-                            {simulation.balance.enemy_hp} /{" "}
-                            {simulation.balance.enemy_attack}
-                          </TableCell>
-                          <TableCell>敵の種類数</TableCell>
-                          <TableCell>
-                            {simulation.balance.enemy_types}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Power補正 HP / 攻</TableCell>
-                          <TableCell>
-                            {simulation.balance.power_hp} /{" "}
-                            {simulation.balance.power_attack}
-                          </TableCell>
-                          <TableCell>関係数補正 HP / 攻</TableCell>
-                          <TableCell>
-                            {simulation.balance.relation_hp} /{" "}
-                            {simulation.balance.relation_attack}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>関係数の上限</TableCell>
-                          <TableCell>
-                            {simulation.balance.relation_cap}
-                          </TableCell>
-                          <TableCell>達成度補正 HP / 攻</TableCell>
-                          <TableCell>
-                            {simulation.balance.region_hp} /{" "}
-                            {simulation.balance.region_attack}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>敵ごとのクイズ数</TableCell>
-                          <TableCell>
-                            {simulation.balance.min_quizzes_per_enemy}〜
-                            {simulation.balance.max_quizzes_per_enemy}
-                          </TableCell>
-                          <TableCell>同時出現数</TableCell>
-                          <TableCell>
-                            {simulation.balance.min_enemies}〜
-                            {simulation.balance.max_encounter_enemies}
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                  <Tabs defaultValue="stats" className="gap-0">
-                    <TabsList aria-label="試算結果の種類">
-                      <TabsTrigger value="stats">敵ステータス</TabsTrigger>
-                      <TabsTrigger value="roster">敵ロスター</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="stats" className="pt-3">
-                      <div className="overflow-x-auto rounded-md border">
-                        <Table
-                          aria-label="敵ステータス試算"
-                          className="min-w-[32rem]"
-                        >
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>敵</TableHead>
-                              <TableHead>HP</TableHead>
-                              <TableHead>攻撃力</TableHead>
-                              <TableHead>関係数</TableHead>
+                  <section aria-label="敵ロスター試算" className="space-y-2">
+                    <h4 className="font-medium">敵ロスター試算</h4>
+                    <div className="overflow-x-auto rounded-md border">
+                      <Table
+                        aria-label="敵ロスター結果"
+                        className="min-w-[28rem]"
+                      >
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>敵の種類</TableHead>
+                            <TableHead>固定クイズ数</TableHead>
+                            <TableHead>HP</TableHead>
+                            <TableHead>攻撃力</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {simulation.enemies.map((enemy) => (
+                            <TableRow key={enemy.index}>
+                              <TableCell>敵 {enemy.index}</TableCell>
+                              <TableCell>{enemy.quiz_count}問</TableCell>
+                              <TableCell>{enemy.hp}</TableCell>
+                              <TableCell>{enemy.attack}</TableCell>
                             </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {simulation.enemies.map((enemy) => (
-                              <TableRow key={enemy.index}>
-                                <TableCell>敵 {enemy.index}</TableCell>
-                                <TableCell>{enemy.hp}</TableCell>
-                                <TableCell>{enemy.attack}</TableCell>
-                                <TableCell>{enemy.relations}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </TabsContent>
-                    <TabsContent value="roster" className="space-y-3 pt-3">
-                      <div className="overflow-x-auto rounded-md border">
-                        <Table
-                          aria-label="敵ロスター試算"
-                          className="min-w-[28rem]"
-                        >
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>敵の種類</TableHead>
-                              <TableHead>固定クイズ数</TableHead>
-                              <TableHead>HP</TableHead>
-                              <TableHead>攻撃力</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {simulation.enemies.map((enemy) => (
-                              <TableRow key={enemy.index}>
-                                <TableCell>敵 {enemy.index}</TableCell>
-                                <TableCell>{enemy.quiz_count}問</TableCell>
-                                <TableCell>{enemy.hp}</TableCell>
-                                <TableCell>{enemy.attack}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        遭遇人数は {simulation.min_encounter_enemies}〜
-                        {simulation.max_encounter_enemies}
-                        体から抽選されます。クイズの内容自体は母集団から再選出されるため、この試算では種類ごとのクイズ数を表示します。
-                      </p>
-                    </TabsContent>
-                  </Tabs>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      遭遇人数は {simulation.min_encounter_enemies}〜
+                      {simulation.max_encounter_enemies}
+                      体から抽選されます。クイズの内容自体は母集団から再選出されるため、この試算では種類ごとのクイズ数を表示します。
+                    </p>
+                  </section>
                 </div>
-              ) : !simulationError ? (
-                <output className="block text-sm text-muted-foreground">
-                  条件と設定を入力し、「試算する」を押してください。
-                </output>
-              ) : null}
-            </section>
-          )}
-        </TabsContent>
-      </Tabs>
+              </div>
+            ) : !simulationError ? (
+              <output className="block text-sm text-muted-foreground">
+                条件と設定を入力し、「試算する」を押してください。
+              </output>
+            ) : null}
+          </section>
+        )}
+      </div>
     </section>
   );
 }
