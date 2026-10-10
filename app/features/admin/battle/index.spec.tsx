@@ -6,12 +6,29 @@ import { vi } from "vitest";
 import { defaultBalance as defaults } from "~/features/game/battle";
 import BattleSettingsManager from ".";
 const saved = vi.fn();
+const simulated = vi.fn();
 const server = setupServer(
   http.get("*/admin/settings/game-balance", () => HttpResponse.json(defaults)),
   http.put("*/admin/settings/game-balance", async ({ request }) => {
     const body = await request.json();
     saved(body);
     return HttpResponse.json(body);
+  }),
+  http.post("*/admin/settings/game-balance/simulate", async ({ request }) => {
+    simulated(await request.json());
+    return HttpResponse.json({
+      power: 100,
+      achievement: 1,
+      pool_quiz_count: 5,
+      average_relations: 3,
+      min_encounter_enemies: 1,
+      max_encounter_enemies: 3,
+      enemies: [
+        { index: 1, quiz_count: 2, hp: 28, attack: 16, relations: 3 },
+        { index: 2, quiz_count: 2, hp: 28, attack: 16, relations: 3 },
+        { index: 3, quiz_count: 1, hp: 28, attack: 16, relations: 3 },
+      ],
+    });
   }),
 );
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -53,12 +70,21 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
 it("simulates roster sizes and enemy stats from power, achievement, and relation count", async () => {
   render(<BattleSettingsManager />);
   await screen.findByLabelText("初期持ち時間（秒）");
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "試算する" }));
   expect(
-    screen.getByRole("table", { name: "敵ロスター試算" }),
+    await screen.findByRole("table", { name: "敵ロスター試算" }),
   ).toBeInTheDocument();
   expect(screen.getAllByRole("row")).toHaveLength(4);
   expect(screen.getAllByText("28")).toHaveLength(3);
   expect(screen.getAllByText("16")).toHaveLength(3);
+  expect(simulated).toHaveBeenCalledWith({
+    balance: defaults,
+    power: 100,
+    achievement: 1,
+    average_relations: 3,
+  });
 });
 it("reports failures without claiming settings were saved", async () => {
   server.use(
