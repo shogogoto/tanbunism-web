@@ -1,7 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/shared/components/ui/table";
 import { type BattleSettings, requestBattleSettings } from "./api";
 
 const fields = {
@@ -76,6 +84,61 @@ export default function BattleSettingsManager() {
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [samplePower, setSamplePower] = useState(100);
+  const [sampleAchievement, setSampleAchievement] = useState(1);
+  const [sampleRelations, setSampleRelations] = useState(3);
+  const simulation = useMemo(() => {
+    if (!settings) return [];
+    const poolSize = sampleAchievement * 5;
+    const rosterSize = Math.min(
+      settings.enemy_types,
+      Math.max(1, Math.floor(poolSize / settings.min_quizzes_per_enemy)),
+    );
+    const retainedSize = Math.min(
+      poolSize,
+      rosterSize * settings.max_quizzes_per_enemy,
+    );
+    const baseSize = Math.min(
+      settings.min_quizzes_per_enemy,
+      Math.floor(retainedSize / rosterSize),
+    );
+    const sizes = Array.from({ length: rosterSize }, () => baseSize);
+    let remaining = retainedSize - baseSize * rosterSize;
+    while (remaining > 0) {
+      for (let index = 0; index < sizes.length && remaining > 0; index++) {
+        if (sizes[index] < settings.max_quizzes_per_enemy) {
+          sizes[index]++;
+          remaining--;
+        }
+      }
+    }
+    const levelIndex = sampleAchievement - 1;
+    const cappedRelations = Math.min(settings.relation_cap, sampleRelations);
+    const hp = Math.min(
+      100000,
+      Math.ceil(
+        settings.enemy_hp +
+          Math.log1p(samplePower) * settings.power_hp +
+          cappedRelations * settings.relation_hp +
+          levelIndex * settings.region_hp,
+      ),
+    );
+    const attack = Math.min(
+      100000,
+      Math.ceil(
+        settings.enemy_attack +
+          Math.log1p(samplePower) * settings.power_attack +
+          cappedRelations * settings.relation_attack +
+          levelIndex * settings.region_attack,
+      ),
+    );
+    return sizes.map((quizCount, index) => ({
+      index: index + 1,
+      quizCount,
+      hp,
+      attack,
+    }));
+  }, [settings, sampleAchievement, samplePower, sampleRelations]);
   useEffect(() => {
     let active = true;
     requestBattleSettings().then(
@@ -188,6 +251,105 @@ export default function BattleSettingsManager() {
             {saving ? "保存中…" : "保存"}
           </Button>
         </form>
+      )}
+      {settings && (
+        <section
+          aria-labelledby="battle-simulation-title"
+          className="space-y-4 rounded-lg border p-4 sm:p-5"
+        >
+          <div>
+            <h3 id="battle-simulation-title" className="font-semibold">
+              敵の試算
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              条件を変えると、この設定を使った敵ロスターと能力値を確認できます。母集団は達成度
+              × 5問、関係数は各敵で同じ値と仮定した概算です。
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1 text-sm">
+              <Label htmlFor="simulation-power">ダンジョンのPower</Label>
+              <Input
+                id="simulation-power"
+                aria-label="試算するPower"
+                type="number"
+                min={0}
+                max={1000000000}
+                value={samplePower}
+                onChange={(event) =>
+                  setSamplePower(Math.max(0, Number(event.target.value)))
+                }
+              />
+            </div>
+            <div className="space-y-1 text-sm">
+              <Label htmlFor="simulation-achievement">達成度</Label>
+              <Input
+                id="simulation-achievement"
+                aria-label="試算する達成度"
+                type="number"
+                min={1}
+                max={20}
+                value={sampleAchievement}
+                onChange={(event) =>
+                  setSampleAchievement(
+                    Math.min(20, Math.max(1, Number(event.target.value))),
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1 text-sm">
+              <Label htmlFor="simulation-relations">
+                敵1体あたりの平均関係数
+              </Label>
+              <Input
+                id="simulation-relations"
+                aria-label="試算する平均関係数"
+                type="number"
+                min={0}
+                max={1000}
+                value={sampleRelations}
+                onChange={(event) =>
+                  setSampleRelations(Math.max(0, Number(event.target.value)))
+                }
+              />
+            </div>
+          </div>
+          {simulation.length ? (
+            <>
+              <div className="overflow-x-auto rounded-md border">
+                <Table aria-label="敵ロスター試算" className="min-w-[32rem]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>敵</TableHead>
+                      <TableHead>固定クイズ数</TableHead>
+                      <TableHead>HP</TableHead>
+                      <TableHead>攻撃力</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {simulation.map((enemy) => (
+                      <TableRow key={enemy.index}>
+                        <TableCell>敵 {enemy.index}</TableCell>
+                        <TableCell>{enemy.quizCount}問</TableCell>
+                        <TableCell>{enemy.hp}</TableCell>
+                        <TableCell>{enemy.attack}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                遭遇人数は {Math.min(settings.min_enemies, simulation.length)}〜
+                {Math.min(settings.max_encounter_enemies, simulation.length)}
+                体からランダムに選択。戦闘ごとの敵・出題クイズも抽選されます。
+              </p>
+            </>
+          ) : (
+            <output className="block text-sm text-muted-foreground">
+              この達成度の母集団クイズ数では、現在の下限設定を満たす敵を作れません。
+            </output>
+          )}
+        </section>
       )}
     </section>
   );

@@ -28,7 +28,7 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   expect(
     screen.getByRole("region", { name: "敵ステータスの計算" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("spinbutton")).toHaveLength(22);
+  expect(screen.getAllByRole("spinbutton")).toHaveLength(25);
   expect(base).toHaveAttribute("min", "5");
   expect(base).toHaveAttribute("max", "300");
   const weight = screen.getByLabelText("PowerのHP補正");
@@ -49,6 +49,16 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
     power_hp: 2,
     enemy_types: 4,
   });
+});
+it("simulates roster sizes and enemy stats from power, achievement, and relation count", async () => {
+  render(<BattleSettingsManager />);
+  await screen.findByLabelText("初期持ち時間（秒）");
+  expect(
+    screen.getByRole("table", { name: "敵ロスター試算" }),
+  ).toBeInTheDocument();
+  expect(screen.getAllByRole("row")).toHaveLength(4);
+  expect(screen.getAllByText("28")).toHaveLength(3);
+  expect(screen.getAllByText("16")).toHaveLength(3);
 });
 it("reports failures without claiming settings were saved", async () => {
   server.use(
