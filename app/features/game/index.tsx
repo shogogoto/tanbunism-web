@@ -430,9 +430,15 @@ export function GamePlay({
         population.quiz_ids,
         population,
       );
+      const pool = regionEnemies(frozen, run.resourceId, region);
+      if (!pool.length) {
+        setError(
+          "領域の敵を読み込めませんでした。少し待ってから進んでください。",
+        );
+        return;
+      }
       if (sentenceId !== ENTRANCE) await markTanbunSeen(sentenceId);
       const next = move(explored, sentenceId, Math.random());
-      const pool = regionEnemies(frozen, run.resourceId, region);
       if (next.run?.phase === "battle" && pool.length) {
         const enemy = pool[Math.floor(Math.random() * pool.length)];
         next.run = {

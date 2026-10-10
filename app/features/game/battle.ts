@@ -33,10 +33,12 @@ export const defaultBalance = {
   region_attack: 2,
   enemy_variance_percent: 10,
   enemy_types: 3,
+  enemy_types_per_region: 0,
   min_quizzes_per_enemy: 1,
   max_quizzes_per_enemy: 100,
   min_enemies: 1,
   max_encounter_enemies: 3,
+  max_encounter_enemies_per_region: 0,
 };
 export type GameBalance = typeof defaultBalance;
 export type LiveEnemy = RegionEnemy & {

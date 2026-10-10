@@ -31,6 +31,7 @@ export type DungeonRegionQuizPool = {
   enemy_types?: number;
   min_quizzes_per_enemy?: number;
   max_quizzes_per_enemy?: number;
+  enemies?: { id: string; name: string; quiz_ids: string[] }[];
 };
 export type RegionEnemy = {
   id: string;
@@ -62,86 +63,50 @@ export function regionQuizPool(
   return content.quizzes.map((quiz) => quiz.quiz_id);
 }
 
-/** Build stable enemies from the frozen population; revisits never reroll it. */
+/** Read the saved roster; new rosters are assigned by the server. */
 export function regionEnemies(
   content: DungeonContent,
-  resourceId: string,
+  _resourceId: string,
   region: number,
 ): RegionEnemy[] {
   const frozenEnemies = content.regionEnemies?.[region];
-  const explicitPool = content.regionQuizPools?.[region];
   if (frozenEnemies) return frozenEnemies;
-  return (
-    freezeRegionEnemies(content, resourceId, region, explicitPool)
-      .regionEnemies?.[region] ?? []
-  );
+  return [];
 }
 export function freezeRegionEnemies(
   content: DungeonContent,
-  resourceId: string,
+  _resourceId: string,
   region: number,
   storedQuizPool?: string[],
-  config: Pick<
-    DungeonRegionQuizPool,
-    "enemy_types" | "min_quizzes_per_enemy" | "max_quizzes_per_enemy"
-  > = {
-    enemy_types: 3,
-    min_quizzes_per_enemy: 1,
-    max_quizzes_per_enemy: 100,
-  },
+  config: Pick<DungeonRegionQuizPool, "enemies"> = {},
 ): DungeonContent {
   const quizPool = storedQuizPool ?? regionQuizPool(content, region);
-  const quizIndexes = new Map(
-    content.quizzes.map((quiz, index) => [quiz.quiz_id, index]),
+  const indexes = new Map(
+    content.quizzes.map((quiz, index) => [
+      quiz.quiz_id.replaceAll("-", "").toLowerCase(),
+      index,
+    ]),
   );
-  return {
-    ...content,
-    regionQuizPools: {
-      ...content.regionQuizPools,
-      [region]: quizPool,
-    },
-    regionEnemies: {
-      ...content.regionEnemies,
-      [region]: (() => {
-        const indices = quizPool.flatMap((quizId) => {
-          const index = quizIndexes.get(quizId);
+  const enemies =
+    content.regionEnemies?.[region] ??
+    (config.enemies ?? [])
+      .map((enemy) => {
+        const quizIndexes = enemy.quiz_ids.flatMap((id) => {
+          const index = indexes.get(id.replaceAll("-", "").toLowerCase());
           return index === undefined ? [] : [index];
         });
-        const count = Math.min(
-          config.enemy_types ?? 3,
-          Math.max(
-            1,
-            Math.floor(indices.length / (config.min_quizzes_per_enemy ?? 1)),
-          ),
-        );
-        const max = Math.max(1, config.max_quizzes_per_enemy ?? 100);
-        const assigned = indices.slice(0, count * max);
-        const groups: number[][] = Array.from({ length: count }, () => []);
-        const minimum = Math.min(
-          config.min_quizzes_per_enemy ?? 1,
-          Math.floor(assigned.length / count),
-        );
-        let cursor = 0;
-        for (const group of groups) {
-          for (let i = 0; i < minimum; i += 1) group.push(assigned[cursor++]);
-        }
-        while (cursor < assigned.length) {
-          const eligible = groups.filter((item) => item.length < max);
-          const minSize = Math.min(...eligible.map((item) => item.length));
-          const group = eligible.find((item) => item.length === minSize);
-          if (!group) break;
-          group.push(assigned[cursor++]);
-        }
-        return groups
-          .filter((group) => group.length)
-          .map((group, index) => ({
-            id: `${resourceId}:${region}:enemy:${index}`,
-            name: `領域 ${region + 1}の敵 ${index + 1}`,
-            quizIndex: group[0],
-            quizIndexes: group,
-          }));
-      })(),
-    },
+        return {
+          id: enemy.id,
+          name: enemy.name,
+          quizIndex: quizIndexes[0],
+          quizIndexes,
+        };
+      })
+      .filter((enemy) => enemy.quizIndexes.length > 0);
+  return {
+    ...content,
+    regionQuizPools: { ...content.regionQuizPools, [region]: quizPool },
+    regionEnemies: { ...content.regionEnemies, [region]: enemies },
   };
 }
 const sameId = (a: string, b: string) =>

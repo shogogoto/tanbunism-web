@@ -51,7 +51,13 @@ it("freezes all prepared enemies in a band and leaves older bands unchanged", ()
     knowledge: [],
     quizzes: [quiz("q1"), quiz("q2"), quiz("q3"), quiz("q4")],
   };
-  const first = freezeRegionEnemies(content, "book", 0);
+  const first = freezeRegionEnemies(content, "book", 0, undefined, {
+    enemies: [
+      { id: "book:0:enemy:0", name: "敵1", quiz_ids: ["q1", "q4"] },
+      { id: "book:0:enemy:1", name: "敵2", quiz_ids: ["q2"] },
+      { id: "book:0:enemy:2", name: "敵3", quiz_ids: ["q3"] },
+    ],
+  });
   expect(regionEnemies(first, "book", 0)).toHaveLength(3);
   expect(first.regionQuizPools?.[0]).toEqual(["q1", "q2", "q3", "q4"]);
   const expanded = freezeRegionEnemies(
@@ -61,6 +67,14 @@ it("freezes all prepared enemies in a band and leaves older bands unchanged", ()
     },
     "book",
     1,
+    undefined,
+    {
+      enemies: [
+        { id: "book:1:enemy:0", name: "敵1", quiz_ids: ["q1", "q4"] },
+        { id: "book:1:enemy:1", name: "敵2", quiz_ids: ["q2", "q5"] },
+        { id: "book:1:enemy:2", name: "敵3", quiz_ids: ["q3"] },
+      ],
+    },
   );
   expect(expanded.regionEnemies?.[0]).toEqual(first.regionEnemies?.[0]);
   expect(expanded.regionQuizPools?.[0]).toEqual(["q1", "q2", "q3", "q4"]);

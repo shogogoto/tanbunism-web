@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -15,13 +15,19 @@ const server = setupServer(
     return HttpResponse.json(body);
   }),
   http.post("*/admin/settings/game-balance/simulate", async ({ request }) => {
-    simulated(await request.json());
+    const input = (await request.json()) as {
+      balance: typeof defaults;
+      power: number;
+      achievement: number;
+      average_relations: number;
+    };
+    simulated(input);
     return HttpResponse.json({
-      power: 100,
-      achievement: 1,
+      power: input.power,
+      achievement: input.achievement,
       pool_quiz_count: 5,
-      average_relations: 3,
-      balance: defaults,
+      average_relations: input.average_relations,
+      balance: input.balance,
       min_encounter_enemies: 1,
       max_encounter_enemies: 3,
       enemies: [
@@ -46,7 +52,7 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   expect(
     screen.getByRole("region", { name: "敵ステータスの計算" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("spinbutton")).toHaveLength(26);
+  expect(screen.getAllByRole("spinbutton")).toHaveLength(28);
   expect(screen.getByLabelText("敵能力のばらつき（±%）")).toHaveValue(10);
   expect(base).toHaveAttribute("min", "5");
   expect(base).toHaveAttribute("max", "300");
@@ -69,48 +75,51 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
     enemy_types: 4,
   });
 });
-it("simulates roster sizes and enemy stats from power, achievement, and relation count", async () => {
+it("retains trials for comparison and lets users revisit their original settings", async () => {
   render(<BattleSettingsManager />);
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "敵ステータスを試算" }),
+      screen.getByRole("button", { name: "試算して比較に追加" }),
     ).toBeEnabled(),
   );
   const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "敵ステータスを試算" }));
-  expect(
-    await screen.findByRole("table", { name: "敵ステータス結果" }),
-  ).toBeInTheDocument();
-  expect(screen.getByText(/条件: Power 100 · 達成度 1/)).toBeInTheDocument();
-  expect(
-    screen.getByRole("table", { name: "敵ステータス結果" }),
-  ).not.toHaveTextContent("Power");
-  expect(screen.getAllByRole("row")).toHaveLength(4);
-  expect(screen.getAllByText("28")).toHaveLength(1);
-  expect(screen.getAllByText("30")).toHaveLength(1);
-  expect(screen.getAllByText("26")).toHaveLength(1);
-  expect(
-    screen.queryByRole("table", { name: "敵ロスター結果" }),
-  ).not.toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "敵ロスターを試算" }));
-  expect(
-    await screen.findByRole("table", { name: "敵ロスター結果" }),
-  ).toBeInTheDocument();
-  expect(screen.getAllByRole("row")).toHaveLength(8);
-  expect(screen.getAllByText("28")).toHaveLength(2);
-  expect(screen.getAllByText("30")).toHaveLength(2);
-  expect(screen.getAllByText("26")).toHaveLength(2);
-  expect(screen.getAllByText(/条件: Power 100 · 達成度 1/)).toHaveLength(2);
-  expect(
-    screen.getByRole("table", { name: "敵ロスター結果" }),
-  ).not.toHaveTextContent("Power");
+  await user.click(screen.getByRole("button", { name: "試算して比較に追加" }));
+  const comparison = await screen.findByRole("table", { name: "試算比較" });
+  expect(within(comparison).getAllByRole("row")).toHaveLength(2);
+  expect(screen.getByRole("table", { name: "試算の敵一覧" })).toHaveTextContent(
+    "28",
+  );
   const power = screen.getByLabelText("試算するPower");
   await user.clear(power);
   await user.type(power, "250");
+  const weight = screen.getByLabelText("PowerのHP補正");
+  await user.clear(weight);
+  await user.type(weight, "2");
+  expect(within(comparison).getAllByRole("row")).toHaveLength(2);
+  await user.click(screen.getByRole("button", { name: "試算して比較に追加" }));
+  await waitFor(() =>
+    expect(within(comparison).getAllByRole("row")).toHaveLength(3),
+  );
+  expect(comparison).toHaveTextContent("100");
+  expect(comparison).toHaveTextContent("250");
   expect(
-    screen.getByRole("table", { name: "敵ロスター結果" }),
+    screen.getByRole("heading", { name: "試算 2 の敵一覧" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByText(/条件: Power 100 · 達成度 1/)).toHaveLength(2);
+  await user.click(screen.getByText("この試算に使ったゲームバランス設定"));
+  const snapshot = screen
+    .getByText("この試算に使ったゲームバランス設定")
+    .closest("details");
+  if (!snapshot) throw new Error("試算の設定が見つかりません。");
+  expect(
+    within(snapshot).getByText("PowerのHP補正").nextElementSibling,
+  ).toHaveTextContent("2");
+  await user.click(screen.getByRole("button", { name: "試算 1" }));
+  expect(
+    within(snapshot).getByText("PowerのHP補正").nextElementSibling,
+  ).toHaveTextContent("1");
+  expect(
+    screen.getByRole("heading", { name: "試算 1 の敵一覧" }),
+  ).toBeInTheDocument();
   expect(simulated).toHaveBeenNthCalledWith(1, {
     balance: defaults,
     power: 100,
@@ -118,11 +127,16 @@ it("simulates roster sizes and enemy stats from power, achievement, and relation
     average_relations: 3,
   });
   expect(simulated).toHaveBeenNthCalledWith(2, {
-    balance: defaults,
-    power: 100,
+    balance: { ...defaults, power_hp: 2 },
+    power: 250,
     achievement: 1,
     average_relations: 3,
   });
+  expect(saved).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "結果をクリア" }));
+  expect(
+    screen.queryByRole("table", { name: "試算比較" }),
+  ).not.toBeInTheDocument();
 });
 it("reports failures without claiming settings were saved", async () => {
   server.use(
