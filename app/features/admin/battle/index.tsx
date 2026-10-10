@@ -327,43 +327,39 @@ export default function BattleSettingsManager() {
               >
                 <h4 className="font-medium">敵ステータス試算</h4>
                 {statsSimulation ? (
-                  <div className="overflow-x-auto rounded-md border">
-                    <Table
-                      aria-label="敵ステータス結果"
-                      className="min-w-[52rem]"
-                    >
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Power</TableHead>
-                          <TableHead>達成度</TableHead>
-                          <TableHead>平均関係数</TableHead>
-                          <TableHead>ばらつき（±%）</TableHead>
-                          <TableHead>敵</TableHead>
-                          <TableHead>HP</TableHead>
-                          <TableHead>攻撃力</TableHead>
-                          <TableHead>関係数</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {statsSimulation.enemies.map((enemy) => (
-                          <TableRow key={enemy.index}>
-                            <TableCell>{statsSimulation.power}</TableCell>
-                            <TableCell>{statsSimulation.achievement}</TableCell>
-                            <TableCell>
-                              {statsSimulation.average_relations}
-                            </TableCell>
-                            <TableCell>
-                              ±{statsSimulation.balance.enemy_variance_percent}%
-                            </TableCell>
-                            <TableCell>敵 {enemy.index}</TableCell>
-                            <TableCell>{enemy.hp}</TableCell>
-                            <TableCell>{enemy.attack}</TableCell>
-                            <TableCell>{enemy.relations}</TableCell>
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      条件: Power {statsSimulation.power} · 達成度{" "}
+                      {statsSimulation.achievement} · 平均関係数{" "}
+                      {statsSimulation.average_relations} · ばらつき ±
+                      {statsSimulation.balance.enemy_variance_percent}%
+                    </p>
+                    <div className="overflow-x-auto rounded-md border">
+                      <Table
+                        aria-label="敵ステータス結果"
+                        className="min-w-[28rem]"
+                      >
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>敵</TableHead>
+                            <TableHead>HP</TableHead>
+                            <TableHead>攻撃力</TableHead>
+                            <TableHead>関係数</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <TableBody>
+                          {statsSimulation.enemies.map((enemy) => (
+                            <TableRow key={enemy.index}>
+                              <TableCell>敵 {enemy.index}</TableCell>
+                              <TableCell>{enemy.hp}</TableCell>
+                              <TableCell>{enemy.attack}</TableCell>
+                              <TableCell>{enemy.relations}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     条件を入力し、「敵ステータスを試算」を押してください。
@@ -377,54 +373,35 @@ export default function BattleSettingsManager() {
                 <h4 className="font-medium">敵ロスター試算</h4>
                 {rosterSimulation ? (
                   <>
+                    <p className="text-sm text-muted-foreground">
+                      条件: Power {rosterSimulation.power} · 達成度{" "}
+                      {rosterSimulation.achievement} · 平均関係数{" "}
+                      {rosterSimulation.average_relations} · ばらつき ±
+                      {rosterSimulation.balance.enemy_variance_percent}% ·
+                      母集団 {rosterSimulation.pool_quiz_count}問 · 同時出現{" "}
+                      {rosterSimulation.min_encounter_enemies}〜
+                      {rosterSimulation.max_encounter_enemies}体
+                    </p>
                     <div className="overflow-x-auto rounded-md border">
                       <Table
                         aria-label="敵ロスター結果"
-                        className="min-w-[64rem]"
+                        className="min-w-[32rem]"
                       >
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Power</TableHead>
-                            <TableHead>達成度</TableHead>
-                            <TableHead>平均関係数</TableHead>
-                            <TableHead>ばらつき（±%）</TableHead>
-                            <TableHead>母集団クイズ数</TableHead>
                             <TableHead>敵の種類</TableHead>
                             <TableHead>固定クイズ数</TableHead>
                             <TableHead>HP</TableHead>
                             <TableHead>攻撃力</TableHead>
-                            <TableHead>同時出現数</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {rosterSimulation.enemies.map((enemy) => (
                             <TableRow key={enemy.index}>
-                              <TableCell>{rosterSimulation.power}</TableCell>
-                              <TableCell>
-                                {rosterSimulation.achievement}
-                              </TableCell>
-                              <TableCell>
-                                {rosterSimulation.average_relations}
-                              </TableCell>
-                              <TableCell>
-                                ±
-                                {
-                                  rosterSimulation.balance
-                                    .enemy_variance_percent
-                                }
-                                %
-                              </TableCell>
-                              <TableCell>
-                                {rosterSimulation.pool_quiz_count}
-                              </TableCell>
                               <TableCell>敵 {enemy.index}</TableCell>
                               <TableCell>{enemy.quiz_count}問</TableCell>
                               <TableCell>{enemy.hp}</TableCell>
                               <TableCell>{enemy.attack}</TableCell>
-                              <TableCell>
-                                {rosterSimulation.min_encounter_enemies}〜
-                                {rosterSimulation.max_encounter_enemies}体
-                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

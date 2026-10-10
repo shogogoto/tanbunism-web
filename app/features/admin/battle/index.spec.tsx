@@ -81,6 +81,10 @@ it("simulates roster sizes and enemy stats from power, achievement, and relation
   expect(
     await screen.findByRole("table", { name: "敵ステータス結果" }),
   ).toBeInTheDocument();
+  expect(screen.getByText(/条件: Power 100 · 達成度 1/)).toBeInTheDocument();
+  expect(
+    screen.getByRole("table", { name: "敵ステータス結果" }),
+  ).not.toHaveTextContent("Power");
   expect(screen.getAllByRole("row")).toHaveLength(4);
   expect(screen.getAllByText("28")).toHaveLength(1);
   expect(screen.getAllByText("30")).toHaveLength(1);
@@ -96,18 +100,17 @@ it("simulates roster sizes and enemy stats from power, achievement, and relation
   expect(screen.getAllByText("28")).toHaveLength(2);
   expect(screen.getAllByText("30")).toHaveLength(2);
   expect(screen.getAllByText("26")).toHaveLength(2);
+  expect(screen.getAllByText(/条件: Power 100 · 達成度 1/)).toHaveLength(2);
   expect(
     screen.getByRole("table", { name: "敵ロスター結果" }),
-  ).toHaveTextContent("100");
+  ).not.toHaveTextContent("Power");
   const power = screen.getByLabelText("試算するPower");
   await user.clear(power);
   await user.type(power, "250");
   expect(
     screen.getByRole("table", { name: "敵ロスター結果" }),
   ).toBeInTheDocument();
-  expect(
-    screen.getByRole("table", { name: "敵ロスター結果" }),
-  ).toHaveTextContent("100");
+  expect(screen.getAllByText(/条件: Power 100 · 達成度 1/)).toHaveLength(2);
   expect(simulated).toHaveBeenNthCalledWith(1, {
     balance: defaults,
     power: 100,
