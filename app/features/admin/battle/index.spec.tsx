@@ -25,6 +25,12 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   const user = userEvent.setup();
   const base = await screen.findByLabelText("初期持ち時間（秒）");
   expect(base).toHaveValue(45);
+  expect(
+    screen.getByRole("table", { name: "ゲームバランス設定" }),
+  ).toBeInTheDocument();
+  expect(screen.getAllByRole("spinbutton")).toHaveLength(19);
+  expect(base).toHaveAttribute("min", "5");
+  expect(base).toHaveAttribute("max", "300");
   const weight = screen.getByLabelText("PowerのHP補正");
   await user.clear(weight);
   await user.type(weight, "2");
@@ -32,7 +38,9 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
     screen.queryByLabelText("単文組 → 関係の重み"),
   ).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "保存" }));
-  expect(await screen.findByText("戦闘設定を保存しました")).toBeInTheDocument();
+  expect(
+    await screen.findByText("ゲーム設定を保存しました"),
+  ).toBeInTheDocument();
   expect(saved).toHaveBeenCalledWith({ ...defaults, power_hp: 2 });
 });
 it("reports failures without claiming settings were saved", async () => {
@@ -46,7 +54,9 @@ it("reports failures without claiming settings were saved", async () => {
   await screen.findByLabelText("初期持ち時間（秒）");
   await userEvent.setup().click(screen.getByRole("button", { name: "保存" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(
-    "戦闘設定を操作できませんでした。",
+    "ゲーム設定を操作できませんでした。",
   );
-  expect(screen.queryByText("戦闘設定を保存しました")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("ゲーム設定を保存しました"),
+  ).not.toBeInTheDocument();
 });

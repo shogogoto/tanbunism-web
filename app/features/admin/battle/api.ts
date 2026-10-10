@@ -14,6 +14,6 @@ export async function requestBattleSettings(
       body: JSON.stringify(settings),
     }),
   });
-  if (!response.ok) throw new Error("戦闘設定を操作できませんでした。");
+  if (!response.ok) throw new Error("ゲーム設定を操作できませんでした。");
   return response.json();
 }

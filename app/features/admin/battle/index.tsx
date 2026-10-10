@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/shared/components/ui/table";
 import { type BattleSettings, requestBattleSettings } from "./api";
 
 const fields = {
@@ -25,6 +33,36 @@ const fields = {
   max_enemies: ["同時出現数の上限", 1, 20, 1],
   regions_per_enemy: ["敵数が増える領域間隔", 1, 100, 1],
 } as const;
+const groups = [
+  {
+    label: "プレイヤーの初期値",
+    keys: ["base_hp", "base_attack", "base_defense", "base_seconds"],
+  },
+  {
+    label: "育成ポイントあたりの上昇量",
+    keys: [
+      "hp_per_point",
+      "attack_per_point",
+      "defense_per_point",
+      "seconds_per_point",
+    ],
+  },
+  {
+    label: "敵の能力",
+    keys: [
+      "enemy_hp",
+      "enemy_attack",
+      "power_hp",
+      "power_attack",
+      "relation_hp",
+      "relation_attack",
+      "relation_cap",
+      "region_hp",
+      "region_attack",
+    ],
+  },
+  { label: "敵の出現数", keys: ["max_enemies", "regions_per_enemy"] },
+] as const;
 export default function BattleSettingsManager() {
   const [settings, setSettings] = useState<BattleSettings>();
   const [error, setError] = useState<string>();
@@ -45,7 +83,7 @@ export default function BattleSettingsManager() {
     };
   }, []);
   return (
-    <section className="mx-auto max-w-xl space-y-4 p-4 sm:p-6">
+    <section className="mx-auto max-w-3xl space-y-4 p-4 sm:p-6">
       <h2 className="text-lg font-semibold">ゲームバランス</h2>
       <p className="text-sm text-muted-foreground">
         敵の能力 = 基礎値 + log(1 + Power) × 補正 + 関係数 × 補正 + 領域 ×
@@ -56,7 +94,7 @@ export default function BattleSettingsManager() {
           {error}
         </p>
       )}
-      {saved && <output className="block">戦闘設定を保存しました</output>}
+      {saved && <output className="block">ゲーム設定を保存しました</output>}
       {settings && (
         <form
           className="space-y-4"
@@ -74,32 +112,62 @@ export default function BattleSettingsManager() {
               .finally(() => setSaving(false));
           }}
         >
-          {Object.entries(fields).map(([key, [label, min, max, step]]) => {
-            const kind = key as keyof BattleSettings;
-            return (
-              <div key={kind} className="space-y-2">
-                <Label htmlFor={`battle-${kind}`}>{label}</Label>
-                <div className="flex items-center gap-3">
-                  <Input
-                    id={`battle-${kind}`}
-                    type="number"
-                    min={min}
-                    max={max}
-                    step={step}
-                    required
-                    disabled={saving}
-                    value={settings[kind]}
-                    onChange={(event) =>
-                      setSettings({
-                        ...settings,
-                        [kind]: Number(event.target.value),
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            );
-          })}
+          <Table aria-label="ゲームバランス設定" className="table-fixed">
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">項目</TableHead>
+                <TableHead scope="col" className="w-28">
+                  設定値
+                </TableHead>
+                <TableHead scope="col" className="hidden w-28 sm:table-cell">
+                  範囲
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            {groups.map((group) => (
+              <TableBody key={group.label}>
+                <TableRow className="bg-muted/50">
+                  <TableHead colSpan={3} scope="colgroup">
+                    {group.label}
+                  </TableHead>
+                </TableRow>
+                {group.keys.map((kind) => {
+                  const [label, min, max, step] = fields[kind];
+                  return (
+                    <TableRow key={kind}>
+                      <TableHead scope="row" className="whitespace-normal py-2">
+                        <Label htmlFor={`battle-${kind}`}>{label}</Label>
+                        <span className="mt-1 block text-xs font-normal text-muted-foreground sm:hidden">
+                          {min}–{max}
+                        </span>
+                      </TableHead>
+                      <TableCell>
+                        <Input
+                          id={`battle-${kind}`}
+                          type="number"
+                          min={min}
+                          max={max}
+                          step={step}
+                          required
+                          disabled={saving}
+                          value={settings[kind]}
+                          onChange={(event) =>
+                            setSettings({
+                              ...settings,
+                              [kind]: Number(event.target.value),
+                            })
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="hidden text-muted-foreground sm:table-cell">
+                        {min}–{max}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            ))}
+          </Table>
           <Button disabled={saving} type="submit">
             {saving ? "保存中…" : "保存"}
           </Button>

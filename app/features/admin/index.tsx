@@ -48,7 +48,7 @@ export default function Admin() {
           <TabsTrigger value="users">ユーザー</TabsTrigger>
           <TabsTrigger value="workload">負荷制御</TabsTrigger>
           <TabsTrigger value="levels">レベル</TabsTrigger>
-          <TabsTrigger value="battle">戦闘</TabsTrigger>
+          <TabsTrigger value="battle">ゲーム</TabsTrigger>
           <TabsTrigger value="power">Power</TabsTrigger>
           <TabsTrigger value="pagerank">PageRank</TabsTrigger>
           <TabsTrigger value="images">画像</TabsTrigger>
