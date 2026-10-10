@@ -1,4 +1,5 @@
-import { Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -82,6 +83,45 @@ const emptyPreparations: StudyPlanPreparationStatus[] = [];
 const PLACES_PER_REGION = 5;
 const normalizeResourceId = (resourceId: string) =>
   resourceId.replaceAll("-", "").toLowerCase();
+type SortColumn =
+  | "name"
+  | "resource"
+  | "achievement"
+  | "prepared"
+  | "options"
+  | QuizType;
+type SortState = { column: SortColumn; direction: "ascending" | "descending" };
+
+function SortableHeader({
+  children,
+  column,
+  className,
+  sort,
+  onSort,
+}: {
+  children: ReactNode;
+  column: SortColumn;
+  className?: string;
+  sort?: SortState;
+  onSort: (column: SortColumn) => void;
+}) {
+  const direction = sort?.column === column ? sort.direction : "none";
+  const Icon = direction === "ascending" ? ArrowUp : ArrowDown;
+  return (
+    <TableHead className={className} aria-sort={direction}>
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className="inline-flex items-center justify-center gap-1 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {children}
+        {direction !== "none" && (
+          <Icon className="size-3 shrink-0" aria-hidden="true" />
+        )}
+      </button>
+    </TableHead>
+  );
+}
 
 export default function StudyPlanManager() {
   const isMobile = useIsMobile(1024);
@@ -119,6 +159,7 @@ export default function StudyPlanManager() {
     "delete" | "types" | "prepare"
   >();
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortState>();
   const [currentPlanId, setCurrentPlanId] = useState<string>();
   const [preparingId, setPreparingId] = useState<string>();
   const [additionalCounts, setAdditionalCounts] = useState<
@@ -225,7 +266,7 @@ export default function StudyPlanManager() {
   const selectedPlan =
     selectedPlans.length === 1 ? selectedPlans[0] : undefined;
   const normalizedQuery = query.trim().toLocaleLowerCase();
-  const filteredPlans = useMemo(
+  const matchingPlans = useMemo(
     () =>
       plans.filter((plan) => {
         if (!normalizedQuery) return true;
@@ -242,6 +283,78 @@ export default function StudyPlanManager() {
       }),
     [plans, normalizedQuery, resourceNames],
   );
+  const filteredPlans = useMemo(() => {
+    if (!sort) return matchingPlans;
+    const direction = sort.direction === "ascending" ? 1 : -1;
+    const valueFor = (plan: StudyPlan): string | number | boolean | null => {
+      switch (sort.column) {
+        case "name":
+          return plan.name;
+        case "resource":
+          return plan.resource_ids
+            .map(
+              (resourceId) =>
+                resourceNames.get(normalizeResourceId(resourceId)) ??
+                "不明なResource",
+            )
+            .join(" ");
+        case "achievement":
+          return plan.resource_ids.length === 1
+            ? (adventureAchievements[
+                normalizeResourceId(plan.resource_ids[0])
+              ] ?? 0)
+            : null;
+        case "prepared":
+          return preparedCounts[plan.uid] ?? 0;
+        case "options":
+          return plan.n_option;
+        default:
+          return plan.quiz_types.includes(sort.column);
+      }
+    };
+    const compare = (
+      left: string | number | boolean | null,
+      right: string | number | boolean | null,
+    ) => {
+      if (left === null) return right === null ? 0 : 1;
+      if (right === null) return -1;
+      if (typeof left === "string" && typeof right === "string") {
+        return left.localeCompare(right, "ja");
+      }
+      return Number(left) - Number(right);
+    };
+    const originalOrder = new Map(
+      matchingPlans.map((plan, index) => [plan.uid, index]),
+    );
+    return [...matchingPlans].sort((left, right) => {
+      const leftValue = valueFor(left);
+      const rightValue = valueFor(right);
+      const comparison = compare(leftValue, rightValue);
+      if (comparison === 0) {
+        return (
+          (originalOrder.get(left.uid) ?? 0) -
+          (originalOrder.get(right.uid) ?? 0)
+        );
+      }
+      if (leftValue === null || rightValue === null) return comparison;
+      return comparison * direction;
+    });
+  }, [
+    adventureAchievements,
+    matchingPlans,
+    preparedCounts,
+    resourceNames,
+    sort,
+  ]);
+  function toggleSort(column: SortColumn) {
+    setSort((current) => ({
+      column,
+      direction:
+        current?.column === column && current.direction === "ascending"
+          ? "descending"
+          : "ascending",
+    }));
+  }
   const currentPlan =
     filteredPlans.find(({ uid }) => uid === currentPlanId) ?? filteredPlans[0];
   const actionPlan =
@@ -894,19 +1007,57 @@ export default function StudyPlanManager() {
                         }
                       />
                     </TableHead>
-                    <TableHead className="w-36">Plan</TableHead>
-                    <TableHead className="w-44">Resource</TableHead>
-                    <TableHead className="w-16 text-center">達成度</TableHead>
-                    <TableHead className="w-16 text-center">準備済み</TableHead>
-                    <TableHead className="w-14 text-center">選択肢</TableHead>
+                    <SortableHeader
+                      column="name"
+                      className="w-36"
+                      sort={sort}
+                      onSort={toggleSort}
+                    >
+                      Plan
+                    </SortableHeader>
+                    <SortableHeader
+                      column="resource"
+                      className="w-44"
+                      sort={sort}
+                      onSort={toggleSort}
+                    >
+                      Resource
+                    </SortableHeader>
+                    <SortableHeader
+                      column="achievement"
+                      className="w-16 text-center"
+                      sort={sort}
+                      onSort={toggleSort}
+                    >
+                      達成度
+                    </SortableHeader>
+                    <SortableHeader
+                      column="prepared"
+                      className="w-16 text-center"
+                      sort={sort}
+                      onSort={toggleSort}
+                    >
+                      準備済み
+                    </SortableHeader>
+                    <SortableHeader
+                      column="options"
+                      className="w-14 text-center"
+                      sort={sort}
+                      onSort={toggleSort}
+                    >
+                      選択肢
+                    </SortableHeader>
                     {quizTypeColumns.map(({ type, from, to }) => (
-                      <TableHead
+                      <SortableHeader
                         key={type}
+                        column={type}
                         className="w-20 whitespace-normal text-center text-[11px] leading-tight"
+                        sort={sort}
+                        onSort={toggleSort}
                       >
                         <span className="block">{from}</span>
                         <span className="block">→{to}</span>
-                      </TableHead>
+                      </SortableHeader>
                     ))}
                   </TableRow>
                 </TableHeader>
