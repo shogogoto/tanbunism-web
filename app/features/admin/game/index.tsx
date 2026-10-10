@@ -166,6 +166,13 @@ function GameDungeonManager() {
         target.user_id,
         target.resource_id,
       );
+      if (result.preparing) {
+        toast.success(
+          "クイズをStudyPlanで準備しています。完了後に母集団と敵セットを自動更新します。",
+        );
+        setTarget(undefined);
+        return;
+      }
       toast.success(
         result.region_count
           ? `${result.region_count}領域・クイズ${result.quiz_count}問の母集団と敵セットを再選出しました`

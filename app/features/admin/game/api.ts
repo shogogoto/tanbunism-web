@@ -20,6 +20,7 @@ export type EnemyPoolRebuildResult = {
   dungeon_count: number;
   region_count: number;
   quiz_count: number;
+  preparing?: boolean;
 };
 
 const API_BASE_URL =
