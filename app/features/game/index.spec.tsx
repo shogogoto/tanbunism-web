@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -13,7 +13,7 @@ import { SWRConfig, useSWRConfig } from "swr";
 import { beforeEach, expect, it, vi } from "vitest";
 import { markTanbunSeen } from "~/features/review/api";
 import { GamePlay } from ".";
-import GameHeaderTabs from "./GameHeaderTabs";
+
 import { adventureAccessKey } from "./access";
 import { loadDungeon, validateKnowledge } from "./api";
 import { defaultBalance } from "./battle";
@@ -295,7 +295,6 @@ function renderGame(path = "/game/adventure") {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <SWRConfig value={{ provider: () => new Map() }}>
-        <GameHeaderTabs />
         <Routes>
           <Route
             path="/game/:menu?"
@@ -426,56 +425,7 @@ it("persists continuing a completed lap without spending another adventure right
     screen.queryByRole("button", { name: "探索を続ける" }),
   ).not.toBeInTheDocument();
 });
-it("switches game tabs with arrow keys without resetting the adventure", async () => {
-  state = {
-    revision: 1,
-    save: enterDungeon(newSave(), "book", "テストの本", 1),
-  };
-  renderGame();
-  await screen.findByText("HP 35/35");
-  const user = userEvent.setup();
-  act(() => screen.getByRole("tab", { name: "冒険" }).focus());
-  await user.keyboard("{ArrowRight}");
-  expect(screen.getByRole("tab", { name: "ステータス" })).toHaveFocus();
-  await waitFor(() =>
-    expect(screen.getByTestId("pathname")).toHaveTextContent("/game/status"),
-  );
-  expect(screen.getByText("プレイヤー名")).toBeInTheDocument();
-  await user.keyboard("{End}");
-  expect(screen.getByRole("tab", { name: "アイテム" })).toHaveFocus();
-  await waitFor(() =>
-    expect(screen.getByTestId("pathname")).toHaveTextContent("/game/item"),
-  );
-  await user.keyboard("{Home}");
-  expect(screen.getByRole("tab", { name: "冒険" })).toHaveFocus();
-  expect(await screen.findByText("HP 35/35")).toBeInTheDocument();
-  expect(stateLoadCount).toBe(1);
-  expect(state.revision).toBe(1);
-});
 
-it("shows compact header tabs beside adventure access without a duplicate title", async () => {
-  renderGame();
-  expect(await screen.findByText("冒険可能")).toBeVisible();
-  const tabs = screen.getByRole("tablist", { name: "ゲームメニュー" });
-  expect(tabs.querySelector("[data-dashboard-tab-indicator]")).toHaveAttribute(
-    "data-active-tab",
-    "adventure",
-  );
-  expect(
-    screen.queryByRole("heading", { name: "ゲーム" }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByText("冒険権は毎時00分・30分に回復します。"),
-  ).not.toBeInTheDocument();
-  expect(tabs.parentElement?.parentElement).toContainElement(
-    screen.getByText("冒険可能"),
-  );
-  expect(within(tabs).getAllByRole("tab")).toHaveLength(3);
-  expect(screen.getByText("冒険可能")).toHaveAttribute(
-    "title",
-    "冒険権は毎時00分・30分に回復します。",
-  );
-});
 function HistoryControls() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -607,45 +557,6 @@ it("abandoned timed-out combat retreats only once and preserves feedback across 
   expect(state.save.battleFeedback).toBeUndefined();
 });
 
-it("keeps tabs and preserves the adventure across navigation and browser history", async () => {
-  const save = enterDungeon(newSave(), "book", "テストの本", 1);
-  state = { revision: 1, save };
-  renderGame();
-  const user = userEvent.setup();
-  await screen.findByText("HP 35/35");
-  expect(screen.getByRole("tab", { name: "冒険" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  expect(
-    screen.queryByRole("button", { name: "行き先を変更する" }),
-  ).not.toBeInTheDocument();
-  await user.click(screen.getByRole("tab", { name: "ステータス" }));
-  expect(screen.getByTestId("pathname")).toHaveTextContent("/game/status");
-  expect(screen.getByText("ダンジョン攻略 0周")).toBeInTheDocument();
-  await user.click(screen.getByRole("tab", { name: "アイテム" }));
-  expect(screen.getByTestId("pathname")).toHaveTextContent("/game/item");
-  expect(
-    screen.getByText(/武器・アイテム機能は今後追加予定/),
-  ).toBeInTheDocument();
-  expect(state.revision).toBe(1);
-  expect(state.save.run?.hp).toBe(35);
-  await user.click(screen.getByRole("button", { name: "ブラウザで戻る" }));
-  expect(screen.getByTestId("pathname").textContent).toBe("/game/status");
-  expect(screen.getByRole("tab", { name: "ステータス" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await user.click(screen.getByRole("button", { name: "ブラウザで戻る" }));
-  expect(screen.getByTestId("pathname").textContent).toBe("/game/adventure");
-  expect(screen.getByText("HP 35/35")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "ブラウザで進む" }));
-  await user.click(screen.getByRole("button", { name: "ブラウザで進む" }));
-  expect(screen.getByTestId("pathname").textContent).toBe("/game/item");
-  expect(stateLoadCount).toBe(1);
-  expect(consumeCount).toBe(0);
-});
-
 it.each([false, true])(
   "opens allocation from the map HP bar (fullscreen: %s) without spending moves",
   async (fullscreen) => {
@@ -684,18 +595,19 @@ it.each([false, true])(
       await user.click(
         screen.getByRole("button", { name: "マップを全画面表示" }),
       );
-    const hp = screen.getByRole("link", {
+    const hp = screen.getByRole("button", {
       name: "プレイヤーのステータス・育成ポイントを開く",
     });
     expect(
       within(hp).getByRole("progressbar", { name: "プレイヤーHP" }),
     ).toBeVisible();
-    hp.focus();
-    await user.keyboard("{Enter}");
-    expect(screen.getByTestId("pathname")).toHaveTextContent("/game/status");
-    expect(
-      screen.queryByRole("dialog", { name: "冒険マップ" }),
-    ).not.toBeInTheDocument();
+    if (fullscreen) await user.click(hp);
+    else {
+      hp.focus();
+      await user.keyboard("{Enter}");
+    }
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/game/adventure");
+    expect(screen.getByRole("dialog", { name: "ステータス" })).toBeVisible();
     expect(await screen.findByText("育成ポイント 3 / 3")).toBeVisible();
     const input = screen.getByRole("spinbutton", { name: "HP" });
     await user.clear(input);
@@ -703,7 +615,12 @@ it.each([false, true])(
     await user.click(screen.getByRole("button", { name: "割り振りを保存" }));
     await screen.findByText("現在のHP 35/50");
     expect(requests).toEqual([{ hp: 3, attack: 0, defense: 0, seconds: 0 }]);
-    await user.click(screen.getByRole("button", { name: "ブラウザで戻る" }));
+    await user.keyboard("{Escape}");
+    expect(
+      screen.queryByRole("dialog", { name: "ステータス" }),
+    ).not.toBeInTheDocument();
+    if (fullscreen)
+      expect(screen.getByRole("dialog", { name: "冒険マップ" })).toBeVisible();
     expect(await screen.findByText("HP 35/50")).toBeVisible();
     expect(state.save.run?.moves).toBe(0);
     expect(consumeCount).toBe(0);
@@ -719,11 +636,8 @@ it.each(["/game/status", "/game/status/"])(
     };
     renderGame(path);
     expect(await screen.findByText("ダンジョン攻略 0周")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "ステータス" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    expect(screen.getByRole("dialog", { name: "ステータス" })).toBeVisible();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(state.save.run?.hp).toBe(35);
     expect(state.revision).toBe(1);
   },
@@ -736,6 +650,20 @@ it("opens the item URL directly", async () => {
   ).toBeInTheDocument();
 });
 
+it("shows recovery beside remaining steps instead of a tab header", async () => {
+  available = false;
+  state = {
+    revision: 1,
+    save: enterDungeon(newSave(), "book", "テストの本", 1),
+  };
+  renderGame();
+  const recovery = await screen.findByText(/回復まで .*分/);
+  expect(recovery.closest("aside")).toContainElement(
+    screen.getByLabelText("残り移動数"),
+  );
+  expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+});
+
 it("selects a destination when adventure is opened directly", async () => {
   renderGame("/game/adventure");
   const user = userEvent.setup();
@@ -744,8 +672,12 @@ it("selects a destination when adventure is opened directly", async () => {
   );
   expect(state.save.run?.resourceId).toBe("book");
   expect(consumeCount).toBe(1);
-  await user.click(screen.getByRole("tab", { name: "ステータス" }));
-  await user.click(screen.getByRole("button", { name: "ブラウザで戻る" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: "プレイヤーのステータス・育成ポイントを開く",
+    }),
+  );
+  await user.keyboard("{Escape}");
   expect(screen.getByTestId("pathname").textContent).toBe("/game/adventure");
   expect(
     screen.getByRole("button", { name: /未探索.*進路の用語/ }),

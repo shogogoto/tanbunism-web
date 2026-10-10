@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import {
@@ -25,6 +25,9 @@ export default function StatEditor({
   onSaved: (state: GameState) => void;
 }) {
   const [draft, setDraft] = useState(allocation ?? emptyAllocation);
+  useEffect(() => {
+    setDraft(allocation ?? emptyAllocation);
+  }, [allocation]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const budget = Math.max(0, level - 1) * 3;

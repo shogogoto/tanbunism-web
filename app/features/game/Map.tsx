@@ -41,6 +41,7 @@ export default function ExplorationMap({
   title,
   status,
   remainingMoves,
+  recoveryStatus,
   playerStatus,
   children,
 }: {
@@ -57,6 +58,7 @@ export default function ExplorationMap({
   title?: string;
   status?: ReactNode;
   remainingMoves?: number;
+  recoveryStatus?: ReactNode;
   playerStatus?: ReactNode;
   children?: ReactNode;
 }) {
@@ -272,7 +274,7 @@ export default function ExplorationMap({
     <section
       ref={mapElement}
       aria-label="ダンジョンのマップ"
-      className={`relative isolate min-w-0 overflow-hidden bg-background ${fullscreen ? "h-dvh w-full" : "h-[calc(100dvh-11rem)] min-h-[440px] rounded-xl border sm:h-[calc(100dvh-7rem)]"}`}
+      className={`relative isolate min-w-0 overflow-hidden bg-background ${fullscreen ? "h-dvh w-full" : "h-[calc(100dvh-8rem)] min-h-[440px] rounded-xl border sm:h-[calc(100dvh-5rem)]"}`}
     >
       <div
         ref={viewport}
@@ -521,6 +523,11 @@ export default function ExplorationMap({
             </output>
           )}
           {status && <div className="mt-1 text-center">{status}</div>}
+          {recoveryStatus && (
+            <div className="mt-2 text-center text-xs text-muted-foreground">
+              {recoveryStatus}
+            </div>
+          )}
         </aside>
       )}
       <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col items-center gap-2">

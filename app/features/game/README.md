@@ -7,7 +7,7 @@ QuizAttempt, including real answers, reports, previews, and XP invalidation.
 First playable slice: resource-scoped dungeon, three knowledge paths, 65% encounter
 chance, turn-based correct-answer damage, wrong-answer player damage, five moves
 per event (including finishing the final encounter), three enemies per clear.
-Player Lv affects HP/attack/defense. No in-dungeon healing. Adventure rights recover
+Player Lv grants allocation points; stats only grow through allocation. No in-dungeon healing. Adventure rights recover
 at each clock :00/:30 boundary, capacity one; ongoing HP/kills persist between events.
 An active outing automatically calls the server's atomic `/game/state/recover`
 when a clock slot becomes available (including after reopening). Remaining steps
@@ -26,10 +26,11 @@ Dungeon switching parks the run on the server, never resetting HP or learning XP
 Dungeon clearing counts laps, not resource levels.
 
 Numbers are provisional balancing constants, not a finalized level design.
-The entrance `/game` links to `/game/adventure`, `/game/status`, and `/game/item`.
-Menu changes use browser history, so Back/Forward restores the previous section;
-direct links and reloads open the same section. The shared game component stays
-mounted across menu changes, preserving the adventure and its battle timer.
+Game tabs are removed. The map's lower-left player HP opens a floating stat editor
+without navigating or leaving fullscreen. Escape closes only that editor.
+The entrance offers status/item buttons; legacy `/game/status` and `/game/item`
+links open the corresponding floating panel over the adventure. Recovery status
+appears next to the map's remaining-step HUD (or at the entrance).
 Adventure resumes the current
 dungeon; new destinations appear only after explicitly opening the destination picker.
 Items are a placeholder, not implemented weapons.

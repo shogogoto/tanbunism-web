@@ -13,6 +13,13 @@ import { canonicalSentenceId } from "~/features/tanbun/detail/cache";
 import UserAvatar from "~/features/user/UserAvatar";
 import Loading from "~/shared/components/Loading";
 import { Button } from "~/shared/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "~/shared/components/ui/dialog";
 import { Input } from "~/shared/components/ui/input";
 import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
@@ -84,8 +91,18 @@ export function GamePlay({
   const [stateLoaded, setStateLoaded] = useState(false);
   const revision = useRef(0);
   const { menu: routeMenu } = useParams();
-  const menu = routeMenu ?? "adventure";
+  const [panel, setPanel] = useState<string | undefined>(
+    routeMenu === "status" || routeMenu === "item" ? routeMenu : undefined,
+  );
   const navigate = useNavigate();
+  useEffect(() => {
+    if (routeMenu === "status" || routeMenu === "item") setPanel(routeMenu);
+  }, [routeMenu]);
+  function closePanel() {
+    setPanel(undefined);
+    if (routeMenu === "status" || routeMenu === "item")
+      void navigate("/game/adventure", { replace: true });
+  }
   const [showDestinations, setShowDestinations] = useState(false);
   const [legacy, setLegacy] = useState<GameSave>();
   const [now, setNow] = useState(Date.now);
@@ -119,12 +136,12 @@ export function GamePlay({
   const access = useAdventureAccess(userId);
   const { data: growth, error: growthError } = useResourceGrowth();
   useEffect(() => {
-    if (!stateLoaded || menu !== "adventure" || save.run || selectedId) return;
+    if (!stateLoaded || save.run || selectedId) return;
     const recommended = [...(growth?.resources ?? [])].sort((a, b) =>
       (a.last_reviewed_on ?? "").localeCompare(b.last_reviewed_on ?? ""),
     )[0];
     if (recommended) setSelectedId(recommended.resource_id);
-  }, [stateLoaded, menu, save.run, selectedId, growth]);
+  }, [stateLoaded, save.run, selectedId, growth]);
   const progress = useGetLearningProgressUserUserIdLearningProgressGet(userId, {
     fetch: { credentials: "include" },
   });
@@ -520,12 +537,34 @@ export function GamePlay({
     const resource = resources.find((item) => item.resource_id === id);
     return resource ? [resource] : [];
   });
+  const recoveryStatus = (
+    <span title="冒険権は毎時00分・30分に回復します。">
+      {access.error
+        ? "冒険権を確認できません"
+        : access.data?.available
+          ? "冒険可能"
+          : access.data
+            ? `回復まで ${remainingMinutes}分`
+            : "冒険権を確認中"}
+    </span>
+  );
 
   return (
     <section
-      className={`mx-auto w-full space-y-4 p-2 pb-8 sm:p-3 ${run && menu === "adventure" ? "" : "max-w-3xl"}`}
+      className={`mx-auto w-full space-y-4 p-2 pb-8 sm:p-3 ${run ? "" : "max-w-3xl"}`}
     >
       <div className="space-y-4">
+        {!run && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setPanel("status")}>
+              ステータス
+            </Button>
+            <Button variant="outline" onClick={() => setPanel("item")}>
+              アイテム
+            </Button>
+            <div className="ml-auto text-xs">{recoveryStatus}</div>
+          </div>
+        )}
         {(error || access.error || growthError || progress.error) && (
           <p role="alert" className="text-sm text-destructive">
             {error ??
@@ -580,59 +619,8 @@ export function GamePlay({
             この端末の旧冒険を引き継ぐ
           </Button>
         )}
-        <div
-          className="space-y-4"
-          role="tabpanel"
-          aria-label={
-            menu === "status"
-              ? "ステータス"
-              : menu === "item"
-                ? "アイテム"
-                : "冒険"
-          }
-        >
-          {menu === "status" ? (
-            <div className="rounded-lg border p-4 space-y-3">
-              <h2 className="font-semibold">ステータス</h2>
-              <div className="flex items-center gap-2">
-                <UserAvatar user={player} className="size-9 shrink-0" />
-                <span className="min-w-0 truncate">
-                  {playerName ?? "あなた"}
-                </span>
-              </div>
-              <p>Lv. {level ?? "—"}</p>
-              {run && (
-                <p>
-                  現在のHP {run.hp}/{run.maxHp}
-                </p>
-              )}
-              {level && stateLoaded && (
-                <StatEditor
-                  key={JSON.stringify(save.allocation)}
-                  level={level}
-                  allocation={save.allocation}
-                  balance={balance ?? defaultBalance}
-                  inBattle={run?.phase === "battle"}
-                  onSaved={applyState}
-                />
-              )}
-              <p>
-                ダンジョン攻略{" "}
-                {Object.values(save.clears).reduce(
-                  (sum, value) => sum + value,
-                  0,
-                )}
-                周
-              </p>
-            </div>
-          ) : menu === "item" ? (
-            <div className="rounded-lg border p-4 space-y-2">
-              <h2 className="font-semibold">アイテム</h2>
-              <p className="text-sm text-muted-foreground">
-                まだアイテムはありません。武器・アイテム機能は今後追加予定です。
-              </p>
-            </div>
-          ) : !run ? (
+        <section className="space-y-4" aria-label="冒険">
+          {!run ? (
             <>
               <p className="text-sm text-muted-foreground">
                 知識を読んで進み、クイズの敵と戦う。敵{ENEMIES_TO_CLEAR}
@@ -816,14 +804,16 @@ export function GamePlay({
                   player={player}
                   title={run.name}
                   remainingMoves={Math.max(0, MOVES_PER_EVENT - run.moves)}
+                  recoveryStatus={recoveryStatus}
                   status={
                     <p className="text-xs text-muted-foreground">
                       撃破 {run.kills}/{ENEMIES_TO_CLEAR}
                     </p>
                   }
                   playerStatus={
-                    <Link
-                      to="/game/status"
+                    <Button
+                      variant="ghost"
+                      onClick={() => setPanel("status")}
                       aria-label="プレイヤーのステータス・育成ポイントを開く"
                       title="ステータス・育成ポイント"
                       className="-mx-3 -my-2 flex min-h-11 items-center rounded-lg px-3 py-2 outline-none hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -834,7 +824,7 @@ export function GamePlay({
                         name={playerName}
                         player={player}
                       />
-                    </Link>
+                    </Button>
                   }
                   candidates={
                     !feedback && run.phase === "path"
@@ -1003,7 +993,7 @@ export function GamePlay({
               )}
             </>
           )}
-        </div>
+        </section>
       </div>
       {localBattle.current &&
         content &&
@@ -1046,6 +1036,60 @@ export function GamePlay({
           />
         )}
       {preview}
+      <Dialog
+        open={Boolean(panel)}
+        onOpenChange={(open) => {
+          if (!open) closePanel();
+        }}
+      >
+        <DialogContent
+          className="max-h-[90dvh] overflow-y-auto sm:max-w-lg"
+          data-dashboard-swipe-ignore
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {panel === "item" ? "アイテム" : "ステータス"}
+            </DialogTitle>
+            <DialogDescription>
+              {panel === "item"
+                ? "武器・アイテム機能は今後追加予定です。"
+                : "育成ポイントを割り振れます。振り直しは無料です。"}
+            </DialogDescription>
+          </DialogHeader>
+          {panel === "status" && (
+            <>
+              <div className="flex items-center gap-2">
+                <UserAvatar user={player} className="size-9 shrink-0" />
+                <span>
+                  {playerName ?? "あなた"} · Lv. {level ?? "—"}
+                </span>
+              </div>
+              {run && (
+                <p>
+                  現在のHP {run.hp}/{run.maxHp}
+                </p>
+              )}
+              {level && stateLoaded && (
+                <StatEditor
+                  level={level}
+                  allocation={save.allocation}
+                  balance={balance ?? defaultBalance}
+                  inBattle={run?.phase === "battle"}
+                  onSaved={applyState}
+                />
+              )}
+              <p>
+                ダンジョン攻略{" "}
+                {Object.values(save.clears).reduce(
+                  (sum, value) => sum + value,
+                  0,
+                )}
+                周
+              </p>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
