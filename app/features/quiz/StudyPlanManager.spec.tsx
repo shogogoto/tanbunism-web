@@ -21,6 +21,10 @@ vi.mock("~/features/notifications/NotificationProvider", () => ({
   }),
 }));
 
+vi.mock("~/features/game/state", () => ({
+  requestGameState: vi.fn().mockResolvedValue({ revision: 0, save: {} }),
+}));
+
 vi.mock("./api", () => ({
   deleteStudyPlan: vi.fn(),
   listStudyPlanPreparations: vi.fn(),
@@ -105,6 +109,7 @@ it("PlanとResourceを省略可能な表として表示する", async () => {
     screen.getByText("とても長いResource名").closest("[title]"),
   ).toHaveAttribute("title", "とても長いResource名");
   expect(screen.queryByRole("columnheader", { name: "操作" })).toBeNull();
+  expect(screen.getByRole("columnheader", { name: "達成度" })).toBeVisible();
   expect(screen.getByRole("columnheader", { name: "準備済み" })).toBeVisible();
   expect(screen.queryByRole("columnheader", { name: "1回" })).toBeNull();
   expect(screen.getByRole("columnheader", { name: "選択肢" })).toBeVisible();

@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
+import { requestGameState } from "~/features/game/state";
 import { useNotifications } from "~/features/notifications/NotificationProvider";
 import Loading from "~/shared/components/Loading";
 import {
@@ -78,6 +79,9 @@ const quizTypeColumns: Array<{
 const emptyPlans: StudyPlan[] = [];
 const emptyResources: StudyResource[] = [];
 const emptyPreparations: StudyPlanPreparationStatus[] = [];
+const PLACES_PER_REGION = 5;
+const normalizeResourceId = (resourceId: string) =>
+  resourceId.replaceAll("-", "").toLowerCase();
 
 export default function StudyPlanManager() {
   const isMobile = useIsMobile(1024);
@@ -121,8 +125,47 @@ export default function StudyPlanManager() {
     Record<string, number>
   >({});
   const [error, setError] = useState<string>();
+  const [adventureAchievements, setAdventureAchievements] = useState<
+    Record<string, number>
+  >({});
   const rowRefs = useRef(new Map<string, HTMLElement>());
   const latestPreparationNotificationId = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    let active = true;
+    void requestGameState()
+      .then(({ save }) => {
+        const placeCounts = new Map<string, number>();
+        for (const [resourceId, map] of Object.entries(save.maps ?? {})) {
+          placeCounts.set(normalizeResourceId(resourceId), map.places.length);
+        }
+        if (save.run) {
+          const key = normalizeResourceId(save.run.resourceId);
+          if (!placeCounts.has(key))
+            placeCounts.set(key, save.run.readIds.length);
+        }
+        for (const dungeon of Object.values(save.dungeons ?? {})) {
+          const key = normalizeResourceId(dungeon.run.resourceId);
+          if (!placeCounts.has(key)) {
+            placeCounts.set(key, dungeon.run.readIds.length);
+          }
+        }
+        if (active) {
+          setAdventureAchievements(
+            Object.fromEntries(
+              [...placeCounts].map(([resourceId, count]) => [
+                resourceId,
+                Math.floor(count / PLACES_PER_REGION),
+              ]),
+            ),
+          );
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const latest = notifications.find(
@@ -853,6 +896,7 @@ export default function StudyPlanManager() {
                     </TableHead>
                     <TableHead className="w-36">Plan</TableHead>
                     <TableHead className="w-44">Resource</TableHead>
+                    <TableHead className="w-16 text-center">達成度</TableHead>
                     <TableHead className="w-16 text-center">準備済み</TableHead>
                     <TableHead className="w-14 text-center">選択肢</TableHead>
                     {quizTypeColumns.map(({ type, from, to }) => (
@@ -869,7 +913,7 @@ export default function StudyPlanManager() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={5 + quizTypeColumns.length}>
+                      <TableCell colSpan={6 + quizTypeColumns.length}>
                         <Loading />
                       </TableCell>
                     </TableRow>
@@ -933,6 +977,13 @@ export default function StudyPlanManager() {
                               );
                             })}
                           </div>
+                        </TableCell>
+                        <TableCell className="text-center tabular-nums">
+                          {plan.resource_ids.length === 1
+                            ? (adventureAchievements[
+                                normalizeResourceId(plan.resource_ids[0])
+                              ] ?? 0)
+                            : "—"}
                         </TableCell>
                         <TableCell className="text-center tabular-nums">
                           {preparedCounts[plan.uid] ?? 0}
