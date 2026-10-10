@@ -1,3 +1,4 @@
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import Loading from "~/shared/components/Loading";
@@ -30,6 +31,40 @@ const quizTypeLabels: Record<QuizType, string> = {
 
 const answerRowGrid =
   "grid grid-cols-[4rem_4.5rem_minmax(0,1fr)_5rem] md:grid-cols-[4.5rem_7rem_minmax(0,3fr)_minmax(0,1fr)_7rem_4rem]";
+
+type SortColumn = "result" | "type" | "question" | "resource" | "created";
+type SortState = { column: SortColumn; direction: "ascending" | "descending" };
+
+function SortableHeader({
+  children,
+  column,
+  className,
+  sort,
+  onSort,
+}: {
+  children: React.ReactNode;
+  column: SortColumn;
+  className?: string;
+  sort?: SortState;
+  onSort: (column: SortColumn) => void;
+}) {
+  const direction = sort?.column === column ? sort.direction : "none";
+  const Icon = direction === "ascending" ? ArrowUp : ArrowDown;
+  return (
+    <th scope="col" className={className} aria-sort={direction}>
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className="inline-flex items-center gap-1 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {children}
+        {direction !== "none" && (
+          <Icon className="size-3 shrink-0" aria-hidden="true" />
+        )}
+      </button>
+    </th>
+  );
+}
 
 function formatAnswerDate(value: string): string {
   const date = new Date(value);
@@ -65,6 +100,7 @@ export default function AnswerHistory() {
     filters: { correct, quizType, resourceId },
   } = feed;
   const isLoading = loading || (!feed.loaded && !error);
+  const [sort, setSort] = useState<SortState>();
   const [resources, setResources] = useState<StudyResource[]>([]);
   useEffect(() => {
     let active = true;
@@ -88,6 +124,49 @@ export default function AnswerHistory() {
       ),
     [resources],
   );
+  const sortedItems = useMemo(() => {
+    if (!sort) return items;
+    const direction = sort.direction === "ascending" ? 1 : -1;
+    const originalOrder = new Map(
+      items.map((item, index) => [item.answer.answer_uid, index]),
+    );
+    const valueFor = (item: AnswerHistoryItem): string | number => {
+      switch (sort.column) {
+        case "result":
+          return Number(item.answer.is_correct);
+        case "type":
+          return quizTypeLabels[item.quiz_type];
+        case "question":
+          return item.quiz.statement;
+        case "resource":
+          return resourceNames.get(item.resource_id.replaceAll("-", "")) ?? "";
+        case "created":
+          return new Date(item.answer.created).getTime();
+      }
+    };
+    return [...items].sort((left, right) => {
+      const leftValue = valueFor(left);
+      const rightValue = valueFor(right);
+      const comparison =
+        typeof leftValue === "string" && typeof rightValue === "string"
+          ? leftValue.localeCompare(rightValue, "ja")
+          : Number(leftValue) - Number(rightValue);
+      return comparison === 0
+        ? (originalOrder.get(left.answer.answer_uid) ?? 0) -
+            (originalOrder.get(right.answer.answer_uid) ?? 0)
+        : comparison * direction;
+    });
+  }, [items, resourceNames, sort]);
+
+  function toggleSort(column: SortColumn) {
+    setSort((current) => ({
+      column,
+      direction:
+        current?.column === column && current.direction === "ascending"
+          ? "descending"
+          : "ascending",
+    }));
+  }
 
   return (
     <div
@@ -167,28 +246,53 @@ export default function AnswerHistory() {
           <tr
             className={`${answerRowGrid} items-center text-xs font-medium text-muted-foreground`}
           >
-            <th scope="col" className="px-2 py-2">
+            <SortableHeader
+              column="result"
+              className="px-2 py-2"
+              sort={sort}
+              onSort={toggleSort}
+            >
               結果
-            </th>
-            <th scope="col" className="px-2 py-2">
+            </SortableHeader>
+            <SortableHeader
+              column="type"
+              className="px-2 py-2"
+              sort={sort}
+              onSort={toggleSort}
+            >
               種別
-            </th>
-            <th scope="col" className="px-2 py-2">
+            </SortableHeader>
+            <SortableHeader
+              column="question"
+              className="px-2 py-2"
+              sort={sort}
+              onSort={toggleSort}
+            >
               問題
-            </th>
-            <th scope="col" className="hidden px-2 py-2 md:block">
+            </SortableHeader>
+            <SortableHeader
+              column="resource"
+              className="hidden px-2 py-2 md:block"
+              sort={sort}
+              onSort={toggleSort}
+            >
               Resource
-            </th>
-            <th scope="col" className="px-2 py-2">
+            </SortableHeader>
+            <SortableHeader
+              column="created"
+              className="px-2 py-2"
+              sort={sort}
+              onSort={toggleSort}
+            >
               回答日時
-            </th>
+            </SortableHeader>
             <th scope="col" className="hidden px-2 py-2 md:block">
               詳細
             </th>
           </tr>
         </thead>
         <tbody className="block divide-y">
-          {items.map((item) => (
+          {sortedItems.map((item) => (
             <AnswerRow
               key={item.answer.answer_uid}
               item={item}
@@ -216,9 +320,11 @@ export default function AnswerHistory() {
                   chains: { ...current.chains, [item.quiz.quiz_id]: chain },
                 }))
               }
-              isFirst={item.answer.answer_uid === items[0]?.answer.answer_uid}
+              isFirst={
+                item.answer.answer_uid === sortedItems[0]?.answer.answer_uid
+              }
               isLast={
-                item.answer.answer_uid === items.at(-1)?.answer.answer_uid
+                item.answer.answer_uid === sortedItems.at(-1)?.answer.answer_uid
               }
               onLoadNext={loadNextForKeyboard}
               resourceName={resourceNames.get(
