@@ -12,6 +12,13 @@ import {
   AlertDialogTitle,
 } from "~/shared/components/ui/alert-dialog";
 import { Button } from "~/shared/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "~/shared/components/ui/dialog";
 import { Input } from "~/shared/components/ui/input";
 import {
   Table,
@@ -95,6 +102,7 @@ function GameDungeonManager() {
     direction: "ascending",
   });
   const [target, setTarget] = useState<AdminGameDungeon>();
+  const [poolTarget, setPoolTarget] = useState<AdminGameDungeon>();
   const [loading, setLoading] = useState(true);
   const [mutating, setMutating] = useState(false);
   const [error, setError] = useState<string>();
@@ -160,7 +168,7 @@ function GameDungeonManager() {
       );
       toast.success(
         result.region_count
-          ? `${result.region_count}領域・クイズ${result.quiz_count}問の敵セットを再構築しました`
+          ? `${result.region_count}領域・クイズ${result.quiz_count}問の母集団と敵セットを再選出しました`
           : "再構築できる母集団がありません",
       );
       setTarget(undefined);
@@ -264,20 +272,31 @@ function GameDungeonManager() {
                     {item.quiz_count}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={
-                        mutating ||
-                        item.status === "battle" ||
-                        item.status === "母集団あり" ||
-                        item.region_count === 0
-                      }
-                      onClick={() => setTarget(item)}
-                    >
-                      <Swords /> 敵セットを再構築
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!item.regions.length}
+                        onClick={() => setPoolTarget(item)}
+                      >
+                        母集団を確認
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={
+                          mutating ||
+                          item.status === "battle" ||
+                          item.status === "母集団あり" ||
+                          item.region_count === 0
+                        }
+                        onClick={() => setTarget(item)}
+                      >
+                        <Swords /> 母集団・敵を再選出
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -304,11 +323,11 @@ function GameDungeonManager() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              このダンジョンの敵セットを再構築しますか？
+              このダンジョンの母集団を再選出しますか？
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {target?.user_email} · {target?.resource_name}{" "}
-              の保存済み母集団を使って敵セットを作り直します。母集団・攻略状況・HP・復習履歴は変更しません。戦闘中は実行できません。
+              {target?.user_email} · {target?.resource_name}
+              。準備済みクイズから領域ごとの母集団を重複なく選び直し、敵セットも作り直します。攻略状況・HP・復習履歴は変更しません。戦闘中は実行できません。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -322,11 +341,50 @@ function GameDungeonManager() {
                 void rebuild();
               }}
             >
-              再構築する
+              再選出する
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Dialog
+        open={Boolean(poolTarget)}
+        onOpenChange={(open) => !open && setPoolTarget(undefined)}
+      >
+        <DialogContent className="max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>領域ごとのクイズ母集団</DialogTitle>
+            <DialogDescription>
+              {poolTarget?.user_email} · {poolTarget?.resource_name}
+              。敵の出題元として固定されているクイズです。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {poolTarget?.regions.map((region) => (
+              <section key={region.level} className="space-y-2">
+                <h3 className="text-sm font-semibold">
+                  領域 {region.level} · {region.quizzes.length}問
+                </h3>
+                {region.quizzes.length ? (
+                  <ol className="list-decimal space-y-2 pl-5">
+                    {region.quizzes.map((quiz) => (
+                      <li key={quiz.quiz_id} className="text-sm">
+                        <span className="text-xs text-muted-foreground">
+                          {quiz.quiz_type}
+                        </span>
+                        <p>{quiz.statement || "問題文なし"}</p>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    スナップショットにクイズ本文がありません。
+                  </p>
+                )}
+              </section>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

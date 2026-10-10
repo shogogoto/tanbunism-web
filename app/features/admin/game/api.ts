@@ -6,6 +6,14 @@ export type AdminGameDungeon = {
   status: string;
   region_count: number;
   quiz_count: number;
+  regions: {
+    level: number;
+    quizzes: {
+      quiz_id: string;
+      quiz_type: string;
+      statement: string;
+    }[];
+  }[];
 };
 
 export type EnemyPoolRebuildResult = {
