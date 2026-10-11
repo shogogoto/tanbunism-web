@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
+import CombatSimulation from "./CombatSimulation";
 import Simulation from "./Simulation";
 import { type BattleSettings, requestBattleSettings } from "./api";
 
@@ -212,6 +213,7 @@ export default function BattleSettingsManager() {
             )}
           />
         )}
+        {settings && <CombatSimulation />}
       </div>
     </section>
   );

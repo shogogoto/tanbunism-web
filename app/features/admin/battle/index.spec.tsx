@@ -52,7 +52,7 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
   expect(
     screen.getByRole("region", { name: "敵ステータスの計算" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("spinbutton")).toHaveLength(28);
+  expect(screen.getAllByRole("spinbutton")).toHaveLength(33);
   expect(screen.getByLabelText("敵能力のばらつき（±%）")).toHaveValue(10);
   expect(base).toHaveAttribute("min", "5");
   expect(base).toHaveAttribute("max", "300");

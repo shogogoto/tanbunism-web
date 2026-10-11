@@ -26,8 +26,36 @@ export async function requestEnemyBalanceSimulation(input: {
   achievement: number;
   average_relations: number;
 }): Promise<EnemyBalanceSimulation> {
+  return requestSimulation("simulate", input, "敵を試算できませんでした。");
+}
+
+export type CombatSimulationInput = {
+  player: { hp: number; attack: number; defense: number };
+  enemy: { hp: number; attack: number };
+};
+export type CombatSimulationResult = CombatSimulationInput & {
+  damage_to_enemy: number;
+  damage_to_player: number;
+  correct_answers_to_defeat: number | null;
+  incorrect_answers_to_defeat: number;
+};
+export function requestCombatSimulation(
+  input: CombatSimulationInput,
+): Promise<CombatSimulationResult> {
+  return requestSimulation(
+    "simulate-combat",
+    input,
+    "戦闘を試算できませんでした。",
+  );
+}
+
+async function requestSimulation<T>(
+  path: string,
+  input: unknown,
+  fallback: string,
+): Promise<T> {
   const response = await fetch(
-    `${API_BASE_URL}/admin/settings/game-balance/simulate`,
+    `${API_BASE_URL}/admin/settings/game-balance/${path}`,
     {
       method: "POST",
       credentials: "include",
@@ -40,11 +68,7 @@ export async function requestEnemyBalanceSimulation(input: {
     const body = (await response.json().catch(() => undefined)) as
       | { detail?: string }
       | undefined;
-    throw new Error(
-      typeof body?.detail === "string"
-        ? body.detail
-        : "敵を試算できませんでした。",
-    );
+    throw new Error(typeof body?.detail === "string" ? body.detail : fallback);
   }
   return response.json();
 }
