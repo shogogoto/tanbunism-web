@@ -434,6 +434,9 @@ function LegacyMultiBattle({
             >
               HP {currentHp[enemy.id]}/{enemy.hp}
             </span>
+            <span className="text-sm tabular-nums">
+              速さ {enemy.speed ?? 10}
+            </span>
           </div>
         ))}
       </div>

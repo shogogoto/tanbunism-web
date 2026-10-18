@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { MemoryRouter } from "react-router";
@@ -30,7 +30,7 @@ const content: DungeonContent = {
   })),
 };
 const context = {
-  balance: { ...defaultBalance, battle_tempo_medium_seconds: 10 },
+  balance: { ...defaultBalance, battle_tempo_medium_seconds: 0.1 },
   enemies: [
     {
       id: "e",
@@ -165,7 +165,14 @@ it("keeps keyboard focus across consecutive questions and sends no damage claims
   const first = screen.getByRole("button", { name: "選択肢0" });
   await waitFor(() => expect(first).toHaveFocus());
   await user.keyboard(" {Enter}");
-  const next = await screen.findByRole("button", { name: "次の行動" });
+  const next = await screen.findByRole("button", { name: "次へ" });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  });
+  expect(requests).toHaveLength(1);
+  expect(
+    screen.queryByRole("button", { name: "選択肢1" }),
+  ).not.toBeInTheDocument();
   await waitFor(() => expect(next).toHaveFocus());
   await user.keyboard("{Enter}");
   const second = await screen.findByRole("button", { name: "選択肢1" });
@@ -179,7 +186,7 @@ it("keeps keyboard focus across consecutive questions and sends no damage claims
   expect(requests.every((request) => request.defeated.length === 0)).toBe(true);
 });
 
-it("settles timeout once and automatically returns after the final action", async () => {
+it("settles timeout once and waits for Next even after the final action", async () => {
   const finished = vi.fn(async () => undefined);
   const requests = vi.fn();
   function Fixture() {
@@ -229,7 +236,13 @@ it("settles timeout once and automatically returns after the final action", asyn
       <Fixture />
     </MemoryRouter>,
   );
-  await waitFor(() => expect(finished).toHaveBeenCalledTimes(1));
+  const next = await screen.findByRole("button", { name: "次へ" });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  });
+  expect(finished).not.toHaveBeenCalled();
+  await userEvent.click(next);
+  expect(finished).toHaveBeenCalledTimes(1);
   expect(requests).toHaveBeenCalledTimes(1);
   expect(requests.mock.calls[0][0].answers).toEqual({});
 });

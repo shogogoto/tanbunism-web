@@ -43,6 +43,7 @@ export type RegionEnemy = {
   quizIndexes?: number[];
   hp?: number;
   attack?: number;
+  speed?: number;
 };
 
 /** Quiz IDs, rather than quiz indexes, are the authoritative frozen population. */

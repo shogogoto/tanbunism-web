@@ -6,10 +6,13 @@ export type FormulaField =
   | "damage_variance_percent"
   | "enemy_hp"
   | "enemy_attack"
+  | "enemy_speed"
   | "power_hp"
   | "power_attack"
+  | "power_speed"
   | "region_hp_growth_percent"
   | "region_attack_growth_percent"
+  | "region_speed_growth_percent"
   | "enemy_variance_percent"
   | "enemy_types"
   | "enemy_types_per_region"
@@ -55,20 +58,32 @@ export default function FormulaSettings({
   if (kind === "stats") {
     return (
       <div className="divide-y">
-        {(["hp", "attack"] as const).map((stat) => (
-          <FormulaRow key={stat}>
-            <span>{stat === "hp" ? "HP" : "攻撃力"} = (</span>
-            {input(stat === "hp" ? "enemy_hp" : "enemy_attack")}
+        {(
+          [
+            ["HP", "enemy_hp", "power_hp", "region_hp_growth_percent"],
+            [
+              "攻撃力",
+              "enemy_attack",
+              "power_attack",
+              "region_attack_growth_percent",
+            ],
+            [
+              "速さ",
+              "enemy_speed",
+              "power_speed",
+              "region_speed_growth_percent",
+            ],
+          ] as const
+        ).map(([label, base, power, growth]) => (
+          <FormulaRow key={base}>
+            <span>{label} = (</span>
+            {input(base)}
             <span>+ log(1 + Power) ×</span>
-            {input(stat === "hp" ? "power_hp" : "power_attack")}
+            {input(power)}
             <span>) ×</span>
             <span>[1 + (達成度帯 − 1) ×</span>
             <span className="inline-flex items-center gap-2">
-              {input(
-                stat === "hp"
-                  ? "region_hp_growth_percent"
-                  : "region_attack_growth_percent",
-              )}
+              {input(growth)}
               %]
             </span>
             <span>× 個体差</span>

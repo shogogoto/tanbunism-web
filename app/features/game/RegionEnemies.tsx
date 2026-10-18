@@ -83,7 +83,7 @@ export default function RegionEnemies({
                 <div className="min-w-0">
                   <h3 className="text-sm font-medium">{enemy.name}</h3>
                   <p className="text-sm tabular-nums">
-                    HP {enemy.hp} · 攻 {enemy.attack}
+                    HP {enemy.hp} · 攻 {enemy.attack} · 速さ {enemy.speed ?? 10}
                   </p>
                   <ul className="mt-1 space-y-1">
                     {(enemy.quizIndexes ?? [enemy.quizIndex]).map((index) => (

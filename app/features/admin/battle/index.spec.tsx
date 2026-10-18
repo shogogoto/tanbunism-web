@@ -87,6 +87,17 @@ it("saves the speed formula, base speed, and allocation coefficient", async () =
 it("places ordinary labels above their inputs and preserves editable formulas", async () => {
   render(<BattleSettingsManager />);
   const hp = await screen.findByLabelText("初期HP");
+  const enemyStats = screen.getByRole("region", { name: "敵ステータスの計算" });
+  expect(within(enemyStats).getByLabelText("敵の基礎速さ")).toBeVisible();
+  expect(within(enemyStats).getByLabelText("Powerの速さ補正")).toBeVisible();
+  expect(
+    within(enemyStats).getByLabelText("達成度帯ごとの速さ成長率（%）"),
+  ).toBeVisible();
+  const growth = screen.getByRole("region", {
+    name: "育成ポイントあたりの上昇量",
+  });
+  expect(within(growth).getByLabelText("HP")).toBeVisible();
+  expect(within(growth).queryByText(/\/ 育成ポイント/)).not.toBeInTheDocument();
   const label = document.querySelector(`label[for="${hp.id}"]`);
   expect(label?.parentElement).toBe(hp.parentElement);
   expect(label?.nextElementSibling).toBe(hp);

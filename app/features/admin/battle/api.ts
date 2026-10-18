@@ -80,6 +80,7 @@ export type EnemyBalanceSimulation = {
     quiz_count: number;
     hp: number;
     attack: number;
+    speed?: number;
     relations: number;
   }[];
   requested_enemy_types: number;

@@ -28,16 +28,18 @@ const fields = {
   base_defense: ["初期守", 0, 1000, 1],
   base_speed: ["初期速さ", 1, 1000, 1],
   speed_per_point: ["速さ", 1, 100, 1],
-  enemy_speed: ["敵の速さ", 1, 1000, 1],
+  enemy_speed: ["敵の基礎速さ", 1, 1000, 1],
+  power_speed: ["Powerの速さ補正", 0, 100, 0.1],
+  region_speed_growth_percent: ["達成度帯ごとの速さ成長率（%）", 0, 1000, 1],
   base_seconds: ["初期持ち時間（秒）", 5, 300, 1],
-  hp_per_point: ["HP / 育成ポイント", 1, 100, 1],
-  mp_per_point: ["MP / 育成ポイント", 1, 100, 1],
+  hp_per_point: ["HP", 1, 100, 1],
+  mp_per_point: ["MP", 1, 100, 1],
   skill_mp_cost: ["専門分野の消費MP", 1, 10000, 1],
   skill_term_attack: ["専門分野の攻撃力補正", 0.1, 100, 0.1],
   boss_hp_multiplier: ["ボスのHP倍率", 1, 20, 0.1],
   boss_attack_multiplier: ["ボスの攻撃力倍率", 1, 10, 0.05],
-  attack_per_point: ["攻 / 育成ポイント", 1, 100, 1],
-  defense_per_point: ["守 / 育成ポイント", 1, 100, 1],
+  attack_per_point: ["攻", 1, 100, 1],
+  defense_per_point: ["守", 1, 100, 1],
   enemy_hp: ["敵の基礎HP", 1, 10000, 1],
   enemy_attack: ["敵の基礎攻", 1, 1000, 1],
   power_hp: ["PowerのHP補正", 0, 100, 0.1],
@@ -66,10 +68,13 @@ const fields = {
 const formulaLabels: Partial<Record<keyof typeof fields, string>> = {
   enemy_hp: "基礎HP",
   enemy_attack: "基礎攻撃力",
+  enemy_speed: "基礎速さ",
   power_hp: "Power補正",
   power_attack: "Power補正",
+  power_speed: "Power補正",
   region_hp_growth_percent: "HP成長率",
   region_attack_growth_percent: "攻の成長率",
+  region_speed_growth_percent: "速さ成長率",
   enemy_variance_percent: "ばらつき",
   damage_attack_multiplier: "倍率",
   damage_defense_divisor: "除数",
@@ -147,10 +152,13 @@ const groups = [
     keys: [
       "enemy_hp",
       "enemy_attack",
+      "enemy_speed",
       "power_hp",
       "power_attack",
+      "power_speed",
       "region_hp_growth_percent",
       "region_attack_growth_percent",
+      "region_speed_growth_percent",
       "enemy_variance_percent",
     ],
   },
@@ -335,7 +343,6 @@ export default function BattleSettingsManager() {
                       <option value="linear">比例</option>
                     </select>
                   </label>
-                  {settingInput("enemy_speed")}
                   <p className="text-sm">
                     行動間隔 = 12 ÷{" "}
                     {settings.speed_formula === "sqrt" ? "√速さ" : "速さ"}

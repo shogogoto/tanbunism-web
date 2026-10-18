@@ -444,8 +444,8 @@ export default function PracticeBattle({
         )}
         <p>
           プレイヤー: HP {draftPlayer.maxHp} · MP {draftPlayer.maxMp} · 攻{" "}
-          {draftPlayer.attack} · 守 {draftPlayer.defense} ·{" "}
-          {draftPlayer.answerSeconds}秒
+          {draftPlayer.attack} · 守 {draftPlayer.defense} · 速さ{" "}
+          {draftPlayer.speed} · {draftPlayer.answerSeconds}秒
         </p>
       </div>
       <form

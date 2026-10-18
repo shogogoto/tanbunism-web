@@ -58,7 +58,6 @@ export default function ScheduledBattle({
     !feedback && run?.answerDeadline
       ? Math.max(0, run.answerDeadline - now - clockOffset)
       : undefined;
-  const delay = context.balance[`battle_tempo_${tempo.tempo}_seconds`];
   const latest = useRef(save);
   latest.current = save;
   useEffect(() => {
@@ -153,14 +152,6 @@ export default function ScheduledBattle({
   });
   const ready =
     feedback && (!marker || marker.endActionDone) && !marker?.endAction;
-  useEffect(() => {
-    if (!ready || busy || error) return;
-    const timer = setTimeout(
-      () => advanceButton.current?.click(),
-      delay * 1000,
-    );
-    return () => clearTimeout(timer);
-  }, [ready, busy, error, delay]);
   useLayoutEffect(() => {
     if (busy) return;
     if (feedback) advanceButton.current?.focus();
@@ -214,6 +205,7 @@ export default function ScheduledBattle({
                   : shownResult?.enemy_hp?.[item.id]) ?? 0}
                 /{item.hp}
               </span>
+              <span className="tabular-nums">速さ {item.speed ?? 10}</span>
             </div>
           ))}
       </section>
@@ -362,7 +354,7 @@ export default function ScheduledBattle({
               disabled={busy || !ready}
               onClick={() => void advance()}
             >
-              {marker ? "次の行動" : "続ける"}
+              次へ
             </Button>
           </>
         ) : (

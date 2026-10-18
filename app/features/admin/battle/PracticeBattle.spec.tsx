@@ -432,7 +432,9 @@ it("loads real points and edits only the disposable player before starting", asy
   await user.clear(attack);
   await user.type(attack, "9");
   expect(
-    screen.getByText(/プレイヤー: HP 70 · MP 10 · 攻 28 · 守 2 · 45秒/),
+    screen.getByText(
+      /プレイヤー: HP 70 · MP 10 · 攻 28 · 守 2 · 速さ 10 · 45秒/,
+    ),
   ).toBeVisible();
   await user.click(
     screen.getByRole("button", { name: "現在の設定で模擬戦を開始" }),

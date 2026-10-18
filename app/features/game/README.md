@@ -209,6 +209,10 @@ chosen formula is fixed for each encounter. Forecast generation does not advance
 the battle or reroll ties. Old in-progress battles retain the legacy batched UI.
 Practice uses the same server scheduler/resolver with unsaved admin settings and
 isolated state. Specialty quizzes retain their separate end-action flow.
+After every scheduled action, including the final action, feedback remains until
+the user presses Next/Enter. Result tempo never automatically advances the queue.
+Enemy speed appears alongside HP in battles, rosters and generated previews, and
+its Power/growth inputs share the HP/attack formula editor in admin.
 
 Next slices: choosing a captured quiz weapon on clearing, MP and attack turns;
 capped global-accuracy weapon damage; larger Power dungeon game-only rewards;

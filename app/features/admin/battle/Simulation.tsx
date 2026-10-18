@@ -185,6 +185,7 @@ export default function Simulation({
                   <TableHead>固定問数 / 敵</TableHead>
                   <TableHead>HP</TableHead>
                   <TableHead>攻撃力</TableHead>
+                  <TableHead>速さ</TableHead>
                   <TableHead>同時出現</TableHead>
                 </TableRow>
               </TableHeader>
@@ -248,6 +249,9 @@ export default function Simulation({
                       {range(result.enemies.map((enemy) => enemy.attack))}
                     </TableCell>
                     <TableCell>
+                      {range(result.enemies.map((enemy) => enemy.speed ?? 10))}
+                    </TableCell>
+                    <TableCell>
                       {result.min_encounter_enemies}〜
                       {result.max_encounter_enemies}体
                     </TableCell>
@@ -291,6 +295,7 @@ export default function Simulation({
                       <TableHead>固定クイズ数</TableHead>
                       <TableHead>HP</TableHead>
                       <TableHead>攻撃力</TableHead>
+                      <TableHead>速さ</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -300,6 +305,7 @@ export default function Simulation({
                         <TableCell>{enemy.quiz_count}問</TableCell>
                         <TableCell>{enemy.hp}</TableCell>
                         <TableCell>{enemy.attack}</TableCell>
+                        <TableCell>{enemy.speed ?? 10}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

@@ -32,6 +32,9 @@ it("uses the shared profile avatar and follows profile replacements", () => {
     />,
   );
   expect(screen.getByRole("img")).toHaveAttribute("src", player.avatar_url);
+  expect(screen.getByRole("region", { name: "プレイヤー" })).toHaveTextContent(
+    "速さ 10",
+  );
   view.rerender(
     <PlayerStatus
       run={run}

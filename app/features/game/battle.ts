@@ -29,6 +29,8 @@ export const defaultBalance = {
   base_speed: 10,
   speed_per_point: 1,
   enemy_speed: 10,
+  power_speed: 0,
+  region_speed_growth_percent: 0,
   speed_formula: "sqrt" as "linear" | "sqrt",
   base_seconds: 45,
   hp_per_point: 5,

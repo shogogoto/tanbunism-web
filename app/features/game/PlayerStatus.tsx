@@ -99,6 +99,7 @@ export default function PlayerStatus({
       <p>
         MP {run.mp ?? 0}/{run.maxMp ?? 0}
       </p>
+      <p>速さ {run.speed ?? 10}</p>
     </section>
   );
 }
