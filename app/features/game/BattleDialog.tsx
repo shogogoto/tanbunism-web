@@ -81,12 +81,10 @@ export default function BattleDialog({
           }}
           onOpenAutoFocus={(event) => {
             const target = content.current?.querySelector<HTMLButtonElement>(
-              '[aria-label="敵一覧"] button:not(:disabled), button[data-quiz-option-index]:not(:disabled), button[data-simulation-option]:not(:disabled)',
+              '[aria-label="敵一覧"] button:not(:disabled), button[data-quiz-option-index]:not(:disabled), button[data-simulation-option]:not(:disabled), [data-battle-advance]:not(:disabled)',
             );
-            if (target) {
-              event.preventDefault();
-              target.focus();
-            }
+            event.preventDefault();
+            (target ?? content.current)?.focus();
           }}
           className="top-2 flex max-h-[calc(100dvh-1rem)] translate-y-0 flex-col gap-3 overflow-hidden p-3 sm:max-w-5xl sm:p-5"
           data-dashboard-swipe-ignore
@@ -184,7 +182,10 @@ export default function BattleDialog({
           }}
         >
           <DialogHeader className="shrink-0 pr-36 text-left sm:pr-20">
-            <div className="absolute right-10 top-2 flex items-center gap-1 sm:top-3">
+            <div
+              data-spatial-focus-ignore
+              className="absolute right-10 top-2 flex items-center gap-1 sm:top-3"
+            >
               {headerControls}
               <MusicControls />
             </div>

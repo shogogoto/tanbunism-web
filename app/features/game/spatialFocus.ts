@@ -47,7 +47,12 @@ export function movePanelFocus(
       'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
     ),
   ).filter((element) => {
-    if (element.closest('[hidden], [aria-hidden="true"]')) return false;
+    if (
+      element.closest(
+        '[hidden], [aria-hidden="true"], [data-spatial-focus-ignore], [data-slot="dialog-close"]',
+      )
+    )
+      return false;
     const rect = element.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0;
   });

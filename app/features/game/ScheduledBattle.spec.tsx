@@ -127,6 +127,70 @@ it("shows the backend forecast from left to right without selectable enemies", (
   expect(screen.queryByText("別の領域の敵")).not.toBeInTheDocument();
 });
 
+it("keeps arrow navigation out of header settings while allowing Tab access", async () => {
+  const user = userEvent.setup();
+  const questions = {
+    ...content,
+    quizzes: [
+      { ...content.quizzes[0], options: { a0: "選択肢0", b0: "別の選択肢" } },
+    ],
+  };
+  render(
+    <MemoryRouter>
+      <MultiBattle
+        save={initial()}
+        content={questions}
+        context={context}
+        onSaved={vi.fn()}
+        onFinished={vi.fn()}
+        onBusy={vi.fn()}
+      />
+    </MemoryRouter>,
+  );
+  const first = screen.getByRole("button", { name: "選択肢0" });
+  const second = screen.getByRole("button", { name: "別の選択肢" });
+  const tempo = screen.getByRole("combobox", { name: "戦闘テンポ" });
+  // Model real geometry: settings and Close are above the wide quiz choices.
+  for (const element of screen
+    .getByRole("dialog")
+    .querySelectorAll("button, select")) {
+    const top =
+      element === first
+        ? 200
+        : element === second
+          ? 270
+          : element.closest(
+                '[data-spatial-focus-ignore], [data-slot="dialog-close"]',
+              )
+            ? 0
+            : 400;
+    vi.spyOn(element, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: top,
+      left: 0,
+      right: 300,
+      top,
+      bottom: top + 40,
+      width: 300,
+      height: 40,
+      toJSON: () => ({}),
+    });
+  }
+  await waitFor(() => expect(first).toHaveFocus());
+  await user.keyboard("{ArrowUp}");
+  expect(first).toHaveFocus();
+  expect(tempo).toHaveValue("medium");
+  await user.keyboard("{ArrowDown}");
+  expect(second).toHaveFocus();
+  await user.keyboard("{ArrowUp} ");
+  expect(first).toHaveFocus();
+  expect(first).toHaveAttribute("aria-pressed", "true");
+  await user.tab({ shift: true });
+  await user.tab({ shift: true });
+  await user.tab({ shift: true });
+  expect(tempo).toHaveFocus();
+});
+
 it("freezes the countdown on confirmation until the next action starts", async () => {
   vi.useFakeTimers();
   try {

@@ -77,6 +77,46 @@ it("does not dismiss while a game save is in progress", async () => {
   expect(screen.getByRole("dialog")).toBeInTheDocument();
 });
 
+it("focuses Next when opening a battle that is already showing results", async () => {
+  render(
+    <BattleDialog
+      run={battle()}
+      busy={false}
+      headerControls={
+        <select aria-label="戦闘テンポ">
+          <option>中</option>
+        </select>
+      }
+    >
+      <button type="button" data-battle-advance>
+        次へ
+      </button>
+    </BattleDialog>,
+  );
+  await vi.waitFor(() =>
+    expect(screen.getByRole("button", { name: "次へ" })).toHaveFocus(),
+  );
+});
+
+it("does not autofocus settings while quiz choices are disabled", async () => {
+  render(
+    <BattleDialog
+      run={battle()}
+      busy
+      headerControls={
+        <select aria-label="戦闘テンポ">
+          <option>中</option>
+        </select>
+      }
+    >
+      <button type="button" data-quiz-option-index={1} disabled>
+        選択肢
+      </button>
+    </BattleDialog>,
+  );
+  await vi.waitFor(() => expect(screen.getByRole("dialog")).toHaveFocus());
+});
+
 it("toggles BGM directly without opening another panel", async () => {
   render(
     <BattleDialog run={battle()} busy={false}>
