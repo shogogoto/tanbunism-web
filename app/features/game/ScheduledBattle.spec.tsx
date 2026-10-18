@@ -1,11 +1,23 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
 import MultiBattle from "./MultiBattle";
 import type { DungeonContent } from "./api";
-import { type BattleTransport, type TurnInput, defaultBalance } from "./battle";
+import {
+  type BattleTransport,
+  type TurnInput,
+  type TurnResult,
+  defaultBalance,
+} from "./battle";
 import { type GameSave, enterDungeon, newSave } from "./domain";
 
 vi.mock("~/features/quiz/QuizPreviewPrompt", () => ({
@@ -113,6 +125,69 @@ it("shows the backend forecast from left to right without selectable enemies", (
     ),
   ).not.toBeInTheDocument();
   expect(screen.queryByText("別の領域の敵")).not.toBeInTheDocument();
+});
+
+it("freezes the countdown on confirmation until the next action starts", async () => {
+  vi.useFakeTimers();
+  try {
+    let release = () => {};
+    const response = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    function Fixture() {
+      const [save, setSave] = useState(initial);
+      const transport: BattleTransport = async <T,>(path: string) => {
+        const copy = structuredClone(save);
+        if (path === "battle/turn") {
+          await response;
+          copy.battleFeedback = "正解";
+          return {
+            state: { revision: 1, save: copy },
+            results: { e: true },
+            damage: 0,
+            outgoing_damage: {},
+          } satisfies TurnResult as T;
+        }
+        copy.battleFeedback = null;
+        if (copy.run) copy.run.answerDeadline = Date.now() + 45000;
+        return { revision: 2, save: copy } as T;
+      };
+      return (
+        <MultiBattle
+          save={save}
+          content={content}
+          context={context}
+          simulation
+          transport={transport}
+          onSaved={(state) => setSave(state.save)}
+          onFinished={vi.fn()}
+          onBusy={vi.fn()}
+        />
+      );
+    }
+    render(
+      <MemoryRouter>
+        <Fixture />
+      </MemoryRouter>,
+    );
+    const gauge = () => screen.getByRole("progressbar", { name: "残り時間" });
+    act(() => vi.advanceTimersByTime(2000));
+    expect(gauge()).toHaveAttribute("aria-valuenow", "43");
+    fireEvent.click(screen.getByRole("button", { name: "回答を確定" }));
+    act(() => vi.advanceTimersByTime(5000));
+    expect(gauge()).toHaveAttribute("aria-valuenow", "43");
+    await act(async () => release());
+    act(() => vi.advanceTimersByTime(5000));
+    expect(gauge()).toHaveAttribute("aria-valuenow", "43");
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "次へ" })),
+    );
+    expect(gauge()).toHaveAttribute("aria-valuenow", "45");
+    act(() => vi.advanceTimersByTime(1000));
+    expect(gauge()).toHaveAttribute("aria-valuenow", "44");
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 it("keeps keyboard focus across consecutive questions and sends no damage claims", async () => {

@@ -37,6 +37,7 @@ export default function ScheduledBattle({
   const schedule = marker?.schedule ?? displayMarker.current?.schedule;
   const run = save.run;
   const [now, setNow] = useState(Date.now);
+  const [frozenRemaining, setFrozenRemaining] = useState<number>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<TurnResult>();
@@ -55,15 +56,17 @@ export default function ScheduledBattle({
   const quiz = quizIndex === undefined ? undefined : content.quizzes[quizIndex];
   const feedback = Boolean(save.battleFeedback);
   const remaining =
-    !feedback && run?.answerDeadline
+    frozenRemaining ??
+    (!feedback && run?.answerDeadline
       ? Math.max(0, run.answerDeadline - now - clockOffset)
-      : undefined;
+      : undefined);
   const latest = useRef(save);
   latest.current = save;
   useEffect(() => {
+    if (feedback || frozenRemaining !== undefined) return;
     const timer = setInterval(() => setNow(Date.now()), 100);
     return () => clearInterval(timer);
-  }, []);
+  }, [feedback, frozenRemaining]);
 
   async function submit(selected: string[] | null, retreat = false) {
     if (!marker || !run || pending.current || feedback) return;
@@ -75,6 +78,10 @@ export default function ScheduledBattle({
       retreat,
     };
     pending.current = true;
+    if (run.answerDeadline)
+      setFrozenRemaining(
+        Math.max(0, run.answerDeadline - Date.now() - clockOffset),
+      );
     setBusy(true);
     onBusy(true);
     setError(undefined);
@@ -96,6 +103,7 @@ export default function ScheduledBattle({
             : (enemy?.animation ?? "impact"),
         });
     } catch (cause) {
+      setFrozenRemaining(undefined);
       setRetry(input);
       setError(
         cause instanceof Error ? cause.message : "行動を精算できませんでした。",
@@ -134,6 +142,8 @@ export default function ScheduledBattle({
       setResult(undefined);
       lastResult.current = undefined;
       setSelection("yes");
+      setNow(Date.now());
+      setFrozenRemaining(undefined);
       onSaved(state);
     } catch (cause) {
       setError(
