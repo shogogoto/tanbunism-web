@@ -7,6 +7,8 @@ export type Allocation = {
   mp?: number;
   attack: number;
   defense: number;
+  specialAttack?: number;
+  specialDefense?: number;
   speed?: number;
 };
 export const emptyAllocation: Allocation = {
@@ -14,6 +16,8 @@ export const emptyAllocation: Allocation = {
   mp: 0,
   attack: 0,
   defense: 0,
+  specialAttack: 0,
+  specialDefense: 0,
   speed: 0,
 };
 export const defaultBalance = {
@@ -26,6 +30,10 @@ export const defaultBalance = {
   base_mp: 10,
   base_attack: 10,
   base_defense: 1,
+  base_special_attack: 10,
+  base_special_defense: 1,
+  special_attack_per_point: 2,
+  special_defense_per_point: 1,
   base_speed: 10,
   speed_per_point: 1,
   enemy_speed: 10,
@@ -189,6 +197,16 @@ export function playerStats(
       balance.base_defense + a.defense * balance.defense_per_point,
     ),
     answerSeconds: balance.base_seconds,
+    specialAttack: Math.min(
+      100000,
+      (balance.base_special_attack ?? 10) +
+        (a.specialAttack ?? 0) * (balance.special_attack_per_point ?? 2),
+    ),
+    specialDefense: Math.min(
+      100000,
+      (balance.base_special_defense ?? 1) +
+        (a.specialDefense ?? 0) * (balance.special_defense_per_point ?? 1),
+    ),
     speed: Math.min(
       100000,
       (balance.base_speed ?? 10) +

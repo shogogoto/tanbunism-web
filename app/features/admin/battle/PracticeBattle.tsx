@@ -513,7 +513,17 @@ export default function PracticeBattle({
           className="grid grid-cols-2 gap-3 sm:grid-cols-4"
         >
           <legend className="mb-2 text-sm">加算ポイント（模擬戦用）</legend>
-          {(["hp", "mp", "attack", "defense", "speed"] as const).map((stat) => (
+          {(
+            [
+              "hp",
+              "mp",
+              "attack",
+              "defense",
+              "specialAttack",
+              "specialDefense",
+              "speed",
+            ] as const
+          ).map((stat) => (
             <div key={stat} className="space-y-1">
               <Label htmlFor={`practice-${stat}`}>
                 {
@@ -521,6 +531,8 @@ export default function PracticeBattle({
                     hp: "HPポイント",
                     attack: "攻ポイント",
                     defense: "守ポイント",
+                    specialAttack: "特攻ポイント",
+                    specialDefense: "特守ポイント",
                     mp: "MPポイント",
                     speed: "速さポイント",
                   }[stat]

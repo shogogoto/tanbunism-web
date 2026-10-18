@@ -442,6 +442,8 @@ it("loads real points and edits only the disposable player before starting", asy
   await screen.findByRole("dialog");
   expect(preparations[0].allocation).toEqual({
     ...userPoints,
+    specialAttack: 0,
+    specialDefense: 0,
     attack: 9,
     speed: 0,
   });

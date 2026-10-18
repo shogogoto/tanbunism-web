@@ -27,33 +27,63 @@ type TimedSkill = {
   stack_limit?: number;
   multiplier?: never;
 };
+export type NumericWrongResult =
+  | { type: "fizzle" }
+  | { type: "reduced"; amount: number };
+export type AttackWrongResult =
+  | { type: "counter" | "fizzle" }
+  | { type: "reduced"; amount: number; multiplier: number };
+export type AilmentWrongResult =
+  | { type: "fizzle" }
+  | { type: "reduced"; apply: boolean };
 export type SkillDefinition = SkillBase &
   (
     | (InstantSkill & {
         effect: "attack";
         multiplier: number;
         amount_mode?: "fixed" | "percent";
+        damage_type?: "physical" | "special";
+        target_count?: number;
+        on_wrong?: AttackWrongResult;
       })
     | (InstantSkill & {
         effect: "heal_hp" | "heal_mp";
         multiplier?: never;
         amount_mode?: "fixed" | "percent";
+        on_wrong?: NumericWrongResult;
       })
     | (TimedSkill & {
         effect: "buff";
-        stat?: "attack" | "defense" | "maxHp";
+        stat?:
+          | "attack"
+          | "defense"
+          | "specialAttack"
+          | "specialDefense"
+          | "maxHp";
         ailment?: never;
+        on_wrong?: NumericWrongResult;
       })
-    | (TimedSkill & { effect: "debuff"; stat?: "attack"; ailment?: never })
+    | (TimedSkill & {
+        effect: "debuff";
+        stat?: "attack" | "defense" | "specialAttack" | "specialDefense";
+        ailment?: never;
+        on_wrong?: NumericWrongResult;
+        target_count?: number;
+      })
     | (TimedSkill & {
         effect: "ailment";
         ailment?: "poison" | "curse";
         stat?: never;
+        on_wrong?: AilmentWrongResult;
+        target_count?: number;
       })
     | (InstantSkill & {
         effect: "recover_moves" | "equip_attack";
         multiplier?: never;
         amount_mode?: never;
+        on_wrong?: never;
+        damage_type?: never;
+        target_count?: never;
       })
   );
 export type SkillPatch = Partial<
@@ -61,10 +91,13 @@ export type SkillPatch = Partial<
     effect: SkillDefinition["effect"];
     multiplier: number;
     amount_mode: "fixed" | "percent";
-    stat: "attack" | "defense" | "maxHp";
+    stat: "attack" | "defense" | "specialAttack" | "specialDefense" | "maxHp";
     duration_turns: number;
     stack_limit: number;
     ailment: "poison" | "curse";
+    on_wrong: AttackWrongResult | NumericWrongResult | AilmentWrongResult;
+    damage_type: "physical" | "special";
+    target_count: number;
   }
 >;
 
@@ -102,6 +135,11 @@ export function normalizeSkill(
     duration_turns: skill.duration_turns ?? 3,
     stack_limit: skill.stack_limit ?? 1,
   };
+  const wrong = skill.on_wrong;
+  const numericWrong: NumericWrongResult =
+    wrong?.type === "reduced"
+      ? { type: "reduced", amount: "amount" in wrong ? wrong.amount : 0 }
+      : { type: "fizzle" };
   switch (effect) {
     case "attack":
       return {
@@ -109,20 +147,48 @@ export function normalizeSkill(
         effect,
         ...numeric,
         multiplier: skill.multiplier ?? 1,
+        damage_type: skill.damage_type ?? "physical",
+        target_count: skill.target_count ?? 1,
+        on_wrong:
+          wrong?.type === "reduced"
+            ? {
+                type: "reduced",
+                amount: "amount" in wrong ? wrong.amount : 0,
+                multiplier: "multiplier" in wrong ? wrong.multiplier : 0.5,
+              }
+            : { type: wrong?.type === "counter" ? "counter" : "fizzle" },
       };
     case "heal_hp":
     case "heal_mp":
-      return { ...common, effect, ...numeric };
+      return { ...common, effect, ...numeric, on_wrong: numericWrong };
     case "buff":
-      return { ...common, effect, ...timed, stat: skill.stat ?? "attack" };
+      return {
+        ...common,
+        effect,
+        ...timed,
+        stat: skill.stat ?? "attack",
+        on_wrong: numericWrong,
+      };
     case "debuff":
-      return { ...common, effect, ...timed, stat: "attack" };
+      return {
+        ...common,
+        effect,
+        ...timed,
+        stat: skill.stat === "maxHp" ? "attack" : (skill.stat ?? "attack"),
+        target_count: skill.target_count ?? 1,
+        on_wrong: numericWrong,
+      };
     case "ailment":
       return {
         ...common,
         effect,
         ...timed,
         ailment: skill.ailment ?? "poison",
+        target_count: skill.target_count ?? 1,
+        on_wrong:
+          wrong?.type === "reduced"
+            ? { type: "reduced", apply: "apply" in wrong ? wrong.apply : false }
+            : { type: "fizzle" },
       };
     case "recover_moves":
     case "equip_attack":

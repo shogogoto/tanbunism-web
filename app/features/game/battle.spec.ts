@@ -19,8 +19,22 @@ describe("allocated stats and browser-local enemy HP", () => {
       maxMp: 10,
       attack: 12,
       defense: 1,
+      specialAttack: 10,
+      specialDefense: 1,
       speed: 10,
       answerSeconds: defaultBalance.base_seconds,
+    });
+  });
+  it("special stats grow independently from physical stats", () => {
+    const stats = playerStats(
+      { hp: 0, attack: 0, defense: 0, specialAttack: 3, specialDefense: 2 },
+      defaultBalance,
+    );
+    expect(stats).toMatchObject({
+      attack: 10,
+      defense: 1,
+      specialAttack: 16,
+      specialDefense: 3,
     });
   });
   it("a live maximum increase never heals and a decrease clamps remaining HP", () => {

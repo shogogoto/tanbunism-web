@@ -236,6 +236,82 @@ it("references a skill from an item rather than defining a separate effect", asy
   });
 });
 
+it("edits independent correct and wrong recovery amounts and strips inactive fields", async () => {
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="skills" />);
+  const row = await screen.findByRole("row", { name: "ケアル" });
+  const field = within(row);
+  expect(field.queryByRole("option", { name: "反撃" })).not.toBeInTheDocument();
+  expect(field.getByLabelText("誤答効果量")).toBeDisabled();
+  await user.selectOptions(field.getByLabelText("タイプ"), "reduced");
+  await user.selectOptions(field.getByLabelText("効果量の指定"), "percent");
+  await user.clear(field.getByLabelText("効果量"));
+  await user.type(field.getByLabelText("効果量"), "20");
+  await user.clear(field.getByLabelText("誤答効果量"));
+  await user.type(field.getByLabelText("誤答効果量"), "10");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  const recovery = saved.mock.calls
+    .at(-1)?.[0]
+    .skills.find((s: { id: string }) => s.id === "heal");
+  expect(recovery).toMatchObject({
+    amount: 20,
+    amount_mode: "percent",
+    on_wrong: { type: "reduced", amount: 10 },
+  });
+  expect(recovery.on_wrong).not.toHaveProperty("multiplier");
+  await user.selectOptions(field.getByLabelText("タイプ"), "fizzle");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalledTimes(2));
+  expect(
+    saved.mock.calls
+      .at(-1)?.[0]
+      .skills.find((s: { id: string }) => s.id === "heal").on_wrong,
+  ).toEqual({ type: "fizzle" });
+});
+
+it("adds physical and special attacks to separate tables without a redundant system selector", async () => {
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="skills" />);
+  await screen.findByRole("row", { name: "ファイア" });
+  for (const title of [
+    "回復",
+    "物理攻撃",
+    "特殊攻撃",
+    "バフ",
+    "デバフ",
+    "状態異常",
+  ]) {
+    expect(
+      screen.getByRole("region", { name: `${title}スキル` }),
+    ).toBeVisible();
+  }
+  await user.click(
+    screen.getByRole("button", { name: "特殊攻撃スキルを追加" }),
+  );
+  const row = within(
+    screen.getByRole("region", { name: "特殊攻撃スキル" }),
+  ).getByRole("row", { name: "新しいスキル" });
+  const fields = within(row);
+  expect(fields.queryByLabelText("計算系統")).not.toBeInTheDocument();
+  await user.selectOptions(fields.getByLabelText("タイプ"), "reduced");
+  await user.clear(fields.getByLabelText("対象数"));
+  await user.type(fields.getByLabelText("対象数"), "3");
+  await user.clear(fields.getByLabelText("攻撃倍率"));
+  await user.type(fields.getByLabelText("攻撃倍率"), "2");
+  await user.clear(fields.getByLabelText("誤答攻撃倍率"));
+  await user.type(fields.getByLabelText("誤答攻撃倍率"), "0.7");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls.at(-1)?.[0].skills.at(-1)).toMatchObject({
+    effect: "attack",
+    damage_type: "special",
+    target_count: 3,
+    multiplier: 2,
+    on_wrong: { type: "reduced", multiplier: 0.7 },
+  });
+});
+
 it("selects item art from the material gallery", async () => {
   render(<CatalogEditor kind="items" />);
   const user = userEvent.setup();
@@ -258,7 +334,7 @@ it("marks skills for deletion, supports undo and commits removals only on save",
   const user = userEvent.setup();
   const row = await screen.findByRole("row", { name: "ファイア" });
   const headers = within(
-    screen.getByRole("region", { name: "攻撃スキル" }),
+    screen.getByRole("region", { name: "物理攻撃スキル" }),
   ).getAllByRole("columnheader");
   expect(headers.at(-1)).toHaveTextContent("削除");
   await user.click(within(row).getByRole("button", { name: "削除" }));
@@ -359,9 +435,9 @@ it("defines timed percentage buffs with an explicit stacking limit", async () =>
   render(<CatalogEditor kind="skills" />);
   const user = userEvent.setup();
   await screen.findByRole("row", { name: "ファイア" });
-  await user.click(screen.getByRole("button", { name: "buffスキルを追加" }));
+  await user.click(screen.getByRole("button", { name: "バフスキルを追加" }));
   const skill = within(
-    screen.getByRole("region", { name: "buffスキル" }),
+    screen.getByRole("region", { name: "バフスキル" }),
   ).getByRole("row", { name: "新しいスキル" });
   await user.selectOptions(
     within(skill).getByLabelText("対象ステータス"),
@@ -405,7 +481,7 @@ it("uses one field per column and selects each skill's animation from its galler
     within(within(fire).getByLabelText("効果"))
       .getAllByRole("option")
       .map((o) => o.getAttribute("value")),
-  ).toEqual(["attack"]);
+  ).toEqual(["physical", "special"]);
   expect(
     screen.queryByRole("columnheader", { name: "プレビュー" }),
   ).not.toBeInTheDocument();

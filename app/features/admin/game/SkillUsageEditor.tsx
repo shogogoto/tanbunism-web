@@ -127,12 +127,7 @@ export default function SkillUsageEditor() {
                         {[
                           "スキル",
                           ...(specialty
-                            ? [
-                                "専用クイズ",
-                                "秒数 / 問",
-                                "誤答時倍率",
-                                "Power係数",
-                              ]
+                            ? ["専用クイズ", "秒数 / 問", "Power係数"]
                             : []),
                           "有効",
                         ].map((h) => (
@@ -193,13 +188,6 @@ export default function SkillUsageEditor() {
                                 {(
                                   [
                                     ["秒数 / 問", "quiz_seconds", 5, 300, 1],
-                                    [
-                                      "誤答時倍率",
-                                      "wrong_multiplier",
-                                      0,
-                                      1,
-                                      0.1,
-                                    ],
                                     [
                                       "Power係数",
                                       "power_coefficient",

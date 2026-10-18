@@ -49,6 +49,18 @@ const statDefinitions = [
     Icon: Zap,
     value: (stats: ReturnType<typeof playerStats>) => stats.speed,
   },
+  {
+    key: "specialAttack",
+    label: "特攻",
+    Icon: WandSparkles,
+    value: (stats: ReturnType<typeof playerStats>) => stats.specialAttack,
+  },
+  {
+    key: "specialDefense",
+    label: "特守",
+    Icon: Shield,
+    value: (stats: ReturnType<typeof playerStats>) => stats.specialDefense,
+  },
 ] as const;
 
 export default function StatEditor({

@@ -150,7 +150,10 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
       setSaving(false);
     }
   }
-  function add(effect: SkillDefinition["effect"] = "attack") {
+  function add(
+    effect: SkillDefinition["effect"] = "attack",
+    damageType?: "physical" | "special",
+  ) {
     if (!catalog || kind === "shop") return;
     const id = `${kind.slice(0, -1)}_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
     const base = {
@@ -164,6 +167,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
         ? normalizeSkill({
             ...base,
             effect,
+            damage_type: damageType,
             target: ["attack", "debuff", "ailment"].includes(effect)
               ? "enemy"
               : "self",

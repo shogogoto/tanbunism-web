@@ -6,7 +6,7 @@ import {
 import { networkFetch } from "~/shared/lib/networkFetch";
 
 export const SKILL_FILE_FORMAT = "tanbunism.skills";
-export const SKILL_FILE_VERSION = 2;
+export const SKILL_FILE_VERSION = 3;
 export const MAX_SKILL_FILE_BYTES = 1024 * 1024;
 
 export function skillFileText(skills: SkillDefinition[]) {

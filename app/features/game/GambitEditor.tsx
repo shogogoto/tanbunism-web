@@ -355,6 +355,15 @@ export default function GambitEditor({
           条件を追加
         </Button>
       </fieldset>
+      <div
+        className="rounded-md border p-3 text-sm"
+        aria-label="デフォルトガンビット"
+      >
+        最下位：いつでも → 戦う（反撃・物理・敵1体）
+        <p className="text-muted-foreground">
+          上の行を実行できないときに使用 · 枠の消費なし
+        </p>
+      </div>
       <div className="flex justify-center">
         <Button
           type="submit"

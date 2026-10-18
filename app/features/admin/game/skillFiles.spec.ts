@@ -12,7 +12,7 @@ it("writes a versioned skills-only file without granting access or exporting con
   const text = skillFileText(skills);
   expect(JSON.parse(text)).toEqual({
     format: "tanbunism.skills",
-    version: 2,
+    version: 3,
     skills: skills.map(normalizeSkill),
   });
   expect(

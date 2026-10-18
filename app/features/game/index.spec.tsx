@@ -1007,7 +1007,15 @@ it.each([false, true])(
     await user.click(screen.getByRole("button", { name: "割り振りを保存" }));
     await screen.findByText("現在HP 35/50");
     expect(requests).toEqual([
-      { hp: 3, mp: 0, attack: 0, defense: 0, speed: 0 },
+      {
+        hp: 3,
+        mp: 0,
+        attack: 0,
+        defense: 0,
+        specialAttack: 0,
+        specialDefense: 0,
+        speed: 0,
+      },
     ]);
     fireEvent.click(
       screen.getByRole("button", { name: "ブラウザで戻る", hidden: true }),

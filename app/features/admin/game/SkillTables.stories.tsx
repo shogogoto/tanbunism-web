@@ -46,7 +46,7 @@ function Demo() {
           })
         }
         skills={skills}
-        add={(effect) =>
+        add={(effect, damageType) =>
           setSkills((current) => [
             ...current,
             normalizeSkill({
@@ -55,6 +55,7 @@ function Demo() {
               icon: "sparkles",
               enabled: true,
               effect,
+              damage_type: damageType,
               target: ["attack", "debuff", "ailment"].includes(effect)
                 ? "enemy"
                 : "self",

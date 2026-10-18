@@ -15,6 +15,8 @@ export type Run = {
   maxMp?: number;
   attack: number;
   defense: number;
+  specialAttack?: number;
+  specialDefense?: number;
   speed?: number;
   moves: number;
   kills: number;
@@ -165,6 +167,9 @@ export function enterDungeon(
       mp: stats.maxMp,
       attack: stats.attack,
       defense: stats.defense,
+      specialAttack: stats.specialAttack,
+      specialDefense: stats.specialDefense,
+      speed: stats.speed,
       moves: 0,
       kills: 0,
       enemyHp: 0,

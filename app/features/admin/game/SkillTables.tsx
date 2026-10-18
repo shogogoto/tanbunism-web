@@ -10,12 +10,13 @@ import SkillAnimationGallery from "./SkillAnimationGallery";
 
 const selectClass = "h-9 rounded-md border bg-background px-2 text-sm";
 export const skillGroups = [
-  ["回復", ["heal_hp", "heal_mp"]],
-  ["攻撃", ["attack"]],
-  ["buff", ["buff"]],
-  ["debuff", ["debuff"]],
-  ["状態異常", ["ailment"]],
-  ["その他", ["recover_moves", "equip_attack"]],
+  ["回復", ["heal_hp", "heal_mp"], null],
+  ["物理攻撃", ["attack"], "physical"],
+  ["特殊攻撃", ["attack"], "special"],
+  ["バフ", ["buff"], null],
+  ["デバフ", ["debuff"], null],
+  ["状態異常", ["ailment"], null],
+  ["その他", ["recover_moves", "equip_attack"], null],
 ] as const;
 
 export default function SkillTables({
@@ -27,32 +28,47 @@ export default function SkillTables({
 }: {
   skills: SkillDefinition[];
   update: (id: string, patch: SkillPatch) => void;
-  add: (effect: SkillDefinition["effect"]) => void;
+  add: (
+    effect: SkillDefinition["effect"],
+    damageType?: "physical" | "special",
+  ) => void;
   deletions: Set<string>;
   toggleDelete: (id: string) => void;
 }) {
   return (
     <div className="space-y-6">
-      {skillGroups.map(([title, effects]) => {
+      {skillGroups.map(([title, effects, damageType]) => {
         const status = ["buff", "debuff", "ailment"].includes(effects[0]);
         const stat = effects[0] === "buff" || effects[0] === "debuff";
+        const attack = effects[0] === "attack";
+        const ailment = effects[0] === "ailment";
+        const combat = title !== "その他";
+        const enemyTarget = attack || effects[0] === "debuff" || ailment;
         const headers = [
           "名前",
           "効果",
+          ...(combat ? ["タイプ"] : []),
           "対象",
+          ...(enemyTarget ? ["対象数"] : []),
           ...(stat ? ["対象ステータス"] : []),
           ...(effects[0] === "ailment" ? ["状態異常"] : []),
-          "効果量",
-          ...(title !== "その他" ? ["指定方式"] : []),
-          ...(title === "攻撃" ? ["攻撃倍率"] : []),
+          ailment ? "毎ターン効果量" : combat ? "正答効果量" : "効果量",
+          ...(combat && !ailment ? ["誤答効果量"] : []),
+          ...(ailment ? ["正答付与", "誤答付与"] : []),
+          ...(combat ? ["指定方式"] : []),
+          ...(attack ? ["正答攻撃倍率", "誤答攻撃倍率"] : []),
           ...(status ? ["持続ターン", "重複上限"] : []),
           "消費MP",
           "演出",
           "有効",
           "削除",
         ];
-        const rows = skills.filter((s) =>
-          (effects as readonly string[]).includes(s.effect),
+        const rows = skills.filter(
+          (s) =>
+            (effects as readonly string[]).includes(s.effect) &&
+            (!damageType ||
+              (s.effect === "attack" &&
+                (s.damage_type ?? "physical") === damageType)),
         );
         return (
           <section key={title} aria-label={`${title}スキル`}>
@@ -75,6 +91,52 @@ export default function SkillTables({
                 <tbody>
                   {rows.map((s) => {
                     const removed = deletions.has(s.id);
+                    const wrong = s.on_wrong;
+                    const reduced = wrong?.type === "reduced";
+                    const wrongValue = (key: "amount" | "multiplier") => {
+                      const value =
+                        reduced && "amount" in wrong
+                          ? key === "amount"
+                            ? wrong.amount
+                            : "multiplier" in wrong
+                              ? wrong.multiplier
+                              : 0
+                          : Number.NaN;
+                      return Number.isFinite(value) ? value : "";
+                    };
+                    const wrongNumeric = (key: "amount" | "multiplier") => (
+                      <Input
+                        aria-label={
+                          key === "amount" ? "誤答効果量" : "誤答攻撃倍率"
+                        }
+                        disabled={removed || !reduced}
+                        className="w-24"
+                        type="number"
+                        min={0}
+                        max={key === "amount" ? 10000 : 10}
+                        step={key === "amount" ? 1 : 0.1}
+                        required={reduced}
+                        value={wrongValue(key)}
+                        onChange={(event) =>
+                          update(s.id, {
+                            on_wrong: {
+                              type: "reduced",
+                              amount:
+                                reduced && "amount" in wrong ? wrong.amount : 0,
+                              ...(s.effect === "attack"
+                                ? {
+                                    multiplier:
+                                      reduced && "multiplier" in wrong
+                                        ? wrong.multiplier
+                                        : 0.5,
+                                  }
+                                : {}),
+                              [key]: event.target.valueAsNumber,
+                            },
+                          })
+                        }
+                      />
+                    );
                     const numeric = (
                       label: string,
                       key:
@@ -134,21 +196,75 @@ export default function SkillTables({
                             disabled={removed}
                             aria-label="効果"
                             className={selectClass}
-                            value={s.effect}
+                            value={
+                              attack && s.effect === "attack"
+                                ? (s.damage_type ?? "physical")
+                                : s.effect
+                            }
                             onChange={(e) =>
-                              update(s.id, {
-                                effect: e.target
-                                  .value as SkillDefinition["effect"],
-                              })
+                              update(
+                                s.id,
+                                attack
+                                  ? {
+                                      damage_type: e.target.value as
+                                        | "physical"
+                                        | "special",
+                                    }
+                                  : {
+                                      effect: e.target
+                                        .value as SkillDefinition["effect"],
+                                    },
+                              )
                             }
                           >
-                            {effects.map((effect) => (
-                              <option key={effect} value={effect}>
-                                {effectLabels[effect]}
-                              </option>
-                            ))}
+                            {attack ? (
+                              <>
+                                <option value="physical">物理攻撃</option>
+                                <option value="special">特殊攻撃</option>
+                              </>
+                            ) : (
+                              effects.map((effect) => (
+                                <option key={effect} value={effect}>
+                                  {effectLabels[effect]}
+                                </option>
+                              ))
+                            )}
                           </select>
                         </td>
+                        {combat && (
+                          <td>
+                            <select
+                              aria-label="タイプ"
+                              className={selectClass}
+                              disabled={removed}
+                              value={wrong?.type ?? "fizzle"}
+                              onChange={(event) =>
+                                update(s.id, {
+                                  on_wrong:
+                                    event.target.value === "reduced"
+                                      ? s.effect === "ailment"
+                                        ? { type: "reduced", apply: false }
+                                        : {
+                                            type: "reduced",
+                                            amount: Math.floor(s.amount / 2),
+                                            ...(s.effect === "attack"
+                                              ? { multiplier: s.multiplier / 2 }
+                                              : {}),
+                                          }
+                                      : {
+                                          type: event.target.value as
+                                            | "counter"
+                                            | "fizzle",
+                                        },
+                                })
+                              }
+                            >
+                              {attack && <option value="counter">反撃</option>}
+                              <option value="fizzle">不発</option>
+                              <option value="reduced">軽減</option>
+                            </select>
+                          </td>
+                        )}
                         <td>
                           {["attack", "debuff", "ailment"].includes(
                             s.effect,
@@ -165,13 +281,40 @@ export default function SkillTables({
                                 })
                               }
                             >
-                              <option value="enemy">敵1体</option>
+                              <option value="enemy">敵</option>
                               <option value="all_enemies">敵全体</option>
                             </select>
                           ) : (
                             "自分"
                           )}
                         </td>
+                        {enemyTarget && (
+                          <td>
+                            <Input
+                              aria-label="対象数"
+                              className="w-20"
+                              type="number"
+                              min={1}
+                              max={5}
+                              step={1}
+                              required
+                              disabled={removed || s.target === "all_enemies"}
+                              value={
+                                "target_count" in s &&
+                                s.target_count !== undefined
+                                  ? Number.isFinite(s.target_count)
+                                    ? s.target_count
+                                    : ""
+                                  : 1
+                              }
+                              onChange={(event) =>
+                                update(s.id, {
+                                  target_count: event.target.valueAsNumber,
+                                })
+                              }
+                            />
+                          </td>
+                        )}
                         {stat && (
                           <td>
                             <select
@@ -190,13 +333,11 @@ export default function SkillTables({
                               }
                             >
                               <option value="attack">攻撃力</option>
+                              <option value="defense">守備力</option>
+                              <option value="specialAttack">特攻</option>
+                              <option value="specialDefense">特守</option>
                               {s.effect === "buff" && (
-                                <>
-                                  <option value="defense">守備力</option>
-                                  <option value="maxHp">
-                                    最大HP（バブル）
-                                  </option>
-                                </>
+                                <option value="maxHp">最大HP（バブル）</option>
                               )}
                             </select>
                           </td>
@@ -227,6 +368,37 @@ export default function SkillTables({
                             10000,
                           )}
                         </td>
+                        {combat && !ailment && (
+                          <td>{wrongNumeric("amount")}</td>
+                        )}
+                        {ailment && (
+                          <>
+                            <td>付与する</td>
+                            <td>
+                              <select
+                                aria-label="誤答付与"
+                                className={selectClass}
+                                disabled={removed || !reduced}
+                                value={
+                                  reduced && "apply" in wrong && wrong.apply
+                                    ? "yes"
+                                    : "no"
+                                }
+                                onChange={(event) =>
+                                  update(s.id, {
+                                    on_wrong: {
+                                      type: "reduced",
+                                      apply: event.target.value === "yes",
+                                    },
+                                  })
+                                }
+                              >
+                                <option value="no">付与しない</option>
+                                <option value="yes">付与する</option>
+                              </select>
+                            </td>
+                          </>
+                        )}
                         {title !== "その他" && (
                           <td>
                             <select
@@ -247,10 +419,13 @@ export default function SkillTables({
                             </select>
                           </td>
                         )}
-                        {title === "攻撃" && (
-                          <td>
-                            {numeric("攻撃倍率", "multiplier", 0, 10, 1, 0.1)}
-                          </td>
+                        {attack && (
+                          <>
+                            <td>
+                              {numeric("攻撃倍率", "multiplier", 0, 10, 1, 0.1)}
+                            </td>
+                            <td>{wrongNumeric("multiplier")}</td>
+                          </>
                         )}
                         {status && (
                           <>
@@ -318,7 +493,7 @@ export default function SkillTables({
                         size="icon"
                         variant="ghost"
                         aria-label={`${title}スキルを追加`}
-                        onClick={() => add(effects[0])}
+                        onClick={() => add(effects[0], damageType ?? undefined)}
                       >
                         <Plus aria-hidden="true" />
                       </Button>
