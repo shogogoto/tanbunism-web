@@ -44,6 +44,27 @@ it("blocks allocation and reset during battle", () => {
   expect(screen.getByRole("button", { name: "割り振りを保存" })).toBeDisabled();
 });
 
+it("spends the shared point budget on speed with the configured coefficient", async () => {
+  const user = userEvent.setup();
+  render(
+    <StatEditor
+      level={2}
+      balance={{ ...defaultBalance, base_speed: 12, speed_per_point: 2 }}
+      inBattle={false}
+      onSaved={vi.fn()}
+    />,
+  );
+  const speed = screen.getByRole("button", {
+    name: "速さにポイントを割り振る",
+  });
+  await user.click(speed);
+  expect(screen.getByText("14")).toBeVisible();
+  await user.click(speed);
+  await user.click(speed);
+  expect(speed).toBeDisabled();
+  expect(screen.getByText("18")).toBeVisible();
+});
+
 it("allocates the same point budget to MP and previews the admin's coefficient", async () => {
   render(
     <StatEditor

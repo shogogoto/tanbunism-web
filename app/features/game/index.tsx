@@ -407,6 +407,10 @@ export function GamePlay({
         return;
       void requestGameState()
         .then(async (state) => {
+          if (state.save.battle?.schedule) {
+            localBattle.current = state.save.battle.id;
+            return state;
+          }
           if (state.save.battle || state.save.run?.phase === "battle")
             return gameRequest<import("./state").GameState>(
               "battle/abandon",
@@ -644,6 +648,7 @@ export function GamePlay({
           "battle/start",
           {
             revision: state.revision,
+            scheduled: true,
             region,
             checkpoint: map?.current ?? ENTRANCE,
             discovered_place: isNewPlace ? sentenceId : null,
@@ -851,7 +856,7 @@ export function GamePlay({
     try {
       const started = await gameRequest<import("./state").GameState>(
         "battle/boss",
-        { revision: revision.current, level },
+        { revision: revision.current, level, scheduled: true },
       );
       localBattle.current = started.save.battle?.id ?? null;
       applyState(started);
@@ -1588,7 +1593,7 @@ export function GamePlay({
             }
             onSaved={(state) => {
               applyState(state);
-              void retryCombat();
+              if (!save.battle?.schedule) void retryCombat();
               void invalidateGamification(mutate, {
                 preserveData: true,
               }).catch(() => undefined);

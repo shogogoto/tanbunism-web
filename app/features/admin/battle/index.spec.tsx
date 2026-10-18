@@ -57,6 +57,33 @@ const server = setupServer(
   }),
 );
 
+it("saves the speed formula, base speed, and allocation coefficient", async () => {
+  const user = userEvent.setup();
+  render(<BattleSettingsManager />);
+  const formula = await screen.findByRole("combobox", {
+    name: "速さの計算方式",
+  });
+  expect(formula).toHaveValue("sqrt");
+  await user.selectOptions(formula, "linear");
+  await user.clear(screen.getByLabelText("初期速さ"));
+  await user.type(screen.getByLabelText("初期速さ"), "12");
+  const coefficient = within(
+    screen.getByRole("region", { name: "育成ポイントあたりの上昇量" }),
+  ).getByLabelText("速さ");
+  await user.clear(coefficient);
+  await user.type(coefficient, "2");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() =>
+    expect(saved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        speed_formula: "linear",
+        base_speed: 12,
+        speed_per_point: 2,
+      }),
+    ),
+  );
+});
+
 it("places ordinary labels above their inputs and preserves editable formulas", async () => {
   render(<BattleSettingsManager />);
   const hp = await screen.findByLabelText("初期HP");
@@ -167,7 +194,9 @@ it("saves MP base and allocation alongside the draft battle settings", async () 
   const base = await screen.findByLabelText("初期MP");
   await user.clear(base);
   await user.type(base, "15");
-  const perPoint = screen.getByLabelText("MP / 育成ポイント");
+  const perPoint = within(
+    screen.getByRole("region", { name: "育成ポイントあたりの上昇量" }),
+  ).getByLabelText(/^MP(?: \/ 育成ポイント)?$/);
   await user.clear(perPoint);
   await user.type(perPoint, "4");
   await user.click(screen.getAllByRole("button", { name: "保存" })[0]);

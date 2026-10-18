@@ -201,10 +201,14 @@ Initially loads up to 100 knowledge items per resource and adds related knowledg
 as encountered; no route-aware quiz recommendations yet. Global UI hotkeys continue
 to work; input/dialog guards apply.
 
-Combat rules still run on the client; the snapshot endpoint is not an anti-cheat
-system. Learning answers/exposures and game saves are separate requests: a failed
-game save never removes recorded learning XP. No competitive rewards should use
-these snapshots until server-authoritative combat is implemented.
+New encounters request the server's scheduled combat protocol. The backend owns
+action order, question assignment, enemy HP, damage and defeat rewards; the frontend
+renders its forecast left to right and submits one answer per action. Speed is a
+point-allocated stat. Admin can select linear or square-root speed scaling; the
+chosen formula is fixed for each encounter. Forecast generation does not advance
+the battle or reroll ties. Old in-progress battles retain the legacy batched UI.
+Practice uses the same server scheduler/resolver with unsaved admin settings and
+isolated state. Specialty quizzes retain their separate end-action flow.
 
 Next slices: choosing a captured quiz weapon on clearing, MP and attack turns;
 capped global-accuracy weapon damage; larger Power dungeon game-only rewards;

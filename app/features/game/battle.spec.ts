@@ -19,6 +19,7 @@ describe("allocated stats and browser-local enemy HP", () => {
       maxMp: 10,
       attack: 12,
       defense: 1,
+      speed: 10,
       answerSeconds: defaultBalance.base_seconds,
     });
   });

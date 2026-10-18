@@ -1,4 +1,12 @@
-import { Heart, Minus, Plus, Shield, Swords, WandSparkles } from "lucide-react";
+import {
+  Heart,
+  Minus,
+  Plus,
+  Shield,
+  Swords,
+  WandSparkles,
+  Zap,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "~/shared/components/ui/button";
 import {
@@ -34,6 +42,12 @@ const statDefinitions = [
     label: "守備力",
     Icon: Shield,
     value: (stats: ReturnType<typeof playerStats>) => stats.defense,
+  },
+  {
+    key: "speed",
+    label: "速さ",
+    Icon: Zap,
+    value: (stats: ReturnType<typeof playerStats>) => stats.speed,
   },
 ] as const;
 

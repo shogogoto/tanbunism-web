@@ -145,6 +145,7 @@ export type EnemyDefinition = {
   icon: string;
   enabled: boolean;
   boss: boolean;
+  speed?: number | null;
   attack_skill_id: string | null;
   on_hit_skill_id?: string | null;
 };

@@ -374,6 +374,7 @@ it("challenges the milestone boss from its map node using the current server rev
     expect(challenge).toHaveBeenCalledExactlyOnceWith({
       revision: 4,
       level: 5,
+      scheduled: true,
     }),
   );
   expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -850,6 +851,64 @@ it("records seen knowledge and a batch turn, then retreats after remount without
   expect(loadDungeon).toHaveBeenCalledTimes(loadsBeforeRemount + 1);
 });
 
+it("resumes a scheduled battle without retreating or resetting its deadline and queue", async () => {
+  const content = await loadDungeon("book");
+  const save = enterDungeon(newSave(), "book", "テストの本", 1);
+  if (!save.run) throw new Error("Missing run");
+  const deadline = Date.now() + 45000;
+  const enemyId = "resume-enemy";
+  save.content = {
+    ...content,
+    regionEnemies: { "0": [{ id: enemyId, name: "再開の敵", quizIndex: 0 }] },
+  };
+  save.run = {
+    ...save.run,
+    phase: "battle",
+    answerSeconds: 45,
+    answerDeadline: deadline,
+  };
+  save.battle = {
+    id: "resume",
+    turn: 0,
+    region: 0,
+    checkpoint: "@entrance",
+    enemies: [enemyId],
+    quizIndices: { [enemyId]: 0 },
+    schedule: {
+      formula: "sqrt",
+      actor_id: "player",
+      quiz_enemy_id: enemyId,
+      enemy_hp: { [enemyId]: 7 },
+      queue: [
+        { actor_id: "player", distance: 0 },
+        { actor_id: enemyId, distance: 3 },
+      ],
+    },
+  };
+  state = { revision: 4, save };
+  const abandon = vi.fn();
+  server.use(
+    http.post("*/game/battle/abandon", () => {
+      abandon();
+      return HttpResponse.json(state);
+    }),
+  );
+  const view = renderGame();
+  expect(await screen.findByRole("region", { name: "行動予測" })).toBeVisible();
+  expect(screen.getByRole("region", { name: "敵一覧" })).toHaveTextContent(
+    "HP 7/20",
+  );
+  view.unmount();
+  renderGame();
+  expect(await screen.findByRole("region", { name: "行動予測" })).toBeVisible();
+  expect(abandon).not.toHaveBeenCalled();
+  expect(state.revision).toBe(4);
+  expect(state.save.run?.answerDeadline).toBe(deadline);
+  expect(state.save.battle?.schedule?.queue).toEqual(
+    save.battle?.schedule?.queue,
+  );
+});
+
 it("abandoned timed-out combat retreats only once and preserves feedback across reopening", async () => {
   const save = move(
     enterDungeon(newSave(), "book", "テストの本", 1),
@@ -947,7 +1006,9 @@ it.each([false, true])(
     );
     await user.click(screen.getByRole("button", { name: "割り振りを保存" }));
     await screen.findByText("現在HP 35/50");
-    expect(requests).toEqual([{ hp: 3, mp: 0, attack: 0, defense: 0 }]);
+    expect(requests).toEqual([
+      { hp: 3, mp: 0, attack: 0, defense: 0, speed: 0 },
+    ]);
     fireEvent.click(
       screen.getByRole("button", { name: "ブラウザで戻る", hidden: true }),
     );

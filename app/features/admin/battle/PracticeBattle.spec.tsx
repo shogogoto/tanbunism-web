@@ -438,7 +438,11 @@ it("loads real points and edits only the disposable player before starting", asy
     screen.getByRole("button", { name: "現在の設定で模擬戦を開始" }),
   );
   await screen.findByRole("dialog");
-  expect(preparations[0].allocation).toEqual({ ...userPoints, attack: 9 });
+  expect(preparations[0].allocation).toEqual({
+    ...userPoints,
+    attack: 9,
+    speed: 0,
+  });
   expect(preparations[0].player_user_id).toBe("other");
   expect(screen.getByRole("region", { name: "プレイヤー" })).toHaveTextContent(
     /HP\s*70\/70/,

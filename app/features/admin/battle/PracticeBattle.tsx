@@ -382,7 +382,8 @@ export default function PracticeBattle({
       (correct) => !correct,
     ).length;
     total.unanswered +=
-      marker.enemies.length - Object.keys(turn.answers).length;
+      (marker.schedule ? 1 : marker.enemies.length) -
+      Object.keys(turn.answers).length;
     total.damage += resolved.damage;
     total.seconds += Math.min(
       playerStats(current.state.save.allocation, current.context.balance)
@@ -512,7 +513,7 @@ export default function PracticeBattle({
           className="grid grid-cols-2 gap-3 sm:grid-cols-4"
         >
           <legend className="mb-2 text-sm">加算ポイント（模擬戦用）</legend>
-          {(["hp", "mp", "attack", "defense"] as const).map((stat) => (
+          {(["hp", "mp", "attack", "defense", "speed"] as const).map((stat) => (
             <div key={stat} className="space-y-1">
               <Label htmlFor={`practice-${stat}`}>
                 {
@@ -521,6 +522,7 @@ export default function PracticeBattle({
                     attack: "攻ポイント",
                     defense: "守ポイント",
                     mp: "MPポイント",
+                    speed: "速さポイント",
                   }[stat]
                 }
               </Label>

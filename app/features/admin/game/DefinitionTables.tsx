@@ -24,7 +24,7 @@ export default function DefinitionTables({
     "素材",
     ...(kind === "items"
       ? ["種類", "発動スキル", "使用回数"]
-      : ["ボス用", "攻撃スキル", "命中時スキル"]),
+      : ["ボス用", "速さ", "攻撃スキル", "命中時スキル"]),
     "有効",
   ];
   return (
@@ -142,6 +142,25 @@ export default function DefinitionTables({
                       checked={item.boss}
                       onChange={(e) =>
                         update(item.id, { boss: e.target.checked })
+                      }
+                    />
+                  </td>
+                  <td>
+                    <Input
+                      aria-label={`${item.name}の速さ`}
+                      type="number"
+                      min={1}
+                      max={1000}
+                      className="w-24"
+                      placeholder="共通設定"
+                      value={item.speed ?? ""}
+                      onChange={(event) =>
+                        update(item.id, {
+                          speed:
+                            event.target.value === ""
+                              ? null
+                              : Number(event.target.value),
+                        })
                       }
                     />
                   </td>

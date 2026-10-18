@@ -15,6 +15,7 @@ export type Run = {
   maxMp?: number;
   attack: number;
   defense: number;
+  speed?: number;
   moves: number;
   kills: number;
   enemyHp: number;
@@ -97,6 +98,13 @@ export type GameSave = {
     bossQuizIds?: string[];
     skillUsed?: boolean;
     gambitAction?: import("./catalog").BattleAction | null;
+    schedule?: {
+      formula: "linear" | "sqrt";
+      actor_id: string | null;
+      quiz_enemy_id: string | null;
+      enemy_hp: Record<string, number>;
+      queue: { actor_id: string; distance: number }[];
+    } | null;
     effects?: import("./catalog").BattleEffect[];
     skill?: {
       id: string;

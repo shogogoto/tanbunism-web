@@ -33,7 +33,11 @@ export type PracticeSession = {
 export const requestPractice = (
   input: PracticeInput,
 ): Promise<PracticeSession> =>
-  requestSimulation("practice", input, "模擬戦を準備できませんでした。");
+  requestSimulation(
+    "practice",
+    { ...input, scheduled: true },
+    "模擬戦を準備できませんでした。",
+  );
 export const requestPracticeTurn = (
   session: PracticeSession,
   turn: TurnInput,
@@ -106,7 +110,7 @@ export const requestSimulatedPractice = (
 ): Promise<PracticeSession> =>
   requestSimulation(
     "practice/simulation",
-    input,
+    { ...input, scheduled: true },
     "試算結果から模擬戦を準備できませんでした。",
   );
 

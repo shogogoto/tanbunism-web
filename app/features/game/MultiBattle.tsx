@@ -14,6 +14,7 @@ import BattleDialog from "./BattleDialog";
 import EndTurnAction from "./EndTurnAction";
 import EnemyAvatar from "./EnemyAvatar";
 import GameIcon from "./GameIcon";
+import ScheduledBattle from "./ScheduledBattle";
 import SkillEffect from "./SkillEffect";
 import type { DungeonContent } from "./api";
 import {
@@ -44,7 +45,19 @@ import useBattleTempo, { type BattleTempo } from "./useBattleTempo";
 const hitAnimation = (animation?: SkillAnimation): SkillAnimation =>
   animation && animation !== "none" ? animation : "impact";
 
-export default function MultiBattle({
+export default function MultiBattle(
+  props: Parameters<typeof LegacyMultiBattle>[0],
+) {
+  const scheduled = useRef(Boolean(props.save.battle?.schedule));
+  if (props.save.battle?.schedule) scheduled.current = true;
+  return scheduled.current ? (
+    <ScheduledBattle {...props} />
+  ) : (
+    <LegacyMultiBattle {...props} />
+  );
+}
+
+function LegacyMultiBattle({
   save,
   content,
   context,

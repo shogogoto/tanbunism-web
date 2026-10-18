@@ -26,6 +26,9 @@ const fields = {
   base_mp: ["初期MP", 0, 10000, 1],
   base_attack: ["初期攻", 1, 1000, 1],
   base_defense: ["初期守", 0, 1000, 1],
+  base_speed: ["初期速さ", 1, 1000, 1],
+  speed_per_point: ["速さ", 1, 100, 1],
+  enemy_speed: ["敵の速さ", 1, 1000, 1],
   base_seconds: ["初期持ち時間（秒）", 5, 300, 1],
   hp_per_point: ["HP / 育成ポイント", 1, 100, 1],
   mp_per_point: ["MP / 育成ポイント", 1, 100, 1],
@@ -106,7 +109,14 @@ const groups = [
   },
   {
     label: "プレイヤーの初期値",
-    keys: ["base_hp", "base_mp", "base_attack", "base_defense", "base_seconds"],
+    keys: [
+      "base_hp",
+      "base_mp",
+      "base_attack",
+      "base_defense",
+      "base_speed",
+      "base_seconds",
+    ],
   },
   {
     label: "育成ポイントあたりの上昇量",
@@ -115,6 +125,7 @@ const groups = [
       "mp_per_point",
       "attack_per_point",
       "defense_per_point",
+      "speed_per_point",
     ],
   },
   {
@@ -301,6 +312,39 @@ export default function BattleSettingsManager() {
               }}
             />
             <div className="space-y-5">
+              <section aria-label="行動順" className="rounded-lg border p-4">
+                <h3 className="mb-3 font-medium">行動順</h3>
+                <div className="flex flex-wrap items-end gap-6">
+                  <label className="grid gap-2 text-xs text-muted-foreground">
+                    速さの計算方式
+                    <select
+                      form="game-settings"
+                      aria-label="速さの計算方式"
+                      className="h-9 rounded-md border bg-background px-3 text-sm text-foreground"
+                      value={settings.speed_formula}
+                      onChange={(event) =>
+                        setSettings({
+                          ...settings,
+                          speed_formula: event.target.value as
+                            | "linear"
+                            | "sqrt",
+                        })
+                      }
+                    >
+                      <option value="sqrt">平方根</option>
+                      <option value="linear">比例</option>
+                    </select>
+                  </label>
+                  {settingInput("enemy_speed")}
+                  <p className="text-sm">
+                    行動間隔 = 12 ÷{" "}
+                    {settings.speed_formula === "sqrt" ? "√速さ" : "速さ"}
+                  </p>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  計算方式は戦闘開始時に固定。模擬戦では保存前の設定を使用します。
+                </p>
+              </section>
               {groups.map((group) => (
                 <section
                   key={group.label}

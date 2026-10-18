@@ -7,12 +7,14 @@ export type Allocation = {
   mp?: number;
   attack: number;
   defense: number;
+  speed?: number;
 };
 export const emptyAllocation: Allocation = {
   hp: 0,
   mp: 0,
   attack: 0,
   defense: 0,
+  speed: 0,
 };
 export const defaultBalance = {
   gambit_levels_per_slot: 5,
@@ -24,6 +26,10 @@ export const defaultBalance = {
   base_mp: 10,
   base_attack: 10,
   base_defense: 1,
+  base_speed: 10,
+  speed_per_point: 1,
+  enemy_speed: 10,
+  speed_formula: "sqrt" as "linear" | "sqrt",
   base_seconds: 45,
   hp_per_point: 5,
   mp_per_point: 2,
@@ -74,6 +80,7 @@ export type LiveEnemy = RegionEnemy & {
   attack: number;
   region: number;
   relations: number;
+  speed?: number;
   animation?: import("./catalog").SkillAnimation;
   sound?: import("./catalog").SkillSound;
 };
@@ -94,6 +101,10 @@ export type TurnResult = {
   incoming_damage?: Record<string, number>;
   gold_earned?: number;
   poison_damage?: Record<string, number>;
+  outgoing_damage?: Record<string, number>;
+  enemy_hp?: Record<string, number>;
+  actor_id?: string;
+  quiz_enemy_id?: string;
 };
 
 export function rollPlayerDamage(
@@ -176,6 +187,11 @@ export function playerStats(
       balance.base_defense + a.defense * balance.defense_per_point,
     ),
     answerSeconds: balance.base_seconds,
+    speed: Math.min(
+      100000,
+      (balance.base_speed ?? 10) +
+        (a.speed ?? 0) * (balance.speed_per_point ?? 1),
+    ),
   };
 }
 
