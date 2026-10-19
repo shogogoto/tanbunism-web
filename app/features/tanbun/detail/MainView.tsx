@@ -201,12 +201,14 @@ export default function MainView({
     belows,
     logicOp,
     refOp,
+    antiOp,
   } = useMemo(() => {
     if (detail) {
       const { root, g, kn, location, rootId } = graphForView(detail);
       const belows = succ(g, rootId, eqEdgeType("below"));
       const logicOp = operatorGraph(g, "to");
       const refOp = operatorGraph(g, "resolved");
+      const antiOp = operatorGraph(g, "anti");
       return {
         headerTanbun: root,
         headerLocation: location,
@@ -216,6 +218,7 @@ export default function MainView({
         belows,
         logicOp,
         refOp,
+        antiOp,
       };
     }
     return {
@@ -230,6 +233,7 @@ export default function MainView({
       belows: [],
       logicOp: null,
       refOp: null,
+      antiOp: null,
     };
   }, [detail, prefetched]);
 
@@ -256,6 +260,12 @@ export default function MainView({
   const logicSucc = detail && rootId && logicOp ? logicOp.succ(rootId) : [];
   const refPred = detail && rootId && refOp ? refOp.pred(rootId) : [];
   const refSucc = detail && rootId && refOp ? refOp.succ(rootId) : [];
+  const antiIds =
+    detail && rootId && antiOp
+      ? [...new Set([...antiOp.pred(rootId), ...antiOp.succ(rootId)])].filter(
+          (id) => id !== rootId,
+        )
+      : [];
   const isLoaded = !!(detail && g && rootId && logicOp && refOp);
   const childIds = isLoaded ? oneHopDetailIds(g, belows) : [];
   const hasLogic = logicPred.length > 0 || logicSucc.length > 0;
@@ -316,6 +326,12 @@ export default function MainView({
               </CollapsibleSection>
             </div>
           )}
+        </RelationSection>
+      )}
+
+      {antiIds.length > 0 && (
+        <RelationSection title="反対" borderColor="border-rose-500">
+          <RelatedCards ids={antiIds} kn={kn} borderColor="border-rose-400" />
         </RelationSection>
       )}
 

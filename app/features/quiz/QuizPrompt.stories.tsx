@@ -15,6 +15,18 @@ const baseQuiz: Omit<ReadableQuiz, "quiz_type" | "prompt"> = {
 const quizzes: ReadableQuiz[] = [
   {
     ...baseQuiz,
+    quiz_id: "opposition",
+    quiz_type: "rel2pair",
+    prompt: {
+      subject: "未来を明るく見る",
+      relations: [{ name: "ANTI", is_forward: true }],
+      answer_kind: "sentence",
+    },
+    options: { opposite: "未来を暗く見る", other: "未来をまだ判断しない" },
+    correct: ["opposite"],
+  },
+  {
+    ...baseQuiz,
     quiz_type: "term2sent",
     prompt: { subject: "構造言語学", answer_kind: "sentence" },
   },

@@ -18,7 +18,7 @@ export function KnowledgeScore({ score }: { score: number }) {
       value={String(score)}
       Icon={Award}
       color="text-blue-700 dark:text-blue-300"
-      description="関係数の合計。前提・結論・参照・被参照・詳細・抽象・具体のつながりを数えます。検索では設定した重みを反映します。"
+      description="関係数の合計に重みを反映した値。前提・結論・参照・被参照・詳細・抽象・具体・反対のつながりを数えます。反対関係の既定の重みは3で、検索では設定した重みを反映します。"
     />
   );
 }

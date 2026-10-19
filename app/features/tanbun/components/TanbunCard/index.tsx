@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   Award,
   BookText,
   Calendar,
@@ -132,7 +133,9 @@ export function TanbunCardFooter({ k, index }: KProps & { index?: number }) {
   );
 }
 
-export function createStatView(stats: TanbunStats | undefined) {
+type RelationStats = TanbunStats & { n_anti?: number };
+
+export function createStatView(stats: RelationStats | undefined) {
   const f = (stat: { Icon: LucideIcon; label: string; value?: number }) =>
     stat.value != null && (
       <StatViewItem
@@ -150,6 +153,11 @@ export function createStatView(stats: TanbunStats | undefined) {
     con: { Icon: ChevronsDown, label: "結論数", value: stats?.n_conclusion },
     refer: { Icon: GitFork, label: "参照数", value: stats?.n_refer },
     refd: { Icon: GitPullRequest, label: "被参照数", value: stats?.n_referred },
+    anti: {
+      Icon: ArrowLeftRight,
+      label: "反対関係数",
+      value: stats?.n_anti ?? 0,
+    },
   };
 
   return {
@@ -159,15 +167,23 @@ export function createStatView(stats: TanbunStats | undefined) {
     conclusion: f(items.con),
     refer: f(items.refer),
     referred: f(items.refd),
+    anti: f(items.anti),
   };
 }
 
 export function StatViews({
   stats,
   collapsible,
-}: { stats: TanbunStats | undefined; collapsible?: boolean }) {
+}: { stats: RelationStats | undefined; collapsible?: boolean }) {
   const st = createStatView(stats);
-  const items_c = [st.detail, st.premise, st.conclusion, st.refer, st.referred];
+  const items_c = [
+    st.detail,
+    st.premise,
+    st.conclusion,
+    st.refer,
+    st.referred,
+    st.anti,
+  ];
 
   const className = "flex flex-wrap items-center gap-x-2";
   if (collapsible)

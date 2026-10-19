@@ -12,6 +12,7 @@ describe("relationPresentation", () => {
     ["被参照", "被参照（BがAを参照）"],
     ["一般", "一般"],
     ["具体例", "具体例"],
+    ["反対", "反対"],
     ["親の親", "親の親"],
     ["用語参照の親", "用語参照の親"],
   ])("関係選択肢 %s を短く表示する", (option, expected) => {
@@ -29,6 +30,8 @@ describe("relationPresentation", () => {
     ["EXAMPLE", false, "Aを一般化した単文は？"],
     ["SIBLING", true, "Aと同じ階層の単文は？"],
     ["SIBLING", false, "Aと同じ階層の単文は？"],
+    ["ANTI", true, "Aと反対の関係にある単文は？"],
+    ["ANTI", false, "Aと反対の関係にある単文は？"],
   ])("%s (%s) の向きを文章にする", (name, is_forward, expected) => {
     expect(relationQuestion([{ name, is_forward }])).toBe(expected);
   });

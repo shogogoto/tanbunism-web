@@ -9,6 +9,8 @@ import {
   getSearchByTextTanbunGetResponseMock,
 } from "~/shared/generated/tanbun/tanbun.msw";
 import TanbunSearch from ".";
+import TanbunSearchConfig from "./SearchBar/SearchConfig";
+import { TanbunSearchProvider } from "./SearchContext";
 
 // MSWサーバーのセットアップ
 const server = setupServer(
@@ -46,6 +48,28 @@ function mkrouter(initial: string) {
 }
 
 describe("Tanbun Search", () => {
+  it("反対関係の既定の重み3を変更しURLへ反映する", async () => {
+    const user = userEvent.setup();
+    const router = createMemoryRouter([
+      {
+        path: "/",
+        element: (
+          <TanbunSearchProvider>
+            <TanbunSearchConfig />
+          </TanbunSearchProvider>
+        ),
+      },
+    ]);
+    render(<RouterProvider router={router} />);
+    const slider = screen.getByRole("slider", { name: "反対関係数" });
+    expect(slider).toHaveAttribute("aria-valuenow", "3");
+    slider.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(slider).toHaveAttribute("aria-valuenow", "4");
+    await waitFor(() =>
+      expect(router.state.location.search).toContain("n_anti=4"),
+    );
+  });
   // beforeEach(() => {
   //   vi.useFakeTimers();
   // });

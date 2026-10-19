@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import MainView from "./MainView";
 import { fixtureDetail1 } from "./fixture";
+import { oppositionFixture } from "./opposition.fixture";
 
 const addHistory = vi.hoisted(() => vi.fn());
 
@@ -22,6 +23,24 @@ vi.mock("../components/TanbunCard", async (importOriginal) => ({
 }));
 
 describe("単文詳細", () => {
+  it.each([false, true])(
+    "反対関係は向きを問わず表示し、間接関係は表示しない (%s)",
+    (reverse) => {
+      render(
+        <MemoryRouter>
+          <MainView detail={oppositionFixture(reverse)} />
+        </MemoryRouter>,
+      );
+      expect(screen.getByRole("heading", { name: "反対" })).toBeVisible();
+      expect(screen.getByText("関係する単文: 未来を暗く見る")).toBeVisible();
+      expect(
+        screen.queryByText("関係する単文: 未来をまだ判断しない"),
+      ).not.toBeInTheDocument();
+      expect(
+        within(screen.getByLabelText("現在の単文のスコア内訳")).getByText("1"),
+      ).toBeVisible();
+    },
+  );
   it("現在の単文にもスコア内訳を表示する", () => {
     const detail = structuredClone(fixtureDetail1);
     detail.knowdes[detail.uid.replaceAll("-", "")].stats = {

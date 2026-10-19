@@ -49,6 +49,8 @@ function Slider({
       </SliderPrimitive.Track>
       {Array.from({ length: _values.length }, (_, index) => (
         <SliderPrimitive.Thumb
+          aria-label={props["aria-label"]}
+          aria-labelledby={props["aria-labelledby"]}
           data-slot="slider-thumb"
           // biome-ignore lint/suspicious/noArrayIndexKey:
           key={index}

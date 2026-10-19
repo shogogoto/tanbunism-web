@@ -15,6 +15,7 @@ export default function TanbunSearchConfig() {
     { name: "n_conclusion", label: "結論数" },
     { name: "n_refer", label: "参照数" },
     { name: "n_referred", label: "被参照数" },
+    { name: "n_anti", label: "反対関係数" },
   ];
   return (
     <div className="bg-white dark:bg-gray-800 border">
@@ -111,6 +112,8 @@ function WeightRange({ name, label }: WRProps) {
         <span className="text-xs text-right">{val}</span>
       </label>
       <Slider
+        id={name}
+        aria-label={label}
         name={name}
         min={-1}
         max={5}

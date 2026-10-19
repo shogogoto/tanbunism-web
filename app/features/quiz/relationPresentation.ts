@@ -18,6 +18,7 @@ function targetPhrase(from: string, relation: string): string | undefined {
     被参照: `${from}を参照している単文`,
     一般: `${from}を一般化した内容`,
     具体例: `${from}の具体例`,
+    反対: `${from}と反対の内容`,
   };
   return phrases[relation];
 }
@@ -52,6 +53,7 @@ function relationName({ name, is_forward }: Relation): string | undefined {
     RESOLVED: ["用語参照", "被参照"],
     EXAMPLE: ["一般", "具体例"],
     SIBLING: ["同階層", "同階層"],
+    ANTI: ["反対", "反対"],
   };
   return name ? names[name.toUpperCase()]?.[is_forward ? 1 : 0] : undefined;
 }
@@ -68,6 +70,7 @@ export function relationQuestion(relations: Relation[] = []): string {
     被参照: "Aを参照している単文は？",
     一般: "Aを一般化した単文は？",
     具体例: "Aの具体例にあたる単文は？",
+    反対: "Aと反対の関係にある単文は？",
   };
   if (names.length === 1 && names[0]) return questions[names[0]];
   if (names.length && names.every((name) => name !== undefined)) {

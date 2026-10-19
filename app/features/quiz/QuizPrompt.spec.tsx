@@ -18,6 +18,24 @@ function quiz(overrides: Partial<ReadableQuiz>): ReadableQuiz {
 }
 
 describe("QuizPrompt", () => {
+  it("反対の単文を問うクイズを表示する", () => {
+    render(
+      <QuizPrompt
+        quiz={quiz({
+          quiz_type: "rel2pair",
+          prompt: {
+            subject: "未来を明るく見る",
+            relations: [{ name: "ANTI", is_forward: false }],
+            answer_kind: "sentence",
+          },
+        })}
+      />,
+    );
+    expect(screen.getByLabelText("問う関係")).toHaveTextContent(
+      "Aと反対の関係にある単文は？",
+    );
+    expect(screen.getByText("未来を明るく見る")).toBeVisible();
+  });
   it("用語と回答対象を分けて表示する", () => {
     render(<QuizPrompt quiz={quiz({})} />);
 
