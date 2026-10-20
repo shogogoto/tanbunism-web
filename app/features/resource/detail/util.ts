@@ -9,6 +9,27 @@ import { eqEdgeType, pathsToEnd, pred, succ } from "~/shared/lib/network";
 
 type ResourceTanbun = Omit<Tanbun, "stats" | "resource_uid">;
 
+const RESOURCE_METADATA_LINE =
+  /^@(?:(?:author|published|url):?\s+\S.*|[^\s@]+)$/u;
+
+/** 旧importで単文になった、本文先頭のメタ情報宣言だけを識別する。 */
+export function resourceMetadataSentenceIds(
+  rootId: string,
+  graph: Graph,
+  uids: ResourceDetailUids,
+  terms: ResourceDetailTerms,
+): ReadonlySet<string> {
+  const result = new Set<string>();
+  if (!graph.hasNode(rootId)) return result;
+  for (const branch of toAdjacent(rootId, graph, uids, terms).downArrays()) {
+    for (const { kn } of branch) {
+      if (!RESOURCE_METADATA_LINE.test(kn.sentence.trim())) return result;
+      result.add(kn.uid);
+    }
+  }
+  return result;
+}
+
 export function toAdjacent(
   id: string,
   g: Graph,

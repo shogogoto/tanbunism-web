@@ -16,7 +16,7 @@ const normalizeUid = (value: string) => value.replaceAll("-", "");
 
 // 単文や見出しをいい感じに表示し分ける
 export default function Presenter({ id, prefix }: Props) {
-  const { graph, terms, uids, rootId } = useResourceDetail();
+  const { graph, terms, uids, metadataSentenceIds } = useResourceDetail();
   const adj = toAdjacent(id, graph, uids, terms);
   const level = getHeadingLevel(adj.kn.sentence);
   const { register, isRegistered, getNumber } = useTraceMemory();
@@ -49,7 +49,7 @@ export default function Presenter({ id, prefix }: Props) {
     return <Tag>{headingText}</Tag>;
   }
 
-  if (!isVisible) {
+  if (!isVisible || metadataSentenceIds?.has(id)) {
     return null;
   }
 
