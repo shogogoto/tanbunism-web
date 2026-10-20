@@ -10,7 +10,10 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { vi } from "vitest";
 import * as battleSound from "~/features/game/battleSound";
-import { sampleCatalog } from "~/features/game/catalog.fixtures";
+import {
+  sampleCatalog,
+  sampleTemplateCatalog,
+} from "~/features/game/catalog.fixtures";
 import CatalogEditor from "./CatalogEditor";
 import * as skillFiles from "./skillFiles";
 
@@ -33,6 +36,108 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 afterAll(() => server.close());
+
+it("共通設定を編集すると全参照スキルが連動し、名前・属性・演出は独立する", async () => {
+  server.use(
+    http.get("*/admin/game/catalog", () =>
+      HttpResponse.json(sampleTemplateCatalog),
+    ),
+  );
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="skills" />);
+  const fire = await screen.findByRole("row", { name: "ファイア" });
+  expect(
+    within(fire).getByLabelText("攻撃倍率", { exact: true }),
+  ).toBeDisabled();
+  expect(within(fire).getByLabelText("名前")).toBeEnabled();
+  await user.selectOptions(within(fire).getByLabelText("属性"), "ice");
+  await user.click(
+    screen.getByRole("button", { name: "効果テンプレートを編集" }),
+  );
+  const template = screen.getByRole("row", { name: "初級単体魔法" });
+  expect(template).toHaveTextContent("ファイア、サンダー");
+  expect(within(template).getByRole("button", { name: "削除" })).toBeDisabled();
+  expect(within(template).queryByLabelText("属性")).not.toBeInTheDocument();
+  fireEvent.change(
+    within(template).getByLabelText("攻撃倍率", { exact: true }),
+    { target: { value: "2" } },
+  );
+  expect(within(fire).getByLabelText("攻撃倍率", { exact: true })).toHaveValue(
+    2,
+  );
+  expect(
+    within(screen.getByRole("row", { name: "サンダー" })).getByLabelText(
+      "攻撃倍率",
+      { exact: true },
+    ),
+  ).toHaveValue(2);
+  expect(saved).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalledOnce());
+  const payload = saved.mock.calls[0][0];
+  expect(payload.skill_templates[0]).toMatchObject({
+    id: "basic_spell",
+    multiplier: 2,
+  });
+  expect(payload.skill_templates[0]).not.toHaveProperty("animation");
+  expect(
+    payload.skills.find((s: { id: string }) => s.id === "fire"),
+  ).toMatchObject({
+    template_id: "basic_spell",
+    multiplier: 2,
+    element: "ice",
+    animation: "fire",
+  });
+});
+
+it("既存スキルの値から共通設定を作り、個別設定に戻すと現在値を保持する", async () => {
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="skills" />);
+  const fire = await screen.findByRole("row", { name: "ファイア" });
+  await user.selectOptions(
+    within(fire).getByLabelText("効果テンプレート"),
+    "__create__",
+  );
+  expect(
+    within(fire).getByLabelText("攻撃倍率", { exact: true }),
+  ).toBeDisabled();
+  expect(within(fire).getByLabelText("攻撃倍率", { exact: true })).toHaveValue(
+    1.5,
+  );
+  await user.selectOptions(within(fire).getByLabelText("効果テンプレート"), "");
+  expect(
+    within(fire).getByLabelText("攻撃倍率", { exact: true }),
+  ).toBeEnabled();
+  expect(within(fire).getByLabelText("攻撃倍率", { exact: true })).toHaveValue(
+    1.5,
+  );
+});
+
+it("戦うの演出を編集でき、無料の標準行動の条件と削除は固定する", async () => {
+  server.use(
+    http.get("*/admin/game/catalog", () =>
+      HttpResponse.json(sampleTemplateCatalog),
+    ),
+  );
+  render(<CatalogEditor kind="skills" />);
+  const normal = await screen.findByRole("row", { name: "戦う" });
+  expect(
+    within(normal).getByRole("button", { name: "戦うの演出を選ぶ" }),
+  ).toBeEnabled();
+  for (const label of [
+    "効果",
+    "タイプ",
+    "対象",
+    "対象数",
+    "消費MP",
+    "効果テンプレート",
+    "有効",
+  ])
+    expect(
+      within(normal).getByLabelText(label, { exact: true }),
+    ).toBeDisabled();
+  expect(within(normal).getByRole("button", { name: "削除" })).toBeDisabled();
+});
 
 it("previews and applies animation and SE together without saving other skills", async () => {
   const play = vi
@@ -183,10 +288,13 @@ it("exports current edits while leaving out skills marked for deletion", async (
       target: { value: "25" },
     });
     await user.click(screen.getByRole("button", { name: "JSONを書き出す" }));
-    expect(download).toHaveBeenCalledWith([
-      expect.objectContaining({ ...sampleCatalog.skills[1], amount: 25 }),
-      sampleCatalog.skills[2],
-    ]);
+    expect(download).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ ...sampleCatalog.skills[1], amount: 25 }),
+        sampleCatalog.skills[2],
+      ],
+      undefined,
+    );
     expect(saved).not.toHaveBeenCalled();
   } finally {
     download.mockRestore();

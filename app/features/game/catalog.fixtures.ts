@@ -1,4 +1,10 @@
-import type { GameCatalog, SkillDefinition } from "./catalog";
+import {
+  type GameCatalog,
+  type SkillDefinition,
+  normalizeSkill,
+  resolveCatalogTemplates,
+  skillTemplate,
+} from "./catalog";
 
 /** Isolated examples for UI stories and tests, never used as live fallbacks. */
 export const sampleCatalog = {
@@ -64,3 +70,43 @@ export const sampleCatalog = {
 } satisfies GameCatalog & {
   skills: [SkillDefinition, SkillDefinition, SkillDefinition];
 };
+
+export const sampleTemplateCatalog = resolveCatalogTemplates({
+  ...sampleCatalog,
+  skill_templates: [
+    skillTemplate(
+      normalizeSkill({
+        ...sampleCatalog.skills[0],
+        id: "basic_spell",
+        name: "初級単体魔法",
+        damage_type: "special",
+      }),
+    ),
+  ],
+  skills: [
+    {
+      ...sampleCatalog.skills[0],
+      template_id: "basic_spell",
+      element: "fire",
+      animation: "fire",
+    },
+    ...sampleCatalog.skills.slice(1),
+    normalizeSkill({
+      ...sampleCatalog.skills[0],
+      id: "thunder",
+      name: "サンダー",
+      template_id: "basic_spell",
+      element: "lightning",
+      animation: "lightning",
+    }),
+    normalizeSkill({
+      ...sampleCatalog.skills[0],
+      id: "normal_attack",
+      name: "戦う",
+      mp_cost: 0,
+      multiplier: 1,
+      animation: "impact",
+      on_wrong: { type: "counter" },
+    }),
+  ],
+});

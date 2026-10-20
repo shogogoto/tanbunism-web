@@ -2,7 +2,9 @@ import { Plus } from "lucide-react";
 import {
   type SkillDefinition,
   type SkillPatch,
+  type SkillTemplate,
   effectLabels,
+  elementLabels,
 } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
@@ -25,6 +27,9 @@ export default function SkillTables({
   add,
   deletions,
   toggleDelete,
+  templates = [],
+  templateMode = false,
+  templateUsage = {},
 }: {
   skills: SkillDefinition[];
   update: (id: string, patch: SkillPatch) => void;
@@ -34,6 +39,9 @@ export default function SkillTables({
   ) => void;
   deletions: Set<string>;
   toggleDelete: (id: string) => void;
+  templates?: SkillTemplate[];
+  templateMode?: boolean;
+  templateUsage?: Record<string, string[]>;
 }) {
   return (
     <div className="space-y-6">
@@ -46,6 +54,8 @@ export default function SkillTables({
         const enemyTarget = attack || effects[0] === "debuff" || ailment;
         const headers = [
           "名前",
+          ...(templateMode ? ["使用スキル"] : []),
+          ...(!templateMode ? ["効果テンプレート", "属性"] : []),
           "効果",
           ...(combat ? ["タイプ"] : []),
           "対象",
@@ -59,8 +69,7 @@ export default function SkillTables({
           ...(attack ? ["正答攻撃倍率", "誤答攻撃倍率"] : []),
           ...(status ? ["持続ターン", "重複上限"] : []),
           "消費MP",
-          "演出",
-          "有効",
+          ...(!templateMode ? ["演出", "有効"] : []),
           "削除",
         ];
         const rows = skills.filter(
@@ -71,7 +80,10 @@ export default function SkillTables({
                 (s.damage_type ?? "physical") === damageType)),
         );
         return (
-          <section key={title} aria-label={`${title}スキル`}>
+          <section
+            key={title}
+            aria-label={`${title}${templateMode ? "テンプレート" : "スキル"}`}
+          >
             <h3 className="mb-2 font-semibold">{title}</h3>
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full whitespace-nowrap text-sm">
@@ -91,6 +103,8 @@ export default function SkillTables({
                 <tbody>
                   {rows.map((s) => {
                     const removed = deletions.has(s.id);
+                    const inherited = !templateMode && !!s.template_id;
+                    const normal = !templateMode && s.id === "normal_attack";
                     const wrong = s.on_wrong;
                     const reduced = wrong?.type === "reduced";
                     const wrongValue = (key: "amount" | "multiplier") => {
@@ -109,7 +123,7 @@ export default function SkillTables({
                         aria-label={
                           key === "amount" ? "誤答効果量" : "誤答攻撃倍率"
                         }
-                        disabled={removed || !reduced}
+                        disabled={removed || inherited || !reduced}
                         className="w-24"
                         type="number"
                         min={0}
@@ -151,7 +165,9 @@ export default function SkillTables({
                       step = 1,
                     ) => (
                       <Input
-                        disabled={removed}
+                        disabled={
+                          removed || inherited || (normal && key === "mp_cost")
+                        }
                         aria-label={label}
                         className="w-24"
                         type="number"
@@ -191,9 +207,63 @@ export default function SkillTables({
                             }
                           />
                         </td>
+                        {templateMode && (
+                          <td className="max-w-64 whitespace-normal text-xs text-muted-foreground">
+                            {templateUsage[s.id]?.join("、") || "未使用"}
+                          </td>
+                        )}
+                        {!templateMode && (
+                          <>
+                            <td>
+                              <select
+                                aria-label="効果テンプレート"
+                                className={selectClass}
+                                disabled={removed || normal}
+                                value={s.template_id ?? ""}
+                                onChange={(event) =>
+                                  update(s.id, {
+                                    template_id: event.target.value || null,
+                                  })
+                                }
+                              >
+                                <option value="">個別設定</option>
+                                <option value="__create__">
+                                  現在の値から作成
+                                </option>
+                                {templates.map((t) => (
+                                  <option key={t.id} value={t.id}>
+                                    {t.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td>
+                              <select
+                                aria-label="属性"
+                                className={selectClass}
+                                disabled={removed}
+                                value={s.element ?? "none"}
+                                onChange={(event) =>
+                                  update(s.id, {
+                                    element: event.target
+                                      .value as SkillDefinition["element"],
+                                  })
+                                }
+                              >
+                                {Object.entries(elementLabels).map(
+                                  ([value, label]) => (
+                                    <option key={value} value={value}>
+                                      {label}
+                                    </option>
+                                  ),
+                                )}
+                              </select>
+                            </td>
+                          </>
+                        )}
                         <td>
                           <select
-                            disabled={removed}
+                            disabled={removed || inherited || normal}
                             aria-label="効果"
                             className={selectClass}
                             value={
@@ -236,7 +306,7 @@ export default function SkillTables({
                             <select
                               aria-label="タイプ"
                               className={selectClass}
-                              disabled={removed}
+                              disabled={removed || inherited || normal}
                               value={wrong?.type ?? "fizzle"}
                               onChange={(event) =>
                                 update(s.id, {
@@ -270,7 +340,7 @@ export default function SkillTables({
                             s.effect,
                           ) ? (
                             <select
-                              disabled={removed}
+                              disabled={removed || inherited || normal}
                               aria-label="対象"
                               className={selectClass}
                               value={s.target}
@@ -298,7 +368,12 @@ export default function SkillTables({
                               max={5}
                               step={1}
                               required
-                              disabled={removed || s.target === "all_enemies"}
+                              disabled={
+                                removed ||
+                                inherited ||
+                                normal ||
+                                s.target === "all_enemies"
+                              }
                               value={
                                 "target_count" in s &&
                                 s.target_count !== undefined
@@ -318,7 +393,7 @@ export default function SkillTables({
                         {stat && (
                           <td>
                             <select
-                              disabled={removed}
+                              disabled={removed || inherited}
                               aria-label="対象ステータス"
                               className={selectClass}
                               value={s.stat ?? "attack"}
@@ -345,7 +420,7 @@ export default function SkillTables({
                         {s.effect === "ailment" && (
                           <td>
                             <select
-                              disabled={removed}
+                              disabled={removed || inherited}
                               aria-label="状態異常の種類"
                               className={selectClass}
                               value={s.ailment ?? "poison"}
@@ -378,7 +453,7 @@ export default function SkillTables({
                               <select
                                 aria-label="誤答付与"
                                 className={selectClass}
-                                disabled={removed || !reduced}
+                                disabled={removed || inherited || !reduced}
                                 value={
                                   reduced && "apply" in wrong && wrong.apply
                                     ? "yes"
@@ -405,7 +480,9 @@ export default function SkillTables({
                               aria-label="効果量の指定"
                               className={selectClass}
                               value={s.amount_mode ?? "fixed"}
-                              disabled={removed || s.stat === "maxHp"}
+                              disabled={
+                                removed || inherited || s.stat === "maxHp"
+                              }
                               onChange={(e) =>
                                 update(s.id, {
                                   amount_mode: e.target.value as
@@ -444,30 +521,43 @@ export default function SkillTables({
                           </>
                         )}
                         <td>{numeric("消費MP", "mp_cost", 0, 10000)}</td>
-                        <td>
-                          <SkillAnimationGallery
-                            disabled={removed}
-                            skill={s}
-                            onChange={(selection) => update(s.id, selection)}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            disabled={removed}
-                            aria-label="有効"
-                            type="checkbox"
-                            checked={s.enabled}
-                            onChange={(e) =>
-                              update(s.id, { enabled: e.target.checked })
-                            }
-                          />
-                        </td>
+                        {!templateMode && (
+                          <td>
+                            <SkillAnimationGallery
+                              disabled={removed}
+                              skill={s}
+                              onChange={(selection) => update(s.id, selection)}
+                            />
+                          </td>
+                        )}
+                        {!templateMode && (
+                          <td>
+                            <input
+                              disabled={removed || normal}
+                              aria-label="有効"
+                              type="checkbox"
+                              checked={s.enabled}
+                              onChange={(e) =>
+                                update(s.id, { enabled: e.target.checked })
+                              }
+                            />
+                          </td>
+                        )}
                         <td>
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             aria-pressed={removed}
+                            disabled={
+                              normal ||
+                              (templateMode && !!templateUsage[s.id]?.length)
+                            }
+                            title={
+                              templateMode && templateUsage[s.id]?.length
+                                ? "使用中のテンプレートは削除できません"
+                                : undefined
+                            }
                             onClick={() => toggleDelete(s.id)}
                           >
                             {removed ? "削除を取り消す" : "削除"}
@@ -492,7 +582,7 @@ export default function SkillTables({
                         type="button"
                         size="icon"
                         variant="ghost"
-                        aria-label={`${title}スキルを追加`}
+                        aria-label={`${title}${templateMode ? "テンプレート" : "スキル"}を追加`}
                         onClick={() => add(effects[0], damageType ?? undefined)}
                       >
                         <Plus aria-hidden="true" />

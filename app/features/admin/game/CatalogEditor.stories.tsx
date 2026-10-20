@@ -1,6 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { http, HttpResponse } from "msw";
-import { sampleCatalog } from "~/features/game/catalog.fixtures";
+import {
+  type GameCatalog,
+  resolveCatalogTemplates,
+} from "~/features/game/catalog";
+import {
+  sampleCatalog,
+  sampleTemplateCatalog,
+} from "~/features/game/catalog.fixtures";
 import CatalogEditor from "./CatalogEditor";
 
 export default {
@@ -33,16 +40,17 @@ export default {
         ),
         http.post("*/admin/game/skills/preview", async ({ request }) => {
           const { catalog, document } = (await request.json()) as {
-            catalog: typeof sampleCatalog;
+            catalog: GameCatalog;
             document: {
               format: string;
               version: number;
-              skills: typeof sampleCatalog.skills;
+              skills: GameCatalog["skills"];
+              skill_templates?: GameCatalog["skill_templates"];
             };
           };
           if (
             document.format !== "tanbunism.skills" ||
-            ![1, 2].includes(document.version) ||
+            ![1, 2, 3, 4].includes(document.version) ||
             !Array.isArray(document.skills)
           ) {
             return HttpResponse.json(
@@ -54,10 +62,22 @@ export default {
             catalog.skills.map((skill) => [skill.id, skill]),
           );
           for (const skill of document.skills) skills.set(skill.id, skill);
-          return HttpResponse.json({
-            ...catalog,
-            skills: [...skills.values()],
-          });
+          const templates = new Map(
+            (catalog.skill_templates ?? []).map((template) => [
+              template.id,
+              template,
+            ]),
+          );
+          for (const template of document.skill_templates ?? []) {
+            templates.set(template.id, template);
+          }
+          return HttpResponse.json(
+            resolveCatalogTemplates({
+              ...catalog,
+              skills: [...skills.values()],
+              skill_templates: [...templates.values()],
+            }),
+          );
         }),
       ],
     },
@@ -76,6 +96,20 @@ export default {
   ],
 } satisfies Meta<typeof CatalogEditor>;
 export const Skills: StoryObj<typeof CatalogEditor> = {};
+export const SharedTemplates: StoryObj<typeof CatalogEditor> = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get("*/admin/game/catalog", () =>
+          HttpResponse.json(sampleTemplateCatalog),
+        ),
+        http.put("*/admin/game/catalog", async ({ request }) =>
+          HttpResponse.json(await request.json()),
+        ),
+      ],
+    },
+  },
+};
 export const Shop: StoryObj<typeof CatalogEditor> = { args: { kind: "shop" } };
 export const Items: StoryObj<typeof CatalogEditor> = {
   args: { kind: "items" },

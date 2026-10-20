@@ -1,6 +1,9 @@
 import { expect, it } from "vitest";
 import { type SkillDefinition, normalizeSkill } from "~/features/game/catalog";
-import { sampleCatalog } from "~/features/game/catalog.fixtures";
+import {
+  sampleCatalog,
+  sampleTemplateCatalog,
+} from "~/features/game/catalog.fixtures";
 import {
   MAX_SKILL_FILE_BYTES,
   readSkillFile,
@@ -12,12 +15,35 @@ it("writes a versioned skills-only file without granting access or exporting con
   const text = skillFileText(skills);
   expect(JSON.parse(text)).toEqual({
     format: "tanbunism.skills",
-    version: 3,
+    version: 4,
+    skill_templates: [],
     skills: skills.map(normalizeSkill),
   });
   expect(
     await readSkillFile(new File([`\uFEFF${text}`], "skills.json")),
   ).toEqual(JSON.parse(text));
+});
+
+it("共有テンプレートと参照を出力し、共有値を各スキルへ複製しない", () => {
+  const exported = JSON.parse(
+    skillFileText(
+      sampleTemplateCatalog.skills,
+      sampleTemplateCatalog.skill_templates,
+    ),
+  );
+  expect(exported.version).toBe(4);
+  expect(exported.skill_templates[0]).toMatchObject({
+    id: "basic_spell",
+    damage_type: "special",
+  });
+  const fire = exported.skills.find((s: { id: string }) => s.id === "fire");
+  expect(fire).toMatchObject({
+    template_id: "basic_spell",
+    element: "fire",
+    animation: "fire",
+  });
+  expect(fire).not.toHaveProperty("multiplier");
+  expect(fire).not.toHaveProperty("mp_cost");
 });
 
 it("removes legacy foreign fields from an export without mutating the source", () => {

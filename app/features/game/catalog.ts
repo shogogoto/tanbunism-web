@@ -14,6 +14,18 @@ type SkillBase = {
   mp_cost: number;
   animation?: SkillAnimation;
   sound?: SkillSound;
+  template_id?: string | null;
+  element?:
+    | "none"
+    | "fire"
+    | "ice"
+    | "lightning"
+    | "water"
+    | "wind"
+    | "earth"
+    | "light"
+    | "dark"
+    | "poison";
 };
 type InstantSkill = {
   stat?: never;
@@ -116,6 +128,8 @@ export function normalizeSkill(
     animation,
     sound,
     effect,
+    template_id,
+    element,
   } = skill;
   const common = {
     id,
@@ -128,6 +142,8 @@ export function normalizeSkill(
     animation,
     sound,
     effect,
+    ...(template_id ? { template_id } : {}),
+    ...(element ? { element } : {}),
   };
   const numeric = { amount_mode: skill.amount_mode ?? "fixed" };
   const timed = {
@@ -195,6 +211,56 @@ export function normalizeSkill(
       return { ...common, effect };
   }
 }
+type TemplateOf<T> = T extends SkillDefinition
+  ? Omit<
+      T,
+      "icon" | "enabled" | "template_id" | "element" | "animation" | "sound"
+    >
+  : never;
+export type SkillTemplate = TemplateOf<SkillDefinition>;
+
+export function skillTemplate(skill: SkillDefinition): SkillTemplate {
+  const { icon, enabled, template_id, element, animation, sound, ...values } =
+    normalizeSkill(skill);
+  return values;
+}
+
+export function resolveCatalogTemplates(catalog: GameCatalog): GameCatalog {
+  return {
+    ...catalog,
+    skills: catalog.skills.map((skill) => {
+      const template = catalog.skill_templates?.find(
+        (t) => t.id === skill.template_id,
+      );
+      if (!template) return skill;
+      return normalizeSkill({
+        ...template,
+        id: skill.id,
+        name: skill.name,
+        icon: skill.icon,
+        enabled: skill.enabled,
+        template_id: template.id,
+        element: skill.element,
+        animation: skill.animation,
+        sound: skill.sound,
+      });
+    }),
+  };
+}
+
+export const elementLabels = {
+  none: "なし",
+  fire: "炎",
+  ice: "氷",
+  lightning: "雷",
+  water: "水",
+  wind: "風",
+  earth: "土",
+  light: "光",
+  dark: "闇",
+  poison: "毒",
+} as const;
+
 export type ItemDefinition = {
   id: string;
   name: string;
@@ -217,6 +283,7 @@ export type EnemyDefinition = {
 };
 export type GameCatalog = {
   skills: SkillDefinition[];
+  skill_templates?: SkillTemplate[];
   items: ItemDefinition[];
   shop?: ShopListing[];
   enemies: EnemyDefinition[];

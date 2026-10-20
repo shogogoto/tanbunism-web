@@ -1,16 +1,26 @@
 import {
   type GameCatalog,
   type SkillDefinition,
+  type SkillTemplate,
   normalizeSkill,
 } from "~/features/game/catalog";
 import { networkFetch } from "~/shared/lib/networkFetch";
 
 export const SKILL_FILE_FORMAT = "tanbunism.skills";
-export const SKILL_FILE_VERSION = 3;
+export const SKILL_FILE_VERSION = 4;
 export const MAX_SKILL_FILE_BYTES = 1024 * 1024;
 
-export function skillFileText(skills: SkillDefinition[]) {
-  return `${JSON.stringify({ format: SKILL_FILE_FORMAT, version: SKILL_FILE_VERSION, skills: skills.map(normalizeSkill) }, null, 2)}\n`;
+export function skillFileText(
+  skills: SkillDefinition[],
+  skill_templates: SkillTemplate[] = [],
+) {
+  const normalized = skills.map(normalizeSkill).map((skill) => {
+    if (!skill.template_id) return skill;
+    const { id, name, icon, enabled, element, animation, sound, template_id } =
+      skill;
+    return { id, name, icon, enabled, element, animation, sound, template_id };
+  });
+  return `${JSON.stringify({ format: SKILL_FILE_FORMAT, version: SKILL_FILE_VERSION, skill_templates, skills: normalized }, null, 2)}\n`;
 }
 
 /** Server-side definitions validate enums, ranges, defaults and references. No writes. */
@@ -65,9 +75,12 @@ export function readSkillFile(file: File): Promise<unknown> {
   });
 }
 
-export function downloadSkillFile(skills: SkillDefinition[]) {
+export function downloadSkillFile(
+  skills: SkillDefinition[],
+  templates: SkillTemplate[] = [],
+) {
   const url = URL.createObjectURL(
-    new Blob([skillFileText(skills)], { type: "application/json" }),
+    new Blob([skillFileText(skills, templates)], { type: "application/json" }),
   );
   const link = document.createElement("a");
   link.href = url;

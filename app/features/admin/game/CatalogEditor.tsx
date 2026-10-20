@@ -7,11 +7,14 @@ import {
   type SkillPatch,
   normalizeSkill,
   requestGameCatalog,
+  resolveCatalogTemplates,
+  skillTemplate,
 } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import DefinitionTables from "./DefinitionTables";
 import ShopTable from "./ShopTable";
 import SkillTables from "./SkillTables";
+import SkillTemplateEditor from "./SkillTemplateEditor";
 import {
   downloadSkillFile,
   previewSkillFile,
@@ -38,7 +41,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
     let active = true;
     void requestGameCatalog(true)
       .then((value) => {
-        if (active) setCatalog(value);
+        if (active) setCatalog(resolveCatalogTemplates(value));
       })
       .catch((cause) => {
         if (active) setError(cause.message);
@@ -48,7 +51,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
     };
   }, []);
   function change(next: GameCatalog) {
-    setCatalog(next);
+    setCatalog(resolveCatalogTemplates(next));
     setSaved(false);
     setError(undefined);
     setImportMessage(undefined);
@@ -87,6 +90,26 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
     patch: SkillPatch & Partial<ItemDefinition & EnemyDefinition>,
   ) => {
     if (!catalog || kind === "shop") return;
+    if (kind === "skills" && patch.template_id === "__create__") {
+      const skill = catalog.skills.find((s) => s.id === id);
+      if (!skill) return;
+      const templateId = `template_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
+      change({
+        ...catalog,
+        skill_templates: [
+          ...(catalog.skill_templates ?? []),
+          skillTemplate({
+            ...skill,
+            id: templateId,
+            name: `${skill.name}の共通設定`,
+          }),
+        ],
+        skills: catalog.skills.map((s) =>
+          s.id === id ? { ...s, template_id: templateId } : s,
+        ),
+      });
+      return;
+    }
     change({
       ...catalog,
       ...(kind === "skills"
@@ -232,6 +255,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
                 if (catalog)
                   downloadSkillFile(
                     catalog.skills.filter((s) => !deletions.has(s.id)),
+                    catalog.skill_templates,
                   );
               }}
             >
@@ -269,8 +293,12 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
             className="min-w-0 space-y-4"
           >
             {kind === "skills" && (
+              <SkillTemplateEditor catalog={catalog} onChange={change} />
+            )}
+            {kind === "skills" && (
               <SkillTables
                 skills={catalog.skills}
+                templates={catalog.skill_templates}
                 update={update}
                 add={add}
                 deletions={deletions}
