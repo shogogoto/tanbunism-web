@@ -6,9 +6,11 @@ import {
 } from "~/shared/generated/entry/entry";
 import type { ResourceTextBody } from "~/shared/generated/fastAPI.schemas";
 
+export type ResourceImportBody = ResourceTextBody & { force?: boolean };
+
 /** JSONでないgatewayエラーも、ファイル単位の診断として返す. */
 export async function saveResourceText(
-  body: ResourceTextBody,
+  body: ResourceImportBody,
   options?: RequestInit,
 ): Promise<postTextResourceTextPostResponse> {
   const response = await fetch(getPostTextResourceTextPostUrl(), {

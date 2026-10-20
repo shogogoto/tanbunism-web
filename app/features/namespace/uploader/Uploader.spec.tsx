@@ -103,6 +103,34 @@ describe("Uploader", () => {
     expect(await screen.findByText("変更あり")).toBeVisible();
   });
 
+  it("取り込み済みの同じファイルも強制再解析で再送できる", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <Uploader />
+      </MemoryRouter>,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "テスト用フォルダを選択" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "1件を解析して取り込む" }),
+    );
+    await screen.findByText("変更あり");
+    expect(postText.mock.calls[0]?.[0].force).toBeUndefined();
+    await user.click(screen.getByRole("checkbox", { name: /強制再解析/ }));
+    await user.click(
+      screen.getByRole("button", { name: "1件を解析して取り込む" }),
+    );
+    await waitFor(() => expect(postText).toHaveBeenCalledTimes(2));
+    expect(postText.mock.calls[1]?.[0]).toEqual({
+      txt: "# title\n  sentence",
+      path: ["humanities", "memo.tb"],
+      identity_resolutions: [],
+      force: true,
+    });
+  });
+
   it("ローカル履歴があってもDBへ取り込み直す", async () => {
     localStorage.setItem(
       "tanbunism.upload-history",

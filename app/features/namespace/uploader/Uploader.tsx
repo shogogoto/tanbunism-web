@@ -72,6 +72,7 @@ export default function Uploader({ refresh, autoOpenPicker = false }: Props) {
   const [files, setFiles] = useState<File[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [force, setForce] = useState(false);
   const [successCount, setSuccessCount] = useState(0);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [results, setResults] = useState<Record<number, UploadResult>>({});
@@ -185,6 +186,7 @@ export default function Uploader({ refresh, autoOpenPicker = false }: Props) {
           txt: await file.text(),
           path: file.name.split("/"),
           identity_resolutions: resolutions,
+          ...(force ? { force: true } : {}),
         },
         { credentials: "include" },
       );
@@ -298,6 +300,32 @@ export default function Uploader({ refresh, autoOpenPicker = false }: Props) {
             <AcceptExtensions exts={exts} setExts={setExts} compact />
           </div>
         </details>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={force}
+            disabled={
+              isUploading ||
+              (activeConflict?.status === "conflict" &&
+                activeConflict.isResolving)
+            }
+            onChange={(event) => {
+              setForce(event.target.checked);
+              setResults({});
+              setPreviews({});
+              setConflictOpenIndex(null);
+              setSuccessCount(0);
+              setProgress(0);
+            }}
+            className="mt-1"
+          />
+          <span>
+            強制再解析
+            <span className="block text-xs text-muted-foreground">
+              同じ内容でもキャッシュを使わず、既存の単文・クイズを引き継いで関係を更新します。
+            </span>
+          </span>
+        </label>
         <CustomFileUploader
           autoOpen={autoOpenPicker}
           acceptExt={exts}

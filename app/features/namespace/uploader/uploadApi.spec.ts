@@ -5,6 +5,19 @@ import { saveResourceText } from "./uploadApi";
 
 afterEach(() => vi.unstubAllGlobals());
 
+it("強制再解析の指定をAPIへ送る", async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValue(new Response("{}", { status: 200 }));
+  vi.stubGlobal("fetch", fetcher);
+  await saveResourceText({ txt: "# title", path: [], force: true });
+  expect(JSON.parse(fetcher.mock.calls[0]?.[1].body)).toEqual({
+    txt: "# title",
+    path: [],
+    force: true,
+  });
+});
+
 it("import成功時は単文詳細cacheを破棄し履歴は残す", async () => {
   await tanbunDetailCache.set(fixtureDetail1);
   await historyCache.clear();
