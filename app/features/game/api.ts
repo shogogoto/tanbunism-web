@@ -43,6 +43,9 @@ export type RegionEnemy = {
   quizIndexes?: number[];
   hp?: number;
   attack?: number;
+  mp?: number;
+  special_attack?: number | null;
+  special_defense?: number;
   speed?: number;
 };
 

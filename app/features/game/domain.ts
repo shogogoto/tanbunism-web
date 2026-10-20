@@ -105,6 +105,7 @@ export type GameSave = {
       actor_id: string | null;
       quiz_enemy_id: string | null;
       enemy_hp: Record<string, number>;
+      enemy_mp?: Record<string, number>;
       queue: { actor_id: string; distance: number }[];
     } | null;
     effects?: import("./catalog").BattleEffect[];

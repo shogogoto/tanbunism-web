@@ -434,6 +434,21 @@ function LegacyMultiBattle({
             >
               HP {currentHp[enemy.id]}/{enemy.hp}
             </span>
+            <span
+              aria-label={`${enemy.name}のMP`}
+              className="text-sm tabular-nums"
+            >
+              MP{" "}
+              {result?.enemy_mp?.[enemy.id] ??
+                battle.schedule?.enemy_mp?.[enemy.id] ??
+                enemy.mp ??
+                0}
+              /{enemy.mp ?? 0}
+            </span>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              特攻 {enemy.special_attack ?? enemy.attack} · 特守{" "}
+              {enemy.special_defense ?? 0}
+            </span>
             <span className="text-sm tabular-nums">
               速さ {enemy.speed ?? 10}
             </span>

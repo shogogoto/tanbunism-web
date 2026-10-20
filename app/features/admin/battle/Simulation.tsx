@@ -184,6 +184,9 @@ export default function Simulation({
                   <TableHead>敵の種類</TableHead>
                   <TableHead>固定問数 / 敵</TableHead>
                   <TableHead>HP</TableHead>
+                  <TableHead>MP</TableHead>
+                  <TableHead>特攻</TableHead>
+                  <TableHead>特守</TableHead>
                   <TableHead>攻撃力</TableHead>
                   <TableHead>速さ</TableHead>
                   <TableHead>同時出現</TableHead>
@@ -246,6 +249,23 @@ export default function Simulation({
                       {range(result.enemies.map((enemy) => enemy.hp))}
                     </TableCell>
                     <TableCell>
+                      {range(result.enemies.map((enemy) => enemy.mp ?? 0))}
+                    </TableCell>
+                    <TableCell>
+                      {range(
+                        result.enemies.map(
+                          (enemy) => enemy.special_attack ?? enemy.attack,
+                        ),
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {range(
+                        result.enemies.map(
+                          (enemy) => enemy.special_defense ?? 0,
+                        ),
+                      )}
+                    </TableCell>
+                    <TableCell>
                       {range(result.enemies.map((enemy) => enemy.attack))}
                     </TableCell>
                     <TableCell>
@@ -294,6 +314,9 @@ export default function Simulation({
                       <TableHead>敵</TableHead>
                       <TableHead>固定クイズ数</TableHead>
                       <TableHead>HP</TableHead>
+                      <TableHead>MP</TableHead>
+                      <TableHead>特攻</TableHead>
+                      <TableHead>特守</TableHead>
                       <TableHead>攻撃力</TableHead>
                       <TableHead>速さ</TableHead>
                     </TableRow>
@@ -304,6 +327,11 @@ export default function Simulation({
                         <TableCell>敵 {enemy.index}</TableCell>
                         <TableCell>{enemy.quiz_count}問</TableCell>
                         <TableCell>{enemy.hp}</TableCell>
+                        <TableCell>{enemy.mp ?? 0}</TableCell>
+                        <TableCell>
+                          {enemy.special_attack ?? enemy.attack}
+                        </TableCell>
+                        <TableCell>{enemy.special_defense ?? 0}</TableCell>
                         <TableCell>{enemy.attack}</TableCell>
                         <TableCell>{enemy.speed ?? 10}</TableCell>
                       </TableRow>

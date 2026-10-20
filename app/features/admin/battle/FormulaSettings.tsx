@@ -6,6 +6,15 @@ export type FormulaField =
   | "damage_variance_percent"
   | "enemy_hp"
   | "enemy_attack"
+  | "enemy_mp"
+  | "enemy_special_attack"
+  | "enemy_special_defense"
+  | "power_mp"
+  | "power_special_attack"
+  | "power_special_defense"
+  | "region_mp_growth_percent"
+  | "region_special_attack_growth_percent"
+  | "region_special_defense_growth_percent"
   | "enemy_speed"
   | "power_hp"
   | "power_attack"
@@ -61,6 +70,19 @@ export default function FormulaSettings({
         {(
           [
             ["HP", "enemy_hp", "power_hp", "region_hp_growth_percent"],
+            ["MP", "enemy_mp", "power_mp", "region_mp_growth_percent"],
+            [
+              "特攻",
+              "enemy_special_attack",
+              "power_special_attack",
+              "region_special_attack_growth_percent",
+            ],
+            [
+              "特守",
+              "enemy_special_defense",
+              "power_special_defense",
+              "region_special_defense_growth_percent",
+            ],
             [
               "攻撃力",
               "enemy_attack",

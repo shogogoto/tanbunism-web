@@ -57,6 +57,37 @@ const server = setupServer(
   }),
 );
 
+it("saves enemy MP and special stats with independent growth settings", async () => {
+  const user = userEvent.setup();
+  render(<BattleSettingsManager />);
+  const region = await screen.findByRole("region", {
+    name: "敵ステータスの計算",
+  });
+  for (const [label, value] of [
+    ["敵の基礎MP", "25"],
+    ["敵の基礎特攻", "30"],
+    ["敵の基礎特守", "8"],
+    ["PowerのMP補正", "2"],
+    ["達成度帯ごとの特守成長率（%）", "10"],
+  ]) {
+    const input = within(region).getByLabelText(label);
+    await user.clear(input);
+    await user.type(input, value);
+  }
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() =>
+    expect(saved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        enemy_mp: 25,
+        enemy_special_attack: 30,
+        enemy_special_defense: 8,
+        power_mp: 2,
+        region_special_defense_growth_percent: 10,
+      }),
+    ),
+  );
+});
+
 it("saves the speed formula, base speed, and allocation coefficient", async () => {
   const user = userEvent.setup();
   render(<BattleSettingsManager />);

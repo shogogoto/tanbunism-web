@@ -215,6 +215,19 @@ export default function ScheduledBattle({
                   : shownResult?.enemy_hp?.[item.id]) ?? 0}
                 /{item.hp}
               </span>
+              <span aria-label={`${item.name}のMP`} className="tabular-nums">
+                MP{" "}
+                {(marker
+                  ? schedule?.enemy_mp?.[item.id]
+                  : shownResult?.enemy_mp?.[item.id]) ??
+                  item.mp ??
+                  0}
+                /{item.mp ?? 0}
+              </span>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                特攻 {item.special_attack ?? item.attack} · 特守{" "}
+                {item.special_defense ?? 0}
+              </span>
               <span className="tabular-nums">速さ {item.speed ?? 10}</span>
             </div>
           ))}

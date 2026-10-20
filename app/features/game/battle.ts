@@ -51,6 +51,15 @@ export const defaultBalance = {
   defense_per_point: 1,
   enemy_hp: 20,
   enemy_attack: 12,
+  enemy_mp: 10,
+  enemy_special_attack: 12,
+  enemy_special_defense: 0,
+  power_mp: 0,
+  power_special_attack: 0.5,
+  power_special_defense: 0,
+  region_mp_growth_percent: 0,
+  region_special_attack_growth_percent: 20,
+  region_special_defense_growth_percent: 0,
   power_hp: 1,
   power_attack: 0.5,
   relation_hp: 1,
@@ -88,6 +97,9 @@ export type GameBalance = typeof defaultBalance;
 export type LiveEnemy = RegionEnemy & {
   hp: number;
   attack: number;
+  mp?: number;
+  special_attack?: number | null;
+  special_defense?: number;
   region: number;
   relations: number;
   speed?: number;
@@ -113,6 +125,7 @@ export type TurnResult = {
   poison_damage?: Record<string, number>;
   outgoing_damage?: Record<string, number>;
   enemy_hp?: Record<string, number>;
+  enemy_mp?: Record<string, number>;
   actor_id?: string;
   quiz_enemy_id?: string;
 };

@@ -49,7 +49,12 @@ const meta = {
                 { index: 1, quiz_count: 2, hp: 28, attack: 16, relations: 0 },
                 { index: 2, quiz_count: 2, hp: 30, attack: 17, relations: 0 },
                 { index: 3, quiz_count: 2, hp: 26, attack: 15, relations: 0 },
-              ],
+              ].map((enemy) => ({
+                ...enemy,
+                mp: input.balance.enemy_mp,
+                special_attack: input.balance.enemy_special_attack,
+                special_defense: input.balance.enemy_special_defense,
+              })),
             });
           },
         ),
@@ -68,6 +73,9 @@ const meta = {
               quizIndexes: [0],
               hp: enemy.hp,
               attack: enemy.attack,
+              mp: enemy.mp,
+              special_attack: enemy.special_attack,
+              special_defense: enemy.special_defense,
               region: input.simulation.achievement - 1,
               relations: 0,
             }));

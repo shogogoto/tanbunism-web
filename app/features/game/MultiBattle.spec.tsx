@@ -179,10 +179,19 @@ const enemies = [0, 1].map((index) => ({
   quizIndex: index,
   hp: 10,
   attack: 12,
+  mp: 8,
+  special_attack: 20,
+  special_defense: 5,
   relations: 0,
   region: 2,
 }));
 const stableBalance = { ...defaultBalance, damage_variance_percent: 0 };
+
+it("shows enemy MP and special stats without HP/MP bars", async () => {
+  render(<Fixture />);
+  expect(await screen.findByLabelText("敵0のMP")).toHaveTextContent("MP 8/8");
+  expect(screen.getAllByText("特攻 20 · 特守 5")).toHaveLength(2);
+});
 function initial(deadline = Date.now() + 45000): GameSave {
   const save = enterDungeon(newSave(), "book", "本", 1);
   if (!save.run) throw new Error("Missing run");

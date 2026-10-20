@@ -80,6 +80,9 @@ export type EnemyBalanceSimulation = {
     quiz_count: number;
     hp: number;
     attack: number;
+    mp?: number;
+    special_attack?: number | null;
+    special_defense?: number;
     speed?: number;
     relations: number;
   }[];
