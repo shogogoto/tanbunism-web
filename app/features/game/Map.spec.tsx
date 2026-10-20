@@ -313,6 +313,9 @@ it("retains the current region and opens the enemy list for each discovered band
             quizIndex: 0,
             hp: 25,
             attack: 14,
+            mp: 9,
+            special_attack: 18,
+            special_defense: 6,
             speed: 17,
           },
         ],
@@ -325,7 +328,9 @@ it("retains the current region and opens the enemy list for each discovered band
   expect(screen.getByText("領域1の敵")).toBeVisible();
   await user.click(screen.getByRole("button", { name: "領域 2" }));
   expect(screen.getByText("領域2の敵")).toBeVisible();
-  expect(screen.getByText("HP 25 · 攻 14 · 速さ 17")).toBeVisible();
+  expect(
+    screen.getByText("HP 25 · 攻 14 · 速さ 17 · MP 9 · 特攻 18 · 特守 6"),
+  ).toBeVisible();
   await user.keyboard("{Escape}");
   expect(
     screen.queryByRole("dialog", { name: "領域の敵一覧" }),
