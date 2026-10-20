@@ -80,6 +80,15 @@ export function toAdjacent(
     downArrays,
     conclusions: () => toSucc("to"),
     premises: () => toPred("to"),
+    opposites: () =>
+      [
+        ...new Set([
+          ...succ(g, id, eqEdgeType("anti")),
+          ...pred(g, id, eqEdgeType("anti")),
+        ]),
+      ]
+        .filter((sid) => sid !== id)
+        .map((sid) => toAdjacent(sid, g, uids, terms)),
     refers: () => toSucc("resolved"),
     referreds: () => toPred("resolved"),
     quoterm: () => toSucc("quoterm"),

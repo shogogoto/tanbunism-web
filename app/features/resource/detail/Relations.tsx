@@ -29,6 +29,19 @@ export default function Relations({ startId }: Props) {
           </div>
         );
       })}
+      {adj.opposites().map((elm) => (
+        <div key={`anti-${elm.kn.uid}`}>
+          <Presenter
+            id={elm.kn.uid}
+            prefix={
+              <span title="反対関係" aria-label="反対関係">
+                ↔{" "}
+              </span>
+            }
+          />
+          <Backbone startId={elm.kn.uid} />
+        </div>
+      ))}
       {adj.downArrays().map((down) => {
         return down.map((elm) => {
           return <Backbone key={elm.kn.uid} startId={elm.kn.uid} />;
