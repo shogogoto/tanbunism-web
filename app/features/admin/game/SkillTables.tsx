@@ -6,6 +6,7 @@ import type {
 } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import RowOrder, { moveRow } from "./RowOrder";
 import SkillAnimationGallery from "./SkillAnimationGallery";
 import useTableSort from "./useTableSort";
 
@@ -16,6 +17,7 @@ export default function SkillTables({
   add,
   deletions,
   toggleDelete,
+  reorder,
 }: {
   skills: SkillDefinition[];
   templates?: SkillTemplate[];
@@ -26,23 +28,26 @@ export default function SkillTables({
   ) => void;
   deletions: Set<string>;
   toggleDelete: (id: string) => void;
+  reorder: (skills: SkillDefinition[]) => void;
 }) {
   const names = (skill: SkillDefinition) =>
     (skill.template_ids ?? [])
       .map((id) => templates.find((t) => t.id === id)?.name ?? id)
       .join("、");
-  const { sorted, header } = useTableSort(skills, (skill, column) =>
-    column === "templates"
-      ? names(skill)
-      : column === "mp_cost"
-        ? skill.mp_cost
-        : column === "enabled"
-          ? Number(skill.enabled)
-          : column === "deleted"
-            ? Number(deletions.has(skill.id))
-            : column === "animation"
-              ? (skill.animation ?? "none")
-              : skill.name,
+  const { sorted, header, resetSort } = useTableSort(skills, (skill, column) =>
+    column === "order"
+      ? skills.findIndex((row) => row.id === skill.id)
+      : column === "templates"
+        ? names(skill)
+        : column === "mp_cost"
+          ? skill.mp_cost
+          : column === "enabled"
+            ? Number(skill.enabled)
+            : column === "deleted"
+              ? Number(deletions.has(skill.id))
+              : column === "animation"
+                ? (skill.animation ?? "none")
+                : skill.name,
   );
   return (
     <section aria-label="スキル一覧" className="space-y-2">
@@ -52,6 +57,7 @@ export default function SkillTables({
           <thead className="bg-muted/40 text-muted-foreground">
             <tr>
               {[
+                ["order", "番号"],
                 ["name", "名前"],
                 ["templates", "効果テンプレート"],
                 ["mp_cost", "消費MP"],
@@ -62,7 +68,7 @@ export default function SkillTables({
             </tr>
           </thead>
           <tbody>
-            {sorted.map((skill) => {
+            {sorted.map((skill, index) => {
               const removed = deletions.has(skill.id);
               const normal = skill.id === "normal_attack";
               const selected = skill.template_ids ?? [];
@@ -73,6 +79,16 @@ export default function SkillTables({
                   data-pending-delete={removed || undefined}
                   className={`border-t [&>td]:p-2 ${removed ? "bg-muted text-muted-foreground [&>td:not(:last-child)]:opacity-40" : ""}`}
                 >
+                  <td>
+                    <RowOrder
+                      index={index}
+                      count={sorted.length}
+                      onMove={(direction) => {
+                        reorder(moveRow(sorted, index, direction));
+                        resetSort();
+                      }}
+                    />
+                  </td>
                   <td>
                     <Input
                       aria-label="名前"
@@ -215,7 +231,7 @@ export default function SkillTables({
               );
             })}
             <tr className="border-t">
-              <td colSpan={6} className="p-1 text-center">
+              <td colSpan={7} className="p-1 text-center">
                 <Button
                   aria-label="スキルを追加"
                   type="button"

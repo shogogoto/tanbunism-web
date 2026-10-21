@@ -287,6 +287,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
             {kind === "skills" && (
               <SkillTables
                 skills={catalog.skills}
+                reorder={(skills) => change({ ...catalog, skills })}
                 templates={catalog.skill_templates}
                 update={update}
                 add={add}

@@ -8,6 +8,7 @@ import {
 } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import RowOrder, { moveRow } from "./RowOrder";
 import {
   changeDetail,
   changeKind,
@@ -25,6 +26,7 @@ import useTableSort from "./useTableSort";
 
 const selectClass = "h-9 rounded-md border bg-background px-2";
 const columns = [
+  ["order", "番号"],
   ["name", "名前"],
   ["target_count", "対象数"],
   ["kind", "種別"],
@@ -57,7 +59,8 @@ export default function SkillTemplateEditor({
       enabled: true,
     }),
   );
-  const { sorted, header } = useTableSort(rows, (skill, column) => {
+  const { sorted, header, resetSort } = useTableSort(rows, (skill, column) => {
+    if (column === "order") return rows.findIndex((row) => row.id === skill.id);
     if (column === "type") return skill.on_wrong?.type ?? "fizzle";
     if (column === "kind") return templateKind(skill);
     if (column === "detail")
@@ -104,7 +107,7 @@ export default function SkillTemplateEditor({
             <tr>{columns.map(([key, label]) => header(key, label))}</tr>
           </thead>
           <tbody>
-            {sorted.map((skill) => {
+            {sorted.map((skill, index) => {
               const status = isStatus(skill);
               const kind = templateKind(skill);
               const utility = kind === "other";
@@ -215,6 +218,23 @@ export default function SkillTemplateEditor({
                   aria-label={skill.name}
                   className="border-t [&>td]:p-2"
                 >
+                  <td>
+                    <RowOrder
+                      index={index}
+                      count={sorted.length}
+                      onMove={(direction) => {
+                        onChange({
+                          ...catalog,
+                          skill_templates: moveRow(
+                            sorted,
+                            index,
+                            direction,
+                          ).map(skillTemplate),
+                        });
+                        resetSort();
+                      }}
+                    />
+                  </td>
                   <td>
                     <Input
                       aria-label="名前"

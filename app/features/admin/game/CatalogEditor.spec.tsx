@@ -37,7 +37,7 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-it("uses two sortable tables with exactly six skill columns and migrates legacy skills", async () => {
+it("uses two numbered sortable tables and migrates legacy skills", async () => {
   render(<CatalogEditor kind="skills" />);
   const skills = await screen.findByRole("table", { name: "スキル一覧" });
   expect(screen.getAllByRole("table")).toHaveLength(2);
@@ -45,7 +45,15 @@ it("uses two sortable tables with exactly six skill columns and migrates legacy 
     within(skills)
       .getAllByRole("columnheader")
       .map((h) => h.textContent?.replace(" ↕", "")),
-  ).toEqual(["名前", "効果テンプレート", "消費MP", "演出", "有効", "削除"]);
+  ).toEqual([
+    "番号",
+    "名前",
+    "効果テンプレート",
+    "消費MP",
+    "演出",
+    "有効",
+    "削除",
+  ]);
   const row = within(skills).getByRole("row", { name: "ファイア" });
   expect(within(row).getByLabelText("効果テンプレート 1")).toHaveValue(
     "effect_fire",
@@ -62,7 +70,16 @@ it("uses two sortable tables with exactly six skill columns and migrates legacy 
     within(templates)
       .getAllByRole("columnheader")
       .map((h) => h.textContent?.replace(" ↕", "")),
-  ).toEqual(["名前", "対象数", "種別", "詳細", "タイプ", "効果", "削除"]);
+  ).toEqual([
+    "番号",
+    "名前",
+    "対象数",
+    "種別",
+    "詳細",
+    "タイプ",
+    "効果",
+    "削除",
+  ]);
   expect(
     within(templates).queryByRole("combobox", { name: /^対象$/ }),
   ).not.toBeInTheDocument();
@@ -74,6 +91,91 @@ it("uses two sortable tables with exactly six skill columns and migrates legacy 
   await userEvent.click(nameSort);
   expect(nameSort.closest("th")).toHaveAttribute("aria-sort", "ascending");
 });
+
+it.each([
+  ["スキル一覧", "skills"],
+  ["効果テンプレート一覧", "skill_templates"],
+] as const)(
+  "reorders numbered rows in %s and restores the saved order",
+  async (tableName, key) => {
+    const user = userEvent.setup();
+    const view = render(<CatalogEditor kind="skills" />);
+    const table = await screen.findByRole("table", { name: tableName });
+    const rows = () =>
+      within(table)
+        .getAllByRole("row")
+        .filter((row) => row.hasAttribute("aria-label"));
+    const original = rows().map((row) => row.getAttribute("aria-label"));
+    expect(
+      within(rows()[0]).getByRole("button", { name: "上へ移動" }),
+    ).toBeDisabled();
+    expect(
+      within(rows()[2]).getByRole("button", { name: "下へ移動" }),
+    ).toBeDisabled();
+    await user.click(
+      within(rows()[0]).getByRole("button", { name: "下へ移動" }),
+    );
+    expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual([
+      original[1],
+      original[0],
+      original[2],
+    ]);
+    expect(
+      rows().map((row) => within(row).getAllByRole("cell")[0].textContent),
+    ).toEqual(["1", "2", "3"]);
+    await user.click(
+      within(rows()[2]).getByRole("button", { name: "上へ移動" }),
+    );
+    const expected = [original[1], original[2], original[0]];
+    expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual(
+      expected,
+    );
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    await screen.findByText("保存しました");
+    const payload = saved.mock.calls.at(-1)?.[0];
+    expect(payload[key].map((row: { name: string }) => row.name)).toEqual(
+      expected,
+    );
+    view.unmount();
+    server.use(
+      http.get("*/admin/game/catalog", () => HttpResponse.json(payload)),
+    );
+    render(<CatalogEditor kind="skills" />);
+    const restored = await screen.findByRole("table", { name: tableName });
+    expect(
+      within(restored)
+        .getAllByRole("row")
+        .filter((row) => row.hasAttribute("aria-label"))
+        .map((row) => row.getAttribute("aria-label")),
+    ).toEqual(expected);
+  },
+);
+
+it.each(["スキル一覧", "効果テンプレート一覧"])(
+  "uses the visible sorted order when manually reordering %s",
+  async (tableName) => {
+    const user = userEvent.setup();
+    render(<CatalogEditor kind="skills" />);
+    const table = await screen.findByRole("table", { name: tableName });
+    await user.click(within(table).getByRole("button", { name: "名前 ↕" }));
+    const rows = () =>
+      within(table)
+        .getAllByRole("row")
+        .filter((row) => row.hasAttribute("aria-label"));
+    const sorted = rows().map((row) => row.getAttribute("aria-label"));
+    await user.click(
+      within(rows()[0]).getByRole("button", { name: "下へ移動" }),
+    );
+    expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual([
+      sorted[1],
+      sorted[0],
+      sorted[2],
+    ]);
+    expect(
+      within(table).getByRole("button", { name: "名前 ↕" }).closest("th"),
+    ).toHaveAttribute("aria-sort", "none");
+  },
+);
 
 it("shares effect edits while retaining independent skill MP and multiple references", async () => {
   server.use(

@@ -36,6 +36,7 @@ function Demo() {
   return (
     <div className="p-4">
       <SkillTables
+        reorder={setSkills}
         deletions={deletions}
         toggleDelete={(id) =>
           setDeletions((current) => {

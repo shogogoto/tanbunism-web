@@ -42,5 +42,5 @@ export default function useTableSort<T>(
       </th>
     );
   }
-  return { sorted, header };
+  return { sorted, header, resetSort: () => setSort(undefined) };
 }
