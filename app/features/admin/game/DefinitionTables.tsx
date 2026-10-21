@@ -4,6 +4,7 @@ import type {
   GameCatalog,
   ItemDefinition,
 } from "~/features/game/catalog";
+import { isEquipmentSkill } from "~/features/game/catalog";
 import { Input } from "~/shared/components/ui/input";
 
 const selectClass = "h-9 rounded-md border bg-background px-2 text-sm";
@@ -75,10 +76,10 @@ export default function DefinitionTables({
                       value={item.kind}
                       onChange={(e) => {
                         const value = e.target.value as ItemDefinition["kind"];
-                        const skill = catalog.skills.find(
-                          (s) =>
-                            (s.effect === "equip_attack") ===
-                            (value === "weapon"),
+                        const skill = catalog.skills.find((s) =>
+                          value === "weapon"
+                            ? isEquipmentSkill(s)
+                            : s.effect !== "equip_attack",
                         );
                         update(item.id, {
                           kind: value,
@@ -105,10 +106,10 @@ export default function DefinitionTables({
                         選択
                       </option>
                       {catalog.skills
-                        .filter(
-                          (s) =>
-                            (s.effect === "equip_attack") ===
-                            (item.kind === "weapon"),
+                        .filter((s) =>
+                          item.kind === "weapon"
+                            ? isEquipmentSkill(s)
+                            : s.effect !== "equip_attack",
                         )
                         .map((s) => (
                           <option key={s.id} value={s.id}>

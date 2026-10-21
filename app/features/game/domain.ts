@@ -38,6 +38,18 @@ export type GameSave = {
     weapon: string | null;
     weapon_attack: number;
     weapon_max_uses?: number;
+    equipment_buffs?:
+      | {
+          stat:
+            | "attack"
+            | "defense"
+            | "specialAttack"
+            | "specialDefense"
+            | "maxHp";
+          amount: number;
+          amount_mode: "fixed" | "percent";
+        }[]
+      | null;
     remaining_uses?: Record<string, number>;
     dungeon_keys?: Record<string, { resource_id: string; name: string }>;
     review_reward_day?: string | null;

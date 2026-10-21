@@ -19,6 +19,11 @@ type Product = {
   skill_name?: string;
   enabled?: boolean;
   max_uses?: number;
+  equipment_buffs?: {
+    stat: string;
+    amount: number;
+    amount_mode: "fixed" | "percent";
+  }[];
 };
 type Shop = {
   products: Product[];
@@ -171,7 +176,14 @@ export default function EconomyPanel({
                   {product.kind === "dungeon_unlock"
                     ? "指定リソースのダンジョンを開放"
                     : product.kind === "weapon"
-                      ? `攻 +${product.amount}`
+                      ? product.equipment_buffs?.length
+                        ? product.equipment_buffs
+                            .map(
+                              (buff) =>
+                                `${({ attack: "攻", defense: "守", specialAttack: "特攻", specialDefense: "特守", maxHp: "最大HP" } as Record<string, string>)[buff.stat] ?? buff.stat} +${buff.amount}${buff.amount_mode === "percent" ? "%" : ""}`,
+                            )
+                            .join(" · ")
+                        : `攻 +${product.amount}`
                       : product.kind === "hp"
                         ? `HP ${product.amount}${product.amount_mode === "percent" ? "%" : ""}回復`
                         : product.kind === "mp"

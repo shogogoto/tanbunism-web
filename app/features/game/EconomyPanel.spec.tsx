@@ -73,6 +73,25 @@ it("purchases with the displayed state's revision and applies the returned balan
   });
   expect(onSaved).toHaveBeenCalledWith(result);
 });
+it("describes the shared buff effects of equipment", async () => {
+  vi.mocked(gameRequest).mockResolvedValueOnce({
+    products: [
+      {
+        ...products[0],
+        equipment_buffs: [
+          { stat: "defense", amount: 4, amount_mode: "fixed" },
+          { stat: "specialAttack", amount: 50, amount_mode: "percent" },
+        ],
+      },
+    ],
+  });
+  show(true);
+  expect(
+    await screen.findByText("守 +4 · 特攻 +50% · 30回使用可"),
+  ).toBeVisible();
+  expect(screen.queryByText("攻 +3 · 30回使用可")).not.toBeInTheDocument();
+});
+
 it("uses an owned step potion without showing review tasks in the inventory", async () => {
   show(false);
   const name = await screen.findByText("歩数回復薬");

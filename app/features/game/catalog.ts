@@ -277,7 +277,19 @@ export function skillTemplate(skill: SkillDefinition): SkillTemplate {
     mp_cost,
     target,
     ...values
-  } = normalizeSkill(skill);
+  } = normalizeSkill(
+    skill.effect === "equip_attack"
+      ? {
+          ...skill,
+          effect: "buff",
+          stat: "attack",
+          amount_mode: "fixed",
+          duration_turns: 3,
+          stack_limit: 1,
+          on_wrong: { type: "fizzle" },
+        }
+      : skill,
+  );
   return values;
 }
 
@@ -328,7 +340,19 @@ export function resolveCatalogTemplates(catalog: GameCatalog): GameCatalog {
 
 /** Existing standalone effects become editable templates without changing their values. */
 export function prepareSkillCatalog(catalog: GameCatalog): GameCatalog {
-  const templates = [...(catalog.skill_templates ?? [])];
+  const templates = (catalog.skill_templates ?? []).map((template) =>
+    template.effect === "equip_attack"
+      ? skillTemplate(
+          normalizeSkill({
+            ...template,
+            icon: "sparkles",
+            mp_cost: 0,
+            enabled: true,
+            target: "self",
+          }),
+        )
+      : template,
+  );
   const skills = catalog.skills.map((skill) => {
     let ids = skill.template_ids?.length
       ? skill.template_ids
@@ -375,6 +399,13 @@ export type ItemDefinition = {
   kind: "weapon" | "consumable";
   max_uses?: number;
 };
+
+export function isEquipmentSkill(skill: SkillDefinition): boolean {
+  const effects = skill.effects?.length ? skill.effects : [skill];
+  return effects.every(
+    (effect) => effect.effect === "buff" || effect.effect === "equip_attack",
+  );
+}
 export type ShopListing = { item_id: string; price: number; enabled: boolean };
 export type EnemyDefinition = {
   id: string;

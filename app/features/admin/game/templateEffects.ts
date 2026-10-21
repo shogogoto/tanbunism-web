@@ -10,13 +10,12 @@ export const isStatus = (skill: SkillDefinition) =>
 export const templateKind = (skill: SkillDefinition) =>
   isStatus(skill)
     ? "status"
-    : skill.effect === "heal_mp" || skill.effect === "damage_mp"
-      ? "mp"
-      : skill.effect === "recover_moves"
-        ? "moves"
-        : skill.effect === "equip_attack"
-          ? "equipment"
-          : "hp";
+    : skill.effect === "recover_moves"
+      ? "other"
+      : (skill.damage_type ?? "physical");
+
+export const instantResource = (skill: SkillDefinition) =>
+  skill.effect === "heal_mp" || skill.effect === "damage_mp" ? "mp" : "hp";
 
 export function effectValue(
   skill: SkillDefinition,
@@ -75,7 +74,8 @@ export function effectPatch(
                 },
         }
       : { duration_turns: value };
-  const kind = templateKind(skill);
+  const kind =
+    skill.effect === "recover_moves" ? "other" : instantResource(skill);
   const effect =
     kind === "hp"
       ? skill.effect === "heal_hp"
@@ -116,19 +116,24 @@ export function changeKind(
   skill: SkillDefinition,
   kind: string,
 ): SkillDefinition {
-  const kinds = {
-    hp: "attack",
-    mp: "damage_mp",
-    moves: "recover_moves",
-    status: "buff",
-    equipment: "equip_attack",
-  } as const;
+  if (
+    (kind === "physical" || kind === "special") &&
+    !isStatus(skill) &&
+    skill.effect !== "recover_moves"
+  )
+    return normalizeSkill({ ...skill, damage_type: kind });
   return normalizeSkill({
     ...skill,
-    effect: kinds[kind as keyof typeof kinds],
-    target: kind === "hp" || kind === "mp" ? "enemy" : "self",
+    effect:
+      kind === "other"
+        ? "recover_moves"
+        : kind === "status"
+          ? "buff"
+          : "attack",
+    damage_type: kind === "special" ? "special" : "physical",
+    target: kind === "physical" || kind === "special" ? "enemy" : "self",
     amount: 0,
-    multiplier: 0,
+    multiplier: 1,
     amount_mode: "fixed",
     stat: "attack",
     on_wrong: { type: "fizzle" },
@@ -140,7 +145,7 @@ export function changeDetail(
   recovery: boolean,
 ): SkillPatch {
   const effect =
-    templateKind(skill) === "mp"
+    instantResource(skill) === "mp"
       ? recovery
         ? "heal_mp"
         : "damage_mp"
@@ -156,6 +161,64 @@ export function changeDetail(
       ? effectPatch(draft, wrong.mode, wrong.value, true)
       : {}),
   };
+}
+
+export function changeResource(
+  skill: SkillDefinition,
+  resource: string,
+): SkillPatch {
+  const recovery = skill.effect === "heal_hp" || skill.effect === "heal_mp";
+  const effect =
+    resource === "mp"
+      ? recovery
+        ? "heal_mp"
+        : "damage_mp"
+      : recovery
+        ? "heal_hp"
+        : "attack";
+  const value = effectValue(skill);
+  const wrong = effectValue(skill, true);
+  const draft = normalizeSkill({ ...skill, effect });
+  return {
+    ...effectPatch(draft, value.mode, value.value),
+    ...(skill.on_wrong?.type === "reduced"
+      ? effectPatch(draft, wrong.mode, wrong.value, true)
+      : {}),
+  };
+}
+
+export function stateDetail(skill: SkillDefinition) {
+  return skill.effect === "buff" || skill.effect === "debuff"
+    ? skill.effect
+    : stateRecovery(skill)
+      ? "recovery"
+      : "damage";
+}
+
+export function changeStateDetail(
+  skill: SkillDefinition,
+  detail: string,
+  resource = stateResource(skill),
+): SkillPatch {
+  const periodic = detail === "recovery" || detail === "damage";
+  const selected = periodic
+    ? resource === "mp"
+      ? "mp"
+      : "hp"
+    : [
+          "attack",
+          "defense",
+          "specialAttack",
+          "specialDefense",
+          ...(detail === "buff" ? ["maxHp"] : []),
+        ].includes(resource)
+      ? resource
+      : "attack";
+  return changeState(
+    skill,
+    selected,
+    detail === "recovery" || detail === "buff",
+  );
 }
 
 export function stateResource(skill: SkillDefinition) {

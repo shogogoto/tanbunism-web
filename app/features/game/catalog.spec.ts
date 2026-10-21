@@ -3,11 +3,48 @@ import {
   type SkillDefinition,
   actionDamage,
   effectAmount,
+  isEquipmentSkill,
   modifiedStat,
   normalizeSkill,
   poisonDamage,
+  prepareSkillCatalog,
 } from "./catalog";
 import { sampleCatalog } from "./catalog.fixtures";
+
+it("migrates legacy equipment effects to shared buffs without changing item ownership", () => {
+  const input = {
+    ...sampleCatalog,
+    skills: [
+      ...sampleCatalog.skills,
+      normalizeSkill({
+        id: "sword_power",
+        name: "剣の効果",
+        icon: "sword",
+        enabled: true,
+        effect: "equip_attack",
+        target: "self",
+        amount: 8,
+        mp_cost: 0,
+      }),
+    ],
+  };
+  const result = prepareSkillCatalog(input);
+  const skill = result.skills.at(-1);
+  expect(skill).toMatchObject({
+    effect: "buff",
+    stat: "attack",
+    amount: 8,
+    amount_mode: "fixed",
+  });
+  expect(result.skill_templates?.at(-1)).toMatchObject({
+    effect: "buff",
+    stat: "attack",
+    amount: 8,
+  });
+  expect(input.skills.at(-1)?.effect).toBe("equip_attack");
+  expect(isEquipmentSkill(skill as SkillDefinition)).toBe(true);
+  expect(isEquipmentSkill(sampleCatalog.skills[0])).toBe(false);
+});
 
 it("boosts only the selected target or all enemies without affecting ordinary attacks", () => {
   const action = {

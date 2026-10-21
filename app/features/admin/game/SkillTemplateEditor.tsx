@@ -11,11 +11,13 @@ import { Input } from "~/shared/components/ui/input";
 import {
   changeDetail,
   changeKind,
-  changeState,
+  changeResource,
+  changeStateDetail,
   effectPatch,
   effectValue,
+  instantResource,
   isStatus,
-  stateRecovery,
+  stateDetail,
   stateResource,
   templateKind,
 } from "./templateEffects";
@@ -25,7 +27,6 @@ const selectClass = "h-9 rounded-md border bg-background px-2";
 const columns = [
   ["name", "名前"],
   ["target_count", "対象数"],
-  ["calculation", "計算"],
   ["kind", "種別"],
   ["detail", "詳細"],
   ["type", "タイプ"],
@@ -59,7 +60,6 @@ export default function SkillTemplateEditor({
   const { sorted, header } = useTableSort(rows, (skill, column) => {
     if (column === "type") return skill.on_wrong?.type ?? "fizzle";
     if (column === "kind") return templateKind(skill);
-    if (column === "calculation") return skill.damage_type ?? "physical";
     if (column === "detail")
       return isStatus(skill)
         ? `${skill.effect}:${skill.stat ?? skill.ailment}`
@@ -107,7 +107,7 @@ export default function SkillTemplateEditor({
             {sorted.map((skill) => {
               const status = isStatus(skill);
               const kind = templateKind(skill);
-              const utility = kind === "moves" || kind === "equipment";
+              const utility = kind === "other";
               const normal = catalog.skills.some(
                 (s) =>
                   s.id === "normal_attack" &&
@@ -255,22 +255,6 @@ export default function SkillTemplateEditor({
                   </td>
                   <td>
                     <select
-                      aria-label="計算"
-                      className={selectClass}
-                      disabled={normal || status || utility}
-                      value={skill.damage_type ?? "physical"}
-                      onChange={(e) =>
-                        update(skill.id, {
-                          damage_type: e.target.value as "physical" | "special",
-                        })
-                      }
-                    >
-                      <option value="physical">物理</option>
-                      <option value="special">特殊</option>
-                    </select>
-                  </td>
-                  <td>
-                    <select
                       aria-label="種別"
                       className={selectClass}
                       disabled={normal}
@@ -279,13 +263,10 @@ export default function SkillTemplateEditor({
                         update(skill.id, changeKind(skill, e.target.value))
                       }
                     >
-                      <option value="hp">HP</option>
-                      <option value="mp">MP</option>
-                      <option value="moves">歩数</option>
+                      <option value="physical">物理</option>
+                      <option value="special">特殊</option>
                       <option value="status">状態</option>
-                      {kind === "equipment" && (
-                        <option value="equipment">装備（既存設定）</option>
-                      )}
+                      <option value="other">その他</option>
                     </select>
                   </td>
                   <td>
@@ -294,25 +275,18 @@ export default function SkillTemplateEditor({
                         <select
                           aria-label="詳細"
                           className={selectClass}
-                          value={stateRecovery(skill) ? "recovery" : "damage"}
+                          value={stateDetail(skill)}
                           onChange={(e) =>
                             update(
                               skill.id,
-                              changeState(
-                                skill,
-                                stateResource(skill),
-                                e.target.value === "recovery",
-                              ),
+                              changeStateDetail(skill, e.target.value),
                             )
                           }
                         >
                           <option value="recovery">回復</option>
-                          <option
-                            value="damage"
-                            disabled={skill.stat === "maxHp"}
-                          >
-                            ダメージ
-                          </option>
+                          <option value="damage">ダメージ</option>
+                          <option value="buff">バフ</option>
+                          <option value="debuff">デバフ</option>
                         </select>
                         {
                           <select
@@ -322,24 +296,27 @@ export default function SkillTemplateEditor({
                             onChange={(e) =>
                               update(
                                 skill.id,
-                                changeState(
+                                changeStateDetail(
                                   skill,
+                                  stateDetail(skill),
                                   e.target.value,
-                                  e.target.value === "maxHp" ||
-                                    stateRecovery(skill),
                                 ),
                               )
                             }
                           >
-                            {Object.entries({
-                              hp: "HP",
-                              mp: "MP",
-                              attack: "攻撃力",
-                              defense: "守備力",
-                              specialAttack: "特攻",
-                              specialDefense: "特守",
-                              maxHp: "最大HP（バブル）",
-                            }).map(([v, label]) => (
+                            {Object.entries(
+                              skill.effect === "ailment"
+                                ? { hp: "HP", mp: "MP" }
+                                : {
+                                    attack: "攻撃力",
+                                    defense: "守備力",
+                                    specialAttack: "特攻",
+                                    specialDefense: "特守",
+                                    ...(skill.effect === "buff"
+                                      ? { maxHp: "最大HP（バブル）" }
+                                      : {}),
+                                  },
+                            ).map(([v, label]) => (
                               <option key={v} value={v}>
                                 {label}
                               </option>
@@ -367,28 +344,55 @@ export default function SkillTemplateEditor({
                         {number("重複上限", "stack_limit", 1)}
                       </div>
                     ) : utility ? (
-                      "回復"
-                    ) : (
                       <select
                         aria-label="詳細"
                         className={selectClass}
-                        disabled={normal}
-                        value={
-                          skill.effect === "heal_hp" ||
-                          skill.effect === "heal_mp"
-                            ? "recovery"
-                            : "damage"
-                        }
-                        onChange={(e) =>
-                          update(
-                            skill.id,
-                            changeDetail(skill, e.target.value === "recovery"),
-                          )
-                        }
+                        value="moves"
+                        disabled
                       >
-                        <option value="damage">ダメージ</option>
-                        <option value="recovery">回復</option>
+                        <option value="moves">歩数</option>
                       </select>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <select
+                          aria-label="対象ステータス"
+                          className={selectClass}
+                          value={instantResource(skill)}
+                          disabled={normal}
+                          onChange={(e) =>
+                            update(
+                              skill.id,
+                              changeResource(skill, e.target.value),
+                            )
+                          }
+                        >
+                          <option value="hp">HP</option>
+                          <option value="mp">MP</option>
+                        </select>
+                        <select
+                          aria-label="詳細"
+                          className={selectClass}
+                          disabled={normal}
+                          value={
+                            skill.effect === "heal_hp" ||
+                            skill.effect === "heal_mp"
+                              ? "recovery"
+                              : "damage"
+                          }
+                          onChange={(e) =>
+                            update(
+                              skill.id,
+                              changeDetail(
+                                skill,
+                                e.target.value === "recovery",
+                              ),
+                            )
+                          }
+                        >
+                          <option value="damage">ダメージ</option>
+                          <option value="recovery">回復</option>
+                        </select>
+                      </div>
                     )}
                   </td>
                   <td>

@@ -62,18 +62,13 @@ it("uses two sortable tables with exactly six skill columns and migrates legacy 
     within(templates)
       .getAllByRole("columnheader")
       .map((h) => h.textContent?.replace(" ↕", "")),
-  ).toEqual([
-    "名前",
-    "対象数",
-    "計算",
-    "種別",
-    "詳細",
-    "タイプ",
-    "効果",
-    "削除",
-  ]);
+  ).toEqual(["名前", "対象数", "種別", "詳細", "タイプ", "効果", "削除"]);
   expect(
     within(templates).queryByRole("combobox", { name: /^対象$/ }),
+  ).not.toBeInTheDocument();
+  expect(within(templates).queryByLabelText("計算")).not.toBeInTheDocument();
+  expect(
+    within(templates).queryByRole("option", { name: /装備/ }),
   ).not.toBeInTheDocument();
   const nameSort = within(templates).getByRole("button", { name: "名前 ↕" });
   await userEvent.click(nameSort);
@@ -407,7 +402,7 @@ it("adds templates and skills from the bottom of each unified table", async () =
     screen.getByRole("button", { name: "効果テンプレートを追加" }),
   );
   const effect = screen.getByRole("row", { name: "新しい効果" });
-  await user.selectOptions(within(effect).getByLabelText("計算"), "special");
+  await user.selectOptions(within(effect).getByLabelText("種別"), "special");
   await user.click(screen.getByRole("button", { name: "スキルを追加" }));
   const skill = screen.getByRole("row", { name: "新しいスキル" });
   await user.selectOptions(
@@ -585,6 +580,7 @@ it("defines HP periodic recovery with grouped action durations and no negative a
   );
   const row = within(screen.getByRole("row", { name: "新しい効果" }));
   await user.selectOptions(row.getByLabelText("種別"), "status");
+  await user.selectOptions(row.getByLabelText("詳細"), "recovery");
   await user.selectOptions(row.getByLabelText("対象ステータス"), "hp");
   expect(row.getByLabelText("詳細")).toHaveValue("recovery");
   fireEvent.change(row.getByLabelText("状態の値"), { target: { value: "6" } });
@@ -623,7 +619,8 @@ it("edits MP damage and recovery through detail with independent correct and wro
     screen.getByRole("button", { name: "効果テンプレートを追加" }),
   );
   const row = within(screen.getByRole("row", { name: "新しい効果" }));
-  await user.selectOptions(row.getByLabelText("種別"), "mp");
+  await user.selectOptions(row.getByLabelText("対象ステータス"), "mp");
+  await user.selectOptions(row.getByLabelText("正答効果の指定"), "fixed");
   expect(row.getByLabelText("詳細")).toHaveValue("damage");
   await user.selectOptions(row.getByLabelText("対象数"), "all");
   await user.selectOptions(row.getByLabelText("詳細"), "recovery");
