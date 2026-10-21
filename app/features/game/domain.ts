@@ -75,7 +75,7 @@ export type GameSave = {
     effect?: import("./catalog").SkillDefinition["effect"];
     target?: "self" | "enemy" | "all_enemies";
     target_ids?: string[];
-    ailment?: "poison" | "curse" | null;
+    ailment?: "poison" | "curse" | "regen" | "refresh" | null;
   } | null;
   maps?: Record<string, DungeonMap>;
   dungeons?: Record<string, ParkedDungeon>;

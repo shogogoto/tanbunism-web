@@ -58,6 +58,23 @@ it("uses two sortable tables with exactly six skill columns and migrates legacy 
   await userEvent.click(sort);
   expect(sort.closest("th")).toHaveAttribute("aria-sort", "descending");
   const templates = screen.getByRole("table", { name: "効果テンプレート一覧" });
+  expect(
+    within(templates)
+      .getAllByRole("columnheader")
+      .map((h) => h.textContent?.replace(" ↕", "")),
+  ).toEqual([
+    "名前",
+    "対象数",
+    "計算",
+    "種別",
+    "詳細",
+    "タイプ",
+    "効果",
+    "削除",
+  ]);
+  expect(
+    within(templates).queryByRole("combobox", { name: /^対象$/ }),
+  ).not.toBeInTheDocument();
   const nameSort = within(templates).getByRole("button", { name: "名前 ↕" });
   await userEvent.click(nameSort);
   expect(nameSort.closest("th")).toHaveAttribute("aria-sort", "ascending");
@@ -76,7 +93,7 @@ it("shares effect edits while retaining independent skill MP and multiple refere
   expect(within(template).queryByLabelText("消費MP")).not.toBeInTheDocument();
   expect(within(template).getByRole("button", { name: "削除" })).toBeDisabled();
   fireEvent.change(
-    within(template).getByLabelText("攻撃倍率", { exact: true }),
+    within(template).getByLabelText("正答効果の値", { exact: true }),
     { target: { value: "2" } },
   );
   fireEvent.change(within(fire).getByLabelText("消費MP"), {
@@ -191,7 +208,7 @@ it("merges a skill file into the draft, preserving other edits until explicit sa
   const fire = await screen.findByRole("row", { name: "ファイア" });
   fireEvent.change(
     within(screen.getByRole("row", { name: "ファイアの効果" })).getByLabelText(
-      "効果量",
+      "正答効果の値",
       { exact: true },
     ),
     {
@@ -212,7 +229,7 @@ it("merges a skill file into the draft, preserving other edits until explicit sa
   expect(screen.getByRole("row", { name: "ブリザド" })).toBeVisible();
   expect(
     within(screen.getByRole("row", { name: "ファイアの効果" })).getByLabelText(
-      "効果量",
+      "正答効果の値",
       { exact: true },
     ),
   ).toHaveValue(7);
@@ -278,9 +295,12 @@ it("exports template changes and excludes skills marked for deletion", async () 
   const fire = await screen.findByRole("row", { name: "ファイア" });
   await userEvent.click(within(fire).getByRole("button", { name: "削除" }));
   const heal = screen.getByRole("row", { name: "ケアルの効果" });
-  fireEvent.change(within(heal).getByLabelText("効果量", { exact: true }), {
-    target: { value: "25" },
-  });
+  fireEvent.change(
+    within(heal).getByLabelText("正答効果の値", { exact: true }),
+    {
+      target: { value: "25" },
+    },
+  );
   await userEvent.click(screen.getByRole("button", { name: "JSONを書き出す" }));
   expect(download).toHaveBeenCalledWith(
     expect.not.arrayContaining([expect.objectContaining({ id: "fire" })]),
@@ -302,9 +322,9 @@ it("edits skills without material selection and preserves existing icon data", a
   expect(
     within(skill).queryByRole("button", { name: /素材を選ぶ/ }),
   ).not.toBeInTheDocument();
-  const amount = within(
-    screen.getByRole("row", { name: "ファイアの効果" }),
-  ).getByLabelText("効果量", { exact: true });
+  const effectRow = within(screen.getByRole("row", { name: "ファイアの効果" }));
+  await user.selectOptions(effectRow.getByLabelText("正答効果の指定"), "fixed");
+  const amount = effectRow.getByLabelText("正答効果の値", { exact: true });
   await user.clear(amount);
   await user.type(amount, "7");
   await user.click(screen.getByRole("button", { name: "保存" }));
@@ -341,14 +361,23 @@ it("edits independent correct and wrong recovery amounts and strips inactive fie
   render(<CatalogEditor kind="skills" />);
   const row = await screen.findByRole("row", { name: "ケアルの効果" });
   const field = within(row);
-  expect(field.queryByRole("option", { name: "反撃" })).not.toBeInTheDocument();
-  expect(field.getByLabelText("誤答効果量")).toBeDisabled();
+  expect(field.getByRole("option", { name: "反撃" })).toBeInTheDocument();
+  expect(field.queryByLabelText("誤答効果の値")).not.toBeInTheDocument();
   await user.selectOptions(field.getByLabelText("タイプ"), "reduced");
-  await user.selectOptions(field.getByLabelText("効果量の指定"), "percent");
-  await user.clear(field.getByLabelText("効果量"));
-  await user.type(field.getByLabelText("効果量"), "20");
-  await user.clear(field.getByLabelText("誤答効果量"));
-  await user.type(field.getByLabelText("誤答効果量"), "10");
+  await user.selectOptions(
+    field.getByLabelText("正答効果の指定"),
+    "multiplier",
+  );
+  fireEvent.change(field.getByLabelText("正答効果の値"), {
+    target: { value: "0.2" },
+  });
+  await user.selectOptions(
+    field.getByLabelText("誤答効果の指定"),
+    "multiplier",
+  );
+  fireEvent.change(field.getByLabelText("誤答効果の値"), {
+    target: { value: "0.1" },
+  });
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(saved).toHaveBeenCalled());
   const recovery = saved.mock.calls
@@ -357,7 +386,7 @@ it("edits independent correct and wrong recovery amounts and strips inactive fie
   expect(recovery).toMatchObject({
     amount: 20,
     amount_mode: "percent",
-    on_wrong: { type: "reduced", amount: 10 },
+    on_wrong: { type: "reduced", amount: 10, amount_mode: "percent" },
   });
   expect(recovery.on_wrong).not.toHaveProperty("multiplier");
   await user.selectOptions(field.getByLabelText("タイプ"), "fizzle");
@@ -378,7 +407,7 @@ it("adds templates and skills from the bottom of each unified table", async () =
     screen.getByRole("button", { name: "効果テンプレートを追加" }),
   );
   const effect = screen.getByRole("row", { name: "新しい効果" });
-  await user.selectOptions(within(effect).getByLabelText("種別"), "special");
+  await user.selectOptions(within(effect).getByLabelText("計算"), "special");
   await user.click(screen.getByRole("button", { name: "スキルを追加" }));
   const skill = screen.getByRole("row", { name: "新しいスキル" });
   await user.selectOptions(
@@ -520,15 +549,15 @@ it("defines a timed percentage buff in the unified template table", async () => 
     screen.getByRole("button", { name: "効果テンプレートを追加" }),
   );
   const row = screen.getByRole("row", { name: "新しい効果" });
-  await user.selectOptions(within(row).getByLabelText("種別"), "buff");
+  await user.selectOptions(within(row).getByLabelText("種別"), "status");
   await user.selectOptions(
     within(row).getByLabelText("対象ステータス"),
     "maxHp",
   );
-  expect(within(row).getByLabelText("効果量の指定")).toHaveValue("percent");
+  expect(within(row).getByLabelText("状態の値の指定")).toHaveValue("percent");
   for (const [label, value] of [
-    ["効果量", "50"],
-    ["持続（行動数）", "5"],
+    ["状態の値", "50"],
+    ["正答効果の値", "5"],
     ["重複上限", "2"],
   ]) {
     fireEvent.change(within(row).getByLabelText(label, { exact: true }), {
@@ -544,6 +573,77 @@ it("defines a timed percentage buff in the unified template table", async () => 
     amount_mode: "percent",
     duration_turns: 5,
     stack_limit: 2,
+  });
+});
+
+it("defines HP periodic recovery with grouped action durations and no negative amounts", async () => {
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="skills" />);
+  await screen.findByRole("row", { name: "ファイア" });
+  await user.click(
+    screen.getByRole("button", { name: "効果テンプレートを追加" }),
+  );
+  const row = within(screen.getByRole("row", { name: "新しい効果" }));
+  await user.selectOptions(row.getByLabelText("種別"), "status");
+  await user.selectOptions(row.getByLabelText("対象ステータス"), "hp");
+  expect(row.getByLabelText("詳細")).toHaveValue("recovery");
+  fireEvent.change(row.getByLabelText("状態の値"), { target: { value: "6" } });
+  fireEvent.change(row.getByLabelText("正答効果の値"), {
+    target: { value: "5" },
+  });
+  await user.selectOptions(row.getByLabelText("タイプ"), "reduced");
+  fireEvent.change(row.getByLabelText("誤答効果の値"), {
+    target: { value: "2" },
+  });
+  expect(row.getByRole("group", { name: "正答効果" })).toContainElement(
+    row.getByLabelText("正答効果の値"),
+  );
+  expect(row.getByRole("group", { name: "誤答効果" })).toContainElement(
+    row.getByLabelText("誤答効果の値"),
+  );
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls[0][0].skill_templates.at(-1)).toMatchObject({
+    effect: "ailment",
+    ailment: "regen",
+    amount: 6,
+    duration_turns: 5,
+    on_wrong: { type: "reduced", apply: true, duration_turns: 2 },
+  });
+  expect(saved.mock.calls[0][0].skill_templates.at(-1)).not.toHaveProperty(
+    "target",
+  );
+});
+
+it("edits MP damage and recovery through detail with independent correct and wrong modes", async () => {
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="skills" />);
+  await screen.findByRole("row", { name: "ファイア" });
+  await user.click(
+    screen.getByRole("button", { name: "効果テンプレートを追加" }),
+  );
+  const row = within(screen.getByRole("row", { name: "新しい効果" }));
+  await user.selectOptions(row.getByLabelText("種別"), "mp");
+  expect(row.getByLabelText("詳細")).toHaveValue("damage");
+  await user.selectOptions(row.getByLabelText("対象数"), "all");
+  await user.selectOptions(row.getByLabelText("詳細"), "recovery");
+  fireEvent.change(row.getByLabelText("正答効果の値"), {
+    target: { value: "12" },
+  });
+  await user.selectOptions(row.getByLabelText("タイプ"), "reduced");
+  await user.selectOptions(row.getByLabelText("誤答効果の指定"), "multiplier");
+  fireEvent.change(row.getByLabelText("誤答効果の値"), {
+    target: { value: "0.25" },
+  });
+  expect(row.getByLabelText("正答効果の値")).toHaveAttribute("min", "0");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls[0][0].skill_templates.at(-1)).toMatchObject({
+    effect: "heal_mp",
+    target_count: "all",
+    amount: 12,
+    amount_mode: "fixed",
+    on_wrong: { type: "reduced", amount: 25, amount_mode: "percent" },
   });
 });
 

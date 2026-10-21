@@ -77,7 +77,7 @@ export function stopBattleSounds(): void {
 }
 
 type SoundSkill = Pick<SkillDefinition, "sound" | "effect" | "animation"> & {
-  ailment?: "poison" | "curse";
+  ailment?: "poison" | "curse" | "regen" | "refresh";
 };
 
 export function resolveSkillSound(skill: SoundSkill): Preset | null {
@@ -91,7 +91,10 @@ export function resolveSkillSound(skill: SoundSkill): Preset | null {
     heal_mp: "heal",
     buff: "magic_rise",
     debuff: "drain",
-    ailment: skill.ailment ?? "poison",
+    ailment:
+      skill.ailment === "regen" || skill.ailment === "refresh"
+        ? "heal"
+        : (skill.ailment ?? "poison"),
   };
   return automatic[skill.effect] ?? "impact";
 }

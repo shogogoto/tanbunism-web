@@ -11,6 +11,8 @@ type SkillBase = {
   enabled: boolean;
   target: "enemy" | "all_enemies" | "self";
   amount: number;
+  target_count?: number | "all";
+  damage_type?: "physical" | "special";
   mp_cost: number;
   animation?: SkillAnimation;
   sound?: SkillSound;
@@ -41,15 +43,19 @@ type TimedSkill = {
   stack_limit?: number;
   multiplier?: never;
 };
+type WrongOverride = {
+  amount_mode?: "fixed" | "percent";
+  duration_turns?: number;
+};
 export type NumericWrongResult =
-  | { type: "fizzle" }
-  | { type: "reduced"; amount: number };
+  | { type: "counter" | "fizzle" }
+  | ({ type: "reduced"; amount: number; multiplier?: number } & WrongOverride);
 export type AttackWrongResult =
   | { type: "counter" | "fizzle" }
-  | { type: "reduced"; amount: number; multiplier: number };
+  | ({ type: "reduced"; amount: number; multiplier: number } & WrongOverride);
 export type AilmentWrongResult =
-  | { type: "fizzle" }
-  | { type: "reduced"; apply: boolean };
+  | { type: "counter" | "fizzle" }
+  | { type: "reduced"; apply: boolean; duration_turns?: number };
 export type SkillDefinition = SkillBase &
   (
     | (InstantSkill & {
@@ -57,11 +63,11 @@ export type SkillDefinition = SkillBase &
         multiplier: number;
         amount_mode?: "fixed" | "percent";
         damage_type?: "physical" | "special";
-        target_count?: number;
+        target_count?: number | "all";
         on_wrong?: AttackWrongResult;
       })
     | (InstantSkill & {
-        effect: "heal_hp" | "heal_mp";
+        effect: "heal_hp" | "heal_mp" | "damage_mp";
         multiplier?: never;
         amount_mode?: "fixed" | "percent";
         on_wrong?: NumericWrongResult;
@@ -82,22 +88,20 @@ export type SkillDefinition = SkillBase &
         stat?: "attack" | "defense" | "specialAttack" | "specialDefense";
         ailment?: never;
         on_wrong?: NumericWrongResult;
-        target_count?: number;
+        target_count?: number | "all";
       })
     | (TimedSkill & {
         effect: "ailment";
-        ailment?: "poison" | "curse";
+        ailment?: "poison" | "curse" | "regen" | "refresh";
         stat?: never;
         on_wrong?: AilmentWrongResult;
-        target_count?: number;
+        target_count?: number | "all";
       })
     | (InstantSkill & {
         effect: "recover_moves" | "equip_attack";
         multiplier?: never;
         amount_mode?: never;
         on_wrong?: never;
-        damage_type?: never;
-        target_count?: never;
       })
   );
 export type SkillPatch = Partial<
@@ -108,10 +112,10 @@ export type SkillPatch = Partial<
     stat: "attack" | "defense" | "specialAttack" | "specialDefense" | "maxHp";
     duration_turns: number;
     stack_limit: number;
-    ailment: "poison" | "curse";
+    ailment: "poison" | "curse" | "regen" | "refresh";
     on_wrong: AttackWrongResult | NumericWrongResult | AilmentWrongResult;
     damage_type: "physical" | "special";
-    target_count: number;
+    target_count: number | "all";
   }
 >;
 
@@ -146,6 +150,8 @@ export function normalizeSkill(
     animation,
     sound,
     effect,
+    target_count: skill.target_count ?? (target === "all_enemies" ? "all" : 1),
+    damage_type: skill.damage_type ?? "physical",
     ...(template_id ? { template_id } : {}),
     ...(template_ids?.length ? { template_ids } : {}),
     ...(effects?.length ? { effects } : {}),
@@ -160,8 +166,18 @@ export function normalizeSkill(
   const wrong = skill.on_wrong;
   const numericWrong: NumericWrongResult =
     wrong?.type === "reduced"
-      ? { type: "reduced", amount: "amount" in wrong ? wrong.amount : 0 }
-      : { type: "fizzle" };
+      ? {
+          type: "reduced",
+          amount: "amount" in wrong ? wrong.amount : 0,
+          ...("amount_mode" in wrong && wrong.amount_mode !== undefined
+            ? { amount_mode: wrong.amount_mode }
+            : {}),
+          ...((effect === "buff" || effect === "debuff") &&
+          wrong.duration_turns !== undefined
+            ? { duration_turns: wrong.duration_turns }
+            : {}),
+        }
+      : { type: wrong?.type === "counter" ? "counter" : "fizzle" };
   switch (effect) {
     case "attack":
       return {
@@ -170,18 +186,24 @@ export function normalizeSkill(
         ...numeric,
         multiplier: skill.multiplier ?? 1,
         damage_type: skill.damage_type ?? "physical",
-        target_count: skill.target_count ?? 1,
+        target_count:
+          skill.target_count ?? (target === "all_enemies" ? "all" : 1),
         on_wrong:
           wrong?.type === "reduced"
             ? {
                 type: "reduced",
                 amount: "amount" in wrong ? wrong.amount : 0,
-                multiplier: "multiplier" in wrong ? wrong.multiplier : 0.5,
+                multiplier:
+                  "multiplier" in wrong ? (wrong.multiplier ?? 0.5) : 0.5,
+                ...("amount_mode" in wrong && wrong.amount_mode !== undefined
+                  ? { amount_mode: wrong.amount_mode }
+                  : {}),
               }
             : { type: wrong?.type === "counter" ? "counter" : "fizzle" },
       };
     case "heal_hp":
     case "heal_mp":
+    case "damage_mp":
       return { ...common, effect, ...numeric, on_wrong: numericWrong };
     case "buff":
       return {
@@ -197,7 +219,8 @@ export function normalizeSkill(
         effect,
         ...timed,
         stat: skill.stat === "maxHp" ? "attack" : (skill.stat ?? "attack"),
-        target_count: skill.target_count ?? 1,
+        target_count:
+          skill.target_count ?? (target === "all_enemies" ? "all" : 1),
         on_wrong: numericWrong,
       };
     case "ailment":
@@ -206,11 +229,18 @@ export function normalizeSkill(
         effect,
         ...timed,
         ailment: skill.ailment ?? "poison",
-        target_count: skill.target_count ?? 1,
+        target_count:
+          skill.target_count ?? (target === "all_enemies" ? "all" : 1),
         on_wrong:
           wrong?.type === "reduced"
-            ? { type: "reduced", apply: "apply" in wrong ? wrong.apply : false }
-            : { type: "fizzle" },
+            ? {
+                type: "reduced",
+                apply: "apply" in wrong ? wrong.apply : false,
+                ...(wrong.duration_turns !== undefined
+                  ? { duration_turns: wrong.duration_turns }
+                  : {}),
+              }
+            : { type: wrong?.type === "counter" ? "counter" : "fizzle" },
       };
     case "recover_moves":
     case "equip_attack":
@@ -229,7 +259,8 @@ type TemplateOf<T> = T extends SkillDefinition
       | "animation"
       | "sound"
       | "mp_cost"
-    >
+      | "target"
+    > & { target?: SkillBase["target"] }
   : never;
 export type SkillTemplate = TemplateOf<SkillDefinition>;
 
@@ -244,6 +275,7 @@ export function skillTemplate(skill: SkillDefinition): SkillTemplate {
     animation,
     sound,
     mp_cost,
+    target,
     ...values
   } = normalizeSkill(skill);
   return values;
@@ -265,6 +297,15 @@ export function resolveCatalogTemplates(catalog: GameCatalog): GameCatalog {
       if (!template) return skill;
       return normalizeSkill({
         ...template,
+        target:
+          template.effect === "ailment" &&
+          ["regen", "refresh"].includes(template.ailment ?? "poison")
+            ? "self"
+            : ["attack", "damage_mp", "debuff", "ailment"].includes(
+                  template.effect,
+                )
+              ? "enemy"
+              : "self",
         id: skill.id,
         name: skill.name,
         icon: skill.icon,
@@ -398,6 +439,7 @@ export type GambitRule = {
   action: "skill" | "item" | "specialty";
   definition_id: string;
   trigger_id?: string | null;
+  target?: "self" | "enemy" | null;
 };
 export type BattleAction = {
   skill: SkillDefinition;
@@ -409,6 +451,7 @@ export const effectLabels: Record<SkillDefinition["effect"], string> = {
   attack: "攻撃",
   heal_hp: "HP回復",
   heal_mp: "MP回復",
+  damage_mp: "MPダメージ",
   recover_moves: "歩数回復",
   equip_attack: "装備：攻撃力",
   buff: "buff：能力向上",
@@ -517,7 +560,7 @@ export function poisonDamage(
         (e) =>
           e.target_id === target &&
           e.skill.effect === "ailment" &&
-          e.skill.ailment !== "curse" &&
+          (e.skill.ailment ?? "poison") === "poison" &&
           e.starts_turn <= (battle?.turn ?? 0) &&
           (battle?.turn ?? 0) < e.expires_turn,
       )

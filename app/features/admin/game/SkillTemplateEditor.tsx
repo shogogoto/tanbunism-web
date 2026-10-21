@@ -8,36 +8,28 @@ import {
 } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import {
+  changeDetail,
+  changeKind,
+  changeState,
+  effectPatch,
+  effectValue,
+  isStatus,
+  stateRecovery,
+  stateResource,
+  templateKind,
+} from "./templateEffects";
 import useTableSort from "./useTableSort";
 
-const selectClass = "h-9 min-w-24 rounded-md border bg-background px-2";
-const kinds = {
-  heal_hp: "HP回復",
-  heal_mp: "MP回復",
-  physical: "物理",
-  special: "特殊",
-  buff: "バフ",
-  debuff: "デバフ",
-  ailment: "状態異常",
-  recover_moves: "歩数回復",
-  equip_attack: "装備",
-};
+const selectClass = "h-9 rounded-md border bg-background px-2";
 const columns = [
   ["name", "名前"],
-  ["type", "タイプ"],
-  ["kind", "種別"],
-  ["target", "対象"],
   ["target_count", "対象数"],
-  ["stat", "対象ステータス"],
-  ["ailment", "状態異常"],
-  ["amount_mode", "効果量の指定"],
-  ["amount", "正答効果量"],
-  ["wrong_amount", "誤答効果量"],
-  ["multiplier", "正答攻撃倍率"],
-  ["wrong_multiplier", "誤答攻撃倍率"],
-  ["wrong_apply", "誤答付与"],
-  ["duration_turns", "持続（行動数）"],
-  ["stack_limit", "重複上限"],
+  ["calculation", "計算"],
+  ["kind", "種別"],
+  ["detail", "詳細"],
+  ["type", "タイプ"],
+  ["power", "効果"],
   ["deleted", "削除"],
 ];
 
@@ -49,6 +41,16 @@ export default function SkillTemplateEditor({
   const rows = templates.map((template) =>
     normalizeSkill({
       ...template,
+      target:
+        template.target ??
+        (template.effect === "ailment" &&
+        ["regen", "refresh"].includes(template.ailment ?? "poison")
+          ? "self"
+          : ["attack", "damage_mp", "debuff", "ailment"].includes(
+                template.effect,
+              )
+            ? "enemy"
+            : "self"),
       mp_cost: 0,
       icon: "sparkles",
       enabled: true,
@@ -56,19 +58,13 @@ export default function SkillTemplateEditor({
   );
   const { sorted, header } = useTableSort(rows, (skill, column) => {
     if (column === "type") return skill.on_wrong?.type ?? "fizzle";
-    if (column === "kind")
-      return skill.effect === "attack"
-        ? (skill.damage_type ?? "physical")
+    if (column === "kind") return templateKind(skill);
+    if (column === "calculation") return skill.damage_type ?? "physical";
+    if (column === "detail")
+      return isStatus(skill)
+        ? `${skill.effect}:${skill.stat ?? skill.ailment}`
         : skill.effect;
-    if (column === "wrong_amount")
-      return skill.on_wrong?.type === "reduced" && "amount" in skill.on_wrong
-        ? skill.on_wrong.amount
-        : 0;
-    if (column === "wrong_multiplier")
-      return skill.on_wrong?.type === "reduced" &&
-        "multiplier" in skill.on_wrong
-        ? skill.on_wrong.multiplier
-        : 0;
+    if (column === "power") return effectValue(skill).value;
     const value = skill[column as keyof SkillDefinition];
     return typeof value === "string" || typeof value === "number" ? value : "";
   });
@@ -77,7 +73,18 @@ export default function SkillTemplateEditor({
       ...catalog,
       skill_templates: rows.map((skill) =>
         skillTemplate(
-          skill.id === id ? normalizeSkill({ ...skill, ...patch }) : skill,
+          skill.id === id
+            ? normalizeSkill({
+                ...skill,
+                ...patch,
+                ...(patch.amount !== undefined &&
+                isStatus(skill) &&
+                skill.on_wrong?.type === "reduced" &&
+                "amount" in skill.on_wrong
+                  ? { on_wrong: { ...skill.on_wrong, amount: patch.amount } }
+                  : {}),
+              })
+            : skill,
         ),
       ),
     });
@@ -86,7 +93,7 @@ export default function SkillTemplateEditor({
     <section aria-label="効果テンプレート" className="space-y-2">
       <h3 className="font-semibold">効果テンプレート</h3>
       <p className="text-xs text-muted-foreground">
-        変更は使用中の全スキルに反映されます。持続は完了した行動数で数え、戦闘終了時に解除されます。保存で確定します。
+        回復・ダメージは詳細で指定します。回復の倍率は最大値を基準にします。状態の効果は継続する行動数です。保存で確定します。
       </p>
       <div className="overflow-x-auto rounded-lg border">
         <table
@@ -98,19 +105,9 @@ export default function SkillTemplateEditor({
           </thead>
           <tbody>
             {sorted.map((skill) => {
-              const attack = skill.effect === "attack";
-              const status = ["buff", "debuff", "ailment"].includes(
-                skill.effect,
-              );
-              const ailment = skill.effect === "ailment";
-              const utility = ["recover_moves", "equip_attack"].includes(
-                skill.effect,
-              );
-              const enemyTarget = ["attack", "debuff", "ailment"].includes(
-                skill.effect,
-              );
-              const wrong = skill.on_wrong;
-              const reduced = wrong?.type === "reduced";
+              const status = isStatus(skill);
+              const kind = templateKind(skill);
+              const utility = kind === "moves" || kind === "equipment";
               const normal = catalog.skills.some(
                 (s) =>
                   s.id === "normal_attack" &&
@@ -119,65 +116,97 @@ export default function SkillTemplateEditor({
               const users = catalog.skills.filter((s) =>
                 s.template_ids?.includes(skill.id),
               );
-              function numeric(
+              const reduced = skill.on_wrong?.type === "reduced";
+              function number(
                 label: string,
-                key:
-                  | "amount"
-                  | "multiplier"
-                  | "duration_turns"
-                  | "stack_limit"
-                  | "target_count",
-                min: number,
-                max: number,
-                fallback = 0,
-                disabled = false,
+                key: "amount" | "stack_limit",
+                fallback: number,
               ) {
-                const value = (skill as SkillPatch)[key] ?? fallback;
                 return (
                   <Input
                     aria-label={label}
+                    title={label}
                     type="number"
-                    className="w-24"
                     required
-                    min={min}
-                    max={max}
-                    step={key === "multiplier" ? 0.1 : 1}
-                    value={Number.isFinite(value) ? value : ""}
-                    disabled={disabled}
+                    className="w-20"
+                    min={key === "stack_limit" ? 1 : 0}
+                    max={key === "stack_limit" ? 10 : 10000}
+                    value={skill[key] ?? fallback}
                     onChange={(e) =>
                       update(skill.id, { [key]: e.target.valueAsNumber })
                     }
                   />
                 );
               }
-              function wrongNumeric(key: "amount" | "multiplier") {
-                const value =
-                  reduced && key in wrong
-                    ? Number(wrong[key as keyof typeof wrong])
-                    : 0;
+              function power(wrong = false) {
+                const { mode, value } = effectValue(skill, wrong);
+                const prefix = wrong ? "誤答" : "正答";
                 return (
-                  <Input
-                    aria-label={
-                      key === "amount" ? "誤答効果量" : "誤答攻撃倍率"
-                    }
-                    type="number"
-                    required
-                    className="w-24"
-                    min={0}
-                    max={key === "amount" ? 10000 : 10}
-                    step={key === "amount" ? 1 : 0.1}
-                    value={Number.isFinite(value) ? value : ""}
-                    disabled={!reduced}
-                    onChange={(e) =>
-                      update(skill.id, {
-                        on_wrong: {
-                          ...wrong,
-                          type: "reduced",
-                          [key]: e.target.valueAsNumber,
-                        } as SkillPatch["on_wrong"],
-                      })
-                    }
-                  />
+                  <fieldset
+                    aria-label={`${prefix}効果`}
+                    className="flex items-center gap-1 rounded-md border px-2 py-1"
+                  >
+                    {reduced && (
+                      <span className="text-xs text-muted-foreground">
+                        {prefix}
+                      </span>
+                    )}
+                    {status ? (
+                      <span className="text-xs">行動数</span>
+                    ) : (
+                      <select
+                        aria-label={`${prefix}効果の指定`}
+                        className={selectClass}
+                        value={mode}
+                        disabled={utility}
+                        onChange={(e) =>
+                          update(
+                            skill.id,
+                            effectPatch(
+                              skill,
+                              e.target.value as "fixed" | "multiplier",
+                              e.target.value === "fixed"
+                                ? Math.floor(value)
+                                : value,
+                              wrong,
+                            ),
+                          )
+                        }
+                      >
+                        <option value="fixed">定数</option>
+                        <option value="multiplier">倍率</option>
+                      </select>
+                    )}
+                    <Input
+                      aria-label={`${prefix}効果の値`}
+                      type="number"
+                      required
+                      className="w-24"
+                      min={status && !wrong ? 1 : 0}
+                      max={
+                        status
+                          ? 20
+                          : mode === "multiplier"
+                            ? skill.effect === "attack"
+                              ? 10
+                              : 100
+                            : 10000
+                      }
+                      step={status || mode === "fixed" ? 1 : 0.01}
+                      value={Number.isFinite(value) ? value : ""}
+                      onChange={(e) =>
+                        update(
+                          skill.id,
+                          effectPatch(
+                            skill,
+                            mode,
+                            e.target.valueAsNumber,
+                            wrong,
+                          ),
+                        )
+                      }
+                    />
+                  </fieldset>
                 );
               }
               return (
@@ -192,11 +221,175 @@ export default function SkillTemplateEditor({
                       value={skill.name}
                       required
                       maxLength={80}
-                      className="w-40"
+                      className="w-36"
                       onChange={(e) =>
                         update(skill.id, { name: e.target.value })
                       }
                     />
+                  </td>
+                  <td>
+                    <select
+                      aria-label="対象数"
+                      className={selectClass}
+                      disabled={normal}
+                      value={
+                        skill.target_count ??
+                        (skill.target === "all_enemies" ? "all" : 1)
+                      }
+                      onChange={(e) =>
+                        update(skill.id, {
+                          target_count:
+                            e.target.value === "all"
+                              ? "all"
+                              : Number(e.target.value),
+                        })
+                      }
+                    >
+                      {[1, 3, 5].map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                      <option value="all">全体</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select
+                      aria-label="計算"
+                      className={selectClass}
+                      disabled={normal || status || utility}
+                      value={skill.damage_type ?? "physical"}
+                      onChange={(e) =>
+                        update(skill.id, {
+                          damage_type: e.target.value as "physical" | "special",
+                        })
+                      }
+                    >
+                      <option value="physical">物理</option>
+                      <option value="special">特殊</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select
+                      aria-label="種別"
+                      className={selectClass}
+                      disabled={normal}
+                      value={kind}
+                      onChange={(e) =>
+                        update(skill.id, changeKind(skill, e.target.value))
+                      }
+                    >
+                      <option value="hp">HP</option>
+                      <option value="mp">MP</option>
+                      <option value="moves">歩数</option>
+                      <option value="status">状態</option>
+                      {kind === "equipment" && (
+                        <option value="equipment">装備（既存設定）</option>
+                      )}
+                    </select>
+                  </td>
+                  <td>
+                    {status ? (
+                      <div className="flex items-center gap-1">
+                        <select
+                          aria-label="詳細"
+                          className={selectClass}
+                          value={stateRecovery(skill) ? "recovery" : "damage"}
+                          onChange={(e) =>
+                            update(
+                              skill.id,
+                              changeState(
+                                skill,
+                                stateResource(skill),
+                                e.target.value === "recovery",
+                              ),
+                            )
+                          }
+                        >
+                          <option value="recovery">回復</option>
+                          <option
+                            value="damage"
+                            disabled={skill.stat === "maxHp"}
+                          >
+                            ダメージ
+                          </option>
+                        </select>
+                        {
+                          <select
+                            aria-label="対象ステータス"
+                            className={selectClass}
+                            value={stateResource(skill)}
+                            onChange={(e) =>
+                              update(
+                                skill.id,
+                                changeState(
+                                  skill,
+                                  e.target.value,
+                                  e.target.value === "maxHp" ||
+                                    stateRecovery(skill),
+                                ),
+                              )
+                            }
+                          >
+                            {Object.entries({
+                              hp: "HP",
+                              mp: "MP",
+                              attack: "攻撃力",
+                              defense: "守備力",
+                              specialAttack: "特攻",
+                              specialDefense: "特守",
+                              maxHp: "最大HP（バブル）",
+                            }).map(([v, label]) => (
+                              <option key={v} value={v}>
+                                {label}
+                              </option>
+                            ))}
+                          </select>
+                        }
+                        <select
+                          aria-label="状態の値の指定"
+                          className={selectClass}
+                          value={skill.amount_mode ?? "fixed"}
+                          disabled={skill.stat === "maxHp"}
+                          onChange={(e) =>
+                            update(skill.id, {
+                              amount_mode: e.target.value as
+                                | "fixed"
+                                | "percent",
+                            })
+                          }
+                        >
+                          <option value="fixed">定数</option>
+                          <option value="percent">比率（%）</option>
+                        </select>
+                        {number("状態の値", "amount", 0)}
+                        <span className="text-xs">重複上限</span>
+                        {number("重複上限", "stack_limit", 1)}
+                      </div>
+                    ) : utility ? (
+                      "回復"
+                    ) : (
+                      <select
+                        aria-label="詳細"
+                        className={selectClass}
+                        disabled={normal}
+                        value={
+                          skill.effect === "heal_hp" ||
+                          skill.effect === "heal_mp"
+                            ? "recovery"
+                            : "damage"
+                        }
+                        onChange={(e) =>
+                          update(
+                            skill.id,
+                            changeDetail(skill, e.target.value === "recovery"),
+                          )
+                        }
+                      >
+                        <option value="damage">ダメージ</option>
+                        <option value="recovery">回復</option>
+                      </select>
+                    )}
                   </td>
                   <td>
                     {utility ? (
@@ -205,227 +398,43 @@ export default function SkillTemplateEditor({
                       <select
                         aria-label="タイプ"
                         className={selectClass}
-                        value={wrong?.type ?? "fizzle"}
+                        value={skill.on_wrong?.type ?? "fizzle"}
                         disabled={normal}
                         onChange={(e) =>
-                          update(skill.id, {
-                            on_wrong:
-                              e.target.value === "reduced"
-                                ? ailment
-                                  ? { type: "reduced", apply: false }
-                                  : {
-                                      type: "reduced",
-                                      amount: Math.floor(skill.amount / 2),
-                                      ...(attack
-                                        ? { multiplier: skill.multiplier / 2 }
-                                        : {}),
-                                    }
-                                : {
+                          update(
+                            skill.id,
+                            e.target.value === "reduced"
+                              ? effectPatch(
+                                  skill,
+                                  effectValue(skill).mode,
+                                  status
+                                    ? 1
+                                    : effectValue(skill).mode === "fixed"
+                                      ? Math.floor(effectValue(skill).value / 2)
+                                      : effectValue(skill).value / 2,
+                                  true,
+                                )
+                              : {
+                                  on_wrong: {
                                     type: e.target.value as
                                       | "counter"
                                       | "fizzle",
                                   },
-                          })
+                                },
+                          )
                         }
                       >
-                        {attack && <option value="counter">反撃</option>}
+                        <option value="counter">反撃</option>
                         <option value="fizzle">不発</option>
                         <option value="reduced">軽減</option>
                       </select>
                     )}
                   </td>
                   <td>
-                    <select
-                      aria-label="種別"
-                      className={selectClass}
-                      disabled={normal}
-                      value={
-                        attack
-                          ? (skill.damage_type ?? "physical")
-                          : skill.effect
-                      }
-                      onChange={(e) => {
-                        const kind = e.target.value;
-                        update(skill.id, {
-                          effect: (kind === "physical" || kind === "special"
-                            ? "attack"
-                            : kind) as SkillDefinition["effect"],
-                          damage_type:
-                            kind === "special" ? "special" : "physical",
-                          target: [
-                            "physical",
-                            "special",
-                            "debuff",
-                            "ailment",
-                          ].includes(kind)
-                            ? "enemy"
-                            : "self",
-                          amount:
-                            kind === "ailment"
-                              ? Math.max(1, skill.amount)
-                              : skill.amount,
-                          on_wrong:
-                            wrong?.type === "counter" &&
-                            !["physical", "special"].includes(kind)
-                              ? { type: "fizzle" }
-                              : wrong,
-                        });
-                      }}
-                    >
-                      {Object.entries(kinds).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    {enemyTarget ? (
-                      <select
-                        aria-label="対象"
-                        className={selectClass}
-                        value={skill.target}
-                        disabled={normal}
-                        onChange={(e) =>
-                          update(skill.id, {
-                            target: e.target.value as "enemy" | "all_enemies",
-                          })
-                        }
-                      >
-                        <option value="enemy">敵</option>
-                        <option value="all_enemies">敵全体</option>
-                      </select>
-                    ) : (
-                      "自分"
-                    )}
-                  </td>
-                  <td>
-                    {enemyTarget
-                      ? numeric(
-                          "対象数",
-                          "target_count",
-                          1,
-                          5,
-                          1,
-                          normal || skill.target === "all_enemies",
-                        )
-                      : "—"}
-                  </td>
-                  <td>
-                    {skill.effect === "buff" || skill.effect === "debuff" ? (
-                      <select
-                        aria-label="対象ステータス"
-                        className={selectClass}
-                        value={skill.stat ?? "attack"}
-                        onChange={(e) =>
-                          update(skill.id, {
-                            stat: e.target.value as SkillPatch["stat"],
-                            ...(e.target.value === "maxHp"
-                              ? { amount_mode: "percent" as const }
-                              : {}),
-                          })
-                        }
-                      >
-                        <option value="attack">攻撃力</option>
-                        <option value="defense">守備力</option>
-                        <option value="specialAttack">特攻</option>
-                        <option value="specialDefense">特守</option>
-                        {skill.effect === "buff" && (
-                          <option value="maxHp">最大HP（バブル）</option>
-                        )}
-                      </select>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td>
-                    {ailment ? (
-                      <select
-                        aria-label="状態異常の種類"
-                        className={selectClass}
-                        value={skill.ailment ?? "poison"}
-                        onChange={(e) =>
-                          update(skill.id, {
-                            ailment: e.target.value as "poison" | "curse",
-                          })
-                        }
-                      >
-                        <option value="poison">毒</option>
-                        <option value="curse">呪い</option>
-                      </select>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td>
-                    {utility ? (
-                      "定数"
-                    ) : (
-                      <select
-                        aria-label="効果量の指定"
-                        className={selectClass}
-                        value={skill.amount_mode ?? "fixed"}
-                        disabled={skill.stat === "maxHp"}
-                        onChange={(e) =>
-                          update(skill.id, {
-                            amount_mode: e.target.value as "fixed" | "percent",
-                          })
-                        }
-                      >
-                        <option value="fixed">定数</option>
-                        <option value="percent">比率（%）</option>
-                      </select>
-                    )}
-                  </td>
-                  <td>
-                    {numeric(
-                      ailment ? "毎行動効果量" : "効果量",
-                      "amount",
-                      ailment ? 1 : 0,
-                      10000,
-                    )}
-                  </td>
-                  <td>{!utility && !ailment ? wrongNumeric("amount") : "—"}</td>
-                  <td>
-                    {attack ? numeric("攻撃倍率", "multiplier", 0, 10, 1) : "—"}
-                  </td>
-                  <td>{attack ? wrongNumeric("multiplier") : "—"}</td>
-                  <td>
-                    {ailment ? (
-                      <select
-                        aria-label="誤答付与"
-                        className={selectClass}
-                        disabled={!reduced}
-                        value={
-                          reduced && "apply" in wrong && wrong.apply
-                            ? "yes"
-                            : "no"
-                        }
-                        onChange={(e) =>
-                          update(skill.id, {
-                            on_wrong: {
-                              type: "reduced",
-                              apply: e.target.value === "yes",
-                            },
-                          })
-                        }
-                      >
-                        <option value="no">付与しない</option>
-                        <option value="yes">付与する</option>
-                      </select>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td>
-                    {status
-                      ? numeric("持続（行動数）", "duration_turns", 1, 20, 3)
-                      : "—"}
-                  </td>
-                  <td>
-                    {status
-                      ? numeric("重複上限", "stack_limit", 1, 10, 1)
-                      : "—"}
+                    <div className="flex items-center gap-2">
+                      {power()}
+                      {reduced && power(true)}
+                    </div>
                   </td>
                   <td>
                     <Button
@@ -474,6 +483,7 @@ export default function SkillTemplateEditor({
                             effect: "attack",
                             target: "enemy",
                             amount: 0,
+                            multiplier: 1,
                             mp_cost: 0,
                           }),
                         ),

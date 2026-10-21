@@ -79,6 +79,7 @@ export default function SkillUsageEditor() {
                     "attack",
                     "heal_hp",
                     "heal_mp",
+                    "damage_mp",
                     "buff",
                     "debuff",
                     "ailment",

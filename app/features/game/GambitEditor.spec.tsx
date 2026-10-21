@@ -52,6 +52,21 @@ function setup(disabled = false) {
   return userEvent.setup();
 }
 
+it("saves the target on a gambit rather than an effect template", async () => {
+  const user = setup();
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "保存" })).toBeEnabled(),
+  );
+  const row = screen.getByRole("region", { name: "ガンビット 1" });
+  await user.selectOptions(within(row).getByLabelText("対象"), "enemy");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls[0][0].rules[0]).toMatchObject({
+    definition_id: "heal",
+    target: "enemy",
+  });
+});
+
 it("reorders conditions and saves item references without browser-only row IDs", async () => {
   const user = setup();
   const add = screen.getByRole("button", { name: "条件を追加" });

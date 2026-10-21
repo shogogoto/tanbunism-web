@@ -55,9 +55,15 @@ export default function GambitEditor({
     catalog?.skills.filter(
       (s) =>
         s.enabled &&
-        ["attack", "heal_hp", "heal_mp", "buff", "debuff", "ailment"].includes(
-          s.effect,
-        ),
+        [
+          "attack",
+          "heal_hp",
+          "heal_mp",
+          "damage_mp",
+          "buff",
+          "debuff",
+          "ailment",
+        ].includes(s.effect),
     ) ?? [];
   const skills = combatSkills.filter((skill) =>
     catalog?.player_skills?.some((u) => u.enabled && u.skill_id === skill.id),
@@ -268,6 +274,24 @@ export default function GambitEditor({
                 )}
               </div>
               <div className="flex items-end gap-2">
+                <label className="grid gap-1 text-sm">
+                  対象
+                  <select
+                    className={selectClass}
+                    value={rule.target ?? ""}
+                    onChange={(e) =>
+                      patch(index, {
+                        target: e.target.value
+                          ? (e.target.value as "self" | "enemy")
+                          : null,
+                      })
+                    }
+                  >
+                    <option value="">自動（既存設定）</option>
+                    <option value="self">自分</option>
+                    <option value="enemy">相手</option>
+                  </select>
+                </label>
                 <label className="grid gap-1 text-sm">
                   行動
                   <select
