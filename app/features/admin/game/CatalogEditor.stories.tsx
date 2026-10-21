@@ -50,7 +50,7 @@ export default {
           };
           if (
             document.format !== "tanbunism.skills" ||
-            ![1, 2, 3, 4].includes(document.version) ||
+            ![1, 2, 3, 4, 5].includes(document.version) ||
             !Array.isArray(document.skills)
           ) {
             return HttpResponse.json(

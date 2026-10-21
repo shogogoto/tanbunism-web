@@ -177,7 +177,13 @@ export default function DefinitionTables({
                     >
                       <option value="">通常攻撃</option>
                       {catalog.skills
-                        .filter((s) => s.effect === "attack")
+                        .filter((s) =>
+                          s.effects?.length
+                            ? s.effects.some(
+                                (effect) => effect.effect === "attack",
+                              )
+                            : s.effect === "attack",
+                        )
                         .map((s) => (
                           <option key={s.id} value={s.id}>
                             {s.name}
@@ -198,9 +204,14 @@ export default function DefinitionTables({
                     >
                       <option value="">なし</option>
                       {catalog.skills
-                        .filter(
-                          (s) =>
-                            s.effect === "debuff" || s.effect === "ailment",
+                        .filter((s) =>
+                          s.effects?.length
+                            ? s.effects.every(
+                                (effect) =>
+                                  effect.effect === "debuff" ||
+                                  effect.effect === "ailment",
+                              )
+                            : s.effect === "debuff" || s.effect === "ailment",
                         )
                         .map((s) => (
                           <option key={s.id} value={s.id}>

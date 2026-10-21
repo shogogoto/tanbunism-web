@@ -6,9 +6,9 @@ import {
   type SkillDefinition,
   type SkillPatch,
   normalizeSkill,
+  prepareSkillCatalog,
   requestGameCatalog,
   resolveCatalogTemplates,
-  skillTemplate,
 } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import DefinitionTables from "./DefinitionTables";
@@ -41,7 +41,12 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
     let active = true;
     void requestGameCatalog(true)
       .then((value) => {
-        if (active) setCatalog(resolveCatalogTemplates(value));
+        if (active)
+          setCatalog(
+            kind === "skills"
+              ? prepareSkillCatalog(value)
+              : resolveCatalogTemplates(value),
+          );
       })
       .catch((cause) => {
         if (active) setError(cause.message);
@@ -49,9 +54,13 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [kind]);
   function change(next: GameCatalog) {
-    setCatalog(resolveCatalogTemplates(next));
+    setCatalog(
+      kind === "skills"
+        ? prepareSkillCatalog(next)
+        : resolveCatalogTemplates(next),
+    );
     setSaved(false);
     setError(undefined);
     setImportMessage(undefined);
@@ -90,26 +99,6 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
     patch: SkillPatch & Partial<ItemDefinition & EnemyDefinition>,
   ) => {
     if (!catalog || kind === "shop") return;
-    if (kind === "skills" && patch.template_id === "__create__") {
-      const skill = catalog.skills.find((s) => s.id === id);
-      if (!skill) return;
-      const templateId = `template_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
-      change({
-        ...catalog,
-        skill_templates: [
-          ...(catalog.skill_templates ?? []),
-          skillTemplate({
-            ...skill,
-            id: templateId,
-            name: `${skill.name}の共通設定`,
-          }),
-        ],
-        skills: catalog.skills.map((s) =>
-          s.id === id ? { ...s, template_id: templateId } : s,
-        ),
-      });
-      return;
-    }
     change({
       ...catalog,
       ...(kind === "skills"

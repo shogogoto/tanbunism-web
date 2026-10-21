@@ -7,7 +7,7 @@ import {
 import { networkFetch } from "~/shared/lib/networkFetch";
 
 export const SKILL_FILE_FORMAT = "tanbunism.skills";
-export const SKILL_FILE_VERSION = 4;
+export const SKILL_FILE_VERSION = 5;
 export const MAX_SKILL_FILE_BYTES = 1024 * 1024;
 
 export function skillFileText(
@@ -15,10 +15,31 @@ export function skillFileText(
   skill_templates: SkillTemplate[] = [],
 ) {
   const normalized = skills.map(normalizeSkill).map((skill) => {
-    if (!skill.template_id) return skill;
-    const { id, name, icon, enabled, element, animation, sound, template_id } =
-      skill;
-    return { id, name, icon, enabled, element, animation, sound, template_id };
+    if (!skill.template_id && !skill.template_ids?.length) return skill;
+    const {
+      id,
+      name,
+      icon,
+      enabled,
+      element,
+      animation,
+      sound,
+      template_id,
+      template_ids,
+      mp_cost,
+    } = skill;
+    return {
+      id,
+      name,
+      icon,
+      enabled,
+      element,
+      animation,
+      sound,
+      template_id,
+      template_ids,
+      mp_cost,
+    };
   });
   return `${JSON.stringify({ format: SKILL_FILE_FORMAT, version: SKILL_FILE_VERSION, skill_templates, skills: normalized }, null, 2)}\n`;
 }

@@ -1,37 +1,24 @@
 import { Plus } from "lucide-react";
-import {
-  type SkillDefinition,
-  type SkillPatch,
-  type SkillTemplate,
-  effectLabels,
-  elementLabels,
+import type {
+  SkillDefinition,
+  SkillPatch,
+  SkillTemplate,
 } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import SkillAnimationGallery from "./SkillAnimationGallery";
-
-const selectClass = "h-9 rounded-md border bg-background px-2 text-sm";
-export const skillGroups = [
-  ["回復", ["heal_hp", "heal_mp"], null],
-  ["物理攻撃", ["attack"], "physical"],
-  ["特殊攻撃", ["attack"], "special"],
-  ["バフ", ["buff"], null],
-  ["デバフ", ["debuff"], null],
-  ["状態異常", ["ailment"], null],
-  ["その他", ["recover_moves", "equip_attack"], null],
-] as const;
+import useTableSort from "./useTableSort";
 
 export default function SkillTables({
   skills,
+  templates = [],
   update,
   add,
   deletions,
   toggleDelete,
-  templates = [],
-  templateMode = false,
-  templateUsage = {},
 }: {
   skills: SkillDefinition[];
+  templates?: SkillTemplate[];
   update: (id: string, patch: SkillPatch) => void;
   add: (
     effect: SkillDefinition["effect"],
@@ -39,562 +26,210 @@ export default function SkillTables({
   ) => void;
   deletions: Set<string>;
   toggleDelete: (id: string) => void;
-  templates?: SkillTemplate[];
-  templateMode?: boolean;
-  templateUsage?: Record<string, string[]>;
 }) {
+  const names = (skill: SkillDefinition) =>
+    (skill.template_ids ?? [])
+      .map((id) => templates.find((t) => t.id === id)?.name ?? id)
+      .join("、");
+  const { sorted, header } = useTableSort(skills, (skill, column) =>
+    column === "templates"
+      ? names(skill)
+      : column === "mp_cost"
+        ? skill.mp_cost
+        : column === "enabled"
+          ? Number(skill.enabled)
+          : column === "deleted"
+            ? Number(deletions.has(skill.id))
+            : column === "animation"
+              ? (skill.animation ?? "none")
+              : skill.name,
+  );
   return (
-    <div className="space-y-6">
-      {skillGroups.map(([title, effects, damageType]) => {
-        const status = ["buff", "debuff", "ailment"].includes(effects[0]);
-        const stat = effects[0] === "buff" || effects[0] === "debuff";
-        const attack = effects[0] === "attack";
-        const ailment = effects[0] === "ailment";
-        const combat = title !== "その他";
-        const enemyTarget = attack || effects[0] === "debuff" || ailment;
-        const headers = [
-          "名前",
-          ...(templateMode ? ["使用スキル"] : []),
-          ...(!templateMode ? ["効果テンプレート", "属性"] : []),
-          "効果",
-          ...(combat ? ["タイプ"] : []),
-          "対象",
-          ...(enemyTarget ? ["対象数"] : []),
-          ...(stat ? ["対象ステータス"] : []),
-          ...(effects[0] === "ailment" ? ["状態異常"] : []),
-          ailment ? "毎ターン効果量" : combat ? "正答効果量" : "効果量",
-          ...(combat && !ailment ? ["誤答効果量"] : []),
-          ...(ailment ? ["正答付与", "誤答付与"] : []),
-          ...(combat ? ["指定方式"] : []),
-          ...(attack ? ["正答攻撃倍率", "誤答攻撃倍率"] : []),
-          ...(status ? ["持続ターン", "重複上限"] : []),
-          "消費MP",
-          ...(!templateMode ? ["演出", "有効"] : []),
-          "削除",
-        ];
-        const rows = skills.filter(
-          (s) =>
-            (effects as readonly string[]).includes(s.effect) &&
-            (!damageType ||
-              (s.effect === "attack" &&
-                (s.damage_type ?? "physical") === damageType)),
-        );
-        return (
-          <section
-            key={title}
-            aria-label={`${title}${templateMode ? "テンプレート" : "スキル"}`}
-          >
-            <h3 className="mb-2 font-semibold">{title}</h3>
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full whitespace-nowrap text-sm">
-                <thead className="bg-muted/40">
-                  <tr>
-                    {headers.map((h) => (
-                      <th
-                        key={h}
-                        scope="col"
-                        className="p-2 text-left font-medium"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((s) => {
-                    const removed = deletions.has(s.id);
-                    const inherited = !templateMode && !!s.template_id;
-                    const normal = !templateMode && s.id === "normal_attack";
-                    const wrong = s.on_wrong;
-                    const reduced = wrong?.type === "reduced";
-                    const wrongValue = (key: "amount" | "multiplier") => {
-                      const value =
-                        reduced && "amount" in wrong
-                          ? key === "amount"
-                            ? wrong.amount
-                            : "multiplier" in wrong
-                              ? wrong.multiplier
-                              : 0
-                          : Number.NaN;
-                      return Number.isFinite(value) ? value : "";
-                    };
-                    const wrongNumeric = (key: "amount" | "multiplier") => (
-                      <Input
-                        aria-label={
-                          key === "amount" ? "誤答効果量" : "誤答攻撃倍率"
-                        }
-                        disabled={removed || inherited || !reduced}
-                        className="w-24"
-                        type="number"
-                        min={0}
-                        max={key === "amount" ? 10000 : 10}
-                        step={key === "amount" ? 1 : 0.1}
-                        required={reduced}
-                        value={wrongValue(key)}
-                        onChange={(event) =>
-                          update(s.id, {
-                            on_wrong: {
-                              type: "reduced",
-                              amount:
-                                reduced && "amount" in wrong ? wrong.amount : 0,
-                              ...(s.effect === "attack"
-                                ? {
-                                    multiplier:
-                                      reduced && "multiplier" in wrong
-                                        ? wrong.multiplier
-                                        : 0.5,
-                                  }
-                                : {}),
-                              [key]: event.target.valueAsNumber,
-                            },
-                          })
-                        }
-                      />
-                    );
-                    const numeric = (
-                      label: string,
-                      key:
-                        | "amount"
-                        | "multiplier"
-                        | "mp_cost"
-                        | "duration_turns"
-                        | "stack_limit",
-                      min: number,
-                      max: number,
-                      fallback = 0,
-                      step = 1,
-                    ) => (
-                      <Input
-                        disabled={
-                          removed || inherited || (normal && key === "mp_cost")
-                        }
-                        aria-label={label}
-                        className="w-24"
-                        type="number"
-                        required
-                        min={min}
-                        max={max}
-                        step={step}
-                        value={
-                          s[key] === undefined
-                            ? fallback
-                            : Number.isFinite(s[key])
-                              ? s[key]
-                              : ""
-                        }
-                        onChange={(e) =>
-                          update(s.id, { [key]: e.target.valueAsNumber })
-                        }
-                      />
-                    );
-                    return (
-                      <tr
-                        key={s.id}
-                        aria-label={s.name}
-                        className={`border-t [&>td]:p-2 ${removed ? "bg-muted text-muted-foreground [&>td:not(:last-child)]:opacity-40" : ""}`}
-                        data-pending-delete={removed || undefined}
-                      >
-                        <td>
-                          <Input
-                            disabled={removed}
-                            aria-label="名前"
-                            value={s.name}
-                            required
-                            maxLength={80}
-                            className="w-36"
-                            onChange={(e) =>
-                              update(s.id, { name: e.target.value })
-                            }
-                          />
-                        </td>
-                        {templateMode && (
-                          <td className="max-w-64 whitespace-normal text-xs text-muted-foreground">
-                            {templateUsage[s.id]?.join("、") || "未使用"}
-                          </td>
-                        )}
-                        {!templateMode && (
-                          <>
-                            <td>
-                              <select
-                                aria-label="効果テンプレート"
-                                className={selectClass}
-                                disabled={removed || normal}
-                                value={s.template_id ?? ""}
-                                onChange={(event) =>
-                                  update(s.id, {
-                                    template_id: event.target.value || null,
-                                  })
-                                }
-                              >
-                                <option value="">個別設定</option>
-                                <option value="__create__">
-                                  現在の値から作成
-                                </option>
-                                {templates.map((t) => (
-                                  <option key={t.id} value={t.id}>
-                                    {t.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                            <td>
-                              <select
-                                aria-label="属性"
-                                className={selectClass}
-                                disabled={removed}
-                                value={s.element ?? "none"}
-                                onChange={(event) =>
-                                  update(s.id, {
-                                    element: event.target
-                                      .value as SkillDefinition["element"],
-                                  })
-                                }
-                              >
-                                {Object.entries(elementLabels).map(
-                                  ([value, label]) => (
-                                    <option key={value} value={value}>
-                                      {label}
-                                    </option>
-                                  ),
-                                )}
-                              </select>
-                            </td>
-                          </>
-                        )}
-                        <td>
+    <section aria-label="スキル一覧" className="space-y-2">
+      <h3 className="font-semibold">スキル一覧</h3>
+      <div className="overflow-x-auto rounded-lg border">
+        <table aria-label="スキル一覧" className="w-full text-sm">
+          <thead className="bg-muted/40 text-muted-foreground">
+            <tr>
+              {[
+                ["name", "名前"],
+                ["templates", "効果テンプレート"],
+                ["mp_cost", "消費MP"],
+                ["animation", "演出"],
+                ["enabled", "有効"],
+                ["deleted", "削除"],
+              ].map(([key, label]) => header(key, label))}
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((skill) => {
+              const removed = deletions.has(skill.id);
+              const normal = skill.id === "normal_attack";
+              const selected = skill.template_ids ?? [];
+              return (
+                <tr
+                  key={skill.id}
+                  aria-label={skill.name}
+                  data-pending-delete={removed || undefined}
+                  className={`border-t [&>td]:p-2 ${removed ? "bg-muted text-muted-foreground [&>td:not(:last-child)]:opacity-40" : ""}`}
+                >
+                  <td>
+                    <Input
+                      aria-label="名前"
+                      disabled={removed}
+                      value={skill.name}
+                      required
+                      maxLength={80}
+                      className="w-36"
+                      onChange={(e) =>
+                        update(skill.id, { name: e.target.value })
+                      }
+                    />
+                  </td>
+                  <td>
+                    <div className="min-w-56 space-y-1">
+                      {selected.map((id, index) => (
+                        <div key={id} className="flex items-center gap-1">
                           <select
-                            disabled={removed || inherited || normal}
-                            aria-label="効果"
-                            className={selectClass}
-                            value={
-                              attack && s.effect === "attack"
-                                ? (s.damage_type ?? "physical")
-                                : s.effect
-                            }
+                            aria-label={`効果テンプレート ${index + 1}`}
+                            className="h-9 min-w-40 flex-1 rounded-md border bg-background px-2"
+                            value={id}
+                            disabled={removed || normal}
                             onChange={(e) =>
-                              update(
-                                s.id,
-                                attack
-                                  ? {
-                                      damage_type: e.target.value as
-                                        | "physical"
-                                        | "special",
-                                    }
-                                  : {
-                                      effect: e.target
-                                        .value as SkillDefinition["effect"],
-                                    },
-                              )
+                              update(skill.id, {
+                                template_ids: selected.map(
+                                  (current, position) =>
+                                    position === index
+                                      ? e.target.value
+                                      : current,
+                                ),
+                              })
                             }
                           >
-                            {attack ? (
-                              <>
-                                <option value="physical">物理攻撃</option>
-                                <option value="special">特殊攻撃</option>
-                              </>
-                            ) : (
-                              effects.map((effect) => (
-                                <option key={effect} value={effect}>
-                                  {effectLabels[effect]}
+                            {templates
+                              .filter(
+                                (template) =>
+                                  template.id === id ||
+                                  !selected.includes(template.id),
+                              )
+                              .map((template) => (
+                                <option key={template.id} value={template.id}>
+                                  {template.name}
                                 </option>
-                              ))
-                            )}
+                              ))}
                           </select>
-                        </td>
-                        {combat && (
-                          <td>
-                            <select
-                              aria-label="タイプ"
-                              className={selectClass}
-                              disabled={removed || inherited || normal}
-                              value={wrong?.type ?? "fizzle"}
-                              onChange={(event) =>
-                                update(s.id, {
-                                  on_wrong:
-                                    event.target.value === "reduced"
-                                      ? s.effect === "ailment"
-                                        ? { type: "reduced", apply: false }
-                                        : {
-                                            type: "reduced",
-                                            amount: Math.floor(s.amount / 2),
-                                            ...(s.effect === "attack"
-                                              ? { multiplier: s.multiplier / 2 }
-                                              : {}),
-                                          }
-                                      : {
-                                          type: event.target.value as
-                                            | "counter"
-                                            | "fizzle",
-                                        },
-                                })
-                              }
-                            >
-                              {attack && <option value="counter">反撃</option>}
-                              <option value="fizzle">不発</option>
-                              <option value="reduced">軽減</option>
-                            </select>
-                          </td>
-                        )}
-                        <td>
-                          {["attack", "debuff", "ailment"].includes(
-                            s.effect,
-                          ) ? (
-                            <select
-                              disabled={removed || inherited || normal}
-                              aria-label="対象"
-                              className={selectClass}
-                              value={s.target}
-                              onChange={(e) =>
-                                update(s.id, {
-                                  target: e.target
-                                    .value as SkillDefinition["target"],
-                                })
-                              }
-                            >
-                              <option value="enemy">敵</option>
-                              <option value="all_enemies">敵全体</option>
-                            </select>
-                          ) : (
-                            "自分"
-                          )}
-                        </td>
-                        {enemyTarget && (
-                          <td>
-                            <Input
-                              aria-label="対象数"
-                              className="w-20"
-                              type="number"
-                              min={1}
-                              max={5}
-                              step={1}
-                              required
-                              disabled={
-                                removed ||
-                                inherited ||
-                                normal ||
-                                s.target === "all_enemies"
-                              }
-                              value={
-                                "target_count" in s &&
-                                s.target_count !== undefined
-                                  ? Number.isFinite(s.target_count)
-                                    ? s.target_count
-                                    : ""
-                                  : 1
-                              }
-                              onChange={(event) =>
-                                update(s.id, {
-                                  target_count: event.target.valueAsNumber,
-                                })
-                              }
-                            />
-                          </td>
-                        )}
-                        {stat && (
-                          <td>
-                            <select
-                              disabled={removed || inherited}
-                              aria-label="対象ステータス"
-                              className={selectClass}
-                              value={s.stat ?? "attack"}
-                              onChange={(e) =>
-                                update(s.id, {
-                                  stat: e.target
-                                    .value as SkillDefinition["stat"],
-                                  ...(e.target.value === "maxHp"
-                                    ? { amount_mode: "percent" }
-                                    : {}),
-                                })
-                              }
-                            >
-                              <option value="attack">攻撃力</option>
-                              <option value="defense">守備力</option>
-                              <option value="specialAttack">特攻</option>
-                              <option value="specialDefense">特守</option>
-                              {s.effect === "buff" && (
-                                <option value="maxHp">最大HP（バブル）</option>
-                              )}
-                            </select>
-                          </td>
-                        )}
-                        {s.effect === "ailment" && (
-                          <td>
-                            <select
-                              disabled={removed || inherited}
-                              aria-label="状態異常の種類"
-                              className={selectClass}
-                              value={s.ailment ?? "poison"}
-                              onChange={(e) =>
-                                update(s.id, {
-                                  ailment: e.target.value as "poison" | "curse",
-                                })
-                              }
-                            >
-                              <option value="poison">毒（HP減少）</option>
-                              <option value="curse">呪い（MP減少）</option>
-                            </select>
-                          </td>
-                        )}
-                        <td>
-                          {numeric(
-                            s.effect === "attack" ? "加算ダメージ" : "効果量",
-                            "amount",
-                            s.effect === "ailment" ? 1 : 0,
-                            10000,
-                          )}
-                        </td>
-                        {combat && !ailment && (
-                          <td>{wrongNumeric("amount")}</td>
-                        )}
-                        {ailment && (
-                          <>
-                            <td>付与する</td>
-                            <td>
-                              <select
-                                aria-label="誤答付与"
-                                className={selectClass}
-                                disabled={removed || inherited || !reduced}
-                                value={
-                                  reduced && "apply" in wrong && wrong.apply
-                                    ? "yes"
-                                    : "no"
-                                }
-                                onChange={(event) =>
-                                  update(s.id, {
-                                    on_wrong: {
-                                      type: "reduced",
-                                      apply: event.target.value === "yes",
-                                    },
-                                  })
-                                }
-                              >
-                                <option value="no">付与しない</option>
-                                <option value="yes">付与する</option>
-                              </select>
-                            </td>
-                          </>
-                        )}
-                        {title !== "その他" && (
-                          <td>
-                            <select
-                              aria-label="効果量の指定"
-                              className={selectClass}
-                              value={s.amount_mode ?? "fixed"}
-                              disabled={
-                                removed || inherited || s.stat === "maxHp"
-                              }
-                              onChange={(e) =>
-                                update(s.id, {
-                                  amount_mode: e.target.value as
-                                    | "fixed"
-                                    | "percent",
-                                })
-                              }
-                            >
-                              <option value="fixed">固定値</option>
-                              <option value="percent">割合（%）</option>
-                            </select>
-                          </td>
-                        )}
-                        {attack && (
-                          <>
-                            <td>
-                              {numeric("攻撃倍率", "multiplier", 0, 10, 1, 0.1)}
-                            </td>
-                            <td>{wrongNumeric("multiplier")}</td>
-                          </>
-                        )}
-                        {status && (
-                          <>
-                            <td>
-                              {numeric(
-                                "持続ターン",
-                                "duration_turns",
-                                1,
-                                20,
-                                3,
-                              )}
-                            </td>
-                            <td>
-                              {numeric("重複上限", "stack_limit", 1, 10, 1)}
-                            </td>
-                          </>
-                        )}
-                        <td>{numeric("消費MP", "mp_cost", 0, 10000)}</td>
-                        {!templateMode && (
-                          <td>
-                            <SkillAnimationGallery
-                              disabled={removed}
-                              skill={s}
-                              onChange={(selection) => update(s.id, selection)}
-                            />
-                          </td>
-                        )}
-                        {!templateMode && (
-                          <td>
-                            <input
-                              disabled={removed || normal}
-                              aria-label="有効"
-                              type="checkbox"
-                              checked={s.enabled}
-                              onChange={(e) =>
-                                update(s.id, { enabled: e.target.checked })
-                              }
-                            />
-                          </td>
-                        )}
-                        <td>
                           <Button
                             type="button"
-                            variant="outline"
                             size="sm"
-                            aria-pressed={removed}
-                            disabled={
-                              normal ||
-                              (templateMode && !!templateUsage[s.id]?.length)
+                            variant="ghost"
+                            aria-label={`効果 ${index + 1}を外す`}
+                            disabled={removed || normal || selected.length <= 1}
+                            onClick={() =>
+                              update(skill.id, {
+                                template_ids: selected.filter(
+                                  (_, position) => position !== index,
+                                ),
+                              })
                             }
-                            title={
-                              templateMode && templateUsage[s.id]?.length
-                                ? "使用中のテンプレートは削除できません"
-                                : undefined
-                            }
-                            onClick={() => toggleDelete(s.id)}
                           >
-                            {removed ? "削除を取り消す" : "削除"}
+                            −
                           </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {!rows.length && (
-                    <tr>
-                      <td
-                        colSpan={headers.length}
-                        className="p-3 text-muted-foreground"
-                      >
-                        未登録
-                      </td>
-                    </tr>
-                  )}
-                  <tr className="border-t">
-                    <td colSpan={headers.length} className="p-1 text-center">
+                        </div>
+                      ))}
                       <Button
                         type="button"
-                        size="icon"
+                        size="sm"
                         variant="ghost"
-                        aria-label={`${title}${templateMode ? "テンプレート" : "スキル"}を追加`}
-                        onClick={() => add(effects[0], damageType ?? undefined)}
+                        aria-label="効果を追加"
+                        disabled={
+                          removed ||
+                          normal ||
+                          selected.length >= 20 ||
+                          templates.every((template) =>
+                            selected.includes(template.id),
+                          )
+                        }
+                        onClick={() => {
+                          const next = templates.find(
+                            (template) => !selected.includes(template.id),
+                          );
+                          if (next)
+                            update(skill.id, {
+                              template_ids: [...selected, next.id],
+                            });
+                        }}
                       >
-                        <Plus aria-hidden="true" />
+                        ＋ 効果
                       </Button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-        );
-      })}
-    </div>
+                    </div>
+                  </td>
+                  <td>
+                    <Input
+                      aria-label="消費MP"
+                      type="number"
+                      required
+                      min={0}
+                      max={10000}
+                      step={1}
+                      className="w-24"
+                      disabled={removed || normal}
+                      value={
+                        Number.isFinite(skill.mp_cost) ? skill.mp_cost : ""
+                      }
+                      onChange={(e) =>
+                        update(skill.id, { mp_cost: e.target.valueAsNumber })
+                      }
+                    />
+                  </td>
+                  <td>
+                    <SkillAnimationGallery
+                      skill={skill}
+                      disabled={removed}
+                      onChange={(selection) => update(skill.id, selection)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      aria-label="有効"
+                      type="checkbox"
+                      disabled={removed || normal}
+                      checked={skill.enabled}
+                      onChange={(e) =>
+                        update(skill.id, { enabled: e.target.checked })
+                      }
+                    />
+                  </td>
+                  <td>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={normal}
+                      aria-pressed={removed}
+                      onClick={() => toggleDelete(skill.id)}
+                    >
+                      {removed ? "削除を取り消す" : "削除"}
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+            <tr className="border-t">
+              <td colSpan={6} className="p-1 text-center">
+                <Button
+                  aria-label="スキルを追加"
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => add("attack", "physical")}
+                >
+                  <Plus aria-hidden="true" />
+                </Button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

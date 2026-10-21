@@ -15,6 +15,8 @@ type SkillBase = {
   animation?: SkillAnimation;
   sound?: SkillSound;
   template_id?: string | null;
+  template_ids?: string[];
+  effects?: Record<string, unknown>[];
   element?:
     | "none"
     | "fire"
@@ -129,6 +131,8 @@ export function normalizeSkill(
     sound,
     effect,
     template_id,
+    template_ids,
+    effects,
     element,
   } = skill;
   const common = {
@@ -143,6 +147,8 @@ export function normalizeSkill(
     sound,
     effect,
     ...(template_id ? { template_id } : {}),
+    ...(template_ids?.length ? { template_ids } : {}),
+    ...(effects?.length ? { effects } : {}),
     ...(element ? { element } : {}),
   };
   const numeric = { amount_mode: skill.amount_mode ?? "fixed" };
@@ -214,14 +220,32 @@ export function normalizeSkill(
 type TemplateOf<T> = T extends SkillDefinition
   ? Omit<
       T,
-      "icon" | "enabled" | "template_id" | "element" | "animation" | "sound"
+      | "icon"
+      | "enabled"
+      | "template_id"
+      | "template_ids"
+      | "effects"
+      | "element"
+      | "animation"
+      | "sound"
+      | "mp_cost"
     >
   : never;
 export type SkillTemplate = TemplateOf<SkillDefinition>;
 
 export function skillTemplate(skill: SkillDefinition): SkillTemplate {
-  const { icon, enabled, template_id, element, animation, sound, ...values } =
-    normalizeSkill(skill);
+  const {
+    icon,
+    enabled,
+    template_id,
+    template_ids,
+    effects,
+    element,
+    animation,
+    sound,
+    mp_cost,
+    ...values
+  } = normalizeSkill(skill);
   return values;
 }
 
@@ -229,9 +253,15 @@ export function resolveCatalogTemplates(catalog: GameCatalog): GameCatalog {
   return {
     ...catalog,
     skills: catalog.skills.map((skill) => {
-      const template = catalog.skill_templates?.find(
-        (t) => t.id === skill.template_id,
+      const ids = skill.template_ids?.length
+        ? skill.template_ids
+        : skill.template_id
+          ? [skill.template_id]
+          : [];
+      const selected = ids.map((id) =>
+        catalog.skill_templates?.find((t) => t.id === id),
       );
+      const template = selected[0];
       if (!template) return skill;
       return normalizeSkill({
         ...template,
@@ -239,13 +269,47 @@ export function resolveCatalogTemplates(catalog: GameCatalog): GameCatalog {
         name: skill.name,
         icon: skill.icon,
         enabled: skill.enabled,
-        template_id: template.id,
+        mp_cost: skill.mp_cost,
+        template_id: skill.template_ids?.length ? undefined : template.id,
+        template_ids: skill.template_ids,
+        effects: skill.template_ids?.length
+          ? selected
+              .filter((t) => t !== undefined)
+              .map(({ id, name, ...effect }) => effect)
+          : undefined,
         element: skill.element,
         animation: skill.animation,
         sound: skill.sound,
       });
     }),
   };
+}
+
+/** Existing standalone effects become editable templates without changing their values. */
+export function prepareSkillCatalog(catalog: GameCatalog): GameCatalog {
+  const templates = [...(catalog.skill_templates ?? [])];
+  const skills = catalog.skills.map((skill) => {
+    let ids = skill.template_ids?.length
+      ? skill.template_ids
+      : skill.template_id
+        ? [skill.template_id]
+        : [];
+    if (!ids.length) {
+      let id = `effect_${skill.id}`.slice(0, 64);
+      if (templates.some((template) => template.id === id))
+        id = `effect_${crypto.randomUUID().replaceAll("-", "")}`;
+      templates.push(
+        skillTemplate({ ...skill, id, name: `${skill.name}の効果` }),
+      );
+      ids = [id];
+    }
+    return { ...skill, template_id: undefined, template_ids: ids };
+  });
+  return resolveCatalogTemplates({
+    ...catalog,
+    skills,
+    skill_templates: templates,
+  });
 }
 
 export const elementLabels = {
