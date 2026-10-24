@@ -1,3 +1,4 @@
+import { apiErrorMessage } from "~/shared/lib/apiErrorMessage";
 import { networkFetch } from "~/shared/lib/networkFetch";
 import type { RegionEnemy } from "./api";
 import type { GameState } from "./state";
@@ -264,6 +265,8 @@ export async function gameRequest<T>(
   });
   const result = await response.json();
   if (!response.ok)
-    throw new Error(result.detail ?? "ゲーム状態を更新できませんでした。");
+    throw new Error(
+      apiErrorMessage(result, "ゲーム状態を更新できませんでした。"),
+    );
   return result;
 }

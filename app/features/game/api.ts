@@ -8,6 +8,7 @@ import { canonicalSentenceId } from "~/features/tanbun/detail/cache";
 import type { Tanbun } from "~/shared/generated/fastAPI.schemas";
 import { searchByTextTanbunGet } from "~/shared/generated/tanbun/tanbun";
 import { detailTanbunSentenceSentenceIdGet } from "~/shared/generated/tanbun/tanbun";
+import { apiErrorMessage } from "~/shared/lib/apiErrorMessage";
 import { tanbunDetailCache } from "~/shared/lib/indexed";
 
 export type PathKnowledge = Pick<Tanbun, "uid" | "sentence" | "term">;
@@ -131,7 +132,9 @@ export async function loadDungeonPreparation(
   );
   const body = await response.json();
   if (!response.ok)
-    throw new Error(body?.detail ?? "クイズの準備状況を取得できませんでした。");
+    throw new Error(
+      apiErrorMessage(body, "クイズの準備状況を取得できませんでした。"),
+    );
   return body as DungeonPreparation;
 }
 
@@ -159,7 +162,7 @@ export async function loadDungeonRegionQuizPool(
   const body = await response.json();
   if (!response.ok)
     throw new Error(
-      body?.detail ?? "領域のクイズ母集団を取得できませんでした。",
+      apiErrorMessage(body, "領域のクイズ母集団を取得できませんでした。"),
     );
   return body as DungeonRegionQuizPool;
 }

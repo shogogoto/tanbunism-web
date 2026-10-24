@@ -1,3 +1,4 @@
+import { apiErrorMessage } from "~/shared/lib/apiErrorMessage";
 import { networkFetch } from "~/shared/lib/networkFetch";
 import type { GameSave } from "./domain";
 
@@ -13,7 +14,7 @@ export async function recoverGameState(): Promise<GameState> {
   });
   const body = await response.json();
   if (!response.ok)
-    throw new Error(body?.detail ?? "歩数を回復できませんでした。");
+    throw new Error(apiErrorMessage(body, "歩数を回復できませんでした。"));
   return body;
 }
 
@@ -33,6 +34,6 @@ export async function requestGameState(
   });
   const body = await response.json();
   if (!response.ok)
-    throw new Error(body?.detail ?? "冒険状態を保存できませんでした。");
+    throw new Error(apiErrorMessage(body, "冒険状態を保存できませんでした。"));
   return body;
 }

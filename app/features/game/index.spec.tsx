@@ -180,6 +180,19 @@ const server = setupServer(
       consumeCount++;
     }
     const run = body.save.run;
+    if (run && (run.mp ?? 0) > (run.maxMp ?? 0))
+      return HttpResponse.json(
+        {
+          detail: [
+            {
+              loc: ["body", "save"],
+              msg: "Value error, MPが最大値を超えています。",
+              type: "value_error",
+            },
+          ],
+        },
+        { status: 422 },
+      );
     if (run?.phase === "battle" && !body.save.battleFeedback) {
       run.answerSeconds = 30;
       run.answerDeadline =
@@ -755,6 +768,27 @@ async function enter(select = true) {
     );
   return user;
 }
+it.each([0, 3, 30])(
+  "initializes a new adventure with the configured MP maximum %i",
+  async (maxMp) => {
+    server.use(
+      http.get("*/game/balance", () =>
+        HttpResponse.json({ ...defaultBalance, base_mp: maxMp }),
+      ),
+    );
+    renderGame();
+    await enter(false);
+    await waitFor(() =>
+      expect(state.save.run).toMatchObject({
+        resourceId: "book",
+        mp: maxMp,
+        maxMp,
+      }),
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  },
+);
+
 it("does not mark combat on an already explored place as a new discovery", async () => {
   state = {
     revision: 1,
@@ -1484,67 +1518,91 @@ it("does not offer dungeon switching while an adventure is in progress", async (
   expect(state.save.run?.resourceId).toBe("book");
 });
 
-it("parks a dungeon in the server snapshot and resumes its HP/location without a new right", async () => {
-  const save = enterDungeon(newSave(), "book", "テストの本", 1);
-  if (!save.run) throw new Error("Missing run");
-  const content = await loadDungeon("book");
-  state = {
-    revision: 1,
-    save: {
-      ...save,
-      visitedDungeons: ["book"],
-      maps: {
-        book: {
-          current: ENTRANCE,
-          places: [{ id: "sentence", region: 0 }],
-          edges: [{ from: ENTRANCE, to: "sentence", kind: "detour" }],
+it.each([10, 3, 0])(
+  "parks a dungeon and preserves HP/MP/location with MP maximum %i without a new right",
+  async (maxMp) => {
+    server.use(
+      http.get("*/game/balance", () =>
+        HttpResponse.json({ ...defaultBalance, base_mp: maxMp }),
+      ),
+    );
+    const save = enterDungeon(newSave(), "book", "テストの本", 1);
+    if (!save.run) throw new Error("Missing run");
+    const content = await loadDungeon("book");
+    state = {
+      revision: 1,
+      save: {
+        ...save,
+        visitedDungeons: ["book"],
+        maps: {
+          book: {
+            current: ENTRANCE,
+            places: [{ id: "sentence", region: 0 }],
+            edges: [{ from: ENTRANCE, to: "sentence", kind: "detour" }],
+          },
+        },
+        unlockedDungeons: [
+          {
+            sourceId: "book",
+            resourceId: "previous",
+            name: "以前の本",
+            achievement: 3,
+          },
+        ],
+        content,
+        run: {
+          ...save.run,
+          hp: 24,
+          mp: Math.min(1, maxMp),
+          maxMp,
+          moves: 2,
+          readIds: ["sentence"],
         },
       },
-      unlockedDungeons: [
-        {
-          sourceId: "book",
-          resourceId: "previous",
-          name: "以前の本",
-          achievement: 3,
-        },
-      ],
-      content,
-      run: { ...save.run, hp: 24, moves: 2, readIds: ["sentence"] },
-    },
-  };
-  available = false;
-  renderGame();
-  const user = userEvent.setup();
-  expect(await screen.findByText("24/35")).toBeVisible();
-  expect(
-    screen.queryByRole("button", { name: "ダンジョンを切り替える" }),
-  ).not.toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "マップを全画面表示" }));
-  await user.click(screen.getByRole("button", { name: "ダンジョン 以前の本" }));
-  const unlocked = screen.getByRole("button", { name: "ダンジョン 以前の本" });
-  expect(unlocked).not.toHaveTextContent("現在地");
-  expect(unlocked).toHaveTextContent("達成度 0 · 開拓 0地点");
-  await user.click(
-    screen.getByRole("button", { name: "このダンジョンへ移動" }),
-  );
-  await waitFor(() => expect(state.save.run?.resourceId).toBe("previous"));
-  expect(screen.getByRole("dialog", { name: "冒険マップ" })).toBeVisible();
-  expect(state.save.dungeons?.book.run.hp).toBe(24);
-  expect(state.save.maps?.book.current).toBe(ENTRANCE);
-  expect(state.save.run?.hp).toBe(24);
-  expect(state.save.run?.moves).toBe(2);
-  await user.click(
-    screen.getByRole("button", { name: "ダンジョン テストの本" }),
-  );
-  await user.click(
-    screen.getByRole("button", { name: "このダンジョンへ移動" }),
-  );
-  await waitFor(() => expect(state.save.run?.resourceId).toBe("book"));
-  expect(await screen.findByText("24/35")).toBeVisible();
-  expect(state.save.run?.moves).toBe(2);
-  expect(state.save.maps?.book.current).toBe(ENTRANCE);
-  expect(consumeCount).toBe(0);
-});
+    };
+    available = false;
+    renderGame();
+    const user = userEvent.setup();
+    expect(await screen.findByText("24/35")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "ダンジョンを切り替える" }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "マップを全画面表示" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "ダンジョン 以前の本" }),
+    );
+    const unlocked = screen.getByRole("button", {
+      name: "ダンジョン 以前の本",
+    });
+    expect(unlocked).not.toHaveTextContent("現在地");
+    expect(unlocked).toHaveTextContent("達成度 0 · 開拓 0地点");
+    await user.click(
+      screen.getByRole("button", { name: "このダンジョンへ移動" }),
+    );
+    await waitFor(() => expect(state.save.run?.resourceId).toBe("previous"));
+    expect(screen.getByRole("dialog", { name: "冒険マップ" })).toBeVisible();
+    expect(state.save.dungeons?.book.run.hp).toBe(24);
+    expect(state.save.maps?.book.current).toBe(ENTRANCE);
+    expect(state.save.run?.hp).toBe(24);
+    expect(state.save.run?.mp).toBe(Math.min(1, maxMp));
+    expect(state.save.run?.maxMp).toBe(maxMp);
+    expect(state.save.run?.moves).toBe(2);
+    await user.click(
+      screen.getByRole("button", { name: "ダンジョン テストの本" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "このダンジョンへ移動" }),
+    );
+    await waitFor(() => expect(state.save.run?.resourceId).toBe("book"));
+    expect(await screen.findByText("24/35")).toBeVisible();
+    expect(state.save.run?.moves).toBe(2);
+    expect(state.save.maps?.book.current).toBe(ENTRANCE);
+    expect(state.save.run?.mp).toBe(Math.min(1, maxMp));
+    expect(consumeCount).toBe(0);
+  },
+);
 
 it("uses the recovery place while alive, spending one move without another adventure right", async () => {
   const save = enterDungeon(newSave(), "book", "テストの本", 1);

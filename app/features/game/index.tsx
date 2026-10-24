@@ -775,6 +775,7 @@ export function GamePlay({
             ...entering.run,
             ...stats,
             hp: Math.min(run.hp, stats.maxHp),
+            mp: Math.min(run.mp ?? 0, stats.maxMp),
             moves: run.moves,
             kills: paused?.run.phase === "cleared" ? 0 : entering.run.kills,
             phase:
@@ -816,7 +817,12 @@ export function GamePlay({
         save.economy?.weapon_attack,
       );
       if (restarting.run)
-        restarting.run = { ...restarting.run, ...stats, hp: stats.maxHp };
+        restarting.run = {
+          ...restarting.run,
+          ...stats,
+          hp: stats.maxHp,
+          mp: stats.maxMp,
+        };
       await update({ ...restarting, content }, true);
       void access.mutate();
     } catch (cause) {
@@ -909,7 +915,7 @@ export function GamePlay({
           balance ?? defaultBalance,
           save.economy?.weapon_attack,
         );
-        next.run = { ...next.run, ...stats, hp: stats.maxHp };
+        next.run = { ...next.run, ...stats, hp: stats.maxHp, mp: stats.maxMp };
       }
       await update(
         { ...next, content: next.content ?? content },
