@@ -890,6 +890,10 @@ it("configures enemy icons and attacks and surfaces save failures", async () => 
     ),
   );
   render(<CatalogEditor kind="enemies" />);
+  expect(screen.getByRole("region", { name: "敵定義" })).toHaveClass(
+    "w-full",
+    "max-w-none",
+  );
   const user = userEvent.setup();
   await user.selectOptions(await screen.findByLabelText("攻撃スキル"), "fire");
   await user.click(screen.getByRole("checkbox", { name: "ボス用" }));
