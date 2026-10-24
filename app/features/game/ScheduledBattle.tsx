@@ -342,20 +342,11 @@ export default function ScheduledBattle({
               data-battle-result
             >
               <p>{save.battleFeedback}</p>
-              {shownResult && (
-                <p>
-                  {Object.values(shownResult.outgoing_damage ?? {}).reduce(
-                    (sum, value) => sum + value,
-                    0,
-                  )}{" "}
-                  ダメージ · 被ダメージ {shownResult.damage}
-                </p>
-              )}
-              {quiz && (
+              {quiz && !syntheticAnswers && (
                 <>
                   <QuizPreviewPrompt quiz={quiz} />
                   <p className="text-sm text-emerald-500">
-                    正解:{" "}
+                    答え:{" "}
                     {quiz.correct.map((id) => quiz.options[id]).join("、") ||
                       "該当なし"}
                   </p>
@@ -396,7 +387,6 @@ export default function ScheduledBattle({
               </p>
               {syntheticAnswers ? (
                 <div className="space-y-3">
-                  <p>模擬回答</p>
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       ["yes", "正解"],

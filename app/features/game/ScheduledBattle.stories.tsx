@@ -109,7 +109,9 @@ function Preview() {
           marker.schedule.enemy_hp[target] - 10,
         );
       else copy.run.hp = Math.max(0, copy.run.hp - 3);
-      copy.battleFeedback = correct ? "正解" : "不正解";
+      copy.battleFeedback = correct
+        ? "正解 · ゴーストに10ダメージ"
+        : "不正解 · 3ダメージを受けた";
       return {
         state: { revision: marker.turn, save: copy },
         results: { [target]: correct },

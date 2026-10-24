@@ -331,6 +331,61 @@ it("keeps keyboard focus across consecutive questions and sends no damage claims
   expect(requests.every((request) => request.defeated.length === 0)).toBe(true);
 });
 
+it.each([true, false])(
+  "shows one concise verdict and hides synthetic review text (simulation=%s)",
+  async (synthetic) => {
+    const user = userEvent.setup();
+    function Fixture() {
+      const [save, setSave] = useState(initial);
+      const transport: BattleTransport = async <T,>() => {
+        const copy = structuredClone(save);
+        copy.battleFeedback = "正解 · ゴーストに2ダメージ";
+        return {
+          state: { revision: 1, save: copy },
+          results: { e: true },
+          damage: 0,
+          outgoing_damage: { e: 2 },
+        } as T;
+      };
+      return (
+        <MultiBattle
+          save={save}
+          content={content}
+          context={context}
+          syntheticAnswers={synthetic}
+          transport={transport}
+          onSaved={(state) => setSave(state.save)}
+          onFinished={vi.fn()}
+          onBusy={vi.fn()}
+        />
+      );
+    }
+    render(
+      <MemoryRouter>
+        <Fixture />
+      </MemoryRouter>,
+    );
+    if (!synthetic)
+      await user.click(screen.getByRole("button", { name: "選択肢0" }));
+    await user.click(screen.getByRole("button", { name: "回答を確定" }));
+    await screen.findByRole("button", { name: "次へ" });
+    expect(screen.getByText("正解 · ゴーストに2ダメージ")).toBeVisible();
+    expect(
+      screen.queryByText(/被ダメージ|撃破|正解 1\/1|模擬回答/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("2 ダメージ · 被ダメージ 0"),
+    ).not.toBeInTheDocument();
+    if (synthetic) {
+      expect(screen.queryByText("問題の詳細")).not.toBeInTheDocument();
+      expect(screen.queryByText(/^答え:/)).not.toBeInTheDocument();
+    } else {
+      expect(screen.getByText("問題の詳細")).toBeVisible();
+      expect(screen.getByText("答え: 選択肢0")).toBeVisible();
+    }
+  },
+);
+
 it("settles timeout once and waits for Next even after the final action", async () => {
   const finished = vi.fn(async () => undefined);
   const requests = vi.fn();
