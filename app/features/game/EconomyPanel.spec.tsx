@@ -92,6 +92,35 @@ it("describes the shared buff effects of equipment", async () => {
   expect(screen.queryByText("攻 +3 · 30回使用可")).not.toBeInTheDocument();
 });
 
+it("describes elemental equipment as increased power and resistance", async () => {
+  vi.mocked(gameRequest).mockResolvedValueOnce({
+    products: [
+      {
+        ...products[0],
+        element_names: { fire: "炎", ice: "氷" },
+        equipment_buffs: [
+          {
+            stat: "damageDealt",
+            affected_element: "fire",
+            amount: 25,
+            amount_mode: "percent",
+          },
+          {
+            stat: "damageTaken",
+            affected_element: "ice",
+            amount: 25,
+            amount_mode: "percent",
+          },
+        ],
+      },
+    ],
+  });
+  show(true);
+  expect(
+    await screen.findByText("炎 属性威力 +25% · 氷 属性耐性 +25% · 30回使用可"),
+  ).toBeVisible();
+});
+
 it("uses an owned step potion without showing review tasks in the inventory", async () => {
   show(false);
   const name = await screen.findByText("歩数回復薬");

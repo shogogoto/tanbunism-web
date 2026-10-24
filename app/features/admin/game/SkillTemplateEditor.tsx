@@ -98,7 +98,7 @@ export default function SkillTemplateEditor({
     <section aria-label="効果テンプレート" className="space-y-2">
       <h3 className="font-semibold">効果テンプレート</h3>
       <p className="text-xs text-muted-foreground">
-        回復・ダメージは詳細で指定します。回復の倍率は最大値を基準にします。状態の効果は継続する行動数です。属性バフは与ダメージ増加・被ダメージ軽減、デバフはその逆です。保存で確定します。
+        回復・ダメージは詳細で指定します。回復の倍率は最大値を基準にします。状態の効果は継続する行動数です。属性威力はその属性で攻撃する強さ、属性耐性はその属性のダメージを軽減する強さです。バフで上昇、デバフで低下します。保存で確定します。
       </p>
       <div className="overflow-x-auto rounded-lg border">
         <table
@@ -348,8 +348,8 @@ export default function SkillTemplateEditor({
                                     defense: "守備力",
                                     specialAttack: "特攻",
                                     specialDefense: "特守",
-                                    damageDealt: "与ダメージ（属性）",
-                                    damageTaken: "被ダメージ（属性）",
+                                    damageDealt: "属性威力",
+                                    damageTaken: "属性耐性",
                                     ...(skill.effect === "buff"
                                       ? { maxHp: "最大HP（バブル）" }
                                       : {}),

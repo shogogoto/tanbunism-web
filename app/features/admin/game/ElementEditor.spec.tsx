@@ -59,12 +59,18 @@ it("sets skill element independently of templates and configures attribute buffs
   await user.selectOptions(within(template).getByLabelText("種別"), "status");
   await user.selectOptions(
     within(template).getByLabelText("対象ステータス"),
-    "damageTaken",
+    "属性耐性",
   );
   await user.selectOptions(
     within(template).getByLabelText("補正対象属性"),
     "ice",
   );
+  expect(
+    within(template).getByRole("option", { name: "属性威力" }),
+  ).toBeInTheDocument();
+  expect(
+    within(template).queryByRole("option", { name: /与ダメージ|被ダメージ/ }),
+  ).not.toBeInTheDocument();
   expect(within(template).getByLabelText("状態の値の指定")).toHaveValue(
     "percent",
   );

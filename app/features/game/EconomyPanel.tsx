@@ -182,7 +182,7 @@ export default function EconomyPanel({
                         ? product.equipment_buffs
                             .map(
                               (buff) =>
-                                `${buff.affected_element ? `${product.element_names?.[buff.affected_element] ?? buff.affected_element} ` : ""}${({ attack: "攻", defense: "守", specialAttack: "特攻", specialDefense: "特守", maxHp: "最大HP", damageDealt: "与ダメージ", damageTaken: "被ダメージ" } as Record<string, string>)[buff.stat] ?? buff.stat} ${buff.stat === "damageTaken" ? "-" : "+"}${buff.amount}${buff.amount_mode === "percent" ? "%" : ""}`,
+                                `${buff.affected_element ? `${product.element_names?.[buff.affected_element] ?? buff.affected_element} ` : ""}${({ attack: "攻", defense: "守", specialAttack: "特攻", specialDefense: "特守", maxHp: "最大HP", damageDealt: "属性威力", damageTaken: "属性耐性" } as Record<string, string>)[buff.stat] ?? buff.stat} +${buff.amount}${buff.amount_mode === "percent" ? "%" : ""}`,
                             )
                             .join(" · ")
                         : `攻 +${product.amount}`
