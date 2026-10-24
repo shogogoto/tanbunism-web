@@ -178,6 +178,58 @@ it.each(["スキル一覧", "効果テンプレート一覧"])(
   },
 );
 
+it.each([
+  ["スキル一覧", "skills"],
+  ["効果テンプレート一覧", "skill_templates"],
+] as const)(
+  "reorders %s using its drag handle and saves the visible order",
+  async (tableName, key) => {
+    const user = userEvent.setup();
+    render(<CatalogEditor kind="skills" />);
+    const table = await screen.findByRole("table", { name: tableName });
+    const rows = () =>
+      within(table)
+        .getAllByRole("row")
+        .filter((row) => row.hasAttribute("aria-label"));
+    // jsdom has no layout; give the real sortable keyboard sensor row geometry.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        const row = this.closest("tr");
+        return new DOMRect(
+          0,
+          Math.max(0, rows().indexOf(row as HTMLElement)) * 100,
+          800,
+          100,
+        );
+      },
+    );
+    await user.click(within(table).getByRole("button", { name: "名前 ↕" }));
+    const original = rows().map((row) => row.getAttribute("aria-label"));
+    const handle = within(rows()[0]).getByRole("button", {
+      name: "ドラッグして並べ替え",
+    });
+    handle.focus();
+    await user.keyboard("[Space]");
+    expect(handle).toHaveAttribute("aria-pressed", "true");
+    await user.keyboard("[ArrowDown]");
+    await user.keyboard("[Space]");
+    const expected = [original[1], original[0], original[2]];
+    expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual(
+      expected,
+    );
+    expect(
+      within(table).getByRole("button", { name: "名前 ↕" }).closest("th"),
+    ).toHaveAttribute("aria-sort", "none");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    await screen.findByText("保存しました");
+    expect(
+      saved.mock.calls
+        .at(-1)?.[0]
+        [key].map((row: { name: string }) => row.name),
+    ).toEqual(expected);
+  },
+);
+
 it("shares effect edits while retaining independent skill MP and multiple references", async () => {
   server.use(
     http.get("*/admin/game/catalog", () =>

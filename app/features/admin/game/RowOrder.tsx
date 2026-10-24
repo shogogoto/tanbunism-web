@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Button } from "~/shared/components/ui/button";
+import { RowDragHandle } from "./SortableRows";
 
 export function moveRow<T>(rows: T[], index: number, direction: -1 | 1): T[] {
   const next = [...rows];
@@ -20,6 +21,7 @@ export default function RowOrder({
 }) {
   return (
     <div className="flex items-center gap-1">
+      <RowDragHandle />
       <span className="min-w-6 text-right tabular-nums">{index + 1}</span>
       <div className="flex flex-col">
         {([-1, 1] as const).map((direction) => {
