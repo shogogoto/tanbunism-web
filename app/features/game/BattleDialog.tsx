@@ -206,64 +206,67 @@ export default function BattleDialog({
               {run.name} · 第{run.readIds.length}地点
             </DialogDescription>
           </DialogHeader>
-          <div className="shrink-0">
-            <PlayerStatus
-              run={run}
-              name={playerName}
-              player={player}
-              effect={playerEffect}
-            />
-          </div>
-          {enemyPanel ?? (
-            <section
-              aria-label="敵"
-              className="flex shrink-0 flex-col items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-center"
-            >
-              <EnemyAvatar
-                identity={run.enemyId ?? `${run.resourceId}:${run.kills}`}
-                large
+          <div
+            data-battle-scroll
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain space-y-3 pr-1"
+          >
+            <div className="shrink-0">
+              <PlayerStatus
+                run={run}
+                name={playerName}
+                player={player}
+                effect={playerEffect}
               />
-              <h3 className="text-sm font-medium">敵</h3>
-              <p className="text-sm tabular-nums">
-                HP {run.enemyHp}/{run.enemyMaxHp}
-              </p>
-            </section>
-          )}
-          {timeRatio !== undefined && (
-            <div
-              aria-label="クイズの持ち時間"
-              className="shrink-0 space-y-1.5 rounded-md border px-3 py-2"
-            >
-              <div className="flex items-center justify-between gap-3 text-sm tabular-nums">
-                <span className="flex items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className={`size-2.5 rounded-full ${signal.bar}`}
-                  />
-                  <span>持ち時間</span>
-                  <span role="timer" className="font-semibold">
-                    {Math.ceil(timeRemaining / 1000)}秒
-                  </span>
-                </span>
-                <span className={signal.text}>{signalLabel}</span>
-              </div>
-              <div
-                role="progressbar"
-                tabIndex={-1}
-                aria-label="残り時間"
-                aria-valuenow={Math.ceil(timeRemaining / 1000)}
-                aria-valuemin={0}
-                aria-valuemax={totalTimeSeconds}
-                className="h-2 overflow-hidden rounded-full bg-muted"
-              >
-                <div
-                  className={`h-full transition-[width,background-color] duration-200 ${signal.bar}`}
-                  style={{ width: `${timeRatio * 100}%` }}
-                />
-              </div>
             </div>
-          )}
-          <div className="min-h-0 flex-1 overflow-y-auto space-y-3 pr-1">
+            {enemyPanel ?? (
+              <section
+                aria-label="敵"
+                className="flex shrink-0 flex-col items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-center"
+              >
+                <EnemyAvatar
+                  identity={run.enemyId ?? `${run.resourceId}:${run.kills}`}
+                  large
+                />
+                <h3 className="text-sm font-medium">敵</h3>
+                <p className="text-sm tabular-nums">
+                  HP {run.enemyHp}/{run.enemyMaxHp}
+                </p>
+              </section>
+            )}
+            {timeRatio !== undefined && (
+              <div
+                aria-label="クイズの持ち時間"
+                className="shrink-0 space-y-1.5 rounded-md border px-3 py-2"
+              >
+                <div className="flex items-center justify-between gap-3 text-sm tabular-nums">
+                  <span className="flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className={`size-2.5 rounded-full ${signal.bar}`}
+                    />
+                    <span>持ち時間</span>
+                    <span role="timer" className="font-semibold">
+                      {Math.ceil(timeRemaining / 1000)}秒
+                    </span>
+                  </span>
+                  <span className={signal.text}>{signalLabel}</span>
+                </div>
+                <div
+                  role="progressbar"
+                  tabIndex={-1}
+                  aria-label="残り時間"
+                  aria-valuenow={Math.ceil(timeRemaining / 1000)}
+                  aria-valuemin={0}
+                  aria-valuemax={totalTimeSeconds}
+                  className="h-2 overflow-hidden rounded-full bg-muted"
+                >
+                  <div
+                    className={`h-full transition-[width,background-color] duration-200 ${signal.bar}`}
+                    style={{ width: `${timeRatio * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
             {children}
           </div>
           {footer && (

@@ -56,6 +56,50 @@ it("separates enemy HP from named player HP in the floating battle", () => {
   expect(within(enemy).queryByRole("progressbar")).not.toBeInTheDocument();
 });
 
+it("scrolls all battle content together so enemy rows cannot collapse the quiz area", () => {
+  render(
+    <BattleDialog
+      run={battle()}
+      busy={false}
+      remainingTimeMs={10000}
+      totalTimeSeconds={45}
+      footer={<button type="button">撤退する</button>}
+      enemyPanel={
+        <section aria-label="多数の敵">
+          {Array.from({ length: 12 }, (_, index) => `敵${index}`).map(
+            (name) => (
+              <p key={name}>{name}</p>
+            ),
+          )}
+        </section>
+      }
+    >
+      <button type="button" data-quiz-option-index={0}>
+        選択肢
+      </button>
+      <button type="button" data-quiz-submit>
+        回答を確定
+      </button>
+    </BattleDialog>,
+  );
+  const quiz = screen.getByRole("button", { name: "選択肢" });
+  const scroller = quiz.closest("[data-battle-scroll]");
+  expect(scroller).toHaveClass("min-h-0", "flex-1", "overflow-y-auto");
+  expect(scroller).toContainElement(
+    screen.getByRole("region", { name: "プレイヤー" }),
+  );
+  expect(scroller).toContainElement(
+    screen.getByRole("region", { name: "多数の敵" }),
+  );
+  expect(scroller).toContainElement(screen.getByLabelText("クイズの持ち時間"));
+  expect(scroller).toContainElement(
+    screen.getByRole("button", { name: "回答を確定" }),
+  );
+  expect(scroller).not.toContainElement(
+    screen.getByRole("button", { name: "撤退する" }),
+  );
+});
+
 it("keeps an active battle open when Escape is pressed", async () => {
   render(
     <BattleDialog run={battle()} busy={false}>

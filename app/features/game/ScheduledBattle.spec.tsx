@@ -129,8 +129,9 @@ it("shows the backend forecast from left to right without selectable enemies", (
     ),
   ).not.toBeInTheDocument();
   expect(screen.queryByText("別の領域の敵")).not.toBeInTheDocument();
-  expect(screen.getByLabelText("ゴーストのMP")).toHaveTextContent("MP 4/12");
-  expect(screen.getByText("特攻 25 · 特守 7")).toBeVisible();
+  const enemies = screen.getByRole("region", { name: "敵一覧" });
+  expect(enemies).toHaveTextContent("HP 100/100");
+  expect(enemies).not.toHaveTextContent(/MP|特攻|特守|速さ/);
 });
 
 it("keeps arrow navigation out of header settings while allowing Tab access", async () => {

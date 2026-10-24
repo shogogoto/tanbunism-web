@@ -55,7 +55,16 @@ const order = [
   "player",
 ];
 
-function initial(): GameSave {
+const crowdedEnemies = [
+  ...enemies,
+  ...Array.from({ length: 10 }, (_, index) => ({
+    ...enemies[index % 2],
+    id: `extra_${index}`,
+    name: `スケルトン${index + 1}`,
+  })),
+];
+
+function initial(roster = enemies): GameSave {
   const save = enterDungeon(newSave(), "preview", "行動順プレビュー", 1);
   if (!save.run) throw new Error("Missing run");
   return {
@@ -72,22 +81,23 @@ function initial(): GameSave {
       turn: 0,
       region: 0,
       checkpoint: "@entrance",
-      enemies: ["ghost", "skull"],
+      enemies: roster.map((enemy) => enemy.id),
       quizIndices: { ghost: 0 },
       endActionDone: true,
       schedule: {
         formula: "sqrt",
         actor_id: "player",
         quiz_enemy_id: "ghost",
-        enemy_hp: { ghost: 100, skull: 100 },
+        enemy_hp: Object.fromEntries(roster.map((enemy) => [enemy.id, 100])),
         queue: order.map((actor_id, index) => ({ actor_id, distance: index })),
       },
     },
   };
 }
 
-function Preview() {
-  const [save, setSave] = useState(initial);
+function Preview({ manyEnemies = false }: { manyEnemies?: boolean }) {
+  const roster = manyEnemies ? crowdedEnemies : enemies;
+  const [save, setSave] = useState(() => initial(roster));
   // Fixed backend replies for isolated UI verification; no live requests/writes.
   const transport: BattleTransport = async <T,>(
     path: string,
@@ -136,7 +146,7 @@ function Preview() {
     <MultiBattle
       save={save}
       content={content}
-      context={{ balance: defaultBalance, enemies }}
+      context={{ balance: defaultBalance, enemies: roster }}
       playerName="プレイヤー"
       transport={transport}
       onSaved={(state) => setSave(state.save)}
@@ -152,3 +162,4 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const ActionForecast: Story = {};
+export const ManyEnemies: Story = { args: { manyEnemies: true } };

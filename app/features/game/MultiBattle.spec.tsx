@@ -187,10 +187,11 @@ const enemies = [0, 1].map((index) => ({
 }));
 const stableBalance = { ...defaultBalance, damage_variance_percent: 0 };
 
-it("shows enemy MP and special stats without HP/MP bars", async () => {
+it("shows only HP on compact enemy cards", async () => {
   render(<Fixture />);
-  expect(await screen.findByLabelText("敵0のMP")).toHaveTextContent("MP 8/8");
-  expect(screen.getAllByText("特攻 20 · 特守 5")).toHaveLength(2);
+  const enemies = await screen.findByLabelText("敵一覧");
+  expect(enemies).toHaveTextContent("HP");
+  expect(enemies).not.toHaveTextContent(/MP|特攻|特守|速さ/);
 });
 function initial(deadline = Date.now() + 45000): GameSave {
   const save = enterDungeon(newSave(), "book", "本", 1);
