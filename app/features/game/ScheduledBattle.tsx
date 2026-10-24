@@ -209,7 +209,11 @@ export default function ScheduledBattle({
                 )}
               </div>
               <span className="max-w-full truncate">{item.name}</span>
-              <Weaknesses ids={item.weaknesses} elements={context.elements} />
+              <Weaknesses
+                ids={item.weaknesses}
+                resistances={item.resistances}
+                elements={context.elements}
+              />
               <span className="tabular-nums">
                 HP{" "}
                 {(marker

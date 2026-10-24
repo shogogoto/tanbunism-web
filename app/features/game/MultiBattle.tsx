@@ -429,7 +429,11 @@ function LegacyMultiBattle({
             >
               {enemy.name}
             </span>
-            <Weaknesses ids={enemy.weaknesses} elements={context.elements} />
+            <Weaknesses
+              ids={enemy.weaknesses}
+              resistances={enemy.resistances}
+              elements={context.elements}
+            />
             <span
               aria-label={`${enemy.name}のHP`}
               className="text-sm tabular-nums"

@@ -447,6 +447,7 @@ export type EnemyDefinition = {
   attack_skill_id: string | null;
   on_hit_skill_id?: string | null;
   weaknesses?: string[];
+  resistances?: string[];
 };
 export type GameCatalog = {
   elements?: ElementDefinition[];

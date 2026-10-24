@@ -1,10 +1,11 @@
-import { IconPicker } from "~/features/game/GameIcon";
+import GameIcon, { IconPicker } from "~/features/game/GameIcon";
 import type {
   EnemyDefinition,
   GameCatalog,
   ItemDefinition,
 } from "~/features/game/catalog";
 import { defaultElements, isEquipmentSkill } from "~/features/game/catalog";
+import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 
 const selectClass = "h-9 rounded-md border bg-background px-2 text-sm";
@@ -25,15 +26,28 @@ export default function DefinitionTables({
     "素材",
     ...(kind === "items"
       ? ["種類", "発動スキル", "使用回数"]
-      : ["ボス用", "速さ", "攻撃スキル", "命中時スキル", "弱点属性"]),
-    "有効",
+      : ["ボス用", "速さ", "攻撃スキル", "命中時スキル"]),
   ];
+  const elements = (catalog.elements ?? defaultElements).filter(
+    (element) =>
+      element.enabled ||
+      catalog.enemies.some(
+        (enemy) =>
+          enemy.weaknesses?.includes(element.id) ||
+          enemy.resistances?.includes(element.id),
+      ),
+  );
   return (
     <div className="overflow-x-auto rounded-lg border">
       <table
         className="w-full whitespace-nowrap text-sm"
         aria-label={kind === "items" ? "アイテム定義" : "敵定義"}
       >
+        {kind === "enemies" && (
+          <caption className="caption-top p-2 text-left text-xs text-muted-foreground">
+            属性はクリックで「中立 → 弱点 → 耐性 → 中立」と切り替えます。
+          </caption>
+        )}
         <thead className="bg-muted/40">
           <tr>
             {headers.map((h) => (
@@ -41,6 +55,24 @@ export default function DefinitionTables({
                 {h}
               </th>
             ))}
+            {kind === "enemies" &&
+              elements.map((element) => (
+                <th
+                  key={element.id}
+                  scope="col"
+                  className="p-2 text-center font-medium"
+                  style={{ color: element.color }}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <GameIcon icon={element.icon} className="size-3" />
+                    {element.name}
+                    {!element.enabled && "（無効）"}
+                  </span>
+                </th>
+              ))}
+            <th scope="col" className="p-2 text-left font-medium">
+              有効
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -221,44 +253,49 @@ export default function DefinitionTables({
                         ))}
                     </select>
                   </td>
-                  <td>
-                    <fieldset
-                      className="flex max-w-64 flex-wrap gap-2"
-                      aria-label={`${item.name}の弱点属性`}
-                    >
-                      {(catalog.elements ?? defaultElements)
-                        .filter(
-                          (element) =>
-                            element.enabled ||
-                            item.weaknesses?.includes(element.id),
-                        )
-                        .map((element) => (
-                          <label
-                            key={element.id}
-                            className="flex items-center gap-1 text-xs"
-                            style={{ color: element.color }}
-                          >
-                            <input
-                              type="checkbox"
-                              aria-label={`${item.name}の弱点：${element.name}`}
-                              checked={
-                                item.weaknesses?.includes(element.id) ?? false
-                              }
-                              onChange={(event) =>
-                                update(item.id, {
-                                  weaknesses: event.target.checked
-                                    ? [...(item.weaknesses ?? []), element.id]
-                                    : (item.weaknesses ?? []).filter(
-                                        (key) => key !== element.id,
-                                      ),
-                                })
-                              }
-                            />
-                            {element.name}
-                          </label>
-                        ))}
-                    </fieldset>
-                  </td>
+                  {elements.map((element) => {
+                    const state = item.weaknesses?.includes(element.id)
+                      ? "weak"
+                      : item.resistances?.includes(element.id)
+                        ? "resistant"
+                        : "neutral";
+                    const label = {
+                      weak: "弱点",
+                      resistant: "耐性",
+                      neutral: "中立",
+                    }[state];
+                    return (
+                      <td key={element.id} className="text-center">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={!element.enabled}
+                          aria-label={`${item.name}の${element.name}：${label}`}
+                          title="中立 → 弱点 → 耐性 → 中立"
+                          className={`min-w-14 ${state === "weak" ? "border-rose-500/50 bg-rose-500/10 text-rose-500" : state === "resistant" ? "border-sky-500/50 bg-sky-500/10 text-sky-500" : "text-muted-foreground"}`}
+                          onClick={() =>
+                            update(item.id, {
+                              weaknesses: [
+                                ...(item.weaknesses ?? []).filter(
+                                  (key) => key !== element.id,
+                                ),
+                                ...(state === "neutral" ? [element.id] : []),
+                              ],
+                              resistances: [
+                                ...(item.resistances ?? []).filter(
+                                  (key) => key !== element.id,
+                                ),
+                                ...(state === "weak" ? [element.id] : []),
+                              ],
+                            })
+                          }
+                        >
+                          {label}
+                        </Button>
+                      </td>
+                    );
+                  })}
                 </>
               )}
               <td>

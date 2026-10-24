@@ -18,6 +18,7 @@ import {
 
 const fields = {
   weakness_multiplier: ["弱点ダメージ倍率", 1, 10, 0.1],
+  resistance_multiplier: ["耐性ダメージ倍率", 0.1, 1, 0.1],
   gambit_levels_per_slot: ["ガンビット枠を追加するLv間隔", 2, 100, 1],
   specialty_levels_per_slot: ["専門分野の装備枠を追加するLv間隔", 2, 100, 1],
   chest_gold: ["ゴールド / 宝箱", 0, 100000, 1],
@@ -182,6 +183,7 @@ const groups = [
       "damage_defense_divisor",
       "damage_variance_percent",
       "weakness_multiplier",
+      "resistance_multiplier",
     ],
   },
   {
