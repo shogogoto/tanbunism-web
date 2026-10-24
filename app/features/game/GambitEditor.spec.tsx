@@ -99,6 +99,41 @@ it("reorders conditions and saves item references without browser-only row IDs",
   expect(onSaved).toHaveBeenCalledWith({ revision: 5, save: newSave() });
 });
 
+it("copies the admin's state skill reference when choosing a trigger", async () => {
+  server.use(
+    http.get("*/game/catalog", () =>
+      HttpResponse.json({
+        ...sampleCatalog,
+        triggers: [
+          {
+            id: "protected",
+            name: "プロテクトなし",
+            condition: "state",
+            threshold: 30,
+            state_skill_id: "protect",
+            state_present: false,
+            enabled: true,
+          },
+        ],
+      }),
+    ),
+  );
+  const user = setup();
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "保存" })).toBeEnabled(),
+  );
+  const row = screen.getByRole("region", { name: "ガンビット 1" });
+  await user.selectOptions(within(row).getByLabelText("条件"), "protected");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls[0][0].rules[0]).toMatchObject({
+    condition: "state",
+    trigger_id: "protected",
+    state_skill_id: "protect",
+    state_present: false,
+  });
+});
+
 it("preserves changes after a stale save", async () => {
   server.use(
     http.put("*/game/gambits", () =>

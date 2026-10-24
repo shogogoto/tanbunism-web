@@ -1,4 +1,13 @@
-import type { GambitRule } from "./catalog";
+import type { GambitRule, SkillDefinition } from "./catalog";
+
+export function isStateSkill(skill: SkillDefinition) {
+  return (skill.effects?.length ? skill.effects : [skill]).some(
+    (effect) =>
+      effect.effect === "buff" ||
+      effect.effect === "debuff" ||
+      effect.effect === "ailment",
+  );
+}
 
 export const stateLabels = {
   buff: "バフ",
@@ -10,9 +19,13 @@ export const stateLabels = {
 };
 
 export function stateCondition(
-  rule: Pick<GambitRule, "condition" | "state_kind" | "state_present">,
+  rule: Pick<
+    GambitRule,
+    "condition" | "state_kind" | "state_present" | "state_skill_id"
+  >,
 ) {
   return {
+    state_skill_id: rule.state_skill_id ?? null,
     state_kind:
       rule.condition === "poisoned"
         ? "poison"

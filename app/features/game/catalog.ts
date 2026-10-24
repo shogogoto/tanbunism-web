@@ -465,6 +465,7 @@ export type GameCatalog = {
     threshold: number;
     state_kind?: GambitRule["state_kind"];
     state_present?: boolean;
+    state_skill_id?: string | null;
     enabled: boolean;
   }[];
 };
@@ -507,6 +508,7 @@ export type GambitRule = {
   threshold: number;
   state_kind?: "buff" | "debuff" | "poison" | "curse" | "regen" | "refresh";
   state_present?: boolean;
+  state_skill_id?: string | null;
   action: "skill" | "item" | "specialty";
   definition_id: string;
   trigger_id?: string | null;

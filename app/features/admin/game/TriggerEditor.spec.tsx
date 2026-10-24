@@ -3,12 +3,38 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { vi } from "vitest";
+import { normalizeSkill } from "~/features/game/catalog";
 import { sampleCatalog } from "~/features/game/catalog.fixtures";
 import TriggerEditor from "./TriggerEditor";
 
 const saved = vi.fn();
 const catalog = {
   ...sampleCatalog,
+  skills: [
+    ...sampleCatalog.skills,
+    normalizeSkill({
+      id: "curse_skill",
+      name: "カース",
+      icon: "skull",
+      effect: "ailment",
+      target: "enemy",
+      ailment: "curse",
+      amount: 3,
+      mp_cost: 2,
+      enabled: true,
+    }),
+    normalizeSkill({
+      id: "defense_up",
+      name: "プロテクト",
+      icon: "shield",
+      effect: "buff",
+      target: "self",
+      stat: "defense",
+      amount: 5,
+      mp_cost: 2,
+      enabled: true,
+    }),
+  ],
   triggers: [
     {
       id: "hp",
@@ -65,8 +91,23 @@ it("groups legacy states and edits comparison and state details without losing o
   expect(buff.getByLabelText("判定する条件")).toHaveValue("state");
   expect(buff.getByLabelText("状態の有無")).toHaveValue("false");
   const poison = within(screen.getByRole("row", { name: "毒条件" }));
-  expect(poison.getByLabelText("判定する状態")).toHaveValue("poison");
-  await user.selectOptions(poison.getByLabelText("判定する状態"), "curse");
+  expect(poison.getByLabelText("判定する状態")).toHaveValue("");
+  expect(
+    poison.getByRole("option", { name: "旧設定：毒" }),
+  ).toBeInTheDocument();
+  expect(
+    poison.getByRole("option", { name: "プロテクト" }),
+  ).toBeInTheDocument();
+  expect(
+    poison.queryByRole("option", { name: "ファイア" }),
+  ).not.toBeInTheDocument();
+  expect(
+    poison.queryByRole("option", { name: "ケアル" }),
+  ).not.toBeInTheDocument();
+  await user.selectOptions(
+    poison.getByLabelText("判定する状態"),
+    "curse_skill",
+  );
   await user.selectOptions(poison.getByLabelText("状態の有無"), "false");
   await user.click(screen.getByRole("button", { name: "保存" }));
   await screen.findByText("保存しました");
@@ -78,7 +119,7 @@ it("groups legacy states and edits comparison and state details without losing o
   expect(payload.triggers[1]).toMatchObject({ condition: "buff_absent" });
   expect(payload.triggers[2]).toMatchObject({
     condition: "state",
-    state_kind: "curse",
+    state_skill_id: "curse_skill",
     state_present: false,
   });
   expect(payload.items).toEqual(sampleCatalog.items);

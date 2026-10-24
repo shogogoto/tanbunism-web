@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  type GambitRule,
-  type GameCatalog,
-  requestGameCatalog,
-} from "~/features/game/catalog";
+import { type GameCatalog, requestGameCatalog } from "~/features/game/catalog";
 import {
   conditionGroup,
+  isStateSkill,
   stateCondition,
   stateLabels,
 } from "~/features/game/triggerConditions";
@@ -24,6 +21,7 @@ export default function TriggerEditor() {
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const stateSkills = catalog?.skills.filter(isStateSkill) ?? [];
   useEffect(() => {
     let active = true;
     void requestGameCatalog(true)
@@ -142,6 +140,14 @@ export default function TriggerEditor() {
                                 ? `${group}_below`
                                 : group,
                             ...stateCondition(t),
+                            ...(group === "state" &&
+                            conditionGroup(t.condition) !== "state"
+                              ? {
+                                  state_skill_id:
+                                    stateSkills.find((skill) => skill.enabled)
+                                      ?.id ?? null,
+                                }
+                              : {}),
                             ...(group === "enemy_count"
                               ? { threshold: Math.min(t.threshold, 20) }
                               : {}),
@@ -208,23 +214,33 @@ export default function TriggerEditor() {
                             <select
                               aria-label="判定する状態"
                               className="h-9 rounded-md border bg-background px-2"
-                              value={stateCondition(t).state_kind}
+                              value={t.state_skill_id ?? ""}
                               onChange={(e) =>
                                 patch(t.id, {
                                   condition: "state",
                                   ...stateCondition(t),
-                                  state_kind: e.target
-                                    .value as GambitRule["state_kind"],
+                                  state_skill_id: e.target.value || null,
                                 })
                               }
                             >
-                              {Object.entries(stateLabels).map(
-                                ([id, label]) => (
-                                  <option key={id} value={id}>
-                                    {label}
+                              <option value="" disabled>
+                                旧設定：
+                                {stateLabels[stateCondition(t).state_kind]}
+                              </option>
+                              {t.state_skill_id &&
+                                !stateSkills.some(
+                                  (skill) => skill.id === t.state_skill_id,
+                                ) && (
+                                  <option value={t.state_skill_id}>
+                                    利用不可：{t.state_skill_id}
                                   </option>
-                                ),
-                              )}
+                                )}
+                              {stateSkills.map((skill) => (
+                                <option key={skill.id} value={skill.id}>
+                                  {skill.name}
+                                  {!skill.enabled && "（無効）"}
+                                </option>
+                              ))}
                             </select>
                             <select
                               aria-label="状態の有無"
