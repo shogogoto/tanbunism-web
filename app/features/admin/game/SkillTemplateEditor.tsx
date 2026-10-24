@@ -3,6 +3,7 @@ import {
   type GameCatalog,
   type SkillDefinition,
   type SkillPatch,
+  defaultElements,
   normalizeSkill,
   skillTemplate,
 } from "~/features/game/catalog";
@@ -41,6 +42,7 @@ export default function SkillTemplateEditor({
   onChange,
 }: { catalog: GameCatalog; onChange: (catalog: GameCatalog) => void }) {
   const templates = catalog.skill_templates ?? [];
+  const elements = catalog.elements ?? defaultElements;
   const rows = templates.map((template) =>
     normalizeSkill({
       ...template,
@@ -96,7 +98,7 @@ export default function SkillTemplateEditor({
     <section aria-label="効果テンプレート" className="space-y-2">
       <h3 className="font-semibold">効果テンプレート</h3>
       <p className="text-xs text-muted-foreground">
-        回復・ダメージは詳細で指定します。回復の倍率は最大値を基準にします。状態の効果は継続する行動数です。保存で確定します。
+        回復・ダメージは詳細で指定します。回復の倍率は最大値を基準にします。状態の効果は継続する行動数です。属性バフは与ダメージ増加・被ダメージ軽減、デバフはその逆です。保存で確定します。
       </p>
       <div className="overflow-x-auto rounded-lg border">
         <table
@@ -134,7 +136,11 @@ export default function SkillTemplateEditor({
                     className="w-20"
                     min={key === "stack_limit" ? 1 : 0}
                     max={key === "stack_limit" ? 10 : 10000}
-                    value={skill[key] ?? fallback}
+                    value={
+                      Number.isFinite(skill[key] ?? fallback)
+                        ? (skill[key] ?? fallback)
+                        : ""
+                    }
                     onChange={(e) =>
                       update(skill.id, { [key]: e.target.valueAsNumber })
                     }
@@ -313,16 +319,26 @@ export default function SkillTemplateEditor({
                             aria-label="対象ステータス"
                             className={selectClass}
                             value={stateResource(skill)}
-                            onChange={(e) =>
-                              update(
-                                skill.id,
-                                changeStateDetail(
-                                  skill,
-                                  stateDetail(skill),
+                            onChange={(e) => {
+                              const patch = changeStateDetail(
+                                skill,
+                                stateDetail(skill),
+                                e.target.value,
+                              );
+                              if (
+                                ["damageDealt", "damageTaken"].includes(
                                   e.target.value,
-                                ),
+                                ) &&
+                                !elements.some(
+                                  (element) =>
+                                    element.id === patch.affected_element,
+                                )
                               )
-                            }
+                                patch.affected_element =
+                                  elements.find((element) => element.enabled)
+                                    ?.id ?? "";
+                              update(skill.id, patch);
+                            }}
                           >
                             {Object.entries(
                               skill.effect === "ailment"
@@ -332,6 +348,8 @@ export default function SkillTemplateEditor({
                                     defense: "守備力",
                                     specialAttack: "特攻",
                                     specialDefense: "特守",
+                                    damageDealt: "与ダメージ（属性）",
+                                    damageTaken: "被ダメージ（属性）",
                                     ...(skill.effect === "buff"
                                       ? { maxHp: "最大HP（バブル）" }
                                       : {}),
@@ -343,11 +361,45 @@ export default function SkillTemplateEditor({
                             ))}
                           </select>
                         }
+                        {["damageDealt", "damageTaken"].includes(
+                          skill.stat ?? "",
+                        ) && (
+                          <select
+                            aria-label="補正対象属性"
+                            className={selectClass}
+                            required
+                            value={skill.affected_element ?? ""}
+                            onChange={(event) =>
+                              update(skill.id, {
+                                affected_element: event.target.value,
+                              })
+                            }
+                          >
+                            <option value="" disabled>
+                              属性を選択
+                            </option>
+                            {elements
+                              .filter(
+                                (element) =>
+                                  element.enabled ||
+                                  element.id === skill.affected_element,
+                              )
+                              .map((element) => (
+                                <option key={element.id} value={element.id}>
+                                  {element.name}
+                                </option>
+                              ))}
+                          </select>
+                        )}
                         <select
                           aria-label="状態の値の指定"
                           className={selectClass}
                           value={skill.amount_mode ?? "fixed"}
-                          disabled={skill.stat === "maxHp"}
+                          disabled={[
+                            "maxHp",
+                            "damageDealt",
+                            "damageTaken",
+                          ].includes(skill.stat ?? "")}
                           onChange={(e) =>
                             update(skill.id, {
                               amount_mode: e.target.value as

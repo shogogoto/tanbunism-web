@@ -21,6 +21,7 @@ export const emptyAllocation: Allocation = {
   speed: 0,
 };
 export const defaultBalance = {
+  weakness_multiplier: 1.5,
   gambit_levels_per_slot: 5,
   specialty_levels_per_slot: 20,
   base_hp: 35,
@@ -105,8 +106,13 @@ export type LiveEnemy = RegionEnemy & {
   speed?: number;
   animation?: import("./catalog").SkillAnimation;
   sound?: import("./catalog").SkillSound;
+  weaknesses?: string[];
 };
-export type CombatContext = { balance: GameBalance; enemies: LiveEnemy[] };
+export type CombatContext = {
+  balance: GameBalance;
+  enemies: LiveEnemy[];
+  elements?: import("./catalog").ElementDefinition[];
+};
 export type TurnInput = {
   battle_id: string;
   turn: number;

@@ -49,6 +49,7 @@ it("uses two numbered sortable tables and migrates legacy skills", async () => {
     "番号",
     "名前",
     "効果テンプレート",
+    "属性",
     "消費MP",
     "演出",
     "有効",
@@ -197,7 +198,9 @@ it("shares effect edits while retaining independent skill MP and multiple refere
     target: { value: "7" },
   });
   await user.click(within(fire).getByRole("button", { name: "効果を追加" }));
-  expect(within(fire).getAllByRole("combobox")).toHaveLength(2);
+  expect(
+    within(fire).getAllByRole("combobox", { name: /^効果テンプレート / }),
+  ).toHaveLength(2);
   expect(within(fire).getByLabelText("効果 1を外す")).toBeEnabled();
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(saved).toHaveBeenCalled());
@@ -404,6 +407,7 @@ it("exports template changes and excludes skills marked for deletion", async () 
     expect.arrayContaining([
       expect.objectContaining({ id: "effect_heal", amount: 25 }),
     ]),
+    undefined,
   );
   expect(saved).not.toHaveBeenCalled();
 });

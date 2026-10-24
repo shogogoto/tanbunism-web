@@ -1,5 +1,9 @@
 import { expect, it } from "vitest";
-import { type SkillDefinition, normalizeSkill } from "~/features/game/catalog";
+import {
+  type SkillDefinition,
+  defaultElements,
+  normalizeSkill,
+} from "~/features/game/catalog";
 import {
   sampleCatalog,
   sampleTemplateCatalog,
@@ -9,6 +13,28 @@ import {
   readSkillFile,
   skillFileText,
 } from "./skillFiles";
+
+it("exports attribute definitions alongside skills for portable custom attributes", () => {
+  const elements = [
+    ...defaultElements,
+    {
+      id: "metal",
+      name: "金属",
+      icon: "shield",
+      color: "#889999",
+      enabled: true,
+    },
+  ];
+  const result = JSON.parse(
+    skillFileText(
+      [{ ...sampleCatalog.skills[0], element: "metal" }],
+      [],
+      elements,
+    ),
+  );
+  expect(result.elements).toEqual(elements);
+  expect(result.skills[0].element).toBe("metal");
+});
 
 it("writes a versioned skills-only file without granting access or exporting consumers", async () => {
   const skills = sampleCatalog.skills.map((s) => ({ ...s, enabled: false }));

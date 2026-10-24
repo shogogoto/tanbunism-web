@@ -4,6 +4,10 @@ import type {
   SkillPatch,
   SkillTemplate,
 } from "~/features/game/catalog";
+import {
+  type ElementDefinition,
+  defaultElements,
+} from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import RowOrder, { moveRow } from "./RowOrder";
@@ -18,6 +22,7 @@ export default function SkillTables({
   deletions,
   toggleDelete,
   reorder,
+  elements = defaultElements,
 }: {
   skills: SkillDefinition[];
   templates?: SkillTemplate[];
@@ -29,6 +34,7 @@ export default function SkillTables({
   deletions: Set<string>;
   toggleDelete: (id: string) => void;
   reorder: (skills: SkillDefinition[]) => void;
+  elements?: ElementDefinition[];
 }) {
   const names = (skill: SkillDefinition) =>
     (skill.template_ids ?? [])
@@ -39,15 +45,18 @@ export default function SkillTables({
       ? skills.findIndex((row) => row.id === skill.id)
       : column === "templates"
         ? names(skill)
-        : column === "mp_cost"
-          ? skill.mp_cost
-          : column === "enabled"
-            ? Number(skill.enabled)
-            : column === "deleted"
-              ? Number(deletions.has(skill.id))
-              : column === "animation"
-                ? (skill.animation ?? "none")
-                : skill.name,
+        : column === "element"
+          ? (elements.find((element) => element.id === skill.element)?.name ??
+            "無属性")
+          : column === "mp_cost"
+            ? skill.mp_cost
+            : column === "enabled"
+              ? Number(skill.enabled)
+              : column === "deleted"
+                ? Number(deletions.has(skill.id))
+                : column === "animation"
+                  ? (skill.animation ?? "none")
+                  : skill.name,
   );
   return (
     <section aria-label="スキル一覧" className="space-y-2">
@@ -60,6 +69,7 @@ export default function SkillTables({
                 ["order", "番号"],
                 ["name", "名前"],
                 ["templates", "効果テンプレート"],
+                ["element", "属性"],
                 ["mp_cost", "消費MP"],
                 ["animation", "演出"],
                 ["enabled", "有効"],
@@ -180,6 +190,39 @@ export default function SkillTables({
                     </div>
                   </td>
                   <td>
+                    <select
+                      aria-label="属性"
+                      className="h-9 rounded-md border bg-background px-2"
+                      disabled={removed}
+                      value={skill.element ?? "none"}
+                      onChange={(event) =>
+                        update(skill.id, { element: event.target.value })
+                      }
+                    >
+                      <option value="none">無属性</option>
+                      {elements
+                        .filter(
+                          (element) =>
+                            element.enabled || element.id === skill.element,
+                        )
+                        .map((element) => (
+                          <option key={element.id} value={element.id}>
+                            {element.name}
+                            {!element.enabled && "（無効）"}
+                          </option>
+                        ))}
+                      {skill.element &&
+                        skill.element !== "none" &&
+                        !elements.some(
+                          (element) => element.id === skill.element,
+                        ) && (
+                          <option value={skill.element}>
+                            {skill.element}（旧属性）
+                          </option>
+                        )}
+                    </select>
+                  </td>
+                  <td>
                     <Input
                       aria-label="消費MP"
                       type="number"
@@ -231,7 +274,7 @@ export default function SkillTables({
               );
             })}
             <tr className="border-t">
-              <td colSpan={7} className="p-1 text-center">
+              <td colSpan={8} className="p-1 text-center">
                 <Button
                   aria-label="スキルを追加"
                   type="button"

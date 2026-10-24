@@ -245,6 +245,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
                   downloadSkillFile(
                     catalog.skills.filter((s) => !deletions.has(s.id)),
                     catalog.skill_templates,
+                    catalog.elements,
                   );
               }}
             >
@@ -289,6 +290,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
                 skills={catalog.skills}
                 reorder={(skills) => change({ ...catalog, skills })}
                 templates={catalog.skill_templates}
+                elements={catalog.elements}
                 update={update}
                 add={add}
                 deletions={deletions}

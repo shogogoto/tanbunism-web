@@ -9,6 +9,7 @@ import EndTurnAction from "./EndTurnAction";
 import EnemyAvatar from "./EnemyAvatar";
 import type MultiBattle from "./MultiBattle";
 import SkillEffect from "./SkillEffect";
+import Weaknesses from "./Weaknesses";
 import { type TurnInput, type TurnResult, gameRequest } from "./battle";
 import { playSkillSound } from "./battleSound";
 import type { SkillAnimation } from "./catalog";
@@ -208,6 +209,7 @@ export default function ScheduledBattle({
                 )}
               </div>
               <span className="max-w-full truncate">{item.name}</span>
+              <Weaknesses ids={item.weaknesses} elements={context.elements} />
               <span className="tabular-nums">
                 HP{" "}
                 {(marker

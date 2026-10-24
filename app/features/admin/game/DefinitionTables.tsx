@@ -4,7 +4,7 @@ import type {
   GameCatalog,
   ItemDefinition,
 } from "~/features/game/catalog";
-import { isEquipmentSkill } from "~/features/game/catalog";
+import { defaultElements, isEquipmentSkill } from "~/features/game/catalog";
 import { Input } from "~/shared/components/ui/input";
 
 const selectClass = "h-9 rounded-md border bg-background px-2 text-sm";
@@ -25,7 +25,7 @@ export default function DefinitionTables({
     "素材",
     ...(kind === "items"
       ? ["種類", "発動スキル", "使用回数"]
-      : ["ボス用", "速さ", "攻撃スキル", "命中時スキル"]),
+      : ["ボス用", "速さ", "攻撃スキル", "命中時スキル", "弱点属性"]),
     "有効",
   ];
   return (
@@ -220,6 +220,44 @@ export default function DefinitionTables({
                           </option>
                         ))}
                     </select>
+                  </td>
+                  <td>
+                    <fieldset
+                      className="flex max-w-64 flex-wrap gap-2"
+                      aria-label={`${item.name}の弱点属性`}
+                    >
+                      {(catalog.elements ?? defaultElements)
+                        .filter(
+                          (element) =>
+                            element.enabled ||
+                            item.weaknesses?.includes(element.id),
+                        )
+                        .map((element) => (
+                          <label
+                            key={element.id}
+                            className="flex items-center gap-1 text-xs"
+                            style={{ color: element.color }}
+                          >
+                            <input
+                              type="checkbox"
+                              aria-label={`${item.name}の弱点：${element.name}`}
+                              checked={
+                                item.weaknesses?.includes(element.id) ?? false
+                              }
+                              onChange={(event) =>
+                                update(item.id, {
+                                  weaknesses: event.target.checked
+                                    ? [...(item.weaknesses ?? []), element.id]
+                                    : (item.weaknesses ?? []).filter(
+                                        (key) => key !== element.id,
+                                      ),
+                                })
+                              }
+                            />
+                            {element.name}
+                          </label>
+                        ))}
+                    </fieldset>
                   </td>
                 </>
               )}

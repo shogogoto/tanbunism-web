@@ -1,4 +1,5 @@
 import {
+  type ElementDefinition,
   type GameCatalog,
   type SkillDefinition,
   type SkillTemplate,
@@ -13,6 +14,7 @@ export const MAX_SKILL_FILE_BYTES = 1024 * 1024;
 export function skillFileText(
   skills: SkillDefinition[],
   skill_templates: SkillTemplate[] = [],
+  elements?: ElementDefinition[],
 ) {
   const normalized = skills.map(normalizeSkill).map((skill) => {
     if (!skill.template_id && !skill.template_ids?.length) return skill;
@@ -41,7 +43,7 @@ export function skillFileText(
       mp_cost,
     };
   });
-  return `${JSON.stringify({ format: SKILL_FILE_FORMAT, version: SKILL_FILE_VERSION, skill_templates, skills: normalized }, null, 2)}\n`;
+  return `${JSON.stringify({ format: SKILL_FILE_FORMAT, version: SKILL_FILE_VERSION, skill_templates, skills: normalized, ...(elements ? { elements } : {}) }, null, 2)}\n`;
 }
 
 /** Server-side definitions validate enums, ranges, defaults and references. No writes. */
@@ -99,9 +101,12 @@ export function readSkillFile(file: File): Promise<unknown> {
 export function downloadSkillFile(
   skills: SkillDefinition[],
   templates: SkillTemplate[] = [],
+  elements?: ElementDefinition[],
 ) {
   const url = URL.createObjectURL(
-    new Blob([skillFileText(skills, templates)], { type: "application/json" }),
+    new Blob([skillFileText(skills, templates, elements)], {
+      type: "application/json",
+    }),
   );
   const link = document.createElement("a");
   link.href = url;

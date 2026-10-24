@@ -16,6 +16,7 @@ import EnemyAvatar from "./EnemyAvatar";
 import GameIcon from "./GameIcon";
 import ScheduledBattle from "./ScheduledBattle";
 import SkillEffect from "./SkillEffect";
+import Weaknesses from "./Weaknesses";
 import type { DungeonContent } from "./api";
 import {
   type BattleTransport,
@@ -428,6 +429,7 @@ function LegacyMultiBattle({
             >
               {enemy.name}
             </span>
+            <Weaknesses ids={enemy.weaknesses} elements={context.elements} />
             <span
               aria-label={`${enemy.name}のHP`}
               className="text-sm tabular-nums"

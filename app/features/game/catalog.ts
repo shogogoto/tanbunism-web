@@ -19,25 +19,17 @@ type SkillBase = {
   template_id?: string | null;
   template_ids?: string[];
   effects?: Record<string, unknown>[];
-  element?:
-    | "none"
-    | "fire"
-    | "ice"
-    | "lightning"
-    | "water"
-    | "wind"
-    | "earth"
-    | "light"
-    | "dark"
-    | "poison";
+  element?: string;
 };
 type InstantSkill = {
+  affected_element?: never;
   stat?: never;
   duration_turns?: never;
   stack_limit?: never;
   ailment?: never;
 };
 type TimedSkill = {
+  affected_element?: string | null;
   amount_mode?: "fixed" | "percent";
   duration_turns?: number;
   stack_limit?: number;
@@ -79,13 +71,21 @@ export type SkillDefinition = SkillBase &
           | "defense"
           | "specialAttack"
           | "specialDefense"
-          | "maxHp";
+          | "maxHp"
+          | "damageDealt"
+          | "damageTaken";
         ailment?: never;
         on_wrong?: NumericWrongResult;
       })
     | (TimedSkill & {
         effect: "debuff";
-        stat?: "attack" | "defense" | "specialAttack" | "specialDefense";
+        stat?:
+          | "attack"
+          | "defense"
+          | "specialAttack"
+          | "specialDefense"
+          | "damageDealt"
+          | "damageTaken";
         ailment?: never;
         on_wrong?: NumericWrongResult;
         target_count?: number | "all";
@@ -109,7 +109,15 @@ export type SkillPatch = Partial<
     effect: SkillDefinition["effect"];
     multiplier: number;
     amount_mode: "fixed" | "percent";
-    stat: "attack" | "defense" | "specialAttack" | "specialDefense" | "maxHp";
+    stat:
+      | "attack"
+      | "defense"
+      | "specialAttack"
+      | "specialDefense"
+      | "maxHp"
+      | "damageDealt"
+      | "damageTaken";
+    affected_element: string | null;
     duration_turns: number;
     stack_limit: number;
     ailment: "poison" | "curse" | "regen" | "refresh";
@@ -162,6 +170,10 @@ export function normalizeSkill(
     ...numeric,
     duration_turns: skill.duration_turns ?? 3,
     stack_limit: skill.stack_limit ?? 1,
+    ...(["buff", "debuff"].includes(effect) &&
+    ["damageDealt", "damageTaken"].includes(skill.stat ?? "")
+      ? { affected_element: skill.affected_element }
+      : {}),
   };
   const wrong = skill.on_wrong;
   const numericWrong: NumericWrongResult =
@@ -390,6 +402,24 @@ export const elementLabels = {
   poison: "毒",
 } as const;
 
+export type ElementDefinition = {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  enabled: boolean;
+};
+export const defaultElements: ElementDefinition[] = [
+  ["fire", "炎", "flame", "#ef4444"],
+  ["ice", "氷", "snowflake", "#38bdf8"],
+  ["lightning", "雷", "zap", "#facc15"],
+  ["water", "水", "droplet", "#3b82f6"],
+  ["wind", "風", "leaf", "#22c55e"],
+  ["earth", "土", "mountain", "#a16207"],
+  ["light", "光", "sun", "#fde68a"],
+  ["dark", "闇", "moon", "#a78bfa"],
+].map(([id, name, icon, color]) => ({ id, name, icon, color, enabled: true }));
+
 export type ItemDefinition = {
   id: string;
   name: string;
@@ -416,8 +446,10 @@ export type EnemyDefinition = {
   speed?: number | null;
   attack_skill_id: string | null;
   on_hit_skill_id?: string | null;
+  weaknesses?: string[];
 };
 export type GameCatalog = {
+  elements?: ElementDefinition[];
   skills: SkillDefinition[];
   skill_templates?: SkillTemplate[];
   items: ItemDefinition[];

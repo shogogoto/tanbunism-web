@@ -45,7 +45,10 @@ export type GameSave = {
             | "defense"
             | "specialAttack"
             | "specialDefense"
-            | "maxHp";
+            | "maxHp"
+            | "damageDealt"
+            | "damageTaken";
+          affected_element?: string | null;
           amount: number;
           amount_mode: "fixed" | "percent";
         }[]

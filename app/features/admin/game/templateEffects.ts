@@ -210,6 +210,8 @@ export function changeStateDetail(
           "defense",
           "specialAttack",
           "specialDefense",
+          "damageDealt",
+          "damageTaken",
           ...(detail === "buff" ? ["maxHp"] : []),
         ].includes(resource)
       ? resource
@@ -257,7 +259,12 @@ export function changeState(
           : "poison",
     stat: resource as SkillPatch["stat"],
     amount: periodic ? Math.max(1, skill.amount) : skill.amount,
-    ...(resource === "maxHp" ? { amount_mode: "percent" as const } : {}),
+    ...(["maxHp", "damageDealt", "damageTaken"].includes(resource)
+      ? { amount_mode: "percent" as const }
+      : {}),
+    affected_element: ["damageDealt", "damageTaken"].includes(resource)
+      ? (skill.affected_element ?? "fire")
+      : null,
     on_wrong:
       wrong?.type === "reduced"
         ? periodic
