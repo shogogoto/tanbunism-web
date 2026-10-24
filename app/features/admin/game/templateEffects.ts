@@ -2,6 +2,7 @@ import {
   type SkillDefinition,
   type SkillPatch,
   normalizeSkill,
+  statusStatLabels,
 } from "~/features/game/catalog";
 
 export type EffectMode = "fixed" | "multiplier";
@@ -205,15 +206,7 @@ export function changeStateDetail(
     ? resource === "mp"
       ? "mp"
       : "hp"
-    : [
-          "attack",
-          "defense",
-          "specialAttack",
-          "specialDefense",
-          "damageDealt",
-          "damageTaken",
-          ...(detail === "buff" ? ["maxHp"] : []),
-        ].includes(resource)
+    : Object.hasOwn(statusStatLabels, resource)
       ? resource
       : "attack";
   return changeState(
@@ -259,7 +252,7 @@ export function changeState(
           : "poison",
     stat: resource as SkillPatch["stat"],
     amount: periodic ? Math.max(1, skill.amount) : skill.amount,
-    ...(["maxHp", "damageDealt", "damageTaken"].includes(resource)
+    ...(["maxHp", "maxMp", "damageDealt", "damageTaken"].includes(resource)
       ? { amount_mode: "percent" as const }
       : {}),
     affected_element: ["damageDealt", "damageTaken"].includes(resource)

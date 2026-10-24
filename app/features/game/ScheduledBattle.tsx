@@ -219,7 +219,7 @@ export default function ScheduledBattle({
                 {(marker
                   ? schedule?.enemy_hp[item.id]
                   : shownResult?.enemy_hp?.[item.id]) ?? 0}
-                /{item.hp}
+                /{schedule?.enemy_max_hp?.[item.id] ?? item.hp}
               </span>
             </div>
           ))}

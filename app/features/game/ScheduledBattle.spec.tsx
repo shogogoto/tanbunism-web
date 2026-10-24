@@ -134,6 +134,28 @@ it("shows the backend forecast from left to right without selectable enemies", (
   expect(enemies).not.toHaveTextContent(/MP|特攻|特守|速さ/);
 });
 
+it("displays the server-scaled enemy HP maximum", () => {
+  const save = initial();
+  if (!save.battle?.schedule) throw new Error("Missing schedule");
+  save.battle.schedule.enemy_hp = { e: 40 };
+  save.battle.schedule.enemy_max_hp = { e: 50 };
+  render(
+    <MemoryRouter>
+      <MultiBattle
+        save={save}
+        content={content}
+        context={context}
+        onSaved={vi.fn()}
+        onFinished={vi.fn()}
+        onBusy={vi.fn()}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.getByRole("region", { name: "敵一覧" })).toHaveTextContent(
+    "HP 40/50",
+  );
+});
+
 it("keeps arrow navigation out of header settings while allowing Tab access", async () => {
   const user = userEvent.setup();
   const questions = {

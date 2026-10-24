@@ -957,7 +957,12 @@ it("retains the pending deletion when the server rejects saving", async () => {
   expect(within(row).getByLabelText("名前")).toBeEnabled();
 });
 
-it("defines a timed percentage buff in the unified template table", async () => {
+it.each([
+  ["buff", "maxHp", "HP"],
+  ["buff", "maxMp", "MP"],
+  ["debuff", "maxHp", "HP"],
+  ["debuff", "maxMp", "MP"],
+])("defines a timed percentage %s for %s", async (effect, stat, label) => {
   render(<CatalogEditor kind="skills" />);
   const user = userEvent.setup();
   await screen.findByRole("row", { name: "ファイア" });
@@ -966,11 +971,23 @@ it("defines a timed percentage buff in the unified template table", async () => 
   );
   const row = screen.getByRole("row", { name: "新しい効果" });
   await user.selectOptions(within(row).getByLabelText("種別"), "status");
-  await user.selectOptions(
-    within(row).getByLabelText("対象ステータス"),
-    "maxHp",
+  const buffOptions = within(row).getByLabelText("対象ステータス").textContent;
+  await user.selectOptions(within(row).getByLabelText("詳細"), "debuff");
+  expect(within(row).getByLabelText("対象ステータス").textContent).toBe(
+    buffOptions,
   );
+  await user.selectOptions(within(row).getByLabelText("詳細"), effect);
+  await user.selectOptions(within(row).getByLabelText("対象ステータス"), stat);
+  expect(within(row).getByRole("option", { name: label })).toBeInTheDocument();
+  expect(within(row).queryByText("最大HP（バブル）")).not.toBeInTheDocument();
+  await user.selectOptions(
+    within(row).getByLabelText("詳細"),
+    effect === "buff" ? "debuff" : "buff",
+  );
+  expect(within(row).getByLabelText("対象ステータス")).toHaveValue(stat);
+  await user.selectOptions(within(row).getByLabelText("詳細"), effect);
   expect(within(row).getByLabelText("状態の値の指定")).toHaveValue("percent");
+  expect(within(row).getByLabelText("状態の値の指定")).toBeDisabled();
   for (const [label, value] of [
     ["状態の値", "50"],
     ["正答効果の値", "5"],
@@ -983,8 +1000,8 @@ it("defines a timed percentage buff in the unified template table", async () => 
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(saved).toHaveBeenCalled());
   expect(saved.mock.calls[0][0].skill_templates.at(-1)).toMatchObject({
-    effect: "buff",
-    stat: "maxHp",
+    effect,
+    stat,
     amount: 50,
     amount_mode: "percent",
     duration_turns: 5,

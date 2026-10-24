@@ -7,6 +7,7 @@ import {
   normalizeSkill,
   resolveCatalogTemplates,
   skillTemplate,
+  statusStatLabels,
 } from "~/features/game/catalog";
 import {
   templateOverrideFields,
@@ -520,17 +521,7 @@ export default function SkillTemplateEditor({
                                 {Object.entries(
                                   skill.effect === "ailment"
                                     ? { hp: "HP", mp: "MP" }
-                                    : {
-                                        attack: "攻撃力",
-                                        defense: "守備力",
-                                        specialAttack: "特攻",
-                                        specialDefense: "特守",
-                                        damageDealt: "属性威力",
-                                        damageTaken: "属性耐性",
-                                        ...(skill.effect === "buff"
-                                          ? { maxHp: "最大HP（バブル）" }
-                                          : {}),
-                                      },
+                                    : statusStatLabels,
                                 ).map(([v, label]) => (
                                   <option key={v} value={v}>
                                     {label}
@@ -574,6 +565,7 @@ export default function SkillTemplateEditor({
                               value={skill.amount_mode ?? "fixed"}
                               disabled={[
                                 "maxHp",
+                                "maxMp",
                                 "damageDealt",
                                 "damageTaken",
                               ].includes(skill.stat ?? "")}

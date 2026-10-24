@@ -11,6 +11,7 @@ export type Run = {
   hp: number;
   maxHp: number;
   hpScale?: number;
+  mpScale?: number;
   mp?: number;
   maxMp?: number;
   attack: number;
@@ -46,6 +47,7 @@ export type GameSave = {
             | "specialAttack"
             | "specialDefense"
             | "maxHp"
+            | "maxMp"
             | "damageDealt"
             | "damageTaken";
           affected_element?: string | null;
@@ -121,6 +123,8 @@ export type GameSave = {
       quiz_enemy_id: string | null;
       enemy_hp: Record<string, number>;
       enemy_mp?: Record<string, number>;
+      enemy_max_hp?: Record<string, number>;
+      enemy_max_mp?: Record<string, number>;
       queue: { actor_id: string; distance: number }[];
     } | null;
     effects?: import("./catalog").BattleEffect[];

@@ -52,6 +52,17 @@ export type AttackWrongResult =
 export type AilmentWrongResult =
   | { type: "counter" | "fizzle" }
   | { type: "reduced"; apply: boolean; duration_turns?: number };
+export const statusStatLabels = {
+  maxHp: "HP",
+  maxMp: "MP",
+  attack: "攻撃力",
+  defense: "守備力",
+  specialAttack: "特攻",
+  specialDefense: "特守",
+  damageDealt: "属性威力",
+  damageTaken: "属性耐性",
+};
+export type StatusStat = keyof typeof statusStatLabels;
 export type SkillDefinition = SkillBase &
   (
     | (InstantSkill & {
@@ -70,26 +81,13 @@ export type SkillDefinition = SkillBase &
       })
     | (TimedSkill & {
         effect: "buff";
-        stat?:
-          | "attack"
-          | "defense"
-          | "specialAttack"
-          | "specialDefense"
-          | "maxHp"
-          | "damageDealt"
-          | "damageTaken";
+        stat?: StatusStat;
         ailment?: never;
         on_wrong?: NumericWrongResult;
       })
     | (TimedSkill & {
         effect: "debuff";
-        stat?:
-          | "attack"
-          | "defense"
-          | "specialAttack"
-          | "specialDefense"
-          | "damageDealt"
-          | "damageTaken";
+        stat?: StatusStat;
         ailment?: never;
         on_wrong?: NumericWrongResult;
         target_count?: number | "all";
@@ -113,14 +111,7 @@ export type SkillPatch = Partial<
     effect: SkillDefinition["effect"];
     multiplier: number;
     amount_mode: "fixed" | "percent";
-    stat:
-      | "attack"
-      | "defense"
-      | "specialAttack"
-      | "specialDefense"
-      | "maxHp"
-      | "damageDealt"
-      | "damageTaken";
+    stat: StatusStat;
     affected_element: string | null;
     duration_turns: number;
     stack_limit: number;
@@ -234,7 +225,7 @@ export function normalizeSkill(
         ...common,
         effect,
         ...timed,
-        stat: skill.stat === "maxHp" ? "attack" : (skill.stat ?? "attack"),
+        stat: skill.stat ?? "attack",
         target_count:
           skill.target_count ?? (target === "all_enemies" ? "all" : 1),
         on_wrong: numericWrong,
