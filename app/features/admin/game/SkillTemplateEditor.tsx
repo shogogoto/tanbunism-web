@@ -47,7 +47,12 @@ const columns = [
 export default function SkillTemplateEditor({
   catalog,
   onChange,
-}: { catalog: GameCatalog; onChange: (catalog: GameCatalog) => void }) {
+  variantId,
+}: {
+  catalog: GameCatalog;
+  onChange: (catalog: GameCatalog) => void;
+  variantId?: string;
+}) {
   const templates = catalog.skill_templates ?? [];
   const elements = catalog.elements ?? defaultElements;
   function toTemplate(skill: SkillDefinition) {
@@ -91,18 +96,29 @@ export default function SkillTemplateEditor({
       enabled: true,
     }),
   );
-  const { sorted, header, resetSort } = useTableSort(rows, (skill, column) => {
-    if (column === "order") return rows.findIndex((row) => row.id === skill.id);
-    if (column === "type") return skill.on_wrong?.type ?? "fizzle";
-    if (column === "kind") return templateKind(skill);
-    if (column === "detail")
-      return isStatus(skill)
-        ? `${skill.effect}:${skill.stat ?? skill.ailment}`
-        : skill.effect;
-    if (column === "power") return effectValue(skill).value;
-    const value = skill[column as keyof SkillDefinition];
-    return typeof value === "string" || typeof value === "number" ? value : "";
-  });
+  const visibleRows = rows.filter((skill) =>
+    variantId
+      ? skill.id === variantId
+      : !templates.find((row) => row.id === skill.id)?.base_template_id,
+  );
+  const { sorted, header, resetSort } = useTableSort(
+    visibleRows,
+    (skill, column) => {
+      if (column === "order")
+        return rows.findIndex((row) => row.id === skill.id);
+      if (column === "type") return skill.on_wrong?.type ?? "fizzle";
+      if (column === "kind") return templateKind(skill);
+      if (column === "detail")
+        return isStatus(skill)
+          ? `${skill.effect}:${skill.stat ?? skill.ailment}`
+          : skill.effect;
+      if (column === "power") return effectValue(skill).value;
+      const value = skill[column as keyof SkillDefinition];
+      return typeof value === "string" || typeof value === "number"
+        ? value
+        : "";
+    },
+  );
   function update(id: string, patch: SkillPatch) {
     commit(
       rows.map((skill) => {
@@ -130,10 +146,16 @@ export default function SkillTemplateEditor({
                   ...new Set([
                     ...(source.override_fields ?? []),
                     ...(skill.id === id
-                      ? templateOverrideFields.filter((key) => key in patch)
+                      ? templateOverrideFields.filter(
+                          (key) =>
+                            JSON.stringify(
+                              skill[key as keyof SkillDefinition],
+                            ) !==
+                            JSON.stringify(result[key as keyof typeof result]),
+                        )
                       : []),
                   ]),
-                ],
+                ].filter((key) => key in result),
               }
             : {}),
         };
@@ -141,24 +163,36 @@ export default function SkillTemplateEditor({
     );
   }
   return (
-    <section aria-label="効果テンプレート" className="space-y-2">
-      <h3 className="font-semibold">効果テンプレート</h3>
-      <p className="text-xs text-muted-foreground">
-        回復・ダメージは詳細で指定します。回復の倍率は最大値を基準にします。状態の効果は継続する行動数です。属性威力はその属性で攻撃する強さ、属性耐性はその属性のダメージを軽減する強さです。バフで上昇、デバフで低下します。保存で確定します。
-      </p>
-      <p className="text-xs text-muted-foreground">
-        共通設定から対象数別のバリエーションを一括作成できます。子の対象数・効果を編集すると上書き（色付き）になり、↶で共通値に戻せます。種別・詳細・タイプは共通設定で編集します。継承は1段のみです。
-      </p>
+    <section aria-label="効果テンプレート" className="min-w-0 space-y-2">
+      {!variantId && (
+        <>
+          <h3 className="font-semibold">効果テンプレート</h3>
+          <p className="text-xs text-muted-foreground">
+            回復・ダメージは詳細で指定します。回復の倍率は最大値を基準にします。状態の効果は継続する行動数です。属性威力はその属性で攻撃する強さ、属性耐性はその属性のダメージを軽減する強さです。バフで上昇、デバフで低下します。保存で確定します。
+          </p>
+          <p className="text-xs text-muted-foreground">
+            一覧には共通設定を表示します。「バリエーション」から追加・複製・一括作成できます。どの項目も個別に変更でき、上書きは色付きで表示します。↶で共通値に戻せます。継承は1段のみです。
+          </p>
+        </>
+      )}
       <div className="overflow-x-auto rounded-lg border">
         <SortableRows
           rows={sorted}
           onReorder={(rows) => {
-            commit(rows.map(toTemplate));
+            if (variantId) return;
+            commit(
+              rows.flatMap((skill) => [
+                toTemplate(skill),
+                ...templates.filter((row) => row.base_template_id === skill.id),
+              ]),
+            );
             resetSort();
           }}
         >
           <table
-            aria-label="効果テンプレート一覧"
+            aria-label={
+              variantId ? "バリエーションの設定" : "効果テンプレート一覧"
+            }
             className="w-full whitespace-nowrap text-sm"
           >
             <thead className="bg-muted/40 text-muted-foreground">
@@ -190,6 +224,32 @@ export default function SkillTemplateEditor({
                     templatePowerFields.includes(key),
                   );
                 const reduced = skill.on_wrong?.type === "reduced";
+                function resetCell(label: string, fields: readonly string[]) {
+                  if (
+                    !variant ||
+                    !source?.override_fields?.some((key) =>
+                      fields.includes(key),
+                    )
+                  )
+                    return null;
+                  return (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`${label}を共通設定に戻す`}
+                      onClick={() => resetOverride(skill.id, fields)}
+                    >
+                      ↶
+                    </Button>
+                  );
+                }
+                function overridden(fields: readonly string[]) {
+                  return variant &&
+                    source?.override_fields?.some((key) => fields.includes(key))
+                    ? "bg-amber-500/10"
+                    : undefined;
+                }
                 function number(
                   label: string,
                   key: "amount" | "stack_limit",
@@ -294,7 +354,19 @@ export default function SkillTemplateEditor({
                     className="border-t [&>td]:p-2"
                   >
                     <td>
-                      <RowOrder index={index} />
+                      {variantId ? (
+                        <span className="tabular-nums">
+                          {templates
+                            .filter(
+                              (row) =>
+                                row.base_template_id ===
+                                source?.base_template_id,
+                            )
+                            .findIndex((row) => row.id === skill.id) + 1}
+                        </span>
+                      ) : (
+                        <RowOrder index={index} />
+                      )}
                     </td>
                     <td>
                       <Input
@@ -313,6 +385,18 @@ export default function SkillTemplateEditor({
                           catalog={catalog}
                           onChange={onChange}
                           locked={normal}
+                          renderVariant={
+                            variantId
+                              ? undefined
+                              : (id) => (
+                                  <SkillTemplateEditor
+                                    key={id}
+                                    catalog={catalog}
+                                    onChange={onChange}
+                                    variantId={id}
+                                  />
+                                )
+                          }
                         />
                       )}
                     </td>
@@ -357,8 +441,8 @@ export default function SkillTemplateEditor({
                         </Button>
                       )}
                     </td>
-                    <td>
-                      <fieldset disabled={variant}>
+                    <td className={overridden(["effect", "damage_type"])}>
+                      <fieldset>
                         <select
                           aria-label="種別"
                           className={selectClass}
@@ -374,9 +458,20 @@ export default function SkillTemplateEditor({
                           <option value="other">その他</option>
                         </select>
                       </fieldset>
+                      {resetCell("種別", ["effect", "damage_type"])}
                     </td>
-                    <td>
-                      <fieldset disabled={variant}>
+                    <td
+                      className={overridden([
+                        "effect",
+                        "stat",
+                        "ailment",
+                        "affected_element",
+                        "amount",
+                        "amount_mode",
+                        "stack_limit",
+                      ])}
+                    >
+                      <fieldset>
                         {status ? (
                           <div className="flex items-center gap-1">
                             <select
@@ -549,9 +644,18 @@ export default function SkillTemplateEditor({
                           </div>
                         )}
                       </fieldset>
+                      {resetCell("詳細", [
+                        "effect",
+                        "stat",
+                        "ailment",
+                        "affected_element",
+                        "amount",
+                        "amount_mode",
+                        "stack_limit",
+                      ])}
                     </td>
-                    <td>
-                      <fieldset disabled={variant}>
+                    <td className={overridden(["on_wrong"])}>
+                      <fieldset>
                         {utility ? (
                           "—"
                         ) : (
@@ -592,6 +696,7 @@ export default function SkillTemplateEditor({
                           </select>
                         )}
                       </fieldset>
+                      {resetCell("タイプ", ["on_wrong"])}
                     </td>
                     <td
                       className={powerOverride ? "bg-amber-500/10" : undefined}
@@ -643,39 +748,41 @@ export default function SkillTemplateEditor({
                   </SortableRow>
                 );
               })}
-              <tr className="border-t">
-                <td colSpan={columns.length} className="p-1 text-center">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="効果テンプレートを追加"
-                    onClick={() =>
-                      onChange({
-                        ...catalog,
-                        skill_templates: [
-                          ...templates,
-                          skillTemplate(
-                            normalizeSkill({
-                              id: `effect_${crypto.randomUUID().replaceAll("-", "")}`,
-                              name: "新しい効果",
-                              icon: "sparkles",
-                              enabled: true,
-                              effect: "attack",
-                              target: "enemy",
-                              amount: 0,
-                              multiplier: 1,
-                              mp_cost: 0,
-                            }),
-                          ),
-                        ],
-                      })
-                    }
-                  >
-                    <Plus aria-hidden="true" />
-                  </Button>
-                </td>
-              </tr>
+              {!variantId && (
+                <tr className="border-t">
+                  <td colSpan={columns.length} className="p-1 text-center">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="効果テンプレートを追加"
+                      onClick={() =>
+                        onChange({
+                          ...catalog,
+                          skill_templates: [
+                            ...templates,
+                            skillTemplate(
+                              normalizeSkill({
+                                id: `effect_${crypto.randomUUID().replaceAll("-", "")}`,
+                                name: "新しい効果",
+                                icon: "sparkles",
+                                enabled: true,
+                                effect: "attack",
+                                target: "enemy",
+                                amount: 0,
+                                multiplier: 1,
+                                mp_cost: 0,
+                              }),
+                            ),
+                          ],
+                        })
+                      }
+                    >
+                      <Plus aria-hidden="true" />
+                    </Button>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </SortableRows>

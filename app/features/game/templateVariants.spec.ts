@@ -3,6 +3,7 @@ import { skillFileText } from "~/features/admin/game/skillFiles";
 import { type SkillTemplate, resolveCatalogTemplates } from "./catalog";
 import { sampleCatalog } from "./catalog.fixtures";
 import { resolveTemplateVariants } from "./templateVariants";
+import { templateDifferences } from "./templateVariants";
 
 const base = {
   id: "spell",
@@ -71,4 +72,69 @@ it("rejects missing, self and multi-level parents", () => {
       { ...variant, id: "nested", base_template_id: variant.id },
     ]),
   ).toThrow(/二段/);
+});
+
+it("inherits any setting but keeps explicit kind and state details canonical", () => {
+  const state: SkillTemplate = {
+    id: "guard",
+    name: "中級",
+    effect: "buff",
+    stat: "defense",
+    amount: 20,
+    amount_mode: "percent",
+    duration_turns: 5,
+    stack_limit: 2,
+    on_wrong: { type: "counter" },
+    base_template_id: base.id,
+    override_fields: [
+      "effect",
+      "stat",
+      "amount",
+      "amount_mode",
+      "duration_turns",
+      "stack_limit",
+      "on_wrong",
+    ],
+  };
+  const resolved = resolveTemplateVariants([base, state])[1];
+  expect(resolved).toMatchObject({
+    effect: "buff",
+    stat: "defense",
+    amount: 20,
+    duration_turns: 5,
+    stack_limit: 2,
+  });
+  expect(resolved).not.toHaveProperty("multiplier");
+  const file = JSON.parse(skillFileText([], [base, resolved]));
+  expect(file.skill_templates[1]).toMatchObject({
+    effect: "buff",
+    stat: "defense",
+    duration_turns: 5,
+    on_wrong: { type: "counter" },
+  });
+});
+
+it("links independent templates of different kinds by their actual differences", () => {
+  const recovery: SkillTemplate = {
+    id: "heal",
+    name: "回復",
+    effect: "heal_mp",
+    amount: 25,
+    amount_mode: "percent",
+    on_wrong: { type: "fizzle" },
+  };
+  const fields = templateDifferences(base, recovery);
+  expect(fields).toEqual(
+    expect.arrayContaining(["effect", "amount", "amount_mode"]),
+  );
+  const linked = resolveTemplateVariants([
+    base,
+    { ...recovery, base_template_id: base.id, override_fields: fields },
+  ])[1];
+  expect(linked).toMatchObject({
+    effect: "heal_mp",
+    amount: 25,
+    amount_mode: "percent",
+  });
+  expect(linked).not.toHaveProperty("multiplier");
 });

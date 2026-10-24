@@ -1,6 +1,17 @@
-import type { SkillTemplate } from "./catalog";
+import {
+  type SkillDefinition,
+  type SkillTemplate,
+  normalizeSkill,
+  skillTemplate,
+} from "./catalog";
 
 export const templateOverrideFields = [
+  "effect",
+  "damage_type",
+  "stat",
+  "affected_element",
+  "stack_limit",
+  "ailment",
   "target_count",
   "amount",
   "amount_mode",
@@ -16,6 +27,18 @@ export const templatePowerFields: TemplateOverride[] = [
   "duration_turns",
   "on_wrong",
 ];
+
+export function templateDifferences(
+  base: SkillTemplate,
+  variant: SkillTemplate,
+): TemplateOverride[] {
+  return templateOverrideFields.filter(
+    (key) =>
+      key in variant &&
+      JSON.stringify(variant[key as keyof SkillTemplate]) !==
+        JSON.stringify(base[key as keyof SkillTemplate]),
+  );
+}
 
 /** Parent rows are always independent: resolve once, never recursively. */
 export function resolveTemplateVariants(
@@ -34,7 +57,7 @@ export function resolveTemplateVariants(
         template[key as keyof SkillTemplate],
       ]),
     );
-    return {
+    const merged = {
       ...base,
       ...overrides,
       id: template.id,
@@ -42,5 +65,21 @@ export function resolveTemplateVariants(
       base_template_id: base.id,
       override_fields: template.override_fields ?? [],
     } as SkillTemplate;
+    const normalized = skillTemplate(
+      normalizeSkill({
+        ...merged,
+        target: "self",
+        icon: "sparkles",
+        enabled: true,
+        mp_cost: 0,
+      } as SkillDefinition),
+      merged,
+    );
+    return {
+      ...normalized,
+      override_fields: normalized.override_fields?.filter(
+        (key) => key in normalized,
+      ),
+    };
   });
 }
