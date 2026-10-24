@@ -1,6 +1,10 @@
 import { networkFetch } from "~/shared/lib/networkFetch";
 import { spriteAnimationLabels } from "./effectAssets";
 import type { soundLabels } from "./soundAssets";
+import {
+  type TemplateOverride,
+  resolveTemplateVariants,
+} from "./templateVariants";
 
 export { soundLabels } from "./soundAssets";
 
@@ -274,9 +278,15 @@ type TemplateOf<T> = T extends SkillDefinition
       | "target"
     > & { target?: SkillBase["target"] }
   : never;
-export type SkillTemplate = TemplateOf<SkillDefinition>;
+export type SkillTemplate = TemplateOf<SkillDefinition> & {
+  base_template_id?: string | null;
+  override_fields?: TemplateOverride[];
+};
 
-export function skillTemplate(skill: SkillDefinition): SkillTemplate {
+export function skillTemplate(
+  skill: SkillDefinition,
+  source?: SkillTemplate,
+): SkillTemplate {
   const {
     icon,
     enabled,
@@ -302,21 +312,29 @@ export function skillTemplate(skill: SkillDefinition): SkillTemplate {
         }
       : skill,
   );
-  return values;
+  return {
+    ...values,
+    ...(source?.base_template_id
+      ? {
+          base_template_id: source.base_template_id,
+          override_fields: source.override_fields ?? [],
+        }
+      : {}),
+  };
 }
 
 export function resolveCatalogTemplates(catalog: GameCatalog): GameCatalog {
+  const templates = resolveTemplateVariants(catalog.skill_templates ?? []);
   return {
     ...catalog,
+    ...(catalog.skill_templates ? { skill_templates: templates } : {}),
     skills: catalog.skills.map((skill) => {
       const ids = skill.template_ids?.length
         ? skill.template_ids
         : skill.template_id
           ? [skill.template_id]
           : [];
-      const selected = ids.map((id) =>
-        catalog.skill_templates?.find((t) => t.id === id),
-      );
+      const selected = ids.map((id) => templates.find((t) => t.id === id));
       const template = selected[0];
       if (!template) return skill;
       return normalizeSkill({
@@ -340,7 +358,10 @@ export function resolveCatalogTemplates(catalog: GameCatalog): GameCatalog {
         effects: skill.template_ids?.length
           ? selected
               .filter((t) => t !== undefined)
-              .map(({ id, name, ...effect }) => effect)
+              .map(
+                ({ id, name, base_template_id, override_fields, ...effect }) =>
+                  effect,
+              )
           : undefined,
         element: skill.element,
         animation: skill.animation,

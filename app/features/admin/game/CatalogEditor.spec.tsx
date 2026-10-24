@@ -230,6 +230,89 @@ it.each([
   },
 );
 
+it("creates scope variants, shares common values and preserves overrides through save and reload", async () => {
+  const user = userEvent.setup();
+  const view = render(<CatalogEditor kind="skills" />);
+  const table = await screen.findByRole("table", {
+    name: "効果テンプレート一覧",
+  });
+  const root = within(table).getByRole("row", { name: "ファイアの効果" });
+  await user.click(
+    within(root).getByRole("button", { name: "対象数別に作成" }),
+  );
+  const area = within(table).getByRole("row", {
+    name: "ファイアの効果（3体）",
+  });
+  const single = within(table).getByRole("row", {
+    name: "ファイアの効果（1体）",
+  });
+  const all = within(table).getByRole("row", {
+    name: "ファイアの効果（全体）",
+  });
+  expect(within(area).getByLabelText("対象数")).toHaveValue("3");
+  expect(within(all).getByLabelText("対象数")).toHaveValue("all");
+  expect(within(area).getByLabelText("種別")).toBeDisabled();
+  expect(within(root).getByLabelText("共通設定")).toBeDisabled();
+  await user.click(
+    within(root).getByRole("button", { name: "対象数別に作成" }),
+  );
+  expect(
+    within(table)
+      .getAllByRole("row")
+      .filter((row) => row.hasAttribute("aria-label")),
+  ).toHaveLength(7);
+  fireEvent.change(within(root).getByLabelText("正答効果の値"), {
+    target: { value: "2" },
+  });
+  expect(within(area).getByLabelText("正答効果の値")).toHaveValue(2);
+  fireEvent.change(within(area).getByLabelText("正答効果の値"), {
+    target: { value: "0.8" },
+  });
+  fireEvent.change(within(root).getByLabelText("正答効果の値"), {
+    target: { value: "3" },
+  });
+  expect(within(area).getByLabelText("正答効果の値")).toHaveValue(0.8);
+  expect(within(all).getByLabelText("正答効果の値")).toHaveValue(3);
+  expect(within(area).getByLabelText("正答効果の値").closest("td")).toHaveClass(
+    "bg-amber-500/10",
+  );
+  await user.click(
+    within(area).getByRole("button", { name: "効果を共通設定に戻す" }),
+  );
+  expect(within(area).getByLabelText("正答効果の値")).toHaveValue(3);
+  await user.selectOptions(within(single).getByLabelText("共通設定"), "");
+  fireEvent.change(within(root).getByLabelText("正答効果の値"), {
+    target: { value: "4" },
+  });
+  expect(within(single).getByLabelText("正答効果の値")).toHaveValue(3);
+  expect(within(area).getByLabelText("正答効果の値")).toHaveValue(4);
+  await user.click(within(area).getByRole("button", { name: "上へ移動" }));
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  const payload = saved.mock.calls.at(-1)?.[0];
+  expect(
+    payload.skill_templates.find(
+      (row: { name: string }) => row.name === "ファイアの効果（3体）",
+    ),
+  ).toMatchObject({
+    base_template_id: "effect_fire",
+    override_fields: ["target_count"],
+    multiplier: 4,
+  });
+  view.unmount();
+  server.use(
+    http.get("*/admin/game/catalog", () => HttpResponse.json(payload)),
+  );
+  render(<CatalogEditor kind="skills" />);
+  const restored = await screen.findByRole("row", {
+    name: "ファイアの効果（3体）",
+  });
+  expect(within(restored).getByLabelText("共通設定")).toHaveValue(
+    "effect_fire",
+  );
+  expect(within(restored).getByLabelText("正答効果の値")).toHaveValue(4);
+});
+
 it("shares effect edits while retaining independent skill MP and multiple references", async () => {
   server.use(
     http.get("*/admin/game/catalog", () =>

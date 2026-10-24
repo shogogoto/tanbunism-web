@@ -43,7 +43,22 @@ export function skillFileText(
       mp_cost,
     };
   });
-  return `${JSON.stringify({ format: SKILL_FILE_FORMAT, version: SKILL_FILE_VERSION, skill_templates, skills: normalized, ...(elements ? { elements } : {}) }, null, 2)}\n`;
+  const templates = skill_templates.map((template) =>
+    template.base_template_id
+      ? Object.fromEntries(
+          Object.entries(template).filter(([key]) =>
+            [
+              "id",
+              "name",
+              "base_template_id",
+              "override_fields",
+              ...(template.override_fields ?? []),
+            ].includes(key),
+          ),
+        )
+      : template,
+  );
+  return `${JSON.stringify({ format: SKILL_FILE_FORMAT, version: SKILL_FILE_VERSION, skill_templates: templates, skills: normalized, ...(elements ? { elements } : {}) }, null, 2)}\n`;
 }
 
 /** Server-side definitions validate enums, ranges, defaults and references. No writes. */
