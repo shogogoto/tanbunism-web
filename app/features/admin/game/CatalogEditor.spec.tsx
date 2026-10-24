@@ -37,6 +37,36 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
+async function dragRow(
+  user: ReturnType<typeof userEvent.setup>,
+  table: HTMLElement,
+  row: HTMLElement,
+  direction: "ArrowUp" | "ArrowDown",
+) {
+  // Supply layout for the real dnd-kit keyboard sensor in jsdom.
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    function (this: HTMLElement) {
+      const rows = within(table)
+        .getAllByRole("row")
+        .filter((item) => item.hasAttribute("aria-label"));
+      return new DOMRect(
+        0,
+        Math.max(0, rows.indexOf(this.closest("tr") as HTMLElement)) * 100,
+        800,
+        100,
+      );
+    },
+  );
+  const handle = within(row).getByRole("button", {
+    name: "ドラッグして並べ替え",
+  });
+  handle.focus();
+  await user.keyboard("[Space]");
+  expect(handle).toHaveAttribute("aria-pressed", "true");
+  await user.keyboard(`[${direction}]`);
+  await user.keyboard("[Space]");
+}
+
 it("uses two numbered sortable tables and migrates legacy skills", async () => {
   render(<CatalogEditor kind="skills" />);
   const skills = await screen.findByRole("table", { name: "スキル一覧" });
@@ -108,14 +138,12 @@ it.each([
         .filter((row) => row.hasAttribute("aria-label"));
     const original = rows().map((row) => row.getAttribute("aria-label"));
     expect(
-      within(rows()[0]).getByRole("button", { name: "上へ移動" }),
-    ).toBeDisabled();
+      within(table).queryByRole("button", { name: "上へ移動" }),
+    ).not.toBeInTheDocument();
     expect(
-      within(rows()[2]).getByRole("button", { name: "下へ移動" }),
-    ).toBeDisabled();
-    await user.click(
-      within(rows()[0]).getByRole("button", { name: "下へ移動" }),
-    );
+      within(table).queryByRole("button", { name: "下へ移動" }),
+    ).not.toBeInTheDocument();
+    await dragRow(user, table, rows()[0], "ArrowDown");
     expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual([
       original[1],
       original[0],
@@ -124,9 +152,7 @@ it.each([
     expect(
       rows().map((row) => within(row).getAllByRole("cell")[0].textContent),
     ).toEqual(["1", "2", "3"]);
-    await user.click(
-      within(rows()[2]).getByRole("button", { name: "上へ移動" }),
-    );
+    await dragRow(user, table, rows()[2], "ArrowUp");
     const expected = [original[1], original[2], original[0]];
     expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual(
       expected,
@@ -164,9 +190,7 @@ it.each(["スキル一覧", "効果テンプレート一覧"])(
         .getAllByRole("row")
         .filter((row) => row.hasAttribute("aria-label"));
     const sorted = rows().map((row) => row.getAttribute("aria-label"));
-    await user.click(
-      within(rows()[0]).getByRole("button", { name: "下へ移動" }),
-    );
+    await dragRow(user, table, rows()[0], "ArrowDown");
     expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual([
       sorted[1],
       sorted[0],
@@ -286,7 +310,7 @@ it("creates scope variants, shares common values and preserves overrides through
   });
   expect(within(single).getByLabelText("正答効果の値")).toHaveValue(3);
   expect(within(area).getByLabelText("正答効果の値")).toHaveValue(4);
-  await user.click(within(area).getByRole("button", { name: "上へ移動" }));
+  await dragRow(user, table, area, "ArrowUp");
   await user.click(screen.getByRole("button", { name: "保存" }));
   await screen.findByText("保存しました");
   const payload = saved.mock.calls.at(-1)?.[0];

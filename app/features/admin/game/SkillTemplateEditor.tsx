@@ -14,7 +14,7 @@ import {
 } from "~/features/game/templateVariants";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
-import RowOrder, { moveRow } from "./RowOrder";
+import RowOrder from "./RowOrder";
 import { SortableRow, SortableRows } from "./SortableRows";
 import TemplateVariantControls from "./TemplateVariantControls";
 import {
@@ -294,16 +294,7 @@ export default function SkillTemplateEditor({
                     className="border-t [&>td]:p-2"
                   >
                     <td>
-                      <RowOrder
-                        index={index}
-                        count={sorted.length}
-                        onMove={(direction) => {
-                          commit(
-                            moveRow(sorted, index, direction).map(toTemplate),
-                          );
-                          resetSort();
-                        }}
-                      />
+                      <RowOrder index={index} />
                     </td>
                     <td>
                       <Input

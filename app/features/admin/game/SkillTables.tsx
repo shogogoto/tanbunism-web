@@ -10,7 +10,7 @@ import {
 } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
-import RowOrder, { moveRow } from "./RowOrder";
+import RowOrder from "./RowOrder";
 import SkillAnimationGallery from "./SkillAnimationGallery";
 import { SortableRow, SortableRows } from "./SortableRows";
 import useTableSort from "./useTableSort";
@@ -99,14 +99,7 @@ export default function SkillTables({
                     className={`border-t [&>td]:p-2 ${removed ? "bg-muted text-muted-foreground [&>td:not(:last-child)]:opacity-40" : ""}`}
                   >
                     <td>
-                      <RowOrder
-                        index={index}
-                        count={sorted.length}
-                        onMove={(direction) => {
-                          reorder(moveRow(sorted, index, direction));
-                          resetSort();
-                        }}
-                      />
+                      <RowOrder index={index} />
                     </td>
                     <td>
                       <Input
