@@ -7,16 +7,20 @@ import { gameRequest } from "./battle";
 import { type GambitRule, requestGameCatalog } from "./catalog";
 import type { GameSave } from "./domain";
 import type { GameState } from "./state";
+import { hasThreshold, stateCondition } from "./triggerConditions";
 
 const selectClass = "h-9 min-w-0 rounded-md border bg-background px-2 text-sm";
 const conditionLabels = {
   always: "いつでも",
   hp_below: "自分のHPが以下（%）",
+  hp_above: "自分のHPが以上（%）",
   mp_below: "自分のMPが以下（%）",
+  mp_above: "自分のMPが以上（%）",
   enemy_count: "敵の数が以上",
   buff_present: "自分にbuffあり",
   buff_absent: "自分にbuffなし",
   poisoned: "自分が毒状態",
+  state: "自分の状態",
 };
 export default function GambitEditor({
   save,
@@ -234,6 +238,14 @@ export default function GambitEditor({
                           catalog?.triggers?.find(
                             (t) => t.id === e.target.value,
                           )?.threshold ?? rule.threshold,
+                        ...stateCondition(
+                          catalog?.triggers?.find(
+                            (t) => t.id === e.target.value,
+                          ) ?? {
+                            condition: e.target
+                              .value as GambitRule["condition"],
+                          },
+                        ),
                       })
                     }
                   >
@@ -249,8 +261,9 @@ export default function GambitEditor({
                     ))}
                   </select>
                 </label>
-                {["hp_below", "mp_below", "enemy_count"].includes(
-                  rule.condition,
+                {hasThreshold(
+                  catalog?.triggers?.find((t) => t.id === rule.trigger_id)
+                    ?.condition ?? rule.condition,
                 ) && (
                   <label
                     htmlFor={`${rule.rowId}-threshold`}

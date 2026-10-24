@@ -500,12 +500,63 @@ it("references a skill from an item rather than defining a separate effect", asy
   });
   expect(screen.getByRole("table", { name: "アイテム定義" })).toBeVisible();
   expect(screen.queryByLabelText(/価格/)).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("columnheader", { name: "種類" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "1回" }));
+  expect(screen.getByLabelText("使用回数")).toHaveValue(1);
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(saved).toHaveBeenCalled());
   expect(saved.mock.calls[0][0].items[0]).toMatchObject({
     id: "healing_potion",
     skill_id: "heal",
-    max_uses: 3,
+    max_uses: 1,
+  });
+});
+
+it("infers equipment behavior from the selected skill without resetting durability", async () => {
+  server.use(
+    http.get("*/admin/game/catalog", () =>
+      HttpResponse.json({
+        ...sampleCatalog,
+        skills: [
+          ...sampleCatalog.skills,
+          {
+            id: "strength",
+            name: "攻撃力アップ",
+            icon: "sword",
+            enabled: true,
+            effect: "buff",
+            target: "self",
+            stat: "attack",
+            amount: 5,
+            mp_cost: 0,
+          },
+        ],
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="items" />);
+  const select = await screen.findByLabelText("発動スキル");
+  fireEvent.change(screen.getByLabelText("使用回数"), {
+    target: { value: "30" },
+  });
+  await user.selectOptions(select, "strength");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(saved.mock.calls.at(-1)?.[0].items[0]).toMatchObject({
+    kind: "weapon",
+    skill_id: "strength",
+    max_uses: 30,
+  });
+  await user.selectOptions(select, "fire");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalledTimes(2));
+  expect(saved.mock.calls.at(-1)?.[0].items[0]).toMatchObject({
+    kind: "consumable",
+    skill_id: "fire",
+    max_uses: 30,
   });
 });
 

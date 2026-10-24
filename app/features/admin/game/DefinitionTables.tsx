@@ -25,7 +25,7 @@ export default function DefinitionTables({
     "名前",
     "素材",
     ...(kind === "items"
-      ? ["種類", "発動スキル", "使用回数"]
+      ? ["発動スキル", "使用回数"]
       : ["ボス用", "速さ", "攻撃スキル", "命中時スキル"]),
   ];
   const elements = (catalog.elements ?? defaultElements).filter(
@@ -103,67 +103,59 @@ export default function DefinitionTables({
                 <>
                   <td>
                     <select
-                      aria-label="種類"
-                      className={selectClass}
-                      value={item.kind}
-                      onChange={(e) => {
-                        const value = e.target.value as ItemDefinition["kind"];
-                        const skill = catalog.skills.find((s) =>
-                          value === "weapon"
-                            ? isEquipmentSkill(s)
-                            : s.effect !== "equip_attack",
-                        );
-                        update(item.id, {
-                          kind: value,
-                          max_uses: value === "weapon" ? 30 : 1,
-                          skill_id: skill?.id ?? "",
-                        });
-                      }}
-                    >
-                      <option value="consumable">消耗品</option>
-                      <option value="weapon">武器</option>
-                    </select>
-                  </td>
-                  <td>
-                    <select
                       aria-label="発動スキル"
                       required
                       className={selectClass}
                       value={item.skill_id}
-                      onChange={(e) =>
-                        update(item.id, { skill_id: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const skill = catalog.skills.find(
+                          (s) => s.id === e.target.value,
+                        );
+                        update(item.id, {
+                          skill_id: e.target.value,
+                          kind:
+                            skill && isEquipmentSkill(skill)
+                              ? "weapon"
+                              : "consumable",
+                        });
+                      }}
                     >
                       <option value="" disabled>
                         選択
                       </option>
-                      {catalog.skills
-                        .filter((s) =>
-                          item.kind === "weapon"
-                            ? isEquipmentSkill(s)
-                            : s.effect !== "equip_attack",
-                        )
-                        .map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                            {!s.enabled && "（無効）"}
-                          </option>
-                        ))}
+                      {catalog.skills.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                          {!s.enabled && "（無効）"}
+                        </option>
+                      ))}
                     </select>
                   </td>
                   <td>
-                    <Input
-                      aria-label="使用回数"
-                      type="number"
-                      min={1}
-                      max={10000}
-                      required
-                      className="w-24"
-                      value={item.max_uses ?? (item.kind === "weapon" ? 30 : 1)}
-                      onChange={(e) =>
-                        update(item.id, { max_uses: Number(e.target.value) })
-                      }
-                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        aria-label="使用回数"
+                        type="number"
+                        min={1}
+                        max={10000}
+                        required
+                        className="w-24"
+                        value={
+                          item.max_uses ?? (item.kind === "weapon" ? 30 : 1)
+                        }
+                        onChange={(e) =>
+                          update(item.id, { max_uses: Number(e.target.value) })
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => update(item.id, { max_uses: 1 })}
+                      >
+                        1回
+                      </Button>
+                    </div>
                   </td>
                 </>
               ) : (

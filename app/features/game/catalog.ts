@@ -463,6 +463,8 @@ export type GameCatalog = {
     name: string;
     condition: GambitRule["condition"];
     threshold: number;
+    state_kind?: GambitRule["state_kind"];
+    state_present?: boolean;
     enabled: boolean;
   }[];
 };
@@ -494,12 +496,17 @@ export type GambitRule = {
   condition:
     | "always"
     | "hp_below"
+    | "hp_above"
     | "mp_below"
+    | "mp_above"
     | "enemy_count"
+    | "state"
     | "buff_present"
     | "buff_absent"
     | "poisoned";
   threshold: number;
+  state_kind?: "buff" | "debuff" | "poison" | "curse" | "regen" | "refresh";
+  state_present?: boolean;
   action: "skill" | "item" | "specialty";
   definition_id: string;
   trigger_id?: string | null;

@@ -1,16 +1,23 @@
 import { useEffect, useState } from "react";
-import { type GameCatalog, requestGameCatalog } from "~/features/game/catalog";
+import {
+  type GambitRule,
+  type GameCatalog,
+  requestGameCatalog,
+} from "~/features/game/catalog";
+import {
+  conditionGroup,
+  stateCondition,
+  stateLabels,
+} from "~/features/game/triggerConditions";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 
 const conditions = {
   always: "いつでも",
-  hp_below: "HPがn%以下",
-  mp_below: "MPがn%以下",
-  enemy_count: "敵がn体以上",
-  buff_present: "buffあり",
-  buff_absent: "buffなし",
-  poisoned: "毒状態",
+  hp: "HP",
+  mp: "MP",
+  enemy_count: "敵の数",
+  state: "状態",
 };
 export default function TriggerEditor() {
   const [catalog, setCatalog] = useState<GameCatalog>();
@@ -103,7 +110,7 @@ export default function TriggerEditor() {
             <table className="w-full text-sm">
               <thead>
                 <tr>
-                  {["名前", "条件", "初期値n", "有効"].map((h) => (
+                  {["名前", "条件", "詳細", "有効"].map((h) => (
                     <th key={h} className="p-2 text-left">
                       {h}
                     </th>
@@ -112,7 +119,7 @@ export default function TriggerEditor() {
               </thead>
               <tbody>
                 {catalog?.triggers?.map((t) => (
-                  <tr key={t.id} className="border-t">
+                  <tr key={t.id} aria-label={t.name} className="border-t">
                     <td className="p-2">
                       <Input
                         aria-label="条件の名前"
@@ -126,10 +133,20 @@ export default function TriggerEditor() {
                       <select
                         aria-label="判定する条件"
                         className="h-9 rounded-md border bg-background"
-                        value={t.condition}
-                        onChange={(e) =>
-                          patch(t.id, { condition: e.target.value })
-                        }
+                        value={conditionGroup(t.condition)}
+                        onChange={(e) => {
+                          const group = e.target.value;
+                          patch(t.id, {
+                            condition:
+                              group === "hp" || group === "mp"
+                                ? `${group}_below`
+                                : group,
+                            ...stateCondition(t),
+                            ...(group === "enemy_count"
+                              ? { threshold: Math.min(t.threshold, 20) }
+                              : {}),
+                          });
+                        }}
                       >
                         {Object.entries(conditions).map(([id, name]) => (
                           <option key={id} value={id}>
@@ -139,20 +156,97 @@ export default function TriggerEditor() {
                       </select>
                     </td>
                     <td className="p-2">
-                      {["hp_below", "mp_below", "enemy_count"].includes(
-                        t.condition,
-                      ) && (
-                        <Input
-                          aria-label="初期値n"
-                          type="number"
-                          min={1}
-                          max={t.condition === "enemy_count" ? 20 : 100}
-                          value={t.threshold}
-                          onChange={(e) =>
-                            patch(t.id, { threshold: e.target.valueAsNumber })
-                          }
-                        />
-                      )}
+                      <div className="flex items-center gap-2">
+                        {["hp", "mp", "enemy_count"].includes(
+                          conditionGroup(t.condition),
+                        ) && (
+                          <>
+                            <Input
+                              aria-label="しきい値"
+                              type="number"
+                              min={1}
+                              max={t.condition === "enemy_count" ? 20 : 100}
+                              value={
+                                Number.isFinite(t.threshold) ? t.threshold : ""
+                              }
+                              required
+                              className="w-24"
+                              onChange={(e) =>
+                                patch(t.id, {
+                                  threshold: e.target.valueAsNumber,
+                                })
+                              }
+                            />
+                            {t.condition === "enemy_count" ? (
+                              <span>体以上</span>
+                            ) : (
+                              <>
+                                <span>%</span>
+                                <select
+                                  aria-label="比較"
+                                  className="h-9 rounded-md border bg-background px-2"
+                                  value={
+                                    t.condition.endsWith("above")
+                                      ? "above"
+                                      : "below"
+                                  }
+                                  onChange={(e) =>
+                                    patch(t.id, {
+                                      condition: `${conditionGroup(t.condition)}_${e.target.value}`,
+                                    })
+                                  }
+                                >
+                                  <option value="below">以下</option>
+                                  <option value="above">以上</option>
+                                </select>
+                              </>
+                            )}
+                          </>
+                        )}
+                        {conditionGroup(t.condition) === "state" && (
+                          <>
+                            <select
+                              aria-label="判定する状態"
+                              className="h-9 rounded-md border bg-background px-2"
+                              value={stateCondition(t).state_kind}
+                              onChange={(e) =>
+                                patch(t.id, {
+                                  condition: "state",
+                                  ...stateCondition(t),
+                                  state_kind: e.target
+                                    .value as GambitRule["state_kind"],
+                                })
+                              }
+                            >
+                              {Object.entries(stateLabels).map(
+                                ([id, label]) => (
+                                  <option key={id} value={id}>
+                                    {label}
+                                  </option>
+                                ),
+                              )}
+                            </select>
+                            <select
+                              aria-label="状態の有無"
+                              className="h-9 rounded-md border bg-background px-2"
+                              value={String(stateCondition(t).state_present)}
+                              onChange={(e) =>
+                                patch(t.id, {
+                                  condition: "state",
+                                  ...stateCondition(t),
+                                  state_present: e.target.value === "true",
+                                })
+                              }
+                            >
+                              <option value="true">あり</option>
+                              <option value="false">なし</option>
+                            </select>
+                          </>
+                        )}
+                        {t.condition === "always" && (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-2">
                       <input
