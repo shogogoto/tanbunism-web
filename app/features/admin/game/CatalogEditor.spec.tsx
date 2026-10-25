@@ -83,6 +83,7 @@ it("uses sortable tables without row numbers and a separate variation column", a
     "消費MP",
     "演出",
     "有効",
+    "複製",
     "削除",
   ]);
   const row = within(skills).getByRole("row", { name: "ファイア" });
@@ -98,6 +99,10 @@ it("uses sortable tables without row numbers and a separate variation column", a
   expect(sort.closest("th")).toHaveAttribute("aria-sort", "descending");
   const templates = screen.getByRole("table", { name: "効果テンプレート一覧" });
   expect(templates).toHaveClass("w-auto");
+  expect(templates).toHaveClass(
+    "mx-auto",
+    "[&_tr>*:not(:last-child)]:border-r",
+  );
   const templateRow = within(templates).getByRole("row", {
     name: "ファイアの効果",
   });
@@ -117,6 +122,7 @@ it("uses sortable tables without row numbers and a separate variation column", a
     "詳細",
     "タイプ",
     "効果",
+    "複製",
     "削除",
   ]);
   expect(
@@ -130,6 +136,64 @@ it("uses sortable tables without row numbers and a separate variation column", a
   await userEvent.click(nameSort);
   expect(nameSort.closest("th")).toHaveAttribute("aria-sort", "ascending");
 });
+
+it.each([
+  [
+    "効果テンプレート一覧",
+    "ファイアの効果",
+    "skill_templates",
+    "正答効果の値",
+    "2",
+  ],
+  ["スキル一覧", "ファイア", "skills", "消費MP", "7"],
+] as const)(
+  "duplicates a row before the delete action in %s",
+  async (tableName, name, key, field, value) => {
+    const user = userEvent.setup();
+    render(<CatalogEditor kind="skills" />);
+    const table = await screen.findByRole("table", { name: tableName });
+    const original = within(table).getByRole("row", { name });
+    const originalValue = (
+      within(original).getByLabelText(field) as HTMLInputElement
+    ).value;
+    await user.click(within(original).getByRole("button", { name: "複製" }));
+    const copy = within(table).getByRole("row", { name: `${name}（コピー）` });
+    const cells = within(copy).getAllByRole("cell");
+    expect(
+      within(copy).getByRole("button", { name: "複製" }).closest("td"),
+    ).toBe(cells.at(-2));
+    expect(
+      within(copy).getByRole("button", { name: "削除" }).closest("td"),
+    ).toBe(cells.at(-1));
+    expect(within(copy).getByLabelText(field)).toHaveValue(
+      Number(originalValue),
+    );
+    fireEvent.change(within(copy).getByLabelText(field), { target: { value } });
+    expect(within(original).getByLabelText(field)).toHaveValue(
+      Number(originalValue),
+    );
+    expect(saved).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    await screen.findByText("保存しました");
+    const rows = saved.mock.calls.at(-1)?.[0][key];
+    const source = rows.find((row: { name: string }) => row.name === name);
+    const duplicate = rows.find(
+      (row: { name: string }) => row.name === `${name}（コピー）`,
+    );
+    expect(duplicate.id).not.toBe(source.id);
+    if (key === "skills") {
+      expect(duplicate).toMatchObject({
+        template_ids: source.template_ids,
+        mp_cost: 7,
+      });
+      expect(source.mp_cost).toBe(Number(originalValue));
+    } else {
+      expect(duplicate).toMatchObject({ effect: source.effect, multiplier: 2 });
+      expect(source.multiplier).toBe(Number(originalValue));
+      expect(duplicate.base_template_id).toBeUndefined();
+    }
+  },
+);
 
 it.each([
   ["スキル一覧", "skills"],

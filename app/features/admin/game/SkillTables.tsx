@@ -1,4 +1,4 @@
-import { Plus, X } from "lucide-react";
+import { Copy, Plus, X } from "lucide-react";
 import type {
   SkillDefinition,
   SkillPatch,
@@ -7,6 +7,7 @@ import type {
 import {
   type ElementDefinition,
   defaultElements,
+  normalizeSkill,
 } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
@@ -70,7 +71,10 @@ export default function SkillTables({
             resetSort();
           }}
         >
-          <table aria-label="スキル一覧" className="w-full text-sm">
+          <table
+            aria-label="スキル一覧"
+            className="w-full text-sm [&_tr>*:not(:last-child)]:border-r"
+          >
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>
                 <th scope="col" className="w-8">
@@ -83,8 +87,21 @@ export default function SkillTables({
                   ["mp_cost", "消費MP"],
                   ["animation", "演出"],
                   ["enabled", "有効"],
+                  ["duplicate", "複製"],
                   ["deleted", "削除"],
-                ].map(([key, label]) => header(key, label))}
+                ].map(([key, label]) =>
+                  key === "duplicate" ? (
+                    <th
+                      key={key}
+                      scope="col"
+                      className="p-2 text-left font-medium"
+                    >
+                      {label}
+                    </th>
+                  ) : (
+                    header(key, label)
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
@@ -269,6 +286,34 @@ export default function SkillTables({
                         type="button"
                         size="icon"
                         variant="outline"
+                        disabled={removed}
+                        aria-label="複製"
+                        title="複製"
+                        onClick={() =>
+                          reorder(
+                            skills.flatMap((row) =>
+                              row.id === skill.id
+                                ? [
+                                    row,
+                                    normalizeSkill({
+                                      ...structuredClone(row),
+                                      id: `skill_${crypto.randomUUID().replaceAll("-", "")}`,
+                                      name: `${row.name.slice(0, 74)}（コピー）`,
+                                    }),
+                                  ]
+                                : [row],
+                            ),
+                          )
+                        }
+                      >
+                        <Copy aria-hidden="true" className="size-4" />
+                      </Button>
+                    </td>
+                    <td>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
                         disabled={normal}
                         aria-label={removed ? "削除を取り消す" : "削除"}
                         title={removed ? "削除を取り消す" : "削除"}
@@ -282,7 +327,7 @@ export default function SkillTables({
                 );
               })}
               <tr className="border-t">
-                <td colSpan={8} className="p-1 text-center">
+                <td colSpan={9} className="p-1 text-center">
                   <Button
                     aria-label="スキルを追加"
                     type="button"
