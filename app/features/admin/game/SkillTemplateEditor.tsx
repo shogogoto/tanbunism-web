@@ -188,7 +188,8 @@ export default function SkillTemplateEditor({
             aria-label={
               variantId ? "バリエーションの設定" : "効果テンプレート一覧"
             }
-            className="mx-auto w-auto text-sm"
+            layout="content"
+            className="text-sm"
           >
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>

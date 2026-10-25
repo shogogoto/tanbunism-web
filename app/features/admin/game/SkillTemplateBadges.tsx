@@ -21,7 +21,7 @@ export default function SkillTemplateBadges({
     <fieldset
       aria-label="効果テンプレート"
       disabled={disabled}
-      className="flex h-9 min-w-56 max-w-lg items-center gap-1"
+      className="flex h-9 w-max min-w-0 max-w-lg items-center gap-1"
     >
       <div
         className="flex h-9 min-w-0 flex-nowrap items-center gap-1 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

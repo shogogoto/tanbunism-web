@@ -72,7 +72,11 @@ export default function SkillTables({
             resetSort();
           }}
         >
-          <AdminNativeTable aria-label="スキル一覧" className="w-full text-sm">
+          <AdminNativeTable
+            aria-label="スキル一覧"
+            layout="content"
+            className="text-sm"
+          >
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>
                 <th scope="col" className="w-8">
@@ -169,7 +173,7 @@ export default function SkillTables({
                         min={0}
                         max={10000}
                         step={1}
-                        className="w-24"
+                        className="w-20"
                         disabled={removed || normal}
                         value={
                           Number.isFinite(skill.mp_cost) ? skill.mp_cost : ""

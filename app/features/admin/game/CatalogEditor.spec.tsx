@@ -71,6 +71,9 @@ async function dragRow(
 it("uses sortable tables without row numbers and a separate variation column", async () => {
   render(<CatalogEditor kind="skills" />);
   const skills = await screen.findByRole("table", { name: "スキル一覧" });
+  expect(skills).toHaveClass("mx-auto", "w-auto");
+  expect(skills).toHaveAttribute("data-admin-layout", "content");
+  expect(skills).not.toHaveClass("w-full");
   expect(screen.getAllByRole("table")).toHaveLength(2);
   expect(
     within(skills)
@@ -99,6 +102,7 @@ it("uses sortable tables without row numbers and a separate variation column", a
   expect(sort.closest("th")).toHaveAttribute("aria-sort", "descending");
   const templates = screen.getByRole("table", { name: "効果テンプレート一覧" });
   expect(templates).toHaveClass("w-auto");
+  expect(templates).toHaveAttribute("data-admin-layout", "content");
   expect(templates).toHaveClass(
     "mx-auto",
     "[&_tr>th:not(:last-child)]:border-r",
@@ -535,6 +539,8 @@ it("shares effect edits while retaining independent skill MP and multiple refere
   ).toHaveLength(2);
   const badges = within(fire).getByRole("group", { name: "効果テンプレート" });
   expect(badges).toHaveClass("h-9", "flex");
+  expect(badges).toHaveClass("w-max", "min-w-0");
+  expect(badges).not.toHaveClass("min-w-56");
   expect(badges.querySelectorAll('[data-slot="badge"]')).toHaveLength(2);
   expect(badges.querySelector("[data-template-badges]")).toHaveClass(
     "flex-nowrap",

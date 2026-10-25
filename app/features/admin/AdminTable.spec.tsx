@@ -3,6 +3,47 @@ import { expect, it } from "vitest";
 import { Table } from "~/shared/components/ui/table";
 import { AdminNativeTable, AdminTable } from "./AdminTable";
 
+it.each([
+  ["native", AdminNativeTable],
+  ["wrapped", AdminTable],
+] as const)(
+  "shares and enforces content/full width policies for %s tables",
+  (_, Component) => {
+    render(
+      <>
+        <Component aria-label="content" layout="content" className="w-full">
+          <tbody>
+            <tr>
+              <td>内容</td>
+            </tr>
+          </tbody>
+        </Component>
+        <Component aria-label="full" layout="full" className="w-auto">
+          <tbody>
+            <tr>
+              <td>全幅</td>
+            </tr>
+          </tbody>
+        </Component>
+      </>,
+    );
+    expect(screen.getByRole("table", { name: "content" })).toHaveClass(
+      "mx-auto",
+      "w-auto",
+    );
+    expect(screen.getByRole("table", { name: "content" })).not.toHaveClass(
+      "w-full",
+    );
+    expect(screen.getByRole("table", { name: "full" })).toHaveClass("w-full");
+    expect(screen.getByRole("table", { name: "full" })).not.toHaveClass(
+      "w-auto",
+    );
+    expect(screen.getByRole("table", { name: "content" })).not.toHaveAttribute(
+      "layout",
+    );
+  },
+);
+
 it("shares column dividers across native and scroll-wrapped admin tables without changing ordinary tables", () => {
   render(
     <>
