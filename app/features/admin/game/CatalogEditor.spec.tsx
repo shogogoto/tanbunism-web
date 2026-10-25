@@ -533,6 +533,13 @@ it("shares effect edits while retaining independent skill MP and multiple refere
   expect(
     within(fire).getAllByRole("combobox", { name: /^効果テンプレート / }),
   ).toHaveLength(2);
+  const badges = within(fire).getByRole("group", { name: "効果テンプレート" });
+  expect(badges).toHaveClass("h-9", "flex");
+  expect(badges.querySelectorAll('[data-slot="badge"]')).toHaveLength(2);
+  expect(badges.querySelector("[data-template-badges]")).toHaveClass(
+    "flex-nowrap",
+    "overflow-x-auto",
+  );
   expect(within(fire).getByLabelText("効果 1を外す")).toBeEnabled();
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(saved).toHaveBeenCalled());
@@ -548,6 +555,35 @@ it("shares effect edits while retaining independent skill MP and multiple refere
     payload.skills.find((s: { id: string }) => s.id === "thunder"),
   ).toMatchObject({ mp_cost: 3, multiplier: 2 });
   expect(payload.skill_templates[0]).not.toHaveProperty("mp_cost");
+});
+
+it("edits and removes template badges while keeping the remaining effect reference", async () => {
+  render(<CatalogEditor kind="skills" />);
+  const user = userEvent.setup();
+  const fire = await screen.findByRole("row", { name: "ファイア" });
+  await user.click(within(fire).getByRole("button", { name: "効果を追加" }));
+  const second = within(fire).getByLabelText("効果テンプレート 2");
+  const id = (second as HTMLSelectElement).value;
+  expect(within(fire).getByLabelText("効果テンプレート 1")).toHaveAttribute(
+    "title",
+    "ファイアの効果",
+  );
+  await user.click(within(fire).getByRole("button", { name: "効果 1を外す" }));
+  expect(
+    within(fire).getAllByRole("combobox", { name: /^効果テンプレート / }),
+  ).toHaveLength(1);
+  expect(within(fire).getByLabelText("効果テンプレート 1")).toHaveValue(id);
+  await user.selectOptions(
+    within(fire).getByLabelText("効果テンプレート 1"),
+    "effect_fire",
+  );
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(
+    saved.mock.calls
+      .at(-1)?.[0]
+      .skills.find((skill: { id: string }) => skill.id === "fire").template_ids,
+  ).toEqual(["effect_fire"]);
 });
 
 it("does not remove the last effect and keeps consumed MP on the skill", async () => {

@@ -1,0 +1,103 @@
+import { Plus, X } from "lucide-react";
+import type { SkillTemplate } from "~/features/game/catalog";
+import { Badge } from "~/shared/components/ui/badge";
+import { Button } from "~/shared/components/ui/button";
+
+export default function SkillTemplateBadges({
+  value,
+  templates,
+  disabled,
+  onChange,
+}: {
+  value: string[];
+  templates: SkillTemplate[];
+  disabled: boolean;
+  onChange: (ids: string[]) => void;
+}) {
+  const available = templates.filter(
+    (template) => !value.includes(template.id),
+  );
+  return (
+    <fieldset
+      aria-label="効果テンプレート"
+      disabled={disabled}
+      className="flex h-9 min-w-56 max-w-lg items-center gap-1"
+    >
+      <div
+        className="flex h-9 min-w-0 flex-nowrap items-center gap-1 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        data-template-badges
+      >
+        {value.map((id, index) => {
+          const name =
+            templates.find((template) => template.id === id)?.name ?? id;
+          return (
+            <Badge
+              key={id}
+              variant="secondary"
+              className="h-7 gap-1 overflow-visible px-2 focus-within:ring-2 focus-within:ring-ring/50"
+            >
+              <span className="relative min-w-0">
+                <span aria-hidden="true" className="block max-w-60 truncate">
+                  {name}
+                </span>
+                <select
+                  aria-label={`効果テンプレート ${index + 1}`}
+                  title={name}
+                  value={id}
+                  className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-default"
+                  onChange={(event) =>
+                    onChange(
+                      value.map((current, position) =>
+                        position === index ? event.target.value : current,
+                      ),
+                    )
+                  }
+                >
+                  {templates
+                    .filter(
+                      (template) =>
+                        template.id === id || !value.includes(template.id),
+                    )
+                    .map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.name}
+                      </option>
+                    ))}
+                </select>
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-4 rounded-sm p-0"
+                aria-label={`効果 ${index + 1}を外す`}
+                title="効果を外す"
+                disabled={value.length <= 1}
+                onClick={() =>
+                  onChange(value.filter((_, position) => position !== index))
+                }
+              >
+                <X aria-hidden="true" className="size-3" />
+              </Button>
+            </Badge>
+          );
+        })}
+      </div>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className="size-7 shrink-0"
+        aria-label="効果を追加"
+        title="効果を追加"
+        disabled={value.length >= 20 || !available.length}
+        onClick={() => {
+          const next = available[0];
+          if (next) onChange([...value, next.id]);
+        }}
+      >
+        <Plus aria-hidden="true" className="size-4" />
+      </Button>
+    </fieldset>
+  );
+}

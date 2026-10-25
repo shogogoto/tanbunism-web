@@ -13,6 +13,7 @@ import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import RowOrder from "./RowOrder";
 import SkillAnimationGallery from "./SkillAnimationGallery";
+import SkillTemplateBadges from "./SkillTemplateBadges";
 import { SortableRow, SortableRows } from "./SortableRows";
 import useTableSort from "./useTableSort";
 
@@ -118,83 +119,14 @@ export default function SkillTables({
                       />
                     </td>
                     <td>
-                      <div className="min-w-56 space-y-1">
-                        {selected.map((id, index) => (
-                          <div key={id} className="flex items-center gap-1">
-                            <select
-                              aria-label={`効果テンプレート ${index + 1}`}
-                              className="h-9 min-w-40 flex-1 rounded-md border bg-background px-2"
-                              value={id}
-                              disabled={removed || normal}
-                              onChange={(e) =>
-                                update(skill.id, {
-                                  template_ids: selected.map(
-                                    (current, position) =>
-                                      position === index
-                                        ? e.target.value
-                                        : current,
-                                  ),
-                                })
-                              }
-                            >
-                              {templates
-                                .filter(
-                                  (template) =>
-                                    template.id === id ||
-                                    !selected.includes(template.id),
-                                )
-                                .map((template) => (
-                                  <option key={template.id} value={template.id}>
-                                    {template.name}
-                                  </option>
-                                ))}
-                            </select>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              aria-label={`効果 ${index + 1}を外す`}
-                              disabled={
-                                removed || normal || selected.length <= 1
-                              }
-                              onClick={() =>
-                                update(skill.id, {
-                                  template_ids: selected.filter(
-                                    (_, position) => position !== index,
-                                  ),
-                                })
-                              }
-                            >
-                              −
-                            </Button>
-                          </div>
-                        ))}
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          aria-label="効果を追加"
-                          disabled={
-                            removed ||
-                            normal ||
-                            selected.length >= 20 ||
-                            templates.every((template) =>
-                              selected.includes(template.id),
-                            )
-                          }
-                          onClick={() => {
-                            const next = templates.find(
-                              (template) => !selected.includes(template.id),
-                            );
-                            if (next)
-                              update(skill.id, {
-                                template_ids: [...selected, next.id],
-                              });
-                          }}
-                        >
-                          ＋ 効果
-                        </Button>
-                      </div>
+                      <SkillTemplateBadges
+                        value={selected}
+                        templates={templates}
+                        disabled={removed || normal}
+                        onChange={(ids) =>
+                          update(skill.id, { template_ids: ids })
+                        }
+                      />
                     </td>
                     <td>
                       <select
