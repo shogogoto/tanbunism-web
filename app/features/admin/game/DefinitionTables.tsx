@@ -1,4 +1,4 @@
-import { AdminNativeTable } from "~/features/admin/AdminTable";
+import { AdminNativeTable, AdminTableFrame } from "~/features/admin/AdminTable";
 import GameIcon, { IconPicker } from "~/features/game/GameIcon";
 import type {
   EnemyDefinition,
@@ -40,9 +40,10 @@ export default function DefinitionTables({
       ),
   );
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <AdminTableFrame layout="content">
       <AdminNativeTable
-        className="w-full whitespace-nowrap text-sm"
+        layout="content"
+        className="whitespace-nowrap text-sm"
         aria-label={kind === "items" ? "アイテム定義" : "敵定義"}
       >
         {kind === "enemies" && (
@@ -293,6 +294,6 @@ export default function DefinitionTables({
           ))}
         </tbody>
       </AdminNativeTable>
-    </div>
+    </AdminTableFrame>
   );
 }

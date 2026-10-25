@@ -2,7 +2,11 @@ import { ArrowDown, ArrowUp, ChevronsUpDown, Swords } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
-import { AdminTable as Table } from "~/features/admin/AdminTable";
+import {
+  AdminTableFrame,
+  AdminTableSection,
+  AdminNativeTable as Table,
+} from "~/features/admin/AdminTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -222,7 +226,7 @@ function GameDungeonManager() {
   }
 
   return (
-    <section className="mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
+    <AdminTableSection className="space-y-4 p-4 sm:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">ダンジョン母集団</h2>
@@ -248,8 +252,8 @@ function GameDungeonManager() {
       {loading ? (
         <p className="text-sm text-muted-foreground">読み込み中…</p>
       ) : (
-        <div className="overflow-x-auto rounded-md border">
-          <Table aria-label="ダンジョン母集団">
+        <AdminTableFrame layout="content">
+          <Table aria-label="ダンジョン母集団" layout="content">
             <TableHeader>
               <TableRow>
                 <SortHeader
@@ -387,7 +391,7 @@ function GameDungeonManager() {
               )}
             </TableBody>
           </Table>
-        </div>
+        </AdminTableFrame>
       )}
       <AlertDialog
         open={Boolean(target)}
@@ -464,7 +468,7 @@ function GameDungeonManager() {
           </div>
         </DialogContent>
       </Dialog>
-    </section>
+    </AdminTableSection>
   );
 }
 

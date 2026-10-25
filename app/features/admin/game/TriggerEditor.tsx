@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { AdminNativeTable } from "~/features/admin/AdminTable";
+import {
+  AdminNativeTable,
+  AdminTableFrame,
+  AdminTableSection,
+} from "~/features/admin/AdminTable";
 import { type GameCatalog, requestGameCatalog } from "~/features/game/catalog";
 import {
   conditionGroup,
@@ -50,8 +54,8 @@ export default function TriggerEditor() {
     );
   }
   return (
-    <section
-      className="mx-auto max-w-5xl p-4 space-y-4"
+    <AdminTableSection
+      className="space-y-4 p-4 sm:p-6"
       aria-label="ガンビット条件定義"
     >
       <div className="flex items-center justify-between">
@@ -104,9 +108,13 @@ export default function TriggerEditor() {
           }
         }}
       >
-        <fieldset disabled={!catalog || busy}>
-          <div className="overflow-x-auto">
-            <AdminNativeTable className="w-full text-sm">
+        <fieldset disabled={!catalog || busy} className="min-w-0">
+          <AdminTableFrame layout="content">
+            <AdminNativeTable
+              aria-label="ガンビットのトリガー"
+              layout="content"
+              className="text-sm"
+            >
               <thead>
                 <tr>
                   {["名前", "条件", "詳細", "有効"].map((h) => (
@@ -122,6 +130,7 @@ export default function TriggerEditor() {
                     <td className="p-2">
                       <Input
                         aria-label="条件の名前"
+                        className="w-40"
                         value={t.name}
                         required
                         maxLength={80}
@@ -279,13 +288,13 @@ export default function TriggerEditor() {
                 ))}
               </tbody>
             </AdminNativeTable>
-          </div>
+          </AdminTableFrame>
           <div className="flex justify-center mt-4">
             <Button type="submit">保存</Button>
           </div>
         </fieldset>
       </form>
       {saved && <output>保存しました</output>}
-    </section>
+    </AdminTableSection>
   );
 }

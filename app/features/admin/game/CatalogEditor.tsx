@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AdminTableSection } from "~/features/admin/AdminTable";
 import {
   type EnemyDefinition,
   type GameCatalog,
@@ -207,8 +208,8 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
     change({ ...catalog, [kind]: [...catalog[kind], item] });
   }
   return (
-    <section
-      className={`mx-auto w-full min-w-0 space-y-4 p-4 sm:p-6 ${kind === "enemies" || kind === "skills" ? "max-w-none" : "max-w-5xl"}`}
+    <AdminTableSection
+      className="space-y-4 p-4 sm:p-6"
       aria-label={`${names[kind]}定義`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -329,6 +330,6 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
           {saved && <output className="block text-center">保存しました</output>}
         </form>
       )}
-    </section>
+    </AdminTableSection>
   );
 }

@@ -1,7 +1,36 @@
 import { render, screen } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { Table } from "~/shared/components/ui/table";
-import { AdminNativeTable, AdminTable, AdminTableFrame } from "./AdminTable";
+import {
+  AdminNativeTable,
+  AdminTable,
+  AdminTableFrame,
+  AdminTableSection,
+} from "./AdminTable";
+
+it("keeps a table heading in the same content-width section as its frame", () => {
+  render(
+    <AdminTableSection title="効果テンプレート" aria-label="テンプレート設定">
+      <AdminTableFrame layout="content">
+        <AdminNativeTable layout="content" aria-label="テンプレート">
+          <tbody>
+            <tr>
+              <td>戦う</td>
+            </tr>
+          </tbody>
+        </AdminNativeTable>
+      </AdminTableFrame>
+    </AdminTableSection>,
+  );
+  const section = screen.getByRole("region", { name: "テンプレート設定" });
+  expect(section).toHaveClass("mx-auto", "w-fit", "min-w-0", "max-w-full");
+  expect(
+    screen.getByRole("heading", { name: "効果テンプレート" }).parentElement,
+  ).toBe(section);
+  expect(screen.getByRole("table").closest("[data-admin-table-section]")).toBe(
+    section,
+  );
+});
 
 it("sizes content frames to the table while retaining a bounded scroll area", () => {
   render(
@@ -22,6 +51,10 @@ it("sizes content frames to the table while retaining a bounded scroll area", ()
     "max-w-full",
     "overflow-x-auto",
     "border",
+    "[&_thead]:bg-muted/40",
+    "[&_th]:p-2",
+    "[&_td]:p-2",
+    "[&_tbody>tr]:border-t",
   );
   expect(frame).not.toHaveClass("w-full");
 });

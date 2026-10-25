@@ -1,5 +1,9 @@
 import { Plus, X } from "lucide-react";
-import { AdminNativeTable, AdminTableFrame } from "~/features/admin/AdminTable";
+import {
+  AdminNativeTable,
+  AdminTableFrame,
+  AdminTableSection,
+} from "~/features/admin/AdminTable";
 import type {
   SkillDefinition,
   SkillPatch,
@@ -62,8 +66,7 @@ export default function SkillTables({
                   : skill.name,
   );
   return (
-    <section aria-label="スキル一覧" className="space-y-2">
-      <h3 className="font-semibold">スキル一覧</h3>
+    <AdminTableSection aria-label="スキル一覧" title="スキル一覧">
       <AdminTableFrame layout="content">
         <SortableRows
           rows={sorted}
@@ -236,6 +239,6 @@ export default function SkillTables({
           </AdminNativeTable>
         </SortableRows>
       </AdminTableFrame>
-    </section>
+    </AdminTableSection>
   );
 }

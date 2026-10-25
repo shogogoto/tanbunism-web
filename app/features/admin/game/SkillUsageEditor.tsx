@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { AdminNativeTable } from "~/features/admin/AdminTable";
+import {
+  AdminNativeTable,
+  AdminTableFrame,
+  AdminTableSection,
+} from "~/features/admin/AdminTable";
 import {
   type GameCatalog,
   type SpecialtySkillUse,
@@ -35,8 +39,8 @@ export default function SkillUsageEditor() {
     setCatalog((c) => (c ? { ...c, [key]: value } : c));
   }
   return (
-    <section
-      className="mx-auto max-w-5xl p-4 sm:p-6 space-y-4"
+    <AdminTableSection
+      className="space-y-4 p-4 sm:p-6"
       aria-label="スキルの利用設定"
     >
       <h2 className="text-lg font-semibold">スキルの利用設定</h2>
@@ -67,7 +71,7 @@ export default function SkillUsageEditor() {
           }
         }}
       >
-        <fieldset disabled={!catalog || busy} className="space-y-6">
+        <fieldset disabled={!catalog || busy} className="min-w-0 space-y-6">
           {(["player_skills", "specialty_skills"] as const).map((key) => {
             const specialty = key === "specialty_skills";
             const title = specialty ? "専門分野" : "プレイヤー";
@@ -92,7 +96,7 @@ export default function SkillUsageEditor() {
                 uses.map((u, i) => (i === index ? { ...u, ...value } : u)),
               );
             return (
-              <section key={key} aria-label={`${title}のスキル利用`}>
+              <AdminTableSection key={key} aria-label={`${title}のスキル利用`}>
                 <div className="mb-2 flex justify-between gap-2">
                   <h3 className="font-semibold">{title}</h3>
                   <Button
@@ -122,8 +126,12 @@ export default function SkillUsageEditor() {
                     追加
                   </Button>
                 </div>
-                <div className="overflow-x-auto rounded-lg border">
-                  <AdminNativeTable className="w-full whitespace-nowrap text-sm">
+                <AdminTableFrame layout="content">
+                  <AdminNativeTable
+                    aria-label={`${title}のスキル利用`}
+                    layout="content"
+                    className="whitespace-nowrap text-sm"
+                  >
                     <thead className="bg-muted/40">
                       <tr>
                         {[
@@ -248,8 +256,8 @@ export default function SkillUsageEditor() {
                       )}
                     </tbody>
                   </AdminNativeTable>
-                </div>
-              </section>
+                </AdminTableFrame>
+              </AdminTableSection>
             );
           })}
         </fieldset>
@@ -260,6 +268,6 @@ export default function SkillUsageEditor() {
         </div>
         {saved && <output className="block text-center">保存しました</output>}
       </form>
-    </section>
+    </AdminTableSection>
   );
 }

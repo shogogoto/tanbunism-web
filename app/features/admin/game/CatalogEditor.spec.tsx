@@ -18,6 +18,27 @@ import CatalogEditor from "./CatalogEditor";
 import * as skillFiles from "./skillFiles";
 import { variantRowHighlight } from "./variantRowStyles";
 
+it.each([
+  ["skills", "スキル一覧"],
+  ["items", "アイテム定義"],
+  ["enemies", "敵定義"],
+  ["shop", "ショップ販売設定"],
+] as const)(
+  "uses the shared content-width section and frame for %s",
+  async (kind, name) => {
+    render(<CatalogEditor kind={kind} />);
+    const table = await screen.findByRole("table", { name });
+    expect(table).toHaveAttribute("data-admin-layout", "content");
+    expect(table.closest("[data-admin-table-frame]")).toHaveAttribute(
+      "data-admin-table-frame",
+      "content",
+    );
+    const section = table.closest("[data-admin-table-section]");
+    expect(section).toHaveClass("w-fit", "max-w-full");
+    expect(section?.querySelector("h2,h3")).not.toBeNull();
+  },
+);
+
 const saved = vi.fn();
 const server = setupServer(
   http.get("*/admin/game/catalog", () => HttpResponse.json(sampleCatalog)),
@@ -1339,8 +1360,8 @@ it("configures enemy icons and attacks and surfaces save failures", async () => 
   );
   render(<CatalogEditor kind="enemies" />);
   expect(screen.getByRole("region", { name: "敵定義" })).toHaveClass(
-    "w-full",
-    "max-w-none",
+    "w-fit",
+    "max-w-full",
   );
   const user = userEvent.setup();
   await user.selectOptions(await screen.findByLabelText("攻撃スキル"), "fire");

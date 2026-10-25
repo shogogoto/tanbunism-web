@@ -1,5 +1,9 @@
 import { Plus, X } from "lucide-react";
-import { AdminNativeTable, AdminTableFrame } from "~/features/admin/AdminTable";
+import {
+  AdminNativeTable,
+  AdminTableFrame,
+  AdminTableSection,
+} from "~/features/admin/AdminTable";
 import {
   type GameCatalog,
   type SkillDefinition,
@@ -168,8 +172,10 @@ export default function SkillTemplateEditor({
     );
   }
   return (
-    <section aria-label="効果テンプレート" className="min-w-0 space-y-2">
-      {!variantId && <h3 className="font-semibold">効果テンプレート</h3>}
+    <AdminTableSection
+      aria-label="効果テンプレート"
+      title={!variantId ? "効果テンプレート" : undefined}
+    >
       <AdminTableFrame layout="content">
         <SortableRows
           rows={sorted}
@@ -768,6 +774,6 @@ export default function SkillTemplateEditor({
           </AdminNativeTable>
         </SortableRows>
       </AdminTableFrame>
-    </section>
+    </AdminTableSection>
   );
 }

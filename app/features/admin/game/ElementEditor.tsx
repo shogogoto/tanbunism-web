@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { AdminNativeTable } from "~/features/admin/AdminTable";
+import {
+  AdminNativeTable,
+  AdminTableFrame,
+  AdminTableSection,
+} from "~/features/admin/AdminTable";
 import { IconPicker } from "~/features/game/GameIcon";
 import {
   type ElementDefinition,
@@ -43,9 +47,9 @@ export default function ElementEditor() {
     );
   }
   return (
-    <section aria-label="属性定義" className="mx-auto max-w-5xl space-y-4 p-4">
+    <AdminTableSection aria-label="属性定義" className="space-y-4 p-4 sm:p-6">
       <h2 className="text-lg font-semibold">属性</h2>
-      <p className="text-sm text-muted-foreground">
+      <p className="w-0 min-w-full text-sm text-muted-foreground">
         スキルの属性と、敵の弱点・状態効果の補正対象として使います。無属性は未設定です。無効にすると相性計算から外れ、参照は保持されます。
       </p>
       {error && (
@@ -78,10 +82,11 @@ export default function ElementEditor() {
           }}
         >
           <fieldset disabled={busy} className="min-w-0">
-            <div className="overflow-x-auto rounded-lg border">
+            <AdminTableFrame layout="content">
               <AdminNativeTable
                 aria-label="属性一覧"
-                className="w-full text-sm"
+                layout="content"
+                className="text-sm"
               >
                 <thead className="bg-muted/40">
                   <tr>
@@ -102,6 +107,7 @@ export default function ElementEditor() {
                       <td>
                         <Input
                           aria-label="属性名"
+                          className="w-40"
                           value={element.name}
                           required
                           maxLength={40}
@@ -170,7 +176,7 @@ export default function ElementEditor() {
                   </tr>
                 </tbody>
               </AdminNativeTable>
-            </div>
+            </AdminTableFrame>
             <div className="mt-4 flex justify-center">
               <Button type="submit">{busy ? "保存中…" : "保存"}</Button>
             </div>
@@ -178,6 +184,6 @@ export default function ElementEditor() {
           {saved && <output className="block text-center">保存しました</output>}
         </form>
       )}
-    </section>
+    </AdminTableSection>
   );
 }

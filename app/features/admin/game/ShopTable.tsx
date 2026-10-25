@@ -1,4 +1,4 @@
-import { AdminNativeTable } from "~/features/admin/AdminTable";
+import { AdminNativeTable, AdminTableFrame } from "~/features/admin/AdminTable";
 import GameIcon from "~/features/game/GameIcon";
 import type { GameCatalog, ShopListing } from "~/features/game/catalog";
 import { Input } from "~/shared/components/ui/input";
@@ -17,9 +17,10 @@ export default function ShopTable({
     );
   }
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <AdminTableFrame layout="content">
       <AdminNativeTable
-        className="w-full whitespace-nowrap text-sm"
+        layout="content"
+        className="whitespace-nowrap text-sm"
         aria-label="ショップ販売設定"
       >
         <thead className="bg-muted/40">
@@ -91,6 +92,6 @@ export default function ShopTable({
           アイテムを先に定義してください。
         </p>
       )}
-    </div>
+    </AdminTableFrame>
   );
 }
