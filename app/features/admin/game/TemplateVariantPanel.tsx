@@ -22,6 +22,7 @@ import {
 } from "~/shared/components/ui/dialog";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
+import VariantSetEditor, { variantSetFields } from "./VariantSetEditor";
 import {
   type VariantAxis,
   axisVariant,
@@ -43,7 +44,8 @@ export default function TemplateVariantPanel({
   const [error, setError] = useState<string>();
   const templates = catalog.skill_templates ?? [];
   const variants = templates.filter(
-    (row) => row.base_template_id === template.id,
+    (row) =>
+      row.base_template_id === template.id && !row.variant_selections?.length,
   );
   const axes = variantAxes(template, catalog.elements ?? defaultElements);
   const depth = templateLineage(templates, template.id).length - 1;
@@ -73,7 +75,8 @@ export default function TemplateVariantPanel({
       templates.map((row) =>
         row.id === template.id
           ? { ...row, variant_axis: nextAxis.id }
-          : row.base_template_id === template.id
+          : row.base_template_id === template.id &&
+              !row.variant_selections?.length
             ? axisVariant(
                 template,
                 nextAxis,
@@ -131,6 +134,68 @@ export default function TemplateVariantPanel({
             変更項目を1つ選び、サブ名と値を登録します。一覧の保存で確定します。
           </DialogDescription>
         </DialogHeader>
+        <fieldset className="min-w-0 space-y-2" aria-label="使用する変型セット">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-medium">共有する変型セット</span>
+            <VariantSetEditor catalog={catalog} onChange={onChange} />
+          </div>
+          {(catalog.variant_sets ?? []).map((set) => {
+            const ids = template.variant_set_ids ?? [];
+            const checked = ids.includes(set.id);
+            const conflict =
+              !checked &&
+              (catalog.variant_sets ?? []).some(
+                (other) => ids.includes(other.id) && other.field === set.field,
+              );
+            const incompatible = !(set.field in template);
+            return (
+              <label key={set.id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  aria-label={`${set.name}を使用`}
+                  checked={checked}
+                  disabled={conflict || incompatible}
+                  onChange={(e) => {
+                    try {
+                      onChange(
+                        resolveCatalogTemplates({
+                          ...catalog,
+                          skill_templates: templates.map((row) =>
+                            row.id === template.id
+                              ? {
+                                  ...row,
+                                  variant_set_ids: e.target.checked
+                                    ? [...ids, set.id]
+                                    : ids.filter((id) => id !== set.id),
+                                }
+                              : row,
+                          ),
+                        }),
+                      );
+                      setError(undefined);
+                    } catch (cause) {
+                      setError(
+                        cause instanceof Error
+                          ? cause.message
+                          : "セットを変更できませんでした。",
+                      );
+                    }
+                  }}
+                />
+                <span>{set.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {variantSetFields[set.field].name}
+                  {conflict
+                    ? "（同じ項目を使用中）"
+                    : incompatible
+                      ? "（この効果では使用不可）"
+                      : ""}
+                </span>
+              </label>
+            );
+          })}
+        </fieldset>
+        <div className="border-t pt-3 text-sm font-medium">個別の変型</div>
         <div className="space-y-2">
           <Label htmlFor={`variant-axis-${template.id}`}>変更する項目</Label>
           <select

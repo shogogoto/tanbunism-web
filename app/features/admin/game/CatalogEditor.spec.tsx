@@ -803,6 +803,7 @@ it("exports template changes and excludes skills marked for deletion", async () 
       expect.objectContaining({ id: "effect_heal", amount: 25 }),
     ]),
     undefined,
+    undefined,
   );
   expect(saved).not.toHaveBeenCalled();
 });

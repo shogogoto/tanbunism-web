@@ -4,6 +4,11 @@ import {
   normalizeSkill,
   skillTemplate,
 } from "./catalog";
+import {
+  type VariantSet,
+  attachedVariantSets,
+  selectedVariantValues,
+} from "./variantSets";
 
 export const templateOverrideFields = [
   "effect",
@@ -109,7 +114,14 @@ export function templateDescendants(
 /** Resolve parents once, reject cycles, and preserve independent overrides at each level. */
 export function resolveTemplateVariants(
   templates: SkillTemplate[],
+  sets: VariantSet[] = [],
 ): SkillTemplate[] {
+  if (new Set(sets.map((s) => s.id)).size !== sets.length)
+    throw new Error("変型セットのIDが重複しています。");
+  for (const set of sets) {
+    if (new Set(set.values.map((v) => v.id)).size !== set.values.length)
+      throw new Error("変型セットの候補IDが重複しています。");
+  }
   const entries = new Map(templates.map((row) => [row.id, row]));
   if (entries.size !== templates.length)
     throw new Error("効果テンプレートのIDが重複しています。");
@@ -126,6 +138,7 @@ export function resolveTemplateVariants(
     if (visiting.size > MAX_VARIANT_DEPTH + 1)
       throw new Error("変型は最大16段までです。");
     if (!template.base_template_id) {
+      attachedVariantSets(template, sets);
       parts.set(id, { root: template.name, labels: [] });
       resolved.set(id, template);
       visiting.delete(id);
@@ -134,7 +147,15 @@ export function resolveTemplateVariants(
     const base = resolve(template.base_template_id);
     const parent = parts.get(base.id);
     if (!parent) throw new Error("共通設定が見つかりません。");
-    const labels = [...parent.labels, legacyLabel(template, base.name)];
+    const selection = template.variant_selections?.length
+      ? selectedVariantValues(base, template.variant_selections, sets)
+      : undefined;
+    if (selection && template.override_fields?.length)
+      throw new Error("セットの組み合わせに個別の上書きは指定できません。");
+    const labels = [
+      ...parent.labels,
+      ...(selection?.labels ?? [legacyLabel(template, base.name)]),
+    ];
     if (labels.length > MAX_VARIANT_DEPTH)
       throw new Error("変型は最大16段までです。");
     const overrides = Object.fromEntries(
@@ -146,14 +167,20 @@ export function resolveTemplateVariants(
     const merged = {
       ...base,
       ...overrides,
+      ...selection?.changes,
       id: template.id,
-      name: template.variant_label
-        ? `${parent.root}（${labels.join(", ")}）`
-        : template.name,
+      name:
+        template.variant_label || selection
+          ? `${parent.root}（${labels.join(", ")}）`
+          : template.name,
       base_template_id: base.id,
       override_fields: template.override_fields ?? [],
       variant_axis: template.variant_axis,
       variant_label: template.variant_label,
+      variant_set_ids: selection
+        ? []
+        : (template.variant_set_ids ?? base.variant_set_ids),
+      variant_selections: template.variant_selections,
     } as SkillTemplate;
     const normalized = skillTemplate(
       normalizeSkill({
@@ -171,6 +198,7 @@ export function resolveTemplateVariants(
         (key) => key in normalized,
       ),
     };
+    attachedVariantSets(result, sets);
     parts.set(id, { root: parent.root, labels });
     resolved.set(id, result);
     visiting.delete(id);

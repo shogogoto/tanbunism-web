@@ -275,6 +275,8 @@ export type SkillTemplate = TemplateOf<SkillDefinition> & {
   override_fields?: TemplateOverride[];
   variant_axis?: string | null;
   variant_label?: string | null;
+  variant_set_ids?: string[];
+  variant_selections?: import("./variantSets").VariantSelection[];
 };
 
 export function skillTemplate(
@@ -308,6 +310,12 @@ export function skillTemplate(
   );
   return {
     ...values,
+    ...(source?.variant_set_ids
+      ? { variant_set_ids: source.variant_set_ids }
+      : {}),
+    ...(source?.variant_selections
+      ? { variant_selections: source.variant_selections }
+      : {}),
     ...(source?.variant_axis ? { variant_axis: source.variant_axis } : {}),
     ...(source?.variant_label ? { variant_label: source.variant_label } : {}),
     ...(source?.base_template_id
@@ -320,7 +328,10 @@ export function skillTemplate(
 }
 
 export function resolveCatalogTemplates(catalog: GameCatalog): GameCatalog {
-  const templates = resolveTemplateVariants(catalog.skill_templates ?? []);
+  const templates = resolveTemplateVariants(
+    catalog.skill_templates ?? [],
+    catalog.variant_sets ?? [],
+  );
   return {
     ...catalog,
     ...(catalog.skill_templates ? { skill_templates: templates } : {}),
@@ -362,6 +373,8 @@ export function resolveCatalogTemplates(catalog: GameCatalog): GameCatalog {
                   override_fields,
                   variant_axis,
                   variant_label,
+                  variant_set_ids,
+                  variant_selections,
                   ...effect
                 }) => effect,
               )
@@ -485,6 +498,7 @@ export const enemyStatLabels = {
 };
 export type EnemyStat = keyof typeof enemyStatLabels;
 export type GameCatalog = {
+  variant_sets?: import("./variantSets").VariantSet[];
   elements?: ElementDefinition[];
   skills: SkillDefinition[];
   skill_templates?: SkillTemplate[];

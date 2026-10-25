@@ -5,16 +5,18 @@ import {
   type SkillTemplate,
   normalizeSkill,
 } from "~/features/game/catalog";
+import type { VariantSet } from "~/features/game/variantSets";
 import { networkFetch } from "~/shared/lib/networkFetch";
 
 export const SKILL_FILE_FORMAT = "tanbunism.skills";
-export const SKILL_FILE_VERSION = 5;
+export const SKILL_FILE_VERSION = 6;
 export const MAX_SKILL_FILE_BYTES = 1024 * 1024;
 
 export function skillFileText(
   skills: SkillDefinition[],
   skill_templates: SkillTemplate[] = [],
   elements?: ElementDefinition[],
+  variant_sets?: VariantSet[],
 ) {
   const normalized = skills.map(normalizeSkill).map((skill) => {
     if (!skill.template_id && !skill.template_ids?.length) return skill;
@@ -54,13 +56,15 @@ export function skillFileText(
               "override_fields",
               "variant_label",
               "variant_axis",
+              "variant_set_ids",
+              "variant_selections",
               ...(template.override_fields ?? []),
             ].includes(key),
           ),
         )
       : template,
   );
-  return `${JSON.stringify({ format: SKILL_FILE_FORMAT, version: SKILL_FILE_VERSION, skill_templates: templates, skills: normalized, ...(elements ? { elements } : {}) }, null, 2)}\n`;
+  return `${JSON.stringify({ format: SKILL_FILE_FORMAT, version: SKILL_FILE_VERSION, skill_templates: templates, skills: normalized, ...(elements ? { elements } : {}), ...(variant_sets ? { variant_sets } : {}) }, null, 2)}\n`;
 }
 
 /** Server-side definitions validate enums, ranges, defaults and references. No writes. */
@@ -119,9 +123,10 @@ export function downloadSkillFile(
   skills: SkillDefinition[],
   templates: SkillTemplate[] = [],
   elements?: ElementDefinition[],
+  variant_sets?: VariantSet[],
 ) {
   const url = URL.createObjectURL(
-    new Blob([skillFileText(skills, templates, elements)], {
+    new Blob([skillFileText(skills, templates, elements, variant_sets)], {
       type: "application/json",
     }),
   );

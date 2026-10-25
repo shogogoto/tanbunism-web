@@ -41,7 +41,7 @@ it("writes a versioned skills-only file without granting access or exporting con
   const text = skillFileText(skills);
   expect(JSON.parse(text)).toEqual({
     format: "tanbunism.skills",
-    version: 5,
+    version: 6,
     skill_templates: [],
     skills: skills.map(normalizeSkill),
   });
@@ -57,7 +57,7 @@ it("共有テンプレートと参照を出力し、共有値を各スキルへ�
       sampleTemplateCatalog.skill_templates,
     ),
   );
-  expect(exported.version).toBe(5);
+  expect(exported.version).toBe(6);
   expect(exported.skill_templates[0]).toMatchObject({
     id: "basic_spell",
     damage_type: "special",

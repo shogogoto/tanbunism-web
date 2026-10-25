@@ -13,6 +13,7 @@ import {
   type ElementDefinition,
   defaultElements,
 } from "~/features/game/catalog";
+import type { VariantSelection, VariantSet } from "~/features/game/variantSets";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import RowOrder from "./RowOrder";
@@ -30,6 +31,8 @@ export default function SkillTables({
   toggleDelete,
   reorder,
   elements = defaultElements,
+  variantSets = [],
+  onCombine,
 }: {
   skills: SkillDefinition[];
   templates?: SkillTemplate[];
@@ -42,6 +45,13 @@ export default function SkillTables({
   toggleDelete: (id: string) => void;
   reorder: (skills: SkillDefinition[]) => void;
   elements?: ElementDefinition[];
+  variantSets?: VariantSet[];
+  onCombine?: (
+    skillId: string,
+    index: number,
+    baseId: string,
+    selections: VariantSelection[],
+  ) => void;
 }) {
   const names = (skill: SkillDefinition) =>
     (skill.template_ids ?? [])
@@ -130,6 +140,13 @@ export default function SkillTables({
                         value={selected}
                         templates={templates}
                         disabled={removed || normal}
+                        variantSets={variantSets}
+                        onCombine={
+                          onCombine
+                            ? (index, baseId, selections) =>
+                                onCombine(skill.id, index, baseId, selections)
+                            : undefined
+                        }
                         onChange={(ids) =>
                           update(skill.id, { template_ids: ids })
                         }

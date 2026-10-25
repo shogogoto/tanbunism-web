@@ -11,6 +11,7 @@ import {
   requestGameCatalog,
   resolveCatalogTemplates,
 } from "~/features/game/catalog";
+import { combinationTemplate } from "~/features/game/variantSets";
 import { Button } from "~/shared/components/ui/button";
 import DefinitionTables from "./DefinitionTables";
 import ShopTable from "./ShopTable";
@@ -247,6 +248,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
                     catalog.skills.filter((s) => !deletions.has(s.id)),
                     catalog.skill_templates,
                     catalog.elements,
+                    catalog.variant_sets,
                   );
               }}
             >
@@ -292,6 +294,40 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
                 reorder={(skills) => change({ ...catalog, skills })}
                 templates={catalog.skill_templates}
                 elements={catalog.elements}
+                variantSets={catalog.variant_sets}
+                onCombine={(skillId, index, baseId, selections) => {
+                  const templates = catalog.skill_templates ?? [];
+                  const combined = selections.length
+                    ? combinationTemplate(templates, baseId, selections)
+                    : templates.find((t) => t.id === baseId);
+                  if (!combined) return;
+                  if (
+                    catalog.skills
+                      .find((s) => s.id === skillId)
+                      ?.template_ids?.some(
+                        (id, i) => i !== index && id === combined.id,
+                      )
+                  )
+                    throw new Error(
+                      "同じ効果テンプレートを重複して指定できません。",
+                    );
+                  change({
+                    ...catalog,
+                    skill_templates: templates.some((t) => t.id === combined.id)
+                      ? templates
+                      : [...templates, combined],
+                    skills: catalog.skills.map((skill) =>
+                      skill.id === skillId
+                        ? {
+                            ...skill,
+                            template_ids: (skill.template_ids ?? []).map(
+                              (id, i) => (i === index ? combined.id : id),
+                            ),
+                          }
+                        : skill,
+                    ),
+                  });
+                }}
                 update={update}
                 add={add}
                 deletions={deletions}

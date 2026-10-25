@@ -7,6 +7,7 @@ import {
 import {
   sampleCatalog,
   sampleTemplateCatalog,
+  sampleVariantSetCatalog,
 } from "~/features/game/catalog.fixtures";
 import CatalogEditor from "./CatalogEditor";
 
@@ -50,7 +51,7 @@ export default {
           };
           if (
             document.format !== "tanbunism.skills" ||
-            ![1, 2, 3, 4, 5].includes(document.version) ||
+            ![1, 2, 3, 4, 5, 6].includes(document.version) ||
             !Array.isArray(document.skills)
           ) {
             return HttpResponse.json(
@@ -111,6 +112,20 @@ export const SharedTemplates: StoryObj<typeof CatalogEditor> = {
   },
 };
 export const Shop: StoryObj<typeof CatalogEditor> = { args: { kind: "shop" } };
+export const VariantSets: StoryObj<typeof CatalogEditor> = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get("*/admin/game/catalog", () =>
+          HttpResponse.json(sampleVariantSetCatalog),
+        ),
+        http.put("*/admin/game/catalog", async ({ request }) =>
+          HttpResponse.json(await request.json()),
+        ),
+      ],
+    },
+  },
+};
 export const Items: StoryObj<typeof CatalogEditor> = {
   args: { kind: "items" },
 };

@@ -5,6 +5,48 @@ admin → ゲーム → スキルから、編集中の一覧を書き出し、�
 ファイルにない既存スキルは残ります。表を確認して「保存」を押すまで反映されません。
 アイテム・敵・専門分野などの利用設定は、このファイルでは変更しません。
 
+## 共有する変型セット（バージョン6）
+
+現在の書き出しはバージョン6です。1〜5のファイルも引き続き取り込めます。
+「変型」→「変型セットを管理」で、変更する一項目と副名・値の候補を定義します。
+テンプレートの「使用する変型セット」で紐づけ、スキルのバッジ横の「変型」から
+各セットの候補を組み合わせます。同じ項目のセットは併用できません。
+セットや候補の名前・値は参照先すべてへ反映され、使用中の参照を壊す削除は拒否します。
+
+```json
+{
+  "format": "tanbunism.skills",
+  "version": 6,
+  "variant_sets": [
+    { "id": "tier", "name": "威力段階", "field": "multiplier", "values": [
+      { "id": "low", "name": "初級", "value": 1.2 },
+      { "id": "mid", "name": "中級", "value": 1.8 }
+    ] },
+    { "id": "range", "name": "対象範囲", "field": "target_count", "values": [
+      { "id": "single", "name": "単体", "value": 1 },
+      { "id": "area", "name": "範囲", "value": 3 }
+    ] }
+  ],
+  "skill_templates": [
+    { "id": "magic", "name": "魔法攻撃", "effect": "attack", "damage_type": "special", "variant_set_ids": ["tier", "range"] },
+    { "id": "magic_mid_area", "name": "魔法攻撃（中級, 範囲）", "base_template_id": "magic", "variant_selections": [
+      { "set_id": "tier", "value_id": "mid" },
+      { "set_id": "range", "value_id": "area" }
+    ] }
+  ],
+  "skills": [
+    { "id": "fire", "name": "ファイア", "mp_cost": 3, "template_ids": ["magic_mid_area"], "element": "fire", "animation": "fire" }
+  ]
+}
+```
+
+全組み合わせを行として展開せず、選んだ組み合わせだけを参照として保持します。
+組み合わせ行には効果量をコピーせず、親と候補から再計算します。
+個別の変型（`base_template_id` / `override_fields`）も引き続き利用できます。
+上限は100セット・1セット40候補・1テンプレート8セットです。
+
+## 旧形式の直接定義例（バージョン3）
+
 ```json
 {
   "format": "tanbunism.skills",

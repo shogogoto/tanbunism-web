@@ -110,3 +110,35 @@ export const sampleTemplateCatalog = resolveCatalogTemplates({
     }),
   ],
 });
+
+export const sampleVariantSetCatalog: GameCatalog = {
+  ...sampleTemplateCatalog,
+  variant_sets: [
+    {
+      id: "tier",
+      name: "威力段階",
+      field: "multiplier",
+      values: [
+        { id: "low", name: "初級", value: 1.2 },
+        { id: "mid", name: "中級", value: 1.8 },
+        { id: "high", name: "上級", value: 2.5 },
+      ],
+    },
+    {
+      id: "range",
+      name: "対象範囲",
+      field: "target_count",
+      values: [
+        { id: "single", name: "単体", value: 1 },
+        { id: "area", name: "範囲", value: 3 },
+        { id: "wide", name: "広域", value: 5 },
+        { id: "all", name: "全体", value: "all" },
+      ],
+    },
+  ],
+  skill_templates: sampleTemplateCatalog.skill_templates?.map((t) => ({
+    ...t,
+    name: "魔法攻撃",
+    variant_set_ids: ["tier", "range"],
+  })),
+};

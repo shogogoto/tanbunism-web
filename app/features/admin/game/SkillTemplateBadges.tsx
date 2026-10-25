@@ -1,21 +1,32 @@
 import { Plus, X } from "lucide-react";
 import type { SkillTemplate } from "~/features/game/catalog";
+import type { VariantSelection, VariantSet } from "~/features/game/variantSets";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
+import VariantCombinationPicker from "./VariantCombinationPicker";
 
 export default function SkillTemplateBadges({
   value,
   templates,
   disabled,
   onChange,
+  variantSets = [],
+  onCombine,
 }: {
   value: string[];
   templates: SkillTemplate[];
   disabled: boolean;
   onChange: (ids: string[]) => void;
+  variantSets?: VariantSet[];
+  onCombine?: (
+    index: number,
+    baseId: string,
+    selections: VariantSelection[],
+  ) => void;
 }) {
   const available = templates.filter(
-    (template) => !value.includes(template.id),
+    (template) =>
+      !value.includes(template.id) && !template.variant_selections?.length,
   );
   return (
     <fieldset
@@ -28,6 +39,10 @@ export default function SkillTemplateBadges({
         data-template-badges
       >
         {value.map((id, index) => {
+          const template = templates.find((t) => t.id === id);
+          const base = template?.variant_selections?.length
+            ? templates.find((t) => t.id === template.base_template_id)
+            : template;
           const name =
             templates.find((template) => template.id === id)?.name ?? id;
           return (
@@ -56,7 +71,9 @@ export default function SkillTemplateBadges({
                   {templates
                     .filter(
                       (template) =>
-                        template.id === id || !value.includes(template.id),
+                        template.id === id ||
+                        (!value.includes(template.id) &&
+                          !template.variant_selections?.length),
                     )
                     .map((template) => (
                       <option key={template.id} value={template.id}>
@@ -65,6 +82,18 @@ export default function SkillTemplateBadges({
                     ))}
                 </select>
               </span>
+              {template && base && onCombine && (
+                <VariantCombinationPicker
+                  template={template}
+                  base={base}
+                  sets={variantSets}
+                  disabled={disabled}
+                  label={`効果 ${index + 1}の変型を選ぶ`}
+                  onChoose={(baseId, selections) =>
+                    onCombine(index, baseId, selections)
+                  }
+                />
+              )}
               <Button
                 type="button"
                 variant="ghost"
