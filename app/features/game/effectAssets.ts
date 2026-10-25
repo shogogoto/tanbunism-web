@@ -2,6 +2,15 @@ import manifest from "./effectSpriteManifest.json";
 
 /** Stable IDs shared with the server allow-list; existing CSS IDs stay valid. */
 export const spriteAnimationLabels = {
+  willo_ice_shatter: "氷の粉砕",
+  willo_zap: "稲妻の着弾",
+  oga_star_ice: "氷の槍",
+  oga_star_thunder: "弾ける雷球",
+  willo_fire_impact: "火炎の炸裂",
+  oga_star_fire: "飛翔する火球",
+  willo_cast: "魔法の詠唱",
+  willo_heal: "回復の粒子",
+  willo_impact: "魔力の着弾",
   oga_slash_1: "弧の斬撃",
   oga_slash_2: "回転斬撃",
   oga_slash_3: "残像斬撃",
@@ -57,5 +66,9 @@ export function spriteAsset(animation: string) {
     src: `/game-assets/effects/${id}.webp`,
     poster: `/game-assets/effects/${id}-poster.webp`,
     label: spriteAnimationLabels[id],
+    license:
+      id.startsWith("willo_") || id.startsWith("mochi_")
+        ? "Royalty-free"
+        : "CC0",
   };
 }

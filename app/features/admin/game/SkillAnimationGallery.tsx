@@ -153,6 +153,11 @@ export default function SkillAnimationGallery({
                     type="button"
                     aria-label={`${label}をプレビュー`}
                     aria-pressed={selected === id}
+                    title={
+                      spriteAsset(id)
+                        ? `${spriteAsset(id)?.author} / ${spriteAsset(id)?.license}`
+                        : undefined
+                    }
                     className="flex min-w-0 flex-col items-center gap-2 rounded-lg border p-2 text-sm hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-pressed:border-primary aria-pressed:bg-primary/10"
                     onClick={() => {
                       setSelected(id);
@@ -179,7 +184,7 @@ export default function SkillAnimationGallery({
           </section>
           <section className="flex min-h-0 min-w-0 flex-col gap-2">
             <h3 className="text-sm font-semibold">
-              SE（{Object.keys(soundAssets).length}種類・CC0）
+              SE（{Object.keys(soundAssets).length}種類）
             </h3>
             <div
               className="min-h-0 flex-1 space-y-4 overflow-y-auto"

@@ -3,9 +3,9 @@ import { resolve } from "node:path";
 import { animationLabels } from "./catalog";
 import { spriteAnimationLabels, spriteAsset } from "./effectAssets";
 
-it("registers forty-five local strips with valid metadata and poster files", () => {
+it("registers local strips with valid metadata, licenses and poster files", () => {
   const ids = Object.keys(spriteAnimationLabels);
-  expect(ids).toHaveLength(45);
+  expect(ids).toHaveLength(54);
   for (const id of ids) {
     expect(animationLabels).toHaveProperty(id);
     const asset = spriteAsset(id);
@@ -17,12 +17,17 @@ it("registers forty-five local strips with valid metadata and poster files", () 
     expect(asset.durationMs).toBeLessThanOrEqual(1600);
     for (const url of [asset.src, asset.poster]) {
       expect(url).toMatch(
-        /^\/game-assets\/effects\/(?:oga|mochi)_\w+(?:-poster)?\.webp$/,
+        /^\/game-assets\/effects\/(?:oga|mochi|willo)_\w+(?:-poster)?\.webp$/,
       );
       const file = readFileSync(resolve("public", url.slice(1)));
       expect(file.toString("ascii", 0, 4)).toBe("RIFF");
       expect(file.toString("ascii", 8, 12)).toBe("WEBP");
     }
+    expect(asset.license).toBe(
+      id.startsWith("willo_") || id.startsWith("mochi_")
+        ? "Royalty-free"
+        : "CC0",
+    );
   }
   expect(spriteAsset("../unknown")).toBeUndefined();
   expect(spriteAsset("fire")).toBeUndefined();

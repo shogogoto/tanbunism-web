@@ -1,9 +1,36 @@
 # Battle sound effects
 
-These are third-party CC0 audio assets, not our former runtime oscillator/noise
-presets. Downloaded 2026-10-17; lightning replacements downloaded 2026-10-18. All selected works allow use under
-[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
-Credits are retained here even though attribution is not required by CC0.
+These are third-party audio assets, not our former runtime oscillator/noise
+presets. The original packs below are CC0; the Willosuna additions have their
+own royalty-free license. Credits and per-pack terms are retained here.
+
+## Willosuna spell sounds (2026-10-25, royalty-free, not CC0)
+
+- Source: [Magic Spells SFX Lite](https://willosuna.itch.io/magic-spells-sfx-lite),
+  `magic-spells-sfx-lite.zip`, version 2.0. Original mono 44.1kHz 16-bit WAVs.
+- IDs `willo_<name>` map to `wav/<name>_01.wav` in the original archive.
+  Selected names: `cast`, `impact`, `fire_cast`, `fire_impact`, `ice_cast`,
+  `ice_shatter`, `zap`, `thunder`, `water_cast`, `water_impact`, `wind`, `poison`,
+  `shadow`, `heal`, `buff`, `debuff`, `mana`, `dispel`, `arcane_blast`, `rune`.
+- Original license is preserved in `WILLOSUNA-LICENSE.txt`. Commercial/personal
+  game use and processing are allowed; redistribution as a sound pack/library
+  and Content ID registration are prohibited. No original ZIP or full library
+  is distributed; selected converted sounds are embedded in this game.
+- The author describes these as procedural audio, not recordings or AI output.
+  This project did not synthesize or pitch-shift them.
+- Run the existing importer with sources extracted under `sfx/` and only the
+  `willo_*` IDs as its third argument. It preserves all other sound files.
+- Preserve each complete non-silent one-shot; normalize to 85% peak, apply 5ms
+  edge fades and convert to 32kHz mono 16-bit WAV. No forced mid-phrase cuts.
+  The short discharge is about 0.67s; thunder is about 1.17s after boundary trim.
+- The six new `willo_*` visuals default to their same-name sounds. Starsteel's
+  ice/fire projectiles use the corresponding casts, and its thunder sphere uses
+  the short discharge. Existing visuals and their defaults remain unchanged.
+
+## Original CC0 sounds
+
+Downloaded 2026-10-17; lightning replacements downloaded 2026-10-18. These works
+allow use under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
 
 | Local file | Original file | Author / source |
 | --- | --- | --- |

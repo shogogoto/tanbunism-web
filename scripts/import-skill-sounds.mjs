@@ -1,4 +1,4 @@
-// Convert the downloaded CC0 sources in sounds/SOURCES.md into short PCM WAVs.
+// Convert the licensed third-party sources in sounds/SOURCES.md into short PCM WAVs.
 // Usage: PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chrome node scripts/import-skill-sounds.mjs /tmp/source-dir
 // Requires the existing Playwright installation. No network access or synthesis.
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -68,6 +68,30 @@ const sources = {
   zap: ["digital/zap1.mp3"],
   zap_2: ["digital/zap2.mp3"],
   magic_rise: ["digital/powerUp2.mp3"],
+  ...Object.fromEntries(
+    [
+      "cast",
+      "impact",
+      "fire_cast",
+      "fire_impact",
+      "ice_cast",
+      "ice_shatter",
+      "zap",
+      "thunder",
+      "water_cast",
+      "water_impact",
+      "wind",
+      "poison",
+      "shadow",
+      "heal",
+      "buff",
+      "debuff",
+      "mana",
+      "dispel",
+      "arcane_blast",
+      "rune",
+    ].map((name) => [`willo_${name}`, [`sfx/wav/${name}_01.wav`]]),
+  ),
 };
 const only = process.argv[3]?.split(",");
 const browser = await chromium.launch({

@@ -2,12 +2,21 @@ import type { SkillAnimation, SkillDefinition, SkillSound } from "./catalog";
 import { soundAssets } from "./soundAssets";
 
 type Preset = Exclude<SkillSound, "auto" | "none">;
-/** Locally hosted CC0 recordings; provenance: public/game-assets/sounds/SOURCES.md. */
+/** Locally hosted licensed sounds; provenance: public/game-assets/sounds/SOURCES.md. */
 export const battleSoundFiles = Object.fromEntries(
   Object.keys(soundAssets).map((id) => [id, `/game-assets/sounds/${id}.wav`]),
 ) as Record<Preset, string>;
 /** Exhaustive: adding an animation requires choosing its default sound. */
 export const animationSounds: Record<SkillAnimation, Preset | null> = {
+  willo_ice_shatter: "willo_ice_shatter",
+  willo_zap: "willo_zap",
+  oga_star_ice: "willo_ice_cast",
+  oga_star_thunder: "willo_zap",
+  willo_fire_impact: "willo_fire_impact",
+  oga_star_fire: "willo_fire_cast",
+  willo_cast: "willo_cast",
+  willo_heal: "willo_heal",
+  willo_impact: "willo_impact",
   none: null,
   slash: "slash",
   impact: "impact",

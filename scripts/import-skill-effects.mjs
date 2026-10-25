@@ -2,7 +2,13 @@
 // Usage: node scripts/import-skill-effects.mjs /tmp/tanbun-skill-effects.XXXXXX
 // Requires ImageMagick (convert/identify). No network access; see SOURCES.md.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -12,6 +18,7 @@ if (!input)
     "Provide the directory containing extracted packs listed in SOURCES.md.",
   );
 const output = resolve("public/game-assets/effects");
+const only = process.argv[3]?.split(",");
 const work = mkdtempSync(join(tmpdir(), "tanbun-effect-import-"));
 mkdirSync(output, { recursive: true });
 const run = (name, args) => execFileSync(name, args, { encoding: "utf8" });
@@ -71,9 +78,40 @@ const specs = [
     posterFraction: 0.5,
     author: "Mochi Lab Studio",
   })),
+  ...[
+    ["ice_shatter", 70, 12],
+    ["zap", 60, 8],
+    ["fire_impact", 70, 11],
+    ["cast", 70, 8],
+    ["heal", 80, 12],
+    ["impact", 60, 8],
+  ].map(([effect, frameMs, count]) => ({
+    id: `willo_${effect}`,
+    directory: `vfx/${effect}/frames`,
+    author: "Willosuna",
+    pixelArt: true,
+    posterFraction: 0.4,
+    durationMs: Math.max(650, (count + 1) * frameMs),
+  })),
+  ...[
+    ["ice", "Icespear"],
+    ["thunder", "Thundersphere"],
+    ["fire", "Fireball"],
+  ].map(([id, prefix]) => ({
+    id: `oga_star_${id}`,
+    directory: "starsteel",
+    prefix,
+    author: "StarsteelGaming",
+    pixelArt: true,
+    posterFraction: 0.4,
+    durationMs: 750,
+  })),
 ];
-const manifest = {};
+const manifestPath = resolve("app/features/game/effectSpriteManifest.json");
+const manifest = only ? JSON.parse(readFileSync(manifestPath, "utf8")) : {};
+let imported = 0;
 for (const spec of specs) {
+  if (only && !only.includes(spec.id)) continue;
   let files;
   if (spec.directory) {
     const dir = join(input, spec.directory);
@@ -109,6 +147,7 @@ for (const spec of specs) {
       "center",
       "-extent",
       `${width}x${height}`,
+      ...(spec.pixelArt ? ["-filter", "point"] : []),
       "-resize",
       "192x192",
       "-extent",
@@ -140,12 +179,11 @@ for (const spec of specs) {
   manifest[spec.id] = {
     frames,
     frameSize: 192,
-    durationMs: Math.min(1600, Math.max(650, normalized.length * 45)),
+    durationMs:
+      spec.durationMs ?? Math.min(1600, Math.max(650, normalized.length * 45)),
     author: spec.author,
   };
+  imported++;
 }
-writeFileSync(
-  resolve("app/features/game/effectSpriteManifest.json"),
-  `${JSON.stringify(manifest, null, 2)}\n`,
-);
-console.log(`Imported ${specs.length} animations to ${output}`);
+writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+console.log(`Imported ${imported} animations to ${output}`);

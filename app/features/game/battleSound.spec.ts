@@ -71,6 +71,18 @@ it("assigns an intentional sound to every visual effect", () => {
   }
 });
 
+it("pairs the new ice and lightning visuals with short, complete locally hosted sounds", () => {
+  expect(animationSounds.willo_ice_shatter).toBe("willo_ice_shatter");
+  expect(animationSounds.willo_zap).toBe("willo_zap");
+  expect(animationSounds.oga_star_ice).toBe("willo_ice_cast");
+  expect(animationSounds.oga_star_thunder).toBe("willo_zap");
+  for (const id of ["willo_zap", "willo_thunder"] as const) {
+    const wav = readFileSync(`public${battleSoundFiles[id]}`);
+    expect(wav.readUInt32LE(40) / wav.readUInt32LE(28)).toBeLessThan(1.2);
+    expect(wav.readInt16LE(wav.length - 2)).toBe(0);
+  }
+});
+
 it("keeps pitched magic-bolt sounds out of lightning choices and defaults", () => {
   expect(
     Object.entries(soundAssets)

@@ -18,6 +18,49 @@ import CatalogEditor from "./CatalogEditor";
 import * as skillFiles from "./skillFiles";
 import { variantRowHighlight } from "./variantRowStyles";
 
+it("previews and saves imported ice/lightning materials without labeling all audio CC0", async () => {
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="skills" />);
+  const row = await screen.findByRole("row", { name: "ファイア" });
+  await user.click(
+    within(row).getByRole("button", { name: "ファイアの演出を選ぶ" }),
+  );
+  const gallery = screen.getByRole("dialog", { name: "ファイアの演出" });
+  const ice = within(gallery).getByRole("button", {
+    name: "氷の粉砕をプレビュー",
+  });
+  expect(ice).toHaveAttribute("title", "Willosuna / Royalty-free");
+  await user.click(ice);
+  expect(
+    gallery.querySelector('[data-skill-animation="willo_ice_shatter"]'),
+  ).toBeInTheDocument();
+  expect(battleSound.playSkillSound).toHaveBeenLastCalledWith(
+    expect.objectContaining({ animation: "willo_ice_shatter", sound: "auto" }),
+  );
+  await user.click(
+    within(gallery).getByRole("button", { name: "稲妻の着弾をプレビュー" }),
+  );
+  await user.click(
+    within(gallery).getByRole("button", { name: "短い放電のSEを試聴" }),
+  );
+  expect(battleSound.playSkillSound).toHaveBeenLastCalledWith(
+    expect.objectContaining({ animation: "willo_zap", sound: "willo_zap" }),
+  );
+  expect(
+    within(gallery).getByRole("heading", { name: /^SE/ }),
+  ).not.toHaveTextContent("CC0");
+  await user.click(
+    within(gallery).getByRole("button", { name: "この演出を使う" }),
+  );
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(
+    saved.mock.calls
+      .at(-1)?.[0]
+      .skills.find((s: { id: string }) => s.id === "fire"),
+  ).toMatchObject({ animation: "willo_zap", sound: "willo_zap" });
+});
+
 it.each([
   ["skills", "スキル一覧"],
   ["items", "アイテム定義"],
@@ -1267,7 +1310,7 @@ it("opens the skill's static gallery and discards the selection on Escape", asyn
   expect(
     within(gallery).getByRole("button", { name: "火球をプレビュー" }),
   ).toBeVisible();
-  expect(gallery.querySelectorAll('img[src$="-poster.webp"]')).toHaveLength(45);
+  expect(gallery.querySelectorAll('img[src$="-poster.webp"]')).toHaveLength(54);
   expect(gallery.querySelector(".skill-sprite")).not.toBeInTheDocument();
   await user.click(
     within(gallery).getByRole("button", { name: "火球をプレビュー" }),

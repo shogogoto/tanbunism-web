@@ -268,5 +268,59 @@
     "frameSize": 192,
     "durationMs": 1080,
     "author": "Mochi Lab Studio"
+  },
+  "willo_ice_shatter": {
+    "frames": 13,
+    "frameSize": 192,
+    "durationMs": 910,
+    "author": "Willosuna"
+  },
+  "willo_zap": {
+    "frames": 9,
+    "frameSize": 192,
+    "durationMs": 650,
+    "author": "Willosuna"
+  },
+  "willo_fire_impact": {
+    "frames": 12,
+    "frameSize": 192,
+    "durationMs": 840,
+    "author": "Willosuna"
+  },
+  "willo_cast": {
+    "frames": 9,
+    "frameSize": 192,
+    "durationMs": 650,
+    "author": "Willosuna"
+  },
+  "willo_heal": {
+    "frames": 13,
+    "frameSize": 192,
+    "durationMs": 1040,
+    "author": "Willosuna"
+  },
+  "willo_impact": {
+    "frames": 9,
+    "frameSize": 192,
+    "durationMs": 650,
+    "author": "Willosuna"
+  },
+  "oga_star_ice": {
+    "frames": 7,
+    "frameSize": 192,
+    "durationMs": 750,
+    "author": "StarsteelGaming"
+  },
+  "oga_star_thunder": {
+    "frames": 9,
+    "frameSize": 192,
+    "durationMs": 750,
+    "author": "StarsteelGaming"
+  },
+  "oga_star_fire": {
+    "frames": 10,
+    "frameSize": 192,
+    "durationMs": 750,
+    "author": "StarsteelGaming"
   }
 }
