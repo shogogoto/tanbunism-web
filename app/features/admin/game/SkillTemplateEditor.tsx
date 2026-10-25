@@ -34,6 +34,7 @@ import {
   templateKind,
 } from "./templateEffects";
 import useTableSort from "./useTableSort";
+import { variantRowHighlight } from "./variantRowStyles";
 
 const selectClass = "h-9 rounded-md border bg-background px-2";
 const columns = [
@@ -362,7 +363,7 @@ export default function SkillTemplateEditor({
                     id={skill.id}
                     key={skill.id}
                     aria-label={skill.name}
-                    className="border-t [&>td]:p-2"
+                    className={`border-t [&>td]:p-2 ${variantRowHighlight}`}
                   >
                     <td>{!variantId && <RowOrder />}</td>
                     <td>

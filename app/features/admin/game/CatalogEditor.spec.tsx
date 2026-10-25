@@ -16,6 +16,7 @@ import {
 } from "~/features/game/catalog.fixtures";
 import CatalogEditor from "./CatalogEditor";
 import * as skillFiles from "./skillFiles";
+import { variantRowHighlight } from "./variantRowStyles";
 
 const saved = vi.fn();
 const server = setupServer(
@@ -267,6 +268,28 @@ it.each([
   },
 );
 
+it("highlights only the source row while its variation panel is open", async () => {
+  render(<CatalogEditor kind="skills" />);
+  const user = userEvent.setup();
+  const root = await screen.findByRole("row", { name: "ファイアの効果" });
+  const other = screen.getByRole("row", { name: "ケアルの効果" });
+  const active = ":has([data-variant-trigger][data-state=open])";
+  expect(root).toHaveClass(variantRowHighlight);
+  expect(root.matches(active)).toBe(false);
+  await user.click(within(root).getByRole("button", { name: "変型" }));
+  expect(root.matches(active)).toBe(true);
+  expect(other.matches(active)).toBe(false);
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }),
+  );
+  expect(root.matches(active)).toBe(false);
+  await user.click(within(other).getByRole("button", { name: "変型" }));
+  expect(root.matches(active)).toBe(false);
+  expect(other.matches(active)).toBe(true);
+  await user.keyboard("{Escape}");
+  expect(other.matches(active)).toBe(false);
+});
+
 it("registers one variation axis with several subnames and values, without adding main rows", async () => {
   const user = userEvent.setup();
   const view = render(<CatalogEditor kind="skills" />);
@@ -377,10 +400,16 @@ it("creates a variation of a variation and keeps its skill reference through reo
     target: { value: "範囲" },
   });
   await user.selectOptions(parent.getByLabelText("変型の値"), "3");
-  await user.click(
-    within(
-      parent.getByRole("group", { name: "ファイアの効果（範囲）" }),
-    ).getByRole("button", { name: "変型" }),
+  const variantSource = parent.getByRole("group", {
+    name: "ファイアの効果（範囲）",
+  });
+  await user.click(within(variantSource).getByRole("button", { name: "変型" }));
+  expect(variantSource).toHaveClass(variantRowHighlight);
+  expect(
+    variantSource.matches(":has([data-variant-trigger][data-state=open])"),
+  ).toBe(true);
+  expect(root.matches(":has([data-variant-trigger][data-state=open])")).toBe(
+    true,
   );
   const nested = within(
     await screen.findByRole("dialog", { name: "ファイアの効果（範囲）の変型" }),
@@ -397,6 +426,12 @@ it("creates a variation of a variation and keeps its skill reference through reo
   expect(
     screen.getByRole("dialog", { name: "ファイアの効果の変型" }),
   ).toBeVisible();
+  expect(
+    variantSource.matches(":has([data-variant-trigger][data-state=open])"),
+  ).toBe(false);
+  expect(root.matches(":has([data-variant-trigger][data-state=open])")).toBe(
+    true,
+  );
   await user.click(parent.getByRole("button", { name: "変型を削除" }));
   expect(parent.getByRole("alert")).toHaveTextContent("下位の変型");
   await user.keyboard("{Escape}");

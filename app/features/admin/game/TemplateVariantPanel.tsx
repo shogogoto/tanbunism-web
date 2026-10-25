@@ -28,6 +28,7 @@ import {
   templateSkill,
   variantAxes,
 } from "./templateVariantAxes";
+import { variantRowHighlight } from "./variantRowStyles";
 
 export default function TemplateVariantPanel({
   template,
@@ -113,6 +114,7 @@ export default function TemplateVariantPanel({
           variant="ghost"
           size="sm"
           className="h-7 px-1 text-xs"
+          data-variant-trigger
         >
           変型{variants.length ? ` ${variants.length}` : ""}
         </Button>
@@ -200,7 +202,7 @@ export default function TemplateVariantPanel({
           {variants.map((row) => (
             <fieldset
               key={row.id}
-              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_2rem] items-center gap-2"
+              className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_2rem] items-center gap-2 ${variantRowHighlight}`}
               aria-label={row.name}
             >
               <Input
