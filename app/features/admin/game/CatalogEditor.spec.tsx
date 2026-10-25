@@ -962,6 +962,8 @@ it.each([
   ["buff", "maxMp", "MP"],
   ["debuff", "maxHp", "HP"],
   ["debuff", "maxMp", "MP"],
+  ["buff", "speed", "速さ"],
+  ["debuff", "speed", "速さ"],
 ])("defines a timed percentage %s for %s", async (effect, stat, label) => {
   render(<CatalogEditor kind="skills" />);
   const user = userEvent.setup();
@@ -986,8 +988,12 @@ it.each([
   );
   expect(within(row).getByLabelText("対象ステータス")).toHaveValue(stat);
   await user.selectOptions(within(row).getByLabelText("詳細"), effect);
-  expect(within(row).getByLabelText("状態の値の指定")).toHaveValue("percent");
-  expect(within(row).getByLabelText("状態の値の指定")).toBeDisabled();
+  expect(within(row).getByLabelText("状態の値の指定")).toHaveValue(
+    stat === "speed" ? "fixed" : "percent",
+  );
+  if (stat === "speed")
+    expect(within(row).getByLabelText("状態の値の指定")).toBeEnabled();
+  else expect(within(row).getByLabelText("状態の値の指定")).toBeDisabled();
   for (const [label, value] of [
     ["状態の値", "50"],
     ["正答効果の値", "5"],
@@ -1003,7 +1009,7 @@ it.each([
     effect,
     stat,
     amount: 50,
-    amount_mode: "percent",
+    amount_mode: stat === "speed" ? "fixed" : "percent",
     duration_turns: 5,
     stack_limit: 2,
   });
@@ -1235,6 +1241,46 @@ it("configures enemy icons and attacks and surfaces save failures", async () => 
   );
   expect(screen.queryByText("保存しました")).not.toBeInTheDocument();
   expect(screen.getByLabelText("攻撃スキル")).toHaveValue("fire");
+});
+
+it("edits enemy stat multipliers without adding seven table columns", async () => {
+  render(<CatalogEditor kind="enemies" />);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "ゴーストの能力倍率" }),
+  );
+  const dialog = within(
+    screen.getByRole("dialog", { name: "ゴーストの能力倍率" }),
+  );
+  for (const [label, value] of [
+    ["HP", "2"],
+    ["MP", "0.5"],
+    ["攻撃力", "1.5"],
+    ["守備力", "2"],
+    ["特攻", "3"],
+    ["特守", "2"],
+    ["速さ", "0.5"],
+  ]) {
+    const input = dialog.getByLabelText(label);
+    await user.clear(input);
+    await user.type(input, value);
+  }
+  await user.keyboard("{Escape}");
+  expect(
+    screen.getByRole("button", { name: "ゴーストの能力倍率" }),
+  ).toHaveTextContent("7能力を補正");
+  expect(saved).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls[0][0].enemies[0].multipliers).toEqual({
+    hp: 2,
+    mp: 0.5,
+    attack: 1.5,
+    defense: 2,
+    special_attack: 3,
+    special_defense: 2,
+    speed: 0.5,
+  });
 });
 
 it("filters boss art and saves the registered asset ID for an enemy", async () => {

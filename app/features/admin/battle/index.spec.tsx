@@ -8,6 +8,14 @@ import BattleSettingsManager from ".";
 const saved = vi.fn();
 const simulated = vi.fn();
 const practiceStarted = vi.fn();
+const playerInput = (name: string) =>
+  within(
+    screen.getByRole("region", { name: "プレイヤーの初期値" }),
+  ).getByLabelText(name);
+const findPlayerInput = async (name: string) =>
+  within(
+    await screen.findByRole("region", { name: "プレイヤーの初期値" }),
+  ).getByLabelText(name);
 const server = setupServer(
   http.get("*/admin/users", () => HttpResponse.json([])),
   http.get("*/admin/game/dungeons", () => HttpResponse.json([])),
@@ -96,8 +104,8 @@ it("saves the speed formula, base speed, and allocation coefficient", async () =
   });
   expect(formula).toHaveValue("sqrt");
   await user.selectOptions(formula, "linear");
-  await user.clear(screen.getByLabelText("初期速さ"));
-  await user.type(screen.getByLabelText("初期速さ"), "12");
+  await user.clear(playerInput("速さ"));
+  await user.type(playerInput("速さ"), "12");
   const coefficient = within(
     screen.getByRole("region", { name: "育成ポイントあたりの上昇量" }),
   ).getByLabelText("速さ");
@@ -115,9 +123,48 @@ it("saves the speed formula, base speed, and allocation coefficient", async () =
   );
 });
 
+it("uses concise player labels and saves every boss stat multiplier", async () => {
+  render(<BattleSettingsManager />);
+  const user = userEvent.setup();
+  await findPlayerInput("HP");
+  const player = screen.getByRole("region", { name: "プレイヤーの初期値" });
+  expect(within(player).queryByText(/^初期/)).not.toBeInTheDocument();
+  for (const label of [
+    "HP",
+    "MP",
+    "攻",
+    "守",
+    "特攻",
+    "特守",
+    "速さ",
+    "持ち時間（秒）",
+  ])
+    expect(within(player).getByLabelText(label)).toBeVisible();
+  const boss = within(screen.getByRole("region", { name: "ボス" }));
+  for (const stat of ["HP", "MP", "攻撃力", "守備力", "特攻", "特守", "速さ"]) {
+    const input = boss.getByLabelText(`ボスの${stat}倍率`);
+    await user.clear(input);
+    await user.type(input, "2");
+  }
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() =>
+    expect(saved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        boss_hp_multiplier: 2,
+        boss_mp_multiplier: 2,
+        boss_attack_multiplier: 2,
+        boss_defense_multiplier: 2,
+        boss_special_attack_multiplier: 2,
+        boss_special_defense_multiplier: 2,
+        boss_speed_multiplier: 2,
+      }),
+    ),
+  );
+});
+
 it("places ordinary labels above their inputs and preserves editable formulas", async () => {
   render(<BattleSettingsManager />);
-  const hp = await screen.findByLabelText("初期HP");
+  const hp = await findPlayerInput("HP");
   const enemyStats = screen.getByRole("region", { name: "敵ステータスの計算" });
   expect(within(enemyStats).getByLabelText("敵の基礎速さ")).toBeVisible();
   expect(within(enemyStats).getByLabelText("Powerの速さ補正")).toBeVisible();
@@ -191,7 +238,7 @@ it("saves tempo seconds and rejects an inverted speed order", async () => {
 it("saves player time and live enemy corrections without quiz-type weights", async () => {
   render(<BattleSettingsManager />);
   const user = userEvent.setup();
-  const base = await screen.findByLabelText("初期持ち時間（秒）");
+  const base = await findPlayerInput("持ち時間（秒）");
   expect(base).toHaveValue(45);
   expect(
     screen.getByRole("region", { name: "敵ステータスの計算" }),
@@ -233,7 +280,7 @@ it("saves player time and live enemy corrections without quiz-type weights", asy
 it("saves MP base and allocation alongside the draft battle settings", async () => {
   render(<BattleSettingsManager />);
   const user = userEvent.setup();
-  const base = await screen.findByLabelText("初期MP");
+  const base = await findPlayerInput("MP");
   await user.clear(base);
   await user.type(base, "15");
   const perPoint = within(
@@ -329,7 +376,7 @@ it("reports failures without claiming settings were saved", async () => {
     ),
   );
   render(<BattleSettingsManager />);
-  await screen.findByLabelText("初期持ち時間（秒）");
+  await findPlayerInput("持ち時間（秒）");
   await userEvent.setup().click(screen.getByRole("button", { name: "保存" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "ゲーム設定を操作できませんでした。",
@@ -341,7 +388,7 @@ it("reports failures without claiming settings were saved", async () => {
 
 it("practices with the selected historical enemy trial and current unsaved initial values", async () => {
   render(<BattleSettingsManager />);
-  await screen.findByLabelText("初期HP");
+  await findPlayerInput("HP");
   const user = userEvent.setup();
   await user.click(
     screen.getByRole("button", { name: "敵を試算して比較に追加" }),
@@ -355,7 +402,7 @@ it("practices with the selected historical enemy trial and current unsaved initi
   );
   await screen.findByRole("heading", { name: "試算 2 の敵一覧" });
   await user.click(screen.getByRole("button", { name: "試算 1" }));
-  const initialHp = screen.getByLabelText("初期HP");
+  const initialHp = playerInput("HP");
   await user.clear(initialHp);
   await user.type(initialHp, "70");
   const enemyHp = screen.getByLabelText("敵の基礎HP");
@@ -382,7 +429,7 @@ it("practices with the selected historical enemy trial and current unsaved initi
 
 it("combines enemy stats and roster previews and places practice last", async () => {
   render(<BattleSettingsManager />);
-  await screen.findByLabelText("初期HP");
+  await findPlayerInput("HP");
   const stats = screen.getByRole("region", { name: "敵ステータスの計算" });
   expect(
     screen.getByRole("heading", { name: "実戦形式の模擬戦" }),
@@ -436,15 +483,16 @@ it("combines enemy stats and roster previews and places practice last", async ()
 it("generates practice enemies directly from current unsaved stats, roster and shared conditions", async () => {
   render(<BattleSettingsManager />);
   const user = userEvent.setup();
-  await screen.findByLabelText("初期HP");
+  await findPlayerInput("HP");
   for (const [label, value] of [
-    ["初期HP", "70"],
+    ["HP", "70"],
     ["敵の基礎HP", "99"],
     ["領域ごとの敵の種類数", "4"],
     ["敵の生成に使うPower", "350"],
     ["敵の生成に使う達成度", "3"],
   ]) {
-    const input = screen.getByLabelText(label);
+    const input =
+      label === "HP" ? playerInput(label) : screen.getByLabelText(label);
     await user.clear(input);
     await user.type(input, value);
   }

@@ -48,6 +48,7 @@ export type GameSave = {
             | "specialDefense"
             | "maxHp"
             | "maxMp"
+            | "speed"
             | "damageDealt"
             | "damageTaken";
           affected_element?: string | null;

@@ -59,6 +59,7 @@ export const statusStatLabels = {
   defense: "守備力",
   specialAttack: "特攻",
   specialDefense: "特守",
+  speed: "速さ",
   damageDealt: "属性威力",
   damageTaken: "属性耐性",
 };
@@ -456,11 +457,22 @@ export type EnemyDefinition = {
   enabled: boolean;
   boss: boolean;
   speed?: number | null;
+  multipliers?: Partial<Record<EnemyStat, number>>;
   attack_skill_id: string | null;
   on_hit_skill_id?: string | null;
   weaknesses?: string[];
   resistances?: string[];
 };
+export const enemyStatLabels = {
+  hp: "HP",
+  mp: "MP",
+  attack: "攻撃力",
+  defense: "守備力",
+  special_attack: "特攻",
+  special_defense: "特守",
+  speed: "速さ",
+};
+export type EnemyStat = keyof typeof enemyStatLabels;
 export type GameCatalog = {
   elements?: ElementDefinition[];
   skills: SkillDefinition[];

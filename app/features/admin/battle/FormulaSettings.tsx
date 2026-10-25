@@ -6,6 +6,7 @@ export type FormulaField =
   | "damage_variance_percent"
   | "enemy_hp"
   | "enemy_attack"
+  | "enemy_defense"
   | "enemy_mp"
   | "enemy_special_attack"
   | "enemy_special_defense"
@@ -111,6 +112,10 @@ export default function FormulaSettings({
             <span>× 個体差</span>
           </FormulaRow>
         ))}
+        <FormulaRow>
+          <span>守備力 =</span>
+          {input("enemy_defense")}
+        </FormulaRow>
         <FormulaRow>
           <span>個体差 = 1 ±</span>
           {input("enemy_variance_percent")}

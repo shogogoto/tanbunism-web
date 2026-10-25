@@ -7,6 +7,7 @@ import type {
 import { defaultElements, isEquipmentSkill } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import EnemyMultipliersEditor from "./EnemyMultipliersEditor";
 
 const selectClass = "h-9 rounded-md border bg-background px-2 text-sm";
 export default function DefinitionTables({
@@ -26,7 +27,7 @@ export default function DefinitionTables({
     "素材",
     ...(kind === "items"
       ? ["発動スキル", "使用回数"]
-      : ["ボス用", "速さ", "攻撃スキル", "命中時スキル"]),
+      : ["ボス用", "能力倍率", "攻撃スキル", "命中時スキル"]),
   ];
   const elements = (catalog.elements ?? defaultElements).filter(
     (element) =>
@@ -171,22 +172,9 @@ export default function DefinitionTables({
                     />
                   </td>
                   <td>
-                    <Input
-                      aria-label={`${item.name}の速さ`}
-                      type="number"
-                      min={1}
-                      max={1000}
-                      className="w-24"
-                      placeholder="共通設定"
-                      value={item.speed ?? ""}
-                      onChange={(event) =>
-                        update(item.id, {
-                          speed:
-                            event.target.value === ""
-                              ? null
-                              : Number(event.target.value),
-                        })
-                      }
+                    <EnemyMultipliersEditor
+                      enemy={item}
+                      onChange={(patch) => update(item.id, patch)}
                     />
                   </td>
                   <td>
