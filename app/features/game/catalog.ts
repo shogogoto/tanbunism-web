@@ -273,6 +273,8 @@ type TemplateOf<T> = T extends SkillDefinition
 export type SkillTemplate = TemplateOf<SkillDefinition> & {
   base_template_id?: string | null;
   override_fields?: TemplateOverride[];
+  variant_axis?: string | null;
+  variant_label?: string | null;
 };
 
 export function skillTemplate(
@@ -306,6 +308,8 @@ export function skillTemplate(
   );
   return {
     ...values,
+    ...(source?.variant_axis ? { variant_axis: source.variant_axis } : {}),
+    ...(source?.variant_label ? { variant_label: source.variant_label } : {}),
     ...(source?.base_template_id
       ? {
           base_template_id: source.base_template_id,
@@ -351,8 +355,15 @@ export function resolveCatalogTemplates(catalog: GameCatalog): GameCatalog {
           ? selected
               .filter((t) => t !== undefined)
               .map(
-                ({ id, name, base_template_id, override_fields, ...effect }) =>
-                  effect,
+                ({
+                  id,
+                  name,
+                  base_template_id,
+                  override_fields,
+                  variant_axis,
+                  variant_label,
+                  ...effect
+                }) => effect,
               )
           : undefined,
         element: skill.element,

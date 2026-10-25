@@ -254,191 +254,123 @@ it.each([
   },
 );
 
-it("creates scope variants, shares common values and preserves overrides through save and reload", async () => {
+it("registers one variation axis with several subnames and values, without adding main rows", async () => {
   const user = userEvent.setup();
   const view = render(<CatalogEditor kind="skills" />);
   const table = await screen.findByRole("table", {
     name: "効果テンプレート一覧",
   });
   const root = within(table).getByRole("row", { name: "ファイアの効果" });
-  await user.click(
-    within(root).getByRole("button", { name: "バリエーション 0件" }),
+  expect(screen.queryByText(/回復・ダメージは詳細/)).not.toBeInTheDocument();
+  await user.click(within(root).getByRole("button", { name: "変型" }));
+  const dialog = within(
+    await screen.findByRole("dialog", { name: "ファイアの効果の変型" }),
   );
-  let dialog = within(await screen.findByRole("dialog"));
-  await user.click(dialog.getByRole("button", { name: "対象数別に作成" }));
-  const selectVariant = async (label: string) =>
-    user.selectOptions(
-      dialog.getByLabelText("編集するバリエーション"),
-      dialog.getByRole("option", { name: label }),
+  await user.selectOptions(
+    dialog.getByLabelText("変更する項目"),
+    "target_count",
+  );
+  for (const [name, value] of [
+    ["単体", "1"],
+    ["範囲", "3"],
+    ["全体", "all"],
+  ]) {
+    await user.click(dialog.getByRole("button", { name: "＋ 値を追加" }));
+    const names = dialog.getAllByLabelText("サブ名");
+    fireEvent.change(names.at(-1) as HTMLElement, { target: { value: name } });
+    await user.selectOptions(
+      dialog.getAllByLabelText("変型の値").at(-1) as HTMLElement,
+      value,
     );
-  await selectVariant("ファイアの効果（3体）");
-  let area = dialog.getByRole("row", { name: "ファイアの効果（3体）" });
-  expect(within(area).getByLabelText("対象数")).toHaveValue("3");
-  expect(within(area).getByLabelText("種別")).toBeEnabled();
-  await user.selectOptions(within(area).getByLabelText("種別"), "special");
-  await user.selectOptions(within(area).getByLabelText("タイプ"), "counter");
-  expect(within(root).getByLabelText("共通設定")).toBeDisabled();
-  await user.click(dialog.getByRole("button", { name: "対象数別に作成" }));
-  expect(
-    dialog.getByLabelText("編集するバリエーション").querySelectorAll("option"),
-  ).toHaveLength(4);
+  }
   expect(table.querySelectorAll("tr[aria-label]")).toHaveLength(3);
+  expect(dialog.getAllByLabelText("変型の値")).toHaveLength(3);
   await user.keyboard("{Escape}");
   fireEvent.change(within(root).getByLabelText("正答効果の値"), {
     target: { value: "2" },
   });
-  await user.click(
-    within(root).getByRole("button", { name: "バリエーション 4件" }),
-  );
-  dialog = within(await screen.findByRole("dialog"));
-  area = dialog.getByRole("row", { name: "ファイアの効果（3体）" });
-  expect(within(area).getByLabelText("正答効果の値")).toHaveValue(2);
-  fireEvent.change(within(area).getByLabelText("正答効果の値"), {
-    target: { value: "0.8" },
-  });
-  await user.keyboard("{Escape}");
-  fireEvent.change(within(root).getByLabelText("正答効果の値"), {
-    target: { value: "3" },
-  });
-  await user.click(
-    within(root).getByRole("button", { name: "バリエーション 4件" }),
-  );
-  dialog = within(await screen.findByRole("dialog"));
-  area = dialog.getByRole("row", { name: "ファイアの効果（3体）" });
-  expect(within(area).getByLabelText("正答効果の値")).toHaveValue(0.8);
-  expect(within(area).getByLabelText("正答効果の値").closest("td")).toHaveClass(
-    "bg-amber-500/10",
-  );
-  await user.click(
-    within(area).getByRole("button", { name: "効果を共通設定に戻す" }),
-  );
-  expect(within(area).getByLabelText("正答効果の値")).toHaveValue(3);
-  await selectVariant("ファイアの効果（1体）");
-  const single = dialog.getByRole("row", { name: "ファイアの効果（1体）" });
-  await user.selectOptions(within(single).getByLabelText("共通設定"), "");
-  await user.keyboard("{Escape}");
-  fireEvent.change(within(root).getByLabelText("正答効果の値"), {
-    target: { value: "4" },
-  });
-  expect(
-    within(table).getByRole("row", { name: "ファイアの効果（1体）" }),
-  ).toHaveTextContent("独立した共通設定");
-  await dragRow(user, table, root, "ArrowDown");
   await user.click(screen.getByRole("button", { name: "保存" }));
   await screen.findByText("保存しました");
   const payload = saved.mock.calls.at(-1)?.[0];
   expect(
     payload.skill_templates.find(
-      (row: { name: string }) => row.name === "ファイアの効果（3体）",
+      (row: { id: string }) => row.id === "effect_fire",
     ),
-  ).toMatchObject({
-    base_template_id: "effect_fire",
-    override_fields: expect.arrayContaining(["target_count", "damage_type"]),
-    multiplier: 4,
-  });
+  ).toMatchObject({ variant_axis: "target_count" });
+  expect(
+    payload.skill_templates.filter(
+      (row: { base_template_id?: string }) =>
+        row.base_template_id === "effect_fire",
+    ),
+  ).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        name: "ファイアの効果（範囲）",
+        variant_label: "範囲",
+        target_count: 3,
+        multiplier: 2,
+        override_fields: ["target_count"],
+      }),
+      expect.objectContaining({
+        name: "ファイアの効果（全体）",
+        target_count: "all",
+      }),
+    ]),
+  );
   view.unmount();
   server.use(
     http.get("*/admin/game/catalog", () => HttpResponse.json(payload)),
   );
   render(<CatalogEditor kind="skills" />);
-  const restoredRoot = await screen.findByRole("row", {
-    name: "ファイアの効果",
-  });
+  const restored = await screen.findByRole("row", { name: "ファイアの効果" });
+  await user.click(within(restored).getByRole("button", { name: "変型 3" }));
+  const panel = within(await screen.findByRole("dialog"));
+  expect(panel.getByLabelText("変更する項目")).toHaveValue("target_count");
   expect(
-    screen.queryByRole("row", { name: "ファイアの効果（3体）" }),
-  ).not.toBeInTheDocument();
-  await user.click(
-    within(restoredRoot).getByRole("button", { name: "バリエーション 3件" }),
-  );
-  dialog = within(await screen.findByRole("dialog"));
-  await selectVariant("ファイアの効果（3体）");
-  const restored = dialog.getByRole("row", { name: "ファイアの効果（3体）" });
-  expect(within(restored).getByLabelText("共通設定")).toHaveValue(
-    "effect_fire",
-  );
-  expect(within(restored).getByLabelText("正答効果の値")).toHaveValue(4);
+    panel
+      .getAllByLabelText("サブ名")
+      .map((input) => (input as HTMLInputElement).value),
+  ).toEqual(["単体", "範囲", "全体"]);
+  await user.selectOptions(panel.getByLabelText("変更する項目"), "power");
+  expect(panel.getByRole("alert")).toHaveTextContent("共通値に戻ります");
+  await user.click(panel.getByRole("button", { name: "キャンセル" }));
+  expect(panel.getByLabelText("変更する項目")).toHaveValue("target_count");
+  await user.selectOptions(panel.getByLabelText("変更する項目"), "power");
+  await user.click(panel.getByRole("button", { name: "この項目に切り替える" }));
+  expect(panel.getByLabelText("変更する項目")).toHaveValue("power");
+  fireEvent.change(panel.getAllByLabelText("変型の値")[1], {
+    target: { value: "1.8" },
+  });
+  expect(panel.getAllByLabelText("変型の値")[1]).toHaveValue(1.8);
 });
 
-it("edits tier variants one at a time and copies arbitrary status overrides", async () => {
+it("changes the available variation inputs for status details and reduced action durations", async () => {
   const user = userEvent.setup();
   render(<CatalogEditor kind="skills" />);
   const root = await screen.findByRole("row", { name: "ファイアの効果" });
-  await user.click(
-    within(root).getByRole("button", { name: "バリエーション 0件" }),
-  );
-  const dialog = within(await screen.findByRole("dialog"));
-  await user.click(
-    dialog.getByRole("button", { name: "初級・中級・上級を作成" }),
-  );
-  await user.selectOptions(
-    dialog.getByLabelText("編集するバリエーション"),
-    dialog.getByRole("option", { name: "ファイアの効果（中級）" }),
-  );
-  let row = dialog.getByRole("row", { name: "ファイアの効果（中級）" });
+  await user.selectOptions(within(root).getByLabelText("種別"), "status");
+  await user.selectOptions(within(root).getByLabelText("タイプ"), "reduced");
+  await user.click(within(root).getByRole("button", { name: "変型" }));
+  const panel = within(await screen.findByRole("dialog"));
   expect(
-    dialog
-      .getByRole("table", { name: "バリエーションの設定" })
-      .querySelectorAll("tr[aria-label]"),
-  ).toHaveLength(1);
-  await user.selectOptions(within(row).getByLabelText("種別"), "status");
-  await user.selectOptions(
-    within(row).getByLabelText("対象ステータス"),
-    "defense",
-  );
-  await user.selectOptions(
-    within(row).getByLabelText("状態の値の指定"),
-    "percent",
-  );
-  fireEvent.change(within(row).getByLabelText("状態の値"), {
-    target: { value: "20" },
-  });
-  fireEvent.change(within(row).getByLabelText("重複上限"), {
-    target: { value: "2" },
-  });
-  fireEvent.change(within(row).getByLabelText("正答効果の値"), {
-    target: { value: "5" },
-  });
-  await user.selectOptions(within(row).getByLabelText("タイプ"), "counter");
-  await user.click(
-    dialog.getByRole("button", { name: "選択中のバリエーションを複製" }),
-  );
-  row = dialog.getByRole("row", { name: "ファイアの効果（中級）（コピー）" });
-  expect(within(row).getByLabelText("状態の値")).toHaveValue(20);
-  fireEvent.change(within(row).getByLabelText("状態の値"), {
-    target: { value: "30" },
-  });
-  await user.keyboard("{Escape}");
+    panel.getByRole("option", { name: "詳細：状態の値" }),
+  ).toBeInTheDocument();
   expect(
-    screen.queryByRole("row", { name: "ファイアの効果（中級）" }),
+    panel.getByRole("option", { name: "効果：誤答の行動数" }),
+  ).toBeInTheDocument();
+  expect(
+    panel.queryByRole("option", { name: "効果：誤答の指定" }),
   ).not.toBeInTheDocument();
-  expect(
-    within(root).getByRole("button", { name: "バリエーション 4件" }),
-  ).toBeVisible();
+  await user.selectOptions(panel.getByLabelText("変更する項目"), "resource");
+  await user.click(panel.getByRole("button", { name: "＋ 値を追加" }));
+  await user.selectOptions(panel.getByLabelText("変型の値"), "speed");
+  expect(panel.getByRole("option", { name: "速さ" })).toBeInTheDocument();
+  await user.keyboard("{Escape}");
   await user.click(screen.getByRole("button", { name: "保存" }));
   await screen.findByText("保存しました");
-  const templates = saved.mock.calls.at(-1)?.[0].skill_templates;
-  expect(
-    templates.find(
-      (t: { name: string }) => t.name === "ファイアの効果（中級）",
-    ),
-  ).toMatchObject({
+  expect(saved.mock.calls.at(-1)?.[0].skill_templates.at(-1)).toMatchObject({
     effect: "buff",
-    stat: "defense",
-    amount: 20,
-    amount_mode: "percent",
-    stack_limit: 2,
-    duration_turns: 5,
-    on_wrong: { type: "counter" },
-  });
-  expect(
-    templates.find(
-      (t: { name: string }) => t.name === "ファイアの効果（中級）（コピー）",
-    ),
-  ).toMatchObject({
-    effect: "buff",
-    stat: "defense",
-    amount: 30,
-    stack_limit: 2,
+    stat: "speed",
   });
 });
 

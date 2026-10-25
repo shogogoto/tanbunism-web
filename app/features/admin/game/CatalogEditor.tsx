@@ -208,7 +208,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
   }
   return (
     <section
-      className={`mx-auto w-full min-w-0 space-y-4 p-4 sm:p-6 ${kind === "enemies" ? "max-w-none" : kind === "skills" ? "max-w-[96rem]" : "max-w-5xl"}`}
+      className={`mx-auto w-full min-w-0 space-y-4 p-4 sm:p-6 ${kind === "enemies" || kind === "skills" ? "max-w-none" : "max-w-5xl"}`}
       aria-label={`${names[kind]}定義`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">

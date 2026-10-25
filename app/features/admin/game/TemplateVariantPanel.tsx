@@ -1,7 +1,9 @@
-import { type ReactNode, useState } from "react";
+import { X } from "lucide-react";
+import { useState } from "react";
 import {
   type GameCatalog,
   type SkillTemplate,
+  defaultElements,
   resolveCatalogTemplates,
 } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
@@ -11,146 +13,289 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "~/shared/components/ui/dialog";
+import { Input } from "~/shared/components/ui/input";
+import { Label } from "~/shared/components/ui/label";
+import {
+  type VariantAxis,
+  axisVariant,
+  templateSkill,
+  variantAxes,
+} from "./templateVariantAxes";
 
 export default function TemplateVariantPanel({
   template,
   catalog,
   onChange,
-  renderVariant,
 }: {
   template: SkillTemplate;
   catalog: GameCatalog;
   onChange: (catalog: GameCatalog) => void;
-  renderVariant: (id: string) => ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string>();
+  const [pendingAxis, setPendingAxis] = useState<string>();
+  const [error, setError] = useState<string>();
   const templates = catalog.skill_templates ?? [];
   const variants = templates.filter(
     (row) => row.base_template_id === template.id,
   );
-  const selected = variants.find((row) => row.id === selectedId) ?? variants[0];
-  function add(rows: SkillTemplate[]) {
-    if (!rows.length) return;
-    onChange(
-      resolveCatalogTemplates({
-        ...catalog,
-        skill_templates: [...templates, ...rows],
-      }),
-    );
-    setSelectedId(rows[0].id);
+  const axes = variantAxes(template, catalog.elements ?? defaultElements);
+  const axis = axes.find((item) => item.id === template.variant_axis);
+  const labelOf = (row: SkillTemplate) =>
+    row.variant_label ??
+    (row.name.startsWith(`${template.name}（`) && row.name.endsWith("）")
+      ? row.name.slice(template.name.length + 1, -1)
+      : row.name);
+  const named = (row: SkillTemplate, label: string) => ({
+    ...row,
+    variant_label: label,
+    name: `${template.name}（${label}）`.slice(0, 80),
+  });
+  function change(next: SkillTemplate[]) {
+    try {
+      onChange(resolveCatalogTemplates({ ...catalog, skill_templates: next }));
+      setError(undefined);
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "変型を更新できませんでした。",
+      );
+    }
   }
-  function variant(name: string, source = template): SkillTemplate {
-    return {
-      ...source,
-      id: `variant_${crypto.randomUUID().replaceAll("-", "")}`,
-      name: name.slice(0, 80),
-      base_template_id: template.id,
-      override_fields: source.base_template_id
-        ? [...(source.override_fields ?? [])]
-        : [],
-    };
+  function choose(nextAxis: VariantAxis) {
+    change(
+      templates.map((row) =>
+        row.id === template.id
+          ? { ...row, variant_axis: nextAxis.id }
+          : row.base_template_id === template.id
+            ? axisVariant(
+                template,
+                nextAxis,
+                String(nextAxis.read(templateSkill(template))),
+                named(row, labelOf(row)),
+              )
+            : row,
+      ),
+    );
+    setPendingAxis(undefined);
+  }
+  function remove(row: SkillTemplate) {
+    if (
+      catalog.skills.some(
+        (skill) =>
+          skill.template_ids?.includes(row.id) || skill.template_id === row.id,
+      )
+    ) {
+      setError("スキルで使用中の変型は削除できません。");
+      return;
+    }
+    change(templates.filter((item) => item.id !== row.id));
   }
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-7 justify-start px-1 text-xs"
-        onClick={() => setOpen(true)}
-      >
-        バリエーション {variants.length}件
-      </Button>
+    <Dialog
+      onOpenChange={() => {
+        setError(undefined);
+        setPendingAxis(undefined);
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-1 text-xs"
+        >
+          変型{variants.length ? ` ${variants.length}` : ""}
+        </Button>
+      </DialogTrigger>
       <DialogContent
-        className="max-h-[90dvh] overflow-y-auto sm:max-w-[96rem]"
+        className="max-h-[85dvh] overflow-y-auto sm:max-w-xl"
         data-dashboard-swipe-ignore
       >
         <DialogHeader>
-          <DialogTitle>{template.name}のバリエーション</DialogTitle>
-          <DialogDescription>
-            共通値を引き継ぎ、変更した項目だけ上書きします。↶で共通値へ戻せます。最後に一覧の「保存」で確定します。
+          <DialogTitle>{template.name}の変型</DialogTitle>
+          <DialogDescription className="sr-only">
+            変更項目を1つ選び、サブ名と値を登録します。一覧の保存で確定します。
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="space-y-2">
+          <Label htmlFor={`variant-axis-${template.id}`}>変更する項目</Label>
           <select
-            aria-label="編集するバリエーション"
-            className="h-9 min-w-40 max-w-full rounded-md border bg-background px-2"
-            value={selected?.id ?? ""}
-            onChange={(event) => setSelectedId(event.target.value)}
+            id={`variant-axis-${template.id}`}
+            className="h-9 w-full rounded-md border bg-background px-2"
+            value={axis?.id ?? ""}
+            onChange={(event) => {
+              const next = axes.find((item) => item.id === event.target.value);
+              if (!next) return;
+              if (variants.length) setPendingAxis(next.id);
+              else choose(next);
+            }}
           >
-            {!variants.length && <option value="">未登録</option>}
-            {variants.map((row) => (
-              <option key={row.id} value={row.id}>
-                {row.name}
+            <option value="" disabled>
+              項目を選択
+            </option>
+            {axes.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
               </option>
             ))}
           </select>
-          <Button
-            type="button"
-            variant="outline"
-            aria-label="バリエーションを追加"
-            onClick={() => add([variant(`${template.name}（新規）`)])}
-          >
-            追加
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!selected}
-            aria-label="選択中のバリエーションを複製"
-            onClick={() => {
-              if (selected)
-                add([variant(`${selected.name}（コピー）`, selected)]);
-            }}
-          >
-            複製
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              add(
-                ["初級", "中級", "上級"]
-                  .map((level) => `${template.name.slice(0, 72)}（${level}）`)
-                  .filter((name) => !variants.some((row) => row.name === name))
-                  .map((name) => variant(name)),
-              )
-            }
-          >
-            初級・中級・上級を作成
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              add(
-                ([1, 3, 5, "all"] as const)
-                  .filter(
-                    (count) =>
-                      !variants.some((row) => row.target_count === count),
-                  )
-                  .map((count) => ({
-                    ...variant(
-                      `${template.name.slice(0, 72)}（${count === "all" ? "全体" : `${count}体`}）`,
-                    ),
-                    target_count: count,
-                    override_fields: ["target_count"],
-                  })),
-              )
-            }
-          >
-            対象数別に作成
-          </Button>
         </div>
-        {selected ? (
-          renderVariant(selected.id)
-        ) : (
+        {pendingAxis && (
+          <div role="alert" className="space-y-2 rounded-md border p-3 text-sm">
+            <p>
+              変更項目を切り替えると、登録済みの値は共通値に戻ります。サブ名とスキルからの参照は維持します。
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  const next = axes.find((item) => item.id === pendingAxis);
+                  if (next) choose(next);
+                }}
+              >
+                この項目に切り替える
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPendingAxis(undefined)}
+              >
+                キャンセル
+              </Button>
+            </div>
+          </div>
+        )}
+        {!axis && variants.length > 0 && (
           <p className="text-sm text-muted-foreground">
-            「追加」または一括作成からバリエーションを作成できます。
+            既存の個別設定を保持しています。変更項目を選ぶと1項目の変型へ切り替えられます。
           </p>
         )}
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <fieldset
+          className="min-w-0 space-y-2"
+          aria-label="変型の値一覧"
+          disabled={Boolean(pendingAxis)}
+        >
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2rem] gap-2 text-xs text-muted-foreground">
+            <span>サブ名</span>
+            <span>{axis?.label ?? "値"}</span>
+          </div>
+          {variants.map((row) => (
+            <fieldset
+              key={row.id}
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2"
+              aria-label={row.name}
+            >
+              <Input
+                aria-label="サブ名"
+                maxLength={60}
+                value={labelOf(row)}
+                onChange={(event) =>
+                  change(
+                    templates.map((item) =>
+                      item.id === row.id
+                        ? named(row, event.target.value)
+                        : item,
+                    ),
+                  )
+                }
+              />
+              {axis ? (
+                axis.options ? (
+                  <select
+                    aria-label="変型の値"
+                    className="h-9 min-w-0 rounded-md border bg-background px-2"
+                    value={axis.read(templateSkill(row))}
+                    onChange={(event) =>
+                      change(
+                        templates.map((item) =>
+                          item.id === row.id
+                            ? axisVariant(
+                                template,
+                                axis,
+                                event.target.value,
+                                row,
+                              )
+                            : item,
+                        ),
+                      )
+                    }
+                  >
+                    {Object.entries(axis.options).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <Input
+                    aria-label="変型の値"
+                    type="number"
+                    min={axis.min}
+                    max={axis.max}
+                    step={axis.step}
+                    value={axis.read(templateSkill(row))}
+                    onChange={(event) =>
+                      change(
+                        templates.map((item) =>
+                          item.id === row.id
+                            ? axisVariant(
+                                template,
+                                axis,
+                                event.target.value,
+                                row,
+                              )
+                            : item,
+                        ),
+                      )
+                    }
+                  />
+                )
+              ) : (
+                <span className="text-xs text-muted-foreground">個別設定</span>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="変型を削除"
+                onClick={() => remove(row)}
+              >
+                <X className="size-4" />
+              </Button>
+            </fieldset>
+          ))}
+        </fieldset>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!axis || Boolean(pendingAxis)}
+          onClick={() => {
+            if (!axis) return;
+            const row = named(
+              {
+                ...template,
+                id: `variant_${crypto.randomUUID().replaceAll("-", "")}`,
+              },
+              `変型${variants.length + 1}`,
+            );
+            change([
+              ...templates,
+              axisVariant(
+                template,
+                axis,
+                String(axis.read(templateSkill(template))),
+                row,
+              ),
+            ]);
+          }}
+        >
+          ＋ 値を追加
+        </Button>
       </DialogContent>
     </Dialog>
   );

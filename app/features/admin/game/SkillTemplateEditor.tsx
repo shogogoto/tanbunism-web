@@ -137,6 +137,7 @@ export default function SkillTemplateEditor({
                   : {}),
               })
             : skill,
+          source,
         );
         return {
           ...result,
@@ -165,17 +166,7 @@ export default function SkillTemplateEditor({
   }
   return (
     <section aria-label="効果テンプレート" className="min-w-0 space-y-2">
-      {!variantId && (
-        <>
-          <h3 className="font-semibold">効果テンプレート</h3>
-          <p className="text-xs text-muted-foreground">
-            回復・ダメージは詳細で指定します。回復の倍率は最大値を基準にします。状態の効果は継続する行動数です。属性威力はその属性で攻撃する強さ、属性耐性はその属性のダメージを軽減する強さです。バフで上昇、デバフで低下します。保存で確定します。
-          </p>
-          <p className="text-xs text-muted-foreground">
-            一覧には共通設定を表示します。「バリエーション」から追加・複製・一括作成できます。どの項目も個別に変更でき、上書きは色付きで表示します。↶で共通値に戻せます。継承は1段のみです。
-          </p>
-        </>
-      )}
+      {!variantId && <h3 className="font-semibold">効果テンプレート</h3>}
       <div className="overflow-x-auto rounded-lg border">
         <SortableRows
           rows={sorted}
@@ -194,7 +185,7 @@ export default function SkillTemplateEditor({
             aria-label={
               variantId ? "バリエーションの設定" : "効果テンプレート一覧"
             }
-            className="w-full whitespace-nowrap text-sm"
+            className="w-full text-sm"
           >
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>{columns.map(([key, label]) => header(key, label))}</tr>
@@ -385,19 +376,6 @@ export default function SkillTemplateEditor({
                           template={source}
                           catalog={catalog}
                           onChange={onChange}
-                          locked={normal}
-                          renderVariant={
-                            variantId
-                              ? undefined
-                              : (id) => (
-                                  <SkillTemplateEditor
-                                    key={id}
-                                    catalog={catalog}
-                                    onChange={onChange}
-                                    variantId={id}
-                                  />
-                                )
-                          }
                         />
                       )}
                     </td>
@@ -474,7 +452,7 @@ export default function SkillTemplateEditor({
                     >
                       <fieldset>
                         {status ? (
-                          <div className="flex items-center gap-1">
+                          <div className="flex flex-wrap items-center gap-1">
                             <select
                               aria-label="詳細"
                               className={selectClass}
@@ -594,7 +572,7 @@ export default function SkillTemplateEditor({
                             <option value="moves">歩数</option>
                           </select>
                         ) : (
-                          <div className="flex items-center gap-1">
+                          <div className="flex flex-wrap items-center gap-1">
                             <select
                               aria-label="対象ステータス"
                               className={selectClass}
@@ -693,7 +671,7 @@ export default function SkillTemplateEditor({
                     <td
                       className={powerOverride ? "bg-amber-500/10" : undefined}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {power()}
                         {reduced && power(true)}
                         {powerOverride && (

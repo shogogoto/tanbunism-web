@@ -64,6 +64,8 @@ export function resolveTemplateVariants(
       name: template.name,
       base_template_id: base.id,
       override_fields: template.override_fields ?? [],
+      variant_axis: template.variant_axis,
+      variant_label: template.variant_label,
     } as SkillTemplate;
     const normalized = skillTemplate(
       normalizeSkill({
