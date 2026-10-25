@@ -83,7 +83,6 @@ it("uses sortable tables without row numbers and a separate variation column", a
     "消費MP",
     "演出",
     "有効",
-    "複製",
     "削除",
   ]);
   const row = within(skills).getByRole("row", { name: "ファイア" });
@@ -101,14 +100,15 @@ it("uses sortable tables without row numbers and a separate variation column", a
   expect(templates).toHaveClass("w-auto");
   expect(templates).toHaveClass(
     "mx-auto",
-    "[&_tr>*:not(:last-child)]:border-r",
+    "[&_tr>th:not(:last-child)]:border-r",
+    "[&_tr>td:not(:last-child)]:border-r",
   );
   const templateRow = within(templates).getByRole("row", {
     name: "ファイアの効果",
   });
   expect(
     within(templateRow).getByRole("button", { name: "変型" }).closest("td"),
-  ).toBe(within(templateRow).getAllByRole("cell")[2]);
+  ).toBe(within(templateRow).getAllByRole("cell").at(-2));
   expect(
     within(templates)
       .getAllByRole("columnheader")
@@ -116,13 +116,12 @@ it("uses sortable tables without row numbers and a separate variation column", a
   ).toEqual([
     "並べ替え",
     "名前",
-    "変型",
     "対象数",
     "種別",
     "詳細",
     "タイプ",
     "効果",
-    "複製",
+    "変型",
     "削除",
   ]);
   expect(
@@ -136,64 +135,6 @@ it("uses sortable tables without row numbers and a separate variation column", a
   await userEvent.click(nameSort);
   expect(nameSort.closest("th")).toHaveAttribute("aria-sort", "ascending");
 });
-
-it.each([
-  [
-    "効果テンプレート一覧",
-    "ファイアの効果",
-    "skill_templates",
-    "正答効果の値",
-    "2",
-  ],
-  ["スキル一覧", "ファイア", "skills", "消費MP", "7"],
-] as const)(
-  "duplicates a row before the delete action in %s",
-  async (tableName, name, key, field, value) => {
-    const user = userEvent.setup();
-    render(<CatalogEditor kind="skills" />);
-    const table = await screen.findByRole("table", { name: tableName });
-    const original = within(table).getByRole("row", { name });
-    const originalValue = (
-      within(original).getByLabelText(field) as HTMLInputElement
-    ).value;
-    await user.click(within(original).getByRole("button", { name: "複製" }));
-    const copy = within(table).getByRole("row", { name: `${name}（コピー）` });
-    const cells = within(copy).getAllByRole("cell");
-    expect(
-      within(copy).getByRole("button", { name: "複製" }).closest("td"),
-    ).toBe(cells.at(-2));
-    expect(
-      within(copy).getByRole("button", { name: "削除" }).closest("td"),
-    ).toBe(cells.at(-1));
-    expect(within(copy).getByLabelText(field)).toHaveValue(
-      Number(originalValue),
-    );
-    fireEvent.change(within(copy).getByLabelText(field), { target: { value } });
-    expect(within(original).getByLabelText(field)).toHaveValue(
-      Number(originalValue),
-    );
-    expect(saved).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "保存" }));
-    await screen.findByText("保存しました");
-    const rows = saved.mock.calls.at(-1)?.[0][key];
-    const source = rows.find((row: { name: string }) => row.name === name);
-    const duplicate = rows.find(
-      (row: { name: string }) => row.name === `${name}（コピー）`,
-    );
-    expect(duplicate.id).not.toBe(source.id);
-    if (key === "skills") {
-      expect(duplicate).toMatchObject({
-        template_ids: source.template_ids,
-        mp_cost: 7,
-      });
-      expect(source.mp_cost).toBe(Number(originalValue));
-    } else {
-      expect(duplicate).toMatchObject({ effect: source.effect, multiplier: 2 });
-      expect(source.multiplier).toBe(Number(originalValue));
-      expect(duplicate.base_template_id).toBeUndefined();
-    }
-  },
-);
 
 it.each([
   ["スキル一覧", "skills"],
@@ -414,6 +355,94 @@ it("registers one variation axis with several subnames and values, without addin
     target: { value: "1.8" },
   });
   expect(panel.getAllByLabelText("変型の値")[1]).toHaveValue(1.8);
+});
+
+it("creates a variation of a variation and keeps its skill reference through reorder and reload", async () => {
+  const user = userEvent.setup();
+  const view = render(<CatalogEditor kind="skills" />);
+  const root = await screen.findByRole("row", { name: "ファイアの効果" });
+  expect(
+    screen.queryByRole("button", { name: "複製" }),
+  ).not.toBeInTheDocument();
+  await user.click(within(root).getByRole("button", { name: "変型" }));
+  const parent = within(
+    await screen.findByRole("dialog", { name: "ファイアの効果の変型" }),
+  );
+  await user.selectOptions(
+    parent.getByLabelText("変更する項目"),
+    "target_count",
+  );
+  await user.click(parent.getByRole("button", { name: "＋ 値を追加" }));
+  fireEvent.change(parent.getByLabelText("サブ名"), {
+    target: { value: "範囲" },
+  });
+  await user.selectOptions(parent.getByLabelText("変型の値"), "3");
+  await user.click(
+    within(
+      parent.getByRole("group", { name: "ファイアの効果（範囲）" }),
+    ).getByRole("button", { name: "変型" }),
+  );
+  const nested = within(
+    await screen.findByRole("dialog", { name: "ファイアの効果（範囲）の変型" }),
+  );
+  await user.selectOptions(nested.getByLabelText("変更する項目"), "power");
+  await user.click(nested.getByRole("button", { name: "＋ 値を追加" }));
+  fireEvent.change(nested.getByLabelText("サブ名"), {
+    target: { value: "中級" },
+  });
+  fireEvent.change(nested.getByLabelText("変型の値"), {
+    target: { value: "1.8" },
+  });
+  await user.keyboard("{Escape}");
+  expect(
+    screen.getByRole("dialog", { name: "ファイアの効果の変型" }),
+  ).toBeVisible();
+  await user.click(parent.getByRole("button", { name: "変型を削除" }));
+  expect(parent.getByRole("alert")).toHaveTextContent("下位の変型");
+  await user.keyboard("{Escape}");
+  const skill = screen.getByRole("row", { name: "ファイア" });
+  const option = within(skill).getByRole("option", {
+    name: "ファイアの効果（範囲, 中級）",
+  });
+  const identity = (option as HTMLOptionElement).value;
+  await user.selectOptions(
+    within(skill).getByLabelText("効果テンプレート 1"),
+    identity,
+  );
+  await dragRow(
+    user,
+    screen.getByRole("table", { name: "効果テンプレート一覧" }),
+    root,
+    "ArrowDown",
+  );
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  const payload = saved.mock.calls.at(-1)?.[0];
+  expect(
+    payload.skills.find((row: { id: string }) => row.id === "fire")
+      .template_ids,
+  ).toEqual([identity]);
+  expect(
+    payload.skill_templates.find((row: { id: string }) => row.id === identity),
+  ).toMatchObject({
+    name: "ファイアの効果（範囲, 中級）",
+    target_count: 3,
+    multiplier: 1.8,
+  });
+  view.unmount();
+  server.use(
+    http.get("*/admin/game/catalog", () => HttpResponse.json(payload)),
+  );
+  render(<CatalogEditor kind="skills" />);
+  const restored = await screen.findByRole("row", { name: "ファイア" });
+  expect(within(restored).getByLabelText("効果テンプレート 1")).toHaveValue(
+    identity,
+  );
+  expect(
+    within(restored).getByRole("option", {
+      name: "ファイアの効果（範囲, 中級）",
+    }),
+  ).toBeInTheDocument();
 });
 
 it("changes the available variation inputs for status details and reduced action durations", async () => {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AdminNativeTable } from "~/features/admin/AdminTable";
 import { type GameCatalog, requestGameCatalog } from "~/features/game/catalog";
 import {
   conditionGroup,
@@ -105,7 +106,7 @@ export default function TriggerEditor() {
       >
         <fieldset disabled={!catalog || busy}>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <AdminNativeTable className="w-full text-sm">
               <thead>
                 <tr>
                   {["名前", "条件", "詳細", "有効"].map((h) => (
@@ -277,7 +278,7 @@ export default function TriggerEditor() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </AdminNativeTable>
           </div>
           <div className="flex justify-center mt-4">
             <Button type="submit">保存</Button>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AdminNativeTable } from "~/features/admin/AdminTable";
 import {
   type GameCatalog,
   type SpecialtySkillUse,
@@ -122,7 +123,7 @@ export default function SkillUsageEditor() {
                   </Button>
                 </div>
                 <div className="overflow-x-auto rounded-lg border">
-                  <table className="w-full whitespace-nowrap text-sm">
+                  <AdminNativeTable className="w-full whitespace-nowrap text-sm">
                     <thead className="bg-muted/40">
                       <tr>
                         {[
@@ -246,7 +247,7 @@ export default function SkillUsageEditor() {
                         </tr>
                       )}
                     </tbody>
-                  </table>
+                  </AdminNativeTable>
                 </div>
               </section>
             );

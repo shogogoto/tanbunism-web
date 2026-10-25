@@ -1,3 +1,4 @@
+import { AdminNativeTable } from "~/features/admin/AdminTable";
 import GameIcon from "~/features/game/GameIcon";
 import type { GameCatalog, ShopListing } from "~/features/game/catalog";
 import { Input } from "~/shared/components/ui/input";
@@ -17,7 +18,7 @@ export default function ShopTable({
   }
   return (
     <div className="overflow-x-auto rounded-lg border">
-      <table
+      <AdminNativeTable
         className="w-full whitespace-nowrap text-sm"
         aria-label="ショップ販売設定"
       >
@@ -84,7 +85,7 @@ export default function ShopTable({
             );
           })}
         </tbody>
-      </table>
+      </AdminNativeTable>
       {!catalog.items.length && (
         <p className="p-3 text-sm text-muted-foreground">
           アイテムを先に定義してください。

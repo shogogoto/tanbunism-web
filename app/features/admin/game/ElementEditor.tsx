@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AdminNativeTable } from "~/features/admin/AdminTable";
 import { IconPicker } from "~/features/game/GameIcon";
 import {
   type ElementDefinition,
@@ -78,7 +79,10 @@ export default function ElementEditor() {
         >
           <fieldset disabled={busy} className="min-w-0">
             <div className="overflow-x-auto rounded-lg border">
-              <table aria-label="属性一覧" className="w-full text-sm">
+              <AdminNativeTable
+                aria-label="属性一覧"
+                className="w-full text-sm"
+              >
                 <thead className="bg-muted/40">
                   <tr>
                     {["名前", "アイコン", "表示色", "有効"].map((label) => (
@@ -165,7 +169,7 @@ export default function ElementEditor() {
                     </td>
                   </tr>
                 </tbody>
-              </table>
+              </AdminNativeTable>
             </div>
             <div className="mt-4 flex justify-center">
               <Button type="submit">{busy ? "保存中…" : "保存"}</Button>

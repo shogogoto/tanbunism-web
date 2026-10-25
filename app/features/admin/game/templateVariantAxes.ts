@@ -253,6 +253,7 @@ export function axisVariant(
     id: row.id,
     name: row.name,
     variant_label: row.variant_label,
+    variant_axis: row.variant_axis,
     base_template_id: base.id,
     override_fields: templateOverrideFields.filter(
       (key) =>

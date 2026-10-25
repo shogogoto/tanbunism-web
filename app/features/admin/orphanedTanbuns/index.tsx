@@ -2,6 +2,7 @@ import { ExternalLink, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
+import { AdminTable as Table } from "~/features/admin/AdminTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +18,6 @@ import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import { Checkbox } from "~/shared/components/ui/checkbox";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,

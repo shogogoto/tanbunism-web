@@ -1,7 +1,7 @@
+import { AdminTable as Table } from "~/features/admin/AdminTable";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,

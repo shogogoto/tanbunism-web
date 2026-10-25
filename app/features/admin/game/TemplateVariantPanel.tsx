@@ -6,6 +6,11 @@ import {
   defaultElements,
   resolveCatalogTemplates,
 } from "~/features/game/catalog";
+import {
+  MAX_VARIANT_DEPTH,
+  templateLineage,
+  variantName,
+} from "~/features/game/templateVariants";
 import { Button } from "~/shared/components/ui/button";
 import {
   Dialog,
@@ -40,6 +45,7 @@ export default function TemplateVariantPanel({
     (row) => row.base_template_id === template.id,
   );
   const axes = variantAxes(template, catalog.elements ?? defaultElements);
+  const depth = templateLineage(templates, template.id).length - 1;
   const axis = axes.find((item) => item.id === template.variant_axis);
   const labelOf = (row: SkillTemplate) =>
     row.variant_label ??
@@ -49,7 +55,7 @@ export default function TemplateVariantPanel({
   const named = (row: SkillTemplate, label: string) => ({
     ...row,
     variant_label: label,
-    name: `${template.name}（${label}）`.slice(0, 80),
+    name: variantName(templates, template.id, label),
   });
   function change(next: SkillTemplate[]) {
     try {
@@ -79,6 +85,10 @@ export default function TemplateVariantPanel({
     setPendingAxis(undefined);
   }
   function remove(row: SkillTemplate) {
+    if (templates.some((item) => item.base_template_id === row.id)) {
+      setError("下位の変型があるため削除できません。");
+      return;
+    }
     if (
       catalog.skills.some(
         (skill) =>
@@ -112,7 +122,9 @@ export default function TemplateVariantPanel({
         data-dashboard-swipe-ignore
       >
         <DialogHeader>
-          <DialogTitle>{template.name}の変型</DialogTitle>
+          <DialogTitle className="break-words">
+            {template.name}の変型
+          </DialogTitle>
           <DialogDescription className="sr-only">
             変更項目を1つ選び、サブ名と値を登録します。一覧の保存で確定します。
           </DialogDescription>
@@ -180,14 +192,15 @@ export default function TemplateVariantPanel({
           aria-label="変型の値一覧"
           disabled={Boolean(pendingAxis)}
         >
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2rem] gap-2 text-xs text-muted-foreground">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_2rem] gap-2 text-xs text-muted-foreground">
             <span>サブ名</span>
             <span>{axis?.label ?? "値"}</span>
+            <span>変型</span>
           </div>
           {variants.map((row) => (
             <fieldset
               key={row.id}
-              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2"
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_2rem] items-center gap-2"
               aria-label={row.name}
             >
               <Input
@@ -258,6 +271,15 @@ export default function TemplateVariantPanel({
               ) : (
                 <span className="text-xs text-muted-foreground">個別設定</span>
               )}
+              {depth + 1 < MAX_VARIANT_DEPTH ? (
+                <TemplateVariantPanel
+                  template={row}
+                  catalog={catalog}
+                  onChange={onChange}
+                />
+              ) : (
+                <span className="text-xs text-muted-foreground">上限</span>
+              )}
               <Button
                 type="button"
                 variant="ghost"
@@ -273,7 +295,7 @@ export default function TemplateVariantPanel({
         <Button
           type="button"
           variant="outline"
-          disabled={!axis || Boolean(pendingAxis)}
+          disabled={!axis || Boolean(pendingAxis) || depth >= MAX_VARIANT_DEPTH}
           onClick={() => {
             if (!axis) return;
             const row = named(

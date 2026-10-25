@@ -10,6 +10,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
+import { AdminTable as Table } from "~/features/admin/AdminTable";
 import { adventureAccessKey } from "~/features/game/access";
 import { invalidateGamification } from "~/features/gamification/invalidate";
 import {
@@ -33,7 +34,6 @@ import {
 } from "~/shared/components/ui/dialog";
 import { Input } from "~/shared/components/ui/input";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,

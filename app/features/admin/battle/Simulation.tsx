@@ -1,9 +1,9 @@
 import { useState } from "react";
+import { AdminTable as Table } from "~/features/admin/AdminTable";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,

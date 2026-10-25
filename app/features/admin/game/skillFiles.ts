@@ -53,6 +53,7 @@ export function skillFileText(
               "base_template_id",
               "override_fields",
               "variant_label",
+              "variant_axis",
               ...(template.override_fields ?? []),
             ].includes(key),
           ),

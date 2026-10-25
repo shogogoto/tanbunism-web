@@ -1,4 +1,5 @@
-import { Copy, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import { AdminNativeTable } from "~/features/admin/AdminTable";
 import {
   type GameCatalog,
   type SkillDefinition,
@@ -10,6 +11,7 @@ import {
   statusStatLabels,
 } from "~/features/game/catalog";
 import {
+  templateDescendants,
   templateOverrideFields,
   templatePowerFields,
 } from "~/features/game/templateVariants";
@@ -36,13 +38,12 @@ import useTableSort from "./useTableSort";
 const selectClass = "h-9 rounded-md border bg-background px-2";
 const columns = [
   ["name", "名前"],
-  ["variants", "変型"],
   ["target_count", "対象数"],
   ["kind", "種別"],
   ["detail", "詳細"],
   ["type", "タイプ"],
   ["power", "効果"],
-  ["duplicate", "複製"],
+  ["variants", "変型"],
   ["deleted", "削除"],
 ];
 
@@ -176,17 +177,17 @@ export default function SkillTemplateEditor({
             commit(
               rows.flatMap((skill) => [
                 toTemplate(skill),
-                ...templates.filter((row) => row.base_template_id === skill.id),
+                ...templateDescendants(templates, skill.id),
               ]),
             );
             resetSort();
           }}
         >
-          <table
+          <AdminNativeTable
             aria-label={
               variantId ? "バリエーションの設定" : "効果テンプレート一覧"
             }
-            className="mx-auto w-auto text-sm [&_tr>*:not(:last-child)]:border-r"
+            className="mx-auto w-auto text-sm"
           >
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>
@@ -194,7 +195,7 @@ export default function SkillTemplateEditor({
                   <span className="sr-only">並べ替え</span>
                 </th>
                 {columns.map(([key, label]) =>
-                  key === "variants" || key === "duplicate" ? (
+                  key === "variants" ? (
                     <th
                       key={key}
                       scope="col"
@@ -376,15 +377,7 @@ export default function SkillTemplateEditor({
                         }
                       />
                     </td>
-                    <td>
-                      {source && (
-                        <TemplateVariantControls
-                          template={source}
-                          catalog={catalog}
-                          onChange={onChange}
-                        />
-                      )}
-                    </td>
+
                     <td
                       className={scopeOverride ? "bg-amber-500/10" : undefined}
                     >
@@ -695,35 +688,15 @@ export default function SkillTemplateEditor({
                         )}
                       </div>
                     </td>
+
                     <td>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        aria-label="複製"
-                        title="複製"
-                        onClick={() => {
-                          const {
-                            base_template_id,
-                            override_fields,
-                            variant_axis,
-                            variant_label,
-                            ...copy
-                          } = structuredClone(source ?? skillTemplate(skill));
-                          const duplicate = {
-                            ...copy,
-                            id: `effect_${crypto.randomUUID().replaceAll("-", "")}`,
-                            name: `${skill.name.slice(0, 74)}（コピー）`,
-                          };
-                          commit(
-                            templates.flatMap((row) =>
-                              row.id === skill.id ? [row, duplicate] : [row],
-                            ),
-                          );
-                        }}
-                      >
-                        <Copy aria-hidden="true" className="size-4" />
-                      </Button>
+                      {source && (
+                        <TemplateVariantControls
+                          template={source}
+                          catalog={catalog}
+                          onChange={onChange}
+                        />
+                      )}
                     </td>
                     <td>
                       <Button
@@ -790,7 +763,7 @@ export default function SkillTemplateEditor({
                 </tr>
               )}
             </tbody>
-          </table>
+          </AdminNativeTable>
         </SortableRows>
       </div>
     </section>

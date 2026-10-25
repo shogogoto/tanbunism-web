@@ -1,6 +1,7 @@
 import { RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AdminTable as Table } from "~/features/admin/AdminTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +16,6 @@ import {
 import { Button } from "~/shared/components/ui/button";
 import { Checkbox } from "~/shared/components/ui/checkbox";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,

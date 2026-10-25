@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { AdminNativeTable } from "~/features/admin/AdminTable";
 import { imageRequest } from "~/features/user/ImageUploader/api";
 import { getTransformedImageUrl } from "~/features/user/libs/image";
 import { Button } from "~/shared/components/ui/button";
@@ -226,7 +227,7 @@ export default function ImageManager() {
         </p>
       )}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <AdminNativeTable className="w-full text-sm">
           <thead>
             <tr className="border-b text-left">
               <th className="p-2">選択</th>
@@ -302,7 +303,7 @@ export default function ImageManager() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </AdminNativeTable>
       </div>
     </section>
   );

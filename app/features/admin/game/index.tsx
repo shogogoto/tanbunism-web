@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, ChevronsUpDown, Swords } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
+import { AdminTable as Table } from "~/features/admin/AdminTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +23,6 @@ import {
 } from "~/shared/components/ui/dialog";
 import { Input } from "~/shared/components/ui/input";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
