@@ -1,5 +1,5 @@
 import { Plus, X } from "lucide-react";
-import { AdminNativeTable } from "~/features/admin/AdminTable";
+import { AdminNativeTable, AdminTableFrame } from "~/features/admin/AdminTable";
 import {
   type GameCatalog,
   type SkillDefinition,
@@ -170,7 +170,7 @@ export default function SkillTemplateEditor({
   return (
     <section aria-label="効果テンプレート" className="min-w-0 space-y-2">
       {!variantId && <h3 className="font-semibold">効果テンプレート</h3>}
-      <div className="overflow-x-auto rounded-lg border">
+      <AdminTableFrame layout="content">
         <SortableRows
           rows={sorted}
           onReorder={(rows) => {
@@ -767,7 +767,7 @@ export default function SkillTemplateEditor({
             </tbody>
           </AdminNativeTable>
         </SortableRows>
-      </div>
+      </AdminTableFrame>
     </section>
   );
 }

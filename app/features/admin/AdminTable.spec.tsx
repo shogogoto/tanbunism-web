@@ -1,7 +1,30 @@
 import { render, screen } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { Table } from "~/shared/components/ui/table";
-import { AdminNativeTable, AdminTable } from "./AdminTable";
+import { AdminNativeTable, AdminTable, AdminTableFrame } from "./AdminTable";
+
+it("sizes content frames to the table while retaining a bounded scroll area", () => {
+  render(
+    <AdminTableFrame layout="content" className="w-full">
+      <AdminNativeTable aria-label="framed" layout="content">
+        <tbody>
+          <tr>
+            <td>内容</td>
+          </tr>
+        </tbody>
+      </AdminNativeTable>
+    </AdminTableFrame>,
+  );
+  const frame = screen.getByRole("table", { name: "framed" }).parentElement;
+  expect(frame).toHaveClass(
+    "mx-auto",
+    "w-fit",
+    "max-w-full",
+    "overflow-x-auto",
+    "border",
+  );
+  expect(frame).not.toHaveClass("w-full");
+});
 
 it.each([
   ["native", AdminNativeTable],
@@ -41,6 +64,17 @@ it.each([
     expect(screen.getByRole("table", { name: "content" })).not.toHaveAttribute(
       "layout",
     );
+    if (Component === AdminTable) {
+      expect(
+        screen.getByRole("table", { name: "content" }).parentElement,
+      ).toHaveClass("mx-auto", "w-fit", "max-w-full");
+      expect(
+        screen.getByRole("table", { name: "content" }).parentElement,
+      ).not.toHaveClass("w-full");
+      expect(
+        screen.getByRole("table", { name: "full" }).parentElement,
+      ).toHaveClass("w-full");
+    }
   },
 );
 

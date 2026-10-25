@@ -9,6 +9,29 @@ const layouts: Record<TableLayout, string> = {
   content: "mx-auto w-auto",
   full: "w-full",
 };
+const containerLayouts: Record<TableLayout, string> = {
+  content: "mx-auto w-fit max-w-full",
+  full: "w-full",
+};
+
+/** Keep the scroll frame and its border aligned with the table's width policy. */
+export function AdminTableFrame({
+  className,
+  layout = "full",
+  ...props
+}: ComponentProps<"div"> & { layout?: TableLayout }) {
+  return (
+    <div
+      className={cn(
+        "overflow-x-auto rounded-lg border",
+        className,
+        containerLayouts[layout],
+      )}
+      data-admin-table-frame={layout}
+      {...props}
+    />
+  );
+}
 
 function adminTableClassName(
   className: string | undefined,
@@ -34,11 +57,13 @@ export function AdminNativeTable({
 
 export function AdminTable({
   className,
+  containerClassName,
   layout = "full",
   ...props
 }: ComponentProps<typeof Table> & { layout?: TableLayout }) {
   return (
     <Table
+      containerClassName={cn(containerClassName, containerLayouts[layout])}
       className={adminTableClassName(className, layout)}
       data-admin-layout={layout}
       {...props}
