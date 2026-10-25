@@ -67,7 +67,7 @@ async function dragRow(
   await user.keyboard("[Space]");
 }
 
-it("uses two numbered sortable tables and migrates legacy skills", async () => {
+it("uses sortable tables without row numbers and a separate variation column", async () => {
   render(<CatalogEditor kind="skills" />);
   const skills = await screen.findByRole("table", { name: "スキル一覧" });
   expect(screen.getAllByRole("table")).toHaveLength(2);
@@ -76,7 +76,7 @@ it("uses two numbered sortable tables and migrates legacy skills", async () => {
       .getAllByRole("columnheader")
       .map((h) => h.textContent?.replace(" ↕", "")),
   ).toEqual([
-    "番号",
+    "並べ替え",
     "名前",
     "効果テンプレート",
     "属性",
@@ -97,13 +97,21 @@ it("uses two numbered sortable tables and migrates legacy skills", async () => {
   await userEvent.click(sort);
   expect(sort.closest("th")).toHaveAttribute("aria-sort", "descending");
   const templates = screen.getByRole("table", { name: "効果テンプレート一覧" });
+  expect(templates).toHaveClass("w-auto");
+  const templateRow = within(templates).getByRole("row", {
+    name: "ファイアの効果",
+  });
+  expect(
+    within(templateRow).getByRole("button", { name: "変型" }).closest("td"),
+  ).toBe(within(templateRow).getAllByRole("cell")[2]);
   expect(
     within(templates)
       .getAllByRole("columnheader")
       .map((h) => h.textContent?.replace(" ↕", "")),
   ).toEqual([
-    "番号",
+    "並べ替え",
     "名前",
+    "変型",
     "対象数",
     "種別",
     "詳細",
@@ -127,7 +135,7 @@ it.each([
   ["スキル一覧", "skills"],
   ["効果テンプレート一覧", "skill_templates"],
 ] as const)(
-  "reorders numbered rows in %s and restores the saved order",
+  "reorders unnumbered rows in %s and restores the saved order",
   async (tableName, key) => {
     const user = userEvent.setup();
     const view = render(<CatalogEditor kind="skills" />);
@@ -151,7 +159,7 @@ it.each([
     ]);
     expect(
       rows().map((row) => within(row).getAllByRole("cell")[0].textContent),
-    ).toEqual(["1", "2", "3"]);
+    ).toEqual(["", "", ""]);
     await dragRow(user, table, rows()[2], "ArrowUp");
     const expected = [original[1], original[2], original[0]];
     expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual(

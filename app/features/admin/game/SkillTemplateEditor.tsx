@@ -35,8 +35,8 @@ import useTableSort from "./useTableSort";
 
 const selectClass = "h-9 rounded-md border bg-background px-2";
 const columns = [
-  ["order", "番号"],
   ["name", "名前"],
+  ["variants", "変型"],
   ["target_count", "対象数"],
   ["kind", "種別"],
   ["detail", "詳細"],
@@ -185,13 +185,30 @@ export default function SkillTemplateEditor({
             aria-label={
               variantId ? "バリエーションの設定" : "効果テンプレート一覧"
             }
-            className="w-full text-sm"
+            className="w-auto text-sm"
           >
             <thead className="bg-muted/40 text-muted-foreground">
-              <tr>{columns.map(([key, label]) => header(key, label))}</tr>
+              <tr>
+                <th scope="col" className="w-8">
+                  <span className="sr-only">並べ替え</span>
+                </th>
+                {columns.map(([key, label]) =>
+                  key === "variants" ? (
+                    <th
+                      key={key}
+                      scope="col"
+                      className="p-2 text-left font-medium"
+                    >
+                      {label}
+                    </th>
+                  ) : (
+                    header(key, label)
+                  ),
+                )}
+              </tr>
             </thead>
             <tbody>
-              {sorted.map((skill, index) => {
+              {sorted.map((skill) => {
                 const status = isStatus(skill);
                 const kind = templateKind(skill);
                 const utility = kind === "other";
@@ -345,21 +362,7 @@ export default function SkillTemplateEditor({
                     aria-label={skill.name}
                     className="border-t [&>td]:p-2"
                   >
-                    <td>
-                      {variantId ? (
-                        <span className="tabular-nums">
-                          {templates
-                            .filter(
-                              (row) =>
-                                row.base_template_id ===
-                                source?.base_template_id,
-                            )
-                            .findIndex((row) => row.id === skill.id) + 1}
-                        </span>
-                      ) : (
-                        <RowOrder index={index} />
-                      )}
-                    </td>
+                    <td>{!variantId && <RowOrder />}</td>
                     <td>
                       <Input
                         aria-label="名前"
@@ -371,6 +374,8 @@ export default function SkillTemplateEditor({
                           update(skill.id, { name: e.target.value })
                         }
                       />
+                    </td>
+                    <td>
                       {source && (
                         <TemplateVariantControls
                           template={source}
@@ -450,7 +455,7 @@ export default function SkillTemplateEditor({
                         "stack_limit",
                       ])}
                     >
-                      <fieldset>
+                      <fieldset className="max-w-xs">
                         {status ? (
                           <div className="flex flex-wrap items-center gap-1">
                             <select
@@ -720,7 +725,7 @@ export default function SkillTemplateEditor({
               })}
               {!variantId && (
                 <tr className="border-t">
-                  <td colSpan={columns.length} className="p-1 text-center">
+                  <td colSpan={columns.length + 1} className="p-1 text-center">
                     <Button
                       type="button"
                       variant="ghost"

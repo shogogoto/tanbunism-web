@@ -73,8 +73,10 @@ export default function SkillTables({
           <table aria-label="スキル一覧" className="w-full text-sm">
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>
+                <th scope="col" className="w-8">
+                  <span className="sr-only">並べ替え</span>
+                </th>
                 {[
-                  ["order", "番号"],
                   ["name", "名前"],
                   ["templates", "効果テンプレート"],
                   ["element", "属性"],
@@ -86,7 +88,7 @@ export default function SkillTables({
               </tr>
             </thead>
             <tbody>
-              {sorted.map((skill, index) => {
+              {sorted.map((skill) => {
                 const removed = deletions.has(skill.id);
                 const normal = skill.id === "normal_attack";
                 const selected = skill.template_ids ?? [];
@@ -99,7 +101,7 @@ export default function SkillTables({
                     className={`border-t [&>td]:p-2 ${removed ? "bg-muted text-muted-foreground [&>td:not(:last-child)]:opacity-40" : ""}`}
                   >
                     <td>
-                      <RowOrder index={index} />
+                      <RowOrder />
                     </td>
                     <td>
                       <Input
