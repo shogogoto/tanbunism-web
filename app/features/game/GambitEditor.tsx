@@ -22,9 +22,6 @@ const conditionLabels = {
   mp_below: "自分のMPが以下（%）",
   mp_above: "自分のMPが以上（%）",
   enemy_count: "敵の数が以上",
-  buff_present: "自分にbuffあり",
-  buff_absent: "自分にbuffなし",
-  poisoned: "自分が毒状態",
   state: "自分の状態",
 };
 export default function GambitEditor({

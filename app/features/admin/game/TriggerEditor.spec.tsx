@@ -13,6 +13,17 @@ const catalog = {
   skills: [
     ...sampleCatalog.skills,
     normalizeSkill({
+      id: "poison_skill",
+      name: "ポイズン",
+      icon: "skull",
+      effect: "ailment",
+      target: "enemy",
+      ailment: "poison",
+      amount: 3,
+      mp_cost: 2,
+      enabled: true,
+    }),
+    normalizeSkill({
       id: "curse_skill",
       name: "カース",
       icon: "skull",
@@ -46,14 +57,18 @@ const catalog = {
     {
       id: "buff",
       name: "バフなし",
-      condition: "buff_absent",
+      condition: "state",
+      state_skill_id: "defense_up",
+      state_present: false,
       threshold: 30,
       enabled: true,
     },
     {
       id: "poison",
       name: "毒条件",
-      condition: "poisoned",
+      condition: "state",
+      state_skill_id: "poison_skill",
+      state_present: true,
       threshold: 30,
       enabled: true,
     },
@@ -74,7 +89,7 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-it("groups legacy states and edits comparison and state details without losing other definitions", async () => {
+it("selects state skills and edits comparison details without legacy state options", async () => {
   const user = userEvent.setup();
   render(<TriggerEditor />);
   const row = await screen.findByRole("row", { name: "HP条件" });
@@ -91,10 +106,12 @@ it("groups legacy states and edits comparison and state details without losing o
   expect(buff.getByLabelText("判定する条件")).toHaveValue("state");
   expect(buff.getByLabelText("状態の有無")).toHaveValue("false");
   const poison = within(screen.getByRole("row", { name: "毒条件" }));
-  expect(poison.getByLabelText("判定する状態")).toHaveValue("");
+  expect(poison.getByLabelText("判定する状態")).toHaveValue("poison_skill");
   expect(
-    poison.getByRole("option", { name: "旧設定：毒" }),
-  ).toBeInTheDocument();
+    within(poison.getByLabelText("判定する状態")).queryByRole("option", {
+      name: /旧設定/,
+    }),
+  ).not.toBeInTheDocument();
   expect(
     poison.getByRole("option", { name: "プロテクト" }),
   ).toBeInTheDocument();
@@ -116,7 +133,11 @@ it("groups legacy states and edits comparison and state details without losing o
     condition: "hp_above",
     threshold: 70,
   });
-  expect(payload.triggers[1]).toMatchObject({ condition: "buff_absent" });
+  expect(payload.triggers[1]).toMatchObject({
+    condition: "state",
+    state_skill_id: "defense_up",
+    state_present: false,
+  });
   expect(payload.triggers[2]).toMatchObject({
     condition: "state",
     state_skill_id: "curse_skill",

@@ -10,7 +10,6 @@ import {
   conditionGroup,
   isStateSkill,
   stateCondition,
-  stateLabels,
 } from "~/features/game/triggerConditions";
 import { triggerTargets } from "~/features/game/triggerVariants";
 import { Button } from "~/shared/components/ui/button";
@@ -255,6 +254,7 @@ export default function TriggerEditor() {
                           <>
                             <select
                               aria-label="判定する状態"
+                              required
                               className="h-9 rounded-md border bg-background px-2"
                               value={t.state_skill_id ?? ""}
                               onChange={(e) =>
@@ -266,8 +266,7 @@ export default function TriggerEditor() {
                               }
                             >
                               <option value="" disabled>
-                                旧設定：
-                                {stateLabels[stateCondition(t).state_kind]}
+                                状態スキルを選択
                               </option>
                               {t.state_skill_id &&
                                 !stateSkills.some(

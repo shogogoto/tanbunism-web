@@ -538,7 +538,7 @@ export type TriggerVariant = {
 };
 export type TriggerDefinition = Pick<
   GambitRule,
-  "condition" | "threshold" | "state_kind" | "state_present" | "state_skill_id"
+  "condition" | "threshold" | "state_present" | "state_skill_id"
 > & {
   id: string;
   name: string;
@@ -579,12 +579,8 @@ export type GambitRule = {
     | "mp_below"
     | "mp_above"
     | "enemy_count"
-    | "state"
-    | "buff_present"
-    | "buff_absent"
-    | "poisoned";
+    | "state";
   threshold: number;
-  state_kind?: "buff" | "debuff" | "poison" | "curse" | "regen" | "refresh";
   state_present?: boolean;
   state_skill_id?: string | null;
   action: "skill" | "item" | "specialty";

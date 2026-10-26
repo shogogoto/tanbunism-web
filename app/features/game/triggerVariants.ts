@@ -20,9 +20,6 @@ export const triggerConditionLabels = {
   mp_above: "MPが以上（%）",
   enemy_count: "敵の数が以上",
   state: "状態",
-  buff_present: "buffあり",
-  buff_absent: "buffなし",
-  poisoned: "毒状態",
 } as const;
 
 export function triggerVariant(
@@ -33,21 +30,8 @@ export function triggerVariant(
   const candidate = trigger.variants?.find((v) => v.id === id);
   if (!candidate) return undefined;
   const field = trigger.variant_field ?? "threshold";
-  const legacyState =
-    (field === "state_skill_id" || field === "state_present") &&
-    ["buff_present", "buff_absent", "poisoned"].includes(trigger.condition);
   return {
     ...trigger,
-    ...(legacyState
-      ? {
-          condition: "state" as const,
-          state_kind:
-            trigger.condition === "poisoned"
-              ? ("poison" as const)
-              : ("buff" as const),
-          state_present: trigger.condition !== "buff_absent",
-        }
-      : {}),
     [field]: candidate.value,
   };
 }
