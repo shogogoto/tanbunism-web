@@ -96,6 +96,57 @@ it("saves enemy MP and special stats with independent growth settings", async ()
   );
 });
 
+it("switches the Power formula and saves reference Power and defense growth", async () => {
+  const user = userEvent.setup();
+  render(<BattleSettingsManager />);
+  const region = await screen.findByRole("region", {
+    name: "敵ステータスの計算",
+  });
+  const formula = within(region).getByRole("combobox", {
+    name: "Powerの計算方式",
+  });
+  expect(formula).toHaveValue("sqrt");
+  expect(within(region).getAllByText("+ √(Power / 基準Power) ×")).toHaveLength(
+    7,
+  );
+  for (const [label, value] of [
+    ["基準Power", "100"],
+    ["敵の基礎守", "3"],
+    ["Powerの守補正", "0.5"],
+    ["達成度帯ごとの守成長率（%）", "15"],
+  ]) {
+    const input = within(region).getByLabelText(label);
+    await user.clear(input);
+    await user.type(input, value);
+  }
+  await user.selectOptions(formula, "log");
+  expect(within(region).queryByLabelText("基準Power")).not.toBeInTheDocument();
+  expect(within(region).getAllByText("+ log(1 + Power) ×")).toHaveLength(7);
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() =>
+    expect(saved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        power_formula: "log",
+        power_reference: 100,
+        enemy_defense: 3,
+        power_defense: 0.5,
+        region_defense_growth_percent: 15,
+      }),
+    ),
+  );
+  await user.selectOptions(formula, "sqrt");
+  expect(within(region).getByLabelText("基準Power")).toHaveValue(100);
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() =>
+    expect(saved).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        power_formula: "sqrt",
+        power_reference: 100,
+      }),
+    ),
+  );
+});
+
 it("saves the speed formula, base speed, and allocation coefficient", async () => {
   const user = userEvent.setup();
   render(<BattleSettingsManager />);

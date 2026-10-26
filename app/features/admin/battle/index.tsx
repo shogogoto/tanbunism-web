@@ -47,6 +47,9 @@ const fields = {
   enemy_hp: ["敵の基礎HP", 1, 10000, 1],
   enemy_attack: ["敵の基礎攻", 1, 1000, 1],
   enemy_defense: ["敵の基礎守", 0, 1000, 1],
+  power_reference: ["基準Power", 0.01, 1000000000, "any"],
+  power_defense: ["Powerの守補正", 0, 100, 0.1],
+  region_defense_growth_percent: ["達成度帯ごとの守成長率（%）", 0, 1000, 1],
   enemy_mp: ["敵の基礎MP", 0, 10000, 1],
   enemy_special_attack: ["敵の基礎特攻", 0, 1000, 1],
   enemy_special_defense: ["敵の基礎特守", 0, 1000, 1],
@@ -92,6 +95,9 @@ const fields = {
 const formulaLabels: Partial<Record<keyof typeof fields, string>> = {
   enemy_hp: "基礎HP",
   enemy_attack: "基礎攻撃力",
+  enemy_defense: "基礎守備力",
+  power_defense: "Power補正",
+  region_defense_growth_percent: "守の成長率",
   enemy_mp: "基礎MP",
   enemy_special_attack: "基礎特攻",
   enemy_special_defense: "基礎特守",
@@ -197,6 +203,9 @@ const groups = [
       "region_special_defense_growth_percent",
       "enemy_attack",
       "enemy_defense",
+      "power_reference",
+      "power_defense",
+      "region_defense_growth_percent",
       "enemy_speed",
       "power_hp",
       "power_attack",
@@ -430,6 +439,31 @@ export default function BattleSettingsManager() {
                     <FormulaSettings
                       kind={group.formula}
                       input={(kind) => settingInput(kind, true)}
+                      powerFormula={settings.power_formula}
+                      powerControls={
+                        <label className="grid gap-2 text-xs text-muted-foreground">
+                          Powerの計算方式
+                          <select
+                            form="game-settings"
+                            aria-label="Powerの計算方式"
+                            className="h-9 rounded-md border bg-background px-3 text-sm text-foreground"
+                            disabled={saving}
+                            value={settings.power_formula}
+                            onChange={(event) => {
+                              setSaved(false);
+                              setSettings({
+                                ...settings,
+                                power_formula: event.target.value as
+                                  | "log"
+                                  | "sqrt",
+                              });
+                            }}
+                          >
+                            <option value="sqrt">平方根</option>
+                            <option value="log">対数（従来）</option>
+                          </select>
+                        </label>
+                      }
                     />
                   ) : "inline" in group ? null : (
                     <div className="grid grid-cols-2 gap-x-6 gap-y-4 px-4 py-4 sm:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]">

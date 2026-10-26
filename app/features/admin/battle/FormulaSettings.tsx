@@ -7,6 +7,9 @@ export type FormulaField =
   | "enemy_hp"
   | "enemy_attack"
   | "enemy_defense"
+  | "power_reference"
+  | "power_defense"
+  | "region_defense_growth_percent"
   | "enemy_mp"
   | "enemy_special_attack"
   | "enemy_special_defense"
@@ -42,9 +45,13 @@ function FormulaRow({ children }: { children: ReactNode }) {
 export default function FormulaSettings({
   kind,
   input,
+  powerFormula = "sqrt",
+  powerControls,
 }: {
   kind: "damage" | "stats" | "roster";
   input: (field: FormulaField) => ReactNode;
+  powerFormula?: "log" | "sqrt";
+  powerControls?: ReactNode;
 }) {
   if (kind === "damage") {
     return (
@@ -68,6 +75,10 @@ export default function FormulaSettings({
   if (kind === "stats") {
     return (
       <div className="divide-y">
+        <FormulaRow>
+          {powerControls}
+          {powerFormula === "sqrt" && input("power_reference")}
+        </FormulaRow>
         {(
           [
             ["HP", "enemy_hp", "power_hp", "region_hp_growth_percent"],
@@ -91,6 +102,12 @@ export default function FormulaSettings({
               "region_attack_growth_percent",
             ],
             [
+              "守備力",
+              "enemy_defense",
+              "power_defense",
+              "region_defense_growth_percent",
+            ],
+            [
               "速さ",
               "enemy_speed",
               "power_speed",
@@ -101,7 +118,11 @@ export default function FormulaSettings({
           <FormulaRow key={base}>
             <span>{label} = (</span>
             {input(base)}
-            <span>+ log(1 + Power) ×</span>
+            <span>
+              {powerFormula === "sqrt"
+                ? "+ √(Power / 基準Power) ×"
+                : "+ log(1 + Power) ×"}
+            </span>
             {input(power)}
             <span>) ×</span>
             <span>[1 + (達成度帯 − 1) ×</span>
@@ -112,10 +133,6 @@ export default function FormulaSettings({
             <span>× 個体差</span>
           </FormulaRow>
         ))}
-        <FormulaRow>
-          <span>守備力 =</span>
-          {input("enemy_defense")}
-        </FormulaRow>
         <FormulaRow>
           <span>個体差 = 1 ±</span>
           {input("enemy_variance_percent")}
