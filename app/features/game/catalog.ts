@@ -492,8 +492,15 @@ export type EnemyDefinition = {
   multipliers?: Partial<Record<EnemyStat, number>>;
   attack_skill_id: string | null;
   on_hit_skill_id?: string | null;
+  gambits?: EnemyGambitRule[];
   weaknesses?: string[];
   resistances?: string[];
+};
+export type EnemyGambitRule = {
+  trigger_id: string;
+  trigger_variant_id?: string | null;
+  skill_id: string;
+  enabled: boolean;
 };
 export const enemyStatLabels = {
   hp: "HP",

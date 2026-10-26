@@ -18,6 +18,7 @@ import {
   type TurnResult,
   defaultBalance,
 } from "./battle";
+import { normalizeSkill } from "./catalog";
 import { type GameSave, enterDungeon, newSave } from "./domain";
 
 vi.mock("~/features/quiz/QuizPreviewPrompt", () => ({
@@ -103,6 +104,40 @@ function initial(): GameSave {
     },
   };
 }
+
+it("shows the skill selected by the enemy gambit", () => {
+  const save = initial();
+  if (!save.battle?.schedule) throw new Error("Missing fixture");
+  save.battle.schedule.actor_id = "e";
+  save.battle.enemyAction = {
+    name: "キュア",
+    item_id: null,
+    skill: normalizeSkill({
+      id: "heal",
+      name: "キュア",
+      effect: "heal_hp",
+      amount: 20,
+      target: "self",
+      icon: "heart",
+      mp_cost: 3,
+      enabled: true,
+    }),
+    target_ids: ["e"],
+  };
+  render(
+    <MemoryRouter>
+      <MultiBattle
+        save={save}
+        content={content}
+        context={context}
+        onSaved={vi.fn()}
+        onFinished={vi.fn()}
+        onBusy={vi.fn()}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText("ゴーストのキュア")).toBeVisible();
+});
 
 it("shows the backend forecast from left to right without selectable enemies", () => {
   render(

@@ -9,6 +9,7 @@ import type {
 import { defaultElements, isEquipmentSkill } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import EnemyGambitEditor from "./EnemyGambitEditor";
 import EnemyMultipliersEditor from "./EnemyMultipliersEditor";
 
 const selectClass = "h-9 rounded-md border bg-background px-2 text-sm";
@@ -31,7 +32,7 @@ export default function DefinitionTables({
     "素材",
     ...(kind === "items"
       ? ["発動スキル", "使用回数"]
-      : ["ボス用", "能力倍率", "攻撃スキル", "命中時スキル"]),
+      : ["ボス用", "能力倍率", "ガンビット", "攻撃スキル", "命中時スキル"]),
   ];
   const elements = (catalog.elements ?? defaultElements).filter(
     (element) =>
@@ -180,6 +181,13 @@ export default function DefinitionTables({
                     <EnemyMultipliersEditor
                       enemy={item}
                       onChange={(patch) => update(item.id, patch)}
+                    />
+                  </td>
+                  <td>
+                    <EnemyGambitEditor
+                      enemy={item}
+                      catalog={catalog}
+                      onChange={(gambits) => update(item.id, { gambits })}
                     />
                   </td>
                   <td>

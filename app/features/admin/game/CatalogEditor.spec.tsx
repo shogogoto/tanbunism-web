@@ -18,6 +18,68 @@ import CatalogEditor from "./CatalogEditor";
 import * as skillFiles from "./skillFiles";
 import { variantRowHighlight } from "./variantRowStyles";
 
+it("edits enemy gambits with trigger targets and saves them from the main table", async () => {
+  server.use(
+    http.get("*/admin/game/catalog", () =>
+      HttpResponse.json({
+        ...sampleCatalog,
+        triggers: [
+          {
+            id: "hurt",
+            name: "HPが少ない味方",
+            condition: "hp_below",
+            threshold: 30,
+            target: "ally",
+            enabled: true,
+            variants: [{ id: "half", name: "半分", value: 50 }],
+          },
+          {
+            id: "always",
+            name: "いつでも敵",
+            condition: "always",
+            threshold: 30,
+            target: "enemy",
+            enabled: true,
+          },
+        ],
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="enemies" />);
+  await user.click(await screen.findByRole("button", { name: "ガンビット 0" }));
+  const dialog = within(
+    screen.getByRole("dialog", { name: "ゴーストのガンビット" }),
+  );
+  await user.click(dialog.getByRole("button", { name: "条件を追加" }));
+  let row = within(dialog.getByRole("row", { name: "ガンビット 1" }));
+  expect(row.getByText("味方")).toBeVisible();
+  await user.selectOptions(row.getByLabelText("使用スキル"), "heal");
+  await user.selectOptions(row.getByLabelText("変型"), "half");
+  await user.click(dialog.getByRole("button", { name: "条件を追加" }));
+  row = within(dialog.getByRole("row", { name: "ガンビット 2" }));
+  await user.selectOptions(row.getByLabelText("トリガー"), "always");
+  row = within(dialog.getByRole("row", { name: "ガンビット 2" }));
+  expect(row.getByText("敵")).toBeVisible();
+  await user.click(dialog.getByRole("button", { name: "閉じる" }));
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls.at(-1)?.[0].enemies[0].gambits).toEqual([
+    {
+      trigger_id: "hurt",
+      trigger_variant_id: "half",
+      skill_id: "heal",
+      enabled: true,
+    },
+    {
+      trigger_id: "always",
+      trigger_variant_id: null,
+      skill_id: "fire",
+      enabled: true,
+    },
+  ]);
+});
+
 it("edits each skill binding's activation rate and preserves it after replacing its template", async () => {
   const user = userEvent.setup();
   render(<CatalogEditor kind="skills" />);

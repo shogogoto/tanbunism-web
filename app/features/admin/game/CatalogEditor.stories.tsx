@@ -22,6 +22,26 @@ export default {
         http.get("*/admin/game/catalog", () =>
           HttpResponse.json({
             ...sampleCatalog,
+            triggers: [
+              {
+                id: "hurt",
+                name: "HPが少ない味方",
+                condition: "hp_below",
+                threshold: 30,
+                target: "ally",
+                enabled: true,
+                variant_field: "threshold",
+                variants: [{ id: "half", name: "半分", value: 50 }],
+              },
+              {
+                id: "always",
+                name: "いつでも敵",
+                condition: "always",
+                threshold: 30,
+                target: "enemy",
+                enabled: true,
+              },
+            ],
             skills: [
               ...sampleCatalog.skills,
               {

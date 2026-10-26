@@ -101,7 +101,9 @@ export default function ScheduledBattle({
           sound: "auto",
           animation: hitEnemy
             ? (marker.gambitAction?.skill.animation ?? "impact")
-            : (enemy?.animation ?? "impact"),
+            : (marker.enemyAction?.skill.animation ??
+              enemy?.animation ??
+              "impact"),
         });
     } catch (cause) {
       setFrozenRemaining(undefined);
@@ -239,9 +241,12 @@ export default function ScheduledBattle({
           <SkillEffect
             key={shownResult.state.revision}
             animation={
-              enemy?.animation === "none"
+              (marker?.enemyAction?.skill.animation ?? enemy?.animation) ===
+              "none"
                 ? "impact"
-                : (enemy?.animation ?? "impact")
+                : (marker?.enemyAction?.skill.animation ??
+                  enemy?.animation ??
+                  "impact")
             }
             onIcon
           />
@@ -369,7 +374,7 @@ export default function ScheduledBattle({
               <p className="text-sm">
                 {schedule?.actor_id === "player"
                   ? `${playerName ?? "あなた"}の${marker?.gambitAction?.name ?? "攻撃"}`
-                  : `${enemy?.name ?? "敵"}の攻撃`}
+                  : `${enemy?.name ?? "敵"}の${marker?.enemyAction?.name ?? "攻撃"}`}
               </p>
               {syntheticAnswers ? (
                 <div className="space-y-3">

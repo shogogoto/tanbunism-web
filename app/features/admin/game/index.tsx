@@ -518,9 +518,9 @@ export default function GameAdminManager() {
           {(
             [
               ["skills", "スキル"],
-              ["enemies", "敵"],
               ["gambits", "ガンビット"],
-              ["usage", "スキル利用"],
+              ["enemies", "敵"],
+              ["usage", "専門分野"],
               ["shop", "ショップ"],
               ["elements", "属性"],
             ] as const

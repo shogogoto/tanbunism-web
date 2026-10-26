@@ -112,7 +112,7 @@ it("removes the item subtab and uses the new numbering for actual t-number short
   ).not.toBeInTheDocument();
   expect(screen.getByRole("tab", { name: "敵" })).toHaveAttribute(
     "title",
-    "t → 4",
+    "t → 5",
   );
   expect(screen.getByRole("tab", { name: "ショップ" })).toHaveAttribute(
     "title",
@@ -124,7 +124,15 @@ it("removes the item subtab and uses the new numbering for actual t-number short
   );
   await user.keyboard("t4");
   expect(screen.getByLabelText("現在のURL")).toHaveTextContent(
+    "/admin/game/gambits",
+  );
+  await user.keyboard("t5");
+  expect(screen.getByLabelText("現在のURL")).toHaveTextContent(
     "/admin/game/enemies",
+  );
+  expect(screen.getByRole("tab", { name: "専門分野" })).toHaveAttribute(
+    "title",
+    "t → 6",
   );
   await user.keyboard("t7");
   expect(screen.getByLabelText("現在のURL")).toHaveTextContent(

@@ -41,9 +41,9 @@ export default function SkillUsageEditor() {
   return (
     <AdminTableSection
       className="space-y-4 p-4 sm:p-6"
-      aria-label="スキルの利用設定"
+      aria-label="専門分野の設定"
     >
-      <h2 className="text-lg font-semibold">スキルの利用設定</h2>
+      <h2 className="text-lg font-semibold">専門分野</h2>
       <p className="text-sm text-muted-foreground">
         アイテムの使用スキルはスキルタブ、敵の使用スキルは敵タブで設定します。
       </p>

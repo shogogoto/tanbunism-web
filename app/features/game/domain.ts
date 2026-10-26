@@ -119,6 +119,7 @@ export type GameSave = {
     bossQuizIds?: string[];
     skillUsed?: boolean;
     gambitAction?: import("./catalog").BattleAction | null;
+    enemyAction?: import("./catalog").BattleAction | null;
     schedule?: {
       formula: "linear" | "sqrt";
       actor_id: string | null;
