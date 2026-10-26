@@ -41,7 +41,7 @@ export default function EnemyMultipliersEditor({
         <DialogHeader>
           <DialogTitle>{enemy.name}の能力倍率</DialogTitle>
           <DialogDescription>
-            基礎能力に掛ける倍率です。ボスはボス共通倍率にも重ねて適用します。保存で確定します。
+            基礎能力に掛ける、この敵だけの倍率です。ボスもここだけで設定します。保存で確定します。
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -52,9 +52,9 @@ export default function EnemyMultipliersEditor({
                 <Input
                   id={`enemy-${enemy.id}-${stat}`}
                   type="number"
-                  min={0.1}
-                  max={20}
-                  step={0.1}
+                  min={0.01}
+                  max={400}
+                  step="any"
                   value={enemy.multipliers?.[stat] ?? 1}
                   onChange={(event) =>
                     onChange({

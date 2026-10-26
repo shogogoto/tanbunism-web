@@ -516,6 +516,7 @@ export const enemyStatLabels = {
 };
 export type EnemyStat = keyof typeof enemyStatLabels;
 export type GameCatalog = {
+  boss_multipliers_version?: 1;
   variant_sets?: import("./variantSets").VariantSet[];
   elements?: ElementDefinition[];
   skills: SkillDefinition[];

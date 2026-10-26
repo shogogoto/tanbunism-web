@@ -123,7 +123,7 @@ it("saves the speed formula, base speed, and allocation coefficient", async () =
   );
 });
 
-it("uses concise player labels and saves every boss stat multiplier", async () => {
+it("uses concise player labels and leaves boss multipliers to enemy definitions", async () => {
   render(<BattleSettingsManager />);
   const user = userEvent.setup();
   await findPlayerInput("HP");
@@ -140,26 +140,15 @@ it("uses concise player labels and saves every boss stat multiplier", async () =
     "持ち時間（秒）",
   ])
     expect(within(player).getByLabelText(label)).toBeVisible();
-  const boss = within(screen.getByRole("region", { name: "ボス" }));
-  for (const stat of ["HP", "MP", "攻撃力", "守備力", "特攻", "特守", "速さ"]) {
-    const input = boss.getByLabelText(`ボスの${stat}倍率`);
-    await user.clear(input);
-    await user.type(input, "2");
-  }
+  expect(
+    screen.queryByRole("region", { name: "ボス" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/ボスの.*倍率/)).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "保存" }));
-  await waitFor(() =>
-    expect(saved).toHaveBeenCalledWith(
-      expect.objectContaining({
-        boss_hp_multiplier: 2,
-        boss_mp_multiplier: 2,
-        boss_attack_multiplier: 2,
-        boss_defense_multiplier: 2,
-        boss_special_attack_multiplier: 2,
-        boss_special_defense_multiplier: 2,
-        boss_speed_multiplier: 2,
-      }),
-    ),
-  );
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(
+    Object.keys(saved.mock.calls[0][0]).some((key) => key.startsWith("boss_")),
+  ).toBe(false);
 });
 
 it("places ordinary labels above their inputs and preserves editable formulas", async () => {

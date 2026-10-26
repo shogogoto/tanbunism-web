@@ -1686,6 +1686,45 @@ it("configures enemy icons and attacks and surfaces save failures", async () => 
   expect(screen.getByLabelText("攻撃スキル")).toHaveValue("fire");
 });
 
+it("edits boss multipliers only in enemy definitions and preserves consolidated values", async () => {
+  server.use(
+    http.get("*/admin/game/catalog", () =>
+      HttpResponse.json({
+        ...sampleCatalog,
+        boss_multipliers_version: 1,
+        enemies: [
+          {
+            ...sampleCatalog.enemies[0],
+            id: "boss",
+            name: "ボス",
+            boss: true,
+            multipliers: { hp: 6, attack: 1.875 },
+          },
+        ],
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="enemies" />);
+  await user.click(
+    await screen.findByRole("button", { name: "ボスの能力倍率" }),
+  );
+  const dialog = within(screen.getByRole("dialog", { name: "ボスの能力倍率" }));
+  expect(dialog.queryByText(/ボス共通倍率/)).not.toBeInTheDocument();
+  expect(dialog.getByLabelText("HP")).toHaveValue(6);
+  expect(dialog.getByLabelText("攻撃力")).toHaveValue(1.875);
+  await user.clear(dialog.getByLabelText("HP"));
+  await user.type(dialog.getByLabelText("HP"), "7.5");
+  await user.keyboard("{Escape}");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls.at(-1)?.[0].enemies[0].multipliers).toMatchObject({
+    hp: 7.5,
+    attack: 1.875,
+  });
+  expect(saved.mock.calls.at(-1)?.[0].boss_multipliers_version).toBe(1);
+});
+
 it("edits enemy stat multipliers without adding seven table columns", async () => {
   render(<CatalogEditor kind="enemies" />);
   const user = userEvent.setup();
