@@ -11,7 +11,15 @@ type Product = {
   id: string;
   name: string;
   price: number | null;
-  kind: "weapon" | "hp" | "mp" | "moves" | "skill" | "dungeon_unlock";
+  kind:
+    | "weapon"
+    | "hp"
+    | "mp"
+    | "moves"
+    | "skill"
+    | "dungeon_unlock"
+    | "gambit";
+  trigger_id?: string | null;
   resource_id?: string | null;
   amount: number;
   amount_mode?: "fixed" | "percent";
@@ -84,6 +92,7 @@ export default function EconomyPanel({
       );
       if (product.kind === "dungeon_unlock")
         setMessage("ダンジョンを開放しました。入り口から移動できます。");
+      if (product.kind === "gambit") setMessage("ガンビットを解放しました。");
       void mutate();
     } catch (cause) {
       setError(
@@ -130,11 +139,22 @@ export default function EconomyPanel({
       )}
       {data?.products
         .filter((product) =>
-          shop ? product.price !== null : (inventory[product.id] ?? 0) > 0,
+          shop
+            ? product.price !== null
+            : product.kind === "gambit"
+              ? (save.economy?.unlocked_triggers ?? []).includes(
+                  product.trigger_id ?? "",
+                )
+              : (inventory[product.id] ?? 0) > 0,
         )
         .map((product) => {
           const quantity = inventory[product.id] ?? 0;
           const equipped = save.economy?.weapon === product.id;
+          const unlocked =
+            product.kind === "gambit" &&
+            (save.economy?.unlocked_triggers ?? []).includes(
+              product.trigger_id ?? "",
+            );
           const maxUses =
             product.max_uses ?? (product.kind === "weapon" ? 30 : 1);
           const Icon =
@@ -145,6 +165,7 @@ export default function EconomyPanel({
                 : Footprints;
           const unavailable =
             (product.enabled === false && !equipped) ||
+            unlocked ||
             (shop
               ? (save.economy?.gold ?? 0) < (product.price ?? 0) ||
                 (product.kind === "weapon" && quantity > 0)
@@ -168,35 +189,39 @@ export default function EconomyPanel({
               <div className="min-w-0 flex-1">
                 <p className="break-words font-medium">
                   {product.name}
-                  {!shop && (
+                  {!shop && product.kind !== "gambit" && (
                     <span className="ml-2 text-sm text-muted-foreground">
                       ×{quantity}
                     </span>
                   )}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {product.kind === "dungeon_unlock"
-                    ? "指定リソースのダンジョンを開放"
-                    : product.kind === "weapon"
-                      ? product.equipment_buffs?.length
-                        ? product.equipment_buffs
-                            .map(
-                              (buff) =>
-                                `${buff.affected_element ? `${product.element_names?.[buff.affected_element] ?? buff.affected_element} ` : ""}${({ attack: "攻", defense: "守", specialAttack: "特攻", specialDefense: "特守", maxHp: "HP", maxMp: "MP", damageDealt: "属性威力", damageTaken: "属性耐性" } as Record<string, string>)[buff.stat] ?? buff.stat} +${buff.amount}${buff.amount_mode === "percent" ? "%" : ""}`,
-                            )
-                            .join(" · ")
-                        : `攻 +${product.amount}`
-                      : product.kind === "hp"
-                        ? `HP ${product.amount}${product.amount_mode === "percent" ? "%" : ""}回復`
-                        : product.kind === "mp"
-                          ? `MP ${product.amount}${product.amount_mode === "percent" ? "%" : ""}回復`
-                          : product.kind === "skill"
-                            ? `${product.skill_name ?? "スキル"} · 戦闘のガンビットで使用`
-                            : `${product.amount}歩回復`}
+                  {product.kind === "gambit"
+                    ? "トリガーを永久解放 · 変型にも利用可"
+                    : product.kind === "dungeon_unlock"
+                      ? "指定リソースのダンジョンを開放"
+                      : product.kind === "weapon"
+                        ? product.equipment_buffs?.length
+                          ? product.equipment_buffs
+                              .map(
+                                (buff) =>
+                                  `${buff.affected_element ? `${product.element_names?.[buff.affected_element] ?? buff.affected_element} ` : ""}${({ attack: "攻", defense: "守", specialAttack: "特攻", specialDefense: "特守", maxHp: "HP", maxMp: "MP", damageDealt: "属性威力", damageTaken: "属性耐性" } as Record<string, string>)[buff.stat] ?? buff.stat} +${buff.amount}${buff.amount_mode === "percent" ? "%" : ""}`,
+                              )
+                              .join(" · ")
+                          : `攻 +${product.amount}`
+                        : product.kind === "hp"
+                          ? `HP ${product.amount}${product.amount_mode === "percent" ? "%" : ""}回復`
+                          : product.kind === "mp"
+                            ? `MP ${product.amount}${product.amount_mode === "percent" ? "%" : ""}回復`
+                            : product.kind === "skill"
+                              ? `${product.skill_name ?? "スキル"} · 戦闘のガンビットで使用`
+                              : `${product.amount}歩回復`}
                   {equipped && " · 装備中"}
-                  {shop
-                    ? ` · ${maxUses}回使用可`
-                    : ` · 残り ${Math.min(save.economy?.remaining_uses?.[product.id] ?? maxUses, maxUses)}/${maxUses}回`}
+                  {product.kind === "gambit"
+                    ? ""
+                    : shop
+                      ? ` · ${maxUses}回使用可`
+                      : ` · 残り ${Math.min(save.economy?.remaining_uses?.[product.id] ?? maxUses, maxUses)}/${maxUses}回`}
                 </p>
               </div>
               <Button
@@ -209,28 +234,33 @@ export default function EconomyPanel({
                   )
                 }
               >
-                {shop
-                  ? product.kind === "weapon" && quantity > 0
-                    ? "所持済み"
-                    : `${product.price} G`
-                  : product.kind === "weapon"
-                    ? equipped
-                      ? "外す"
-                      : "装備"
-                    : product.kind === "dungeon_unlock"
-                      ? product.enabled === false
-                        ? "開放済み"
-                        : "開放する"
-                      : "使う"}
+                {unlocked
+                  ? "解放済み"
+                  : shop
+                    ? product.kind === "weapon" && quantity > 0
+                      ? "所持済み"
+                      : `${product.price} G`
+                    : product.kind === "weapon"
+                      ? equipped
+                        ? "外す"
+                        : "装備"
+                      : product.kind === "dungeon_unlock"
+                        ? product.enabled === false
+                          ? "開放済み"
+                          : "開放する"
+                        : "使う"}
               </Button>
             </div>
           );
         })}
-      {!shop && data && !Object.values(inventory).some((n) => n > 0) && (
-        <p className="text-sm text-muted-foreground">
-          まだアイテムを持っていません。
-        </p>
-      )}
+      {!shop &&
+        data &&
+        !Object.values(inventory).some((n) => n > 0) &&
+        !save.economy?.unlocked_triggers?.length && (
+          <p className="text-sm text-muted-foreground">
+            まだアイテムを持っていません。
+          </p>
+        )}
       {disabled && (
         <p className="text-sm text-muted-foreground">
           戦闘が終わってから操作できます。

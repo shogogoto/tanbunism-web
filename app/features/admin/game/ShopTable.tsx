@@ -1,6 +1,8 @@
 import { AdminNativeTable, AdminTableFrame } from "~/features/admin/AdminTable";
 import GameIcon from "~/features/game/GameIcon";
 import type { GameCatalog, ShopListing } from "~/features/game/catalog";
+import { shopProductId } from "~/features/game/gambitShop";
+import { triggerTargets } from "~/features/game/triggerVariants";
 import { Input } from "~/shared/components/ui/input";
 
 export default function ShopTable({
@@ -9,13 +11,41 @@ export default function ShopTable({
 }: { catalog: GameCatalog; onChange: (shop: ShopListing[]) => void }) {
   const shop = catalog.shop ?? [];
   function update(id: string, patch: Partial<ShopListing>) {
-    const current = shop.find((p) => p.item_id === id);
+    const current = shop.find((p) => shopProductId(p) === id);
     onChange(
       current
-        ? shop.map((p) => (p.item_id === id ? { ...p, ...patch } : p))
-        : [...shop, { item_id: id, price: 0, enabled: true, ...patch }],
+        ? shop.map((p) =>
+            shopProductId(p) === id ? ({ ...p, ...patch } as ShopListing) : p,
+          )
+        : [
+            ...shop,
+            {
+              ...(id.startsWith("gambit:")
+                ? { trigger_id: id.slice(7) }
+                : { item_id: id }),
+              price: 0,
+              enabled: true,
+              ...patch,
+            } as ShopListing,
+          ],
     );
   }
+  const products = [
+    ...catalog.items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      icon: item.icon,
+      enabled: item.enabled,
+      detail: catalog.skills.find((s) => s.id === item.skill_id)?.name ?? "—",
+    })),
+    ...(catalog.triggers ?? []).map((trigger) => ({
+      id: `gambit:${trigger.id}`,
+      name: trigger.name,
+      icon: "target",
+      enabled: trigger.enabled,
+      detail: `ガンビット · ${triggerTargets[trigger.target ?? "enemy"]}`,
+    })),
+  ];
   return (
     <AdminTableFrame layout="content">
       <AdminNativeTable
@@ -25,7 +55,7 @@ export default function ShopTable({
       >
         <thead className="bg-muted/40">
           <tr>
-            {["アイテム", "発動スキル", "販売", "価格（G）"].map((h) => (
+            {["アイテム", "内容", "販売", "価格（G）"].map((h) => (
               <th key={h} scope="col" className="p-2 text-left font-medium">
                 {h}
               </th>
@@ -33,8 +63,8 @@ export default function ShopTable({
           </tr>
         </thead>
         <tbody>
-          {catalog.items.map((item) => {
-            const listing = shop.find((p) => p.item_id === item.id);
+          {products.map((item) => {
+            const listing = shop.find((p) => shopProductId(p) === item.id);
             return (
               <tr
                 key={item.id}
@@ -48,9 +78,7 @@ export default function ShopTable({
                     {!item.enabled && "（無効）"}
                   </span>
                 </td>
-                <td>
-                  {catalog.skills.find((s) => s.id === item.skill_id)?.name}
-                </td>
+                <td>{item.detail}</td>
                 <td>
                   <input
                     type="checkbox"
@@ -87,7 +115,7 @@ export default function ShopTable({
           })}
         </tbody>
       </AdminNativeTable>
-      {!catalog.items.length && (
+      {!products.length && (
         <p className="p-3 text-sm text-muted-foreground">
           アイテムを先に定義してください。
         </p>

@@ -36,6 +36,7 @@ export type GameSave = {
   economy?: {
     gold: number;
     inventory: Record<string, number>;
+    unlocked_triggers?: string[];
     weapon: string | null;
     weapon_attack: number;
     weapon_max_uses?: number;

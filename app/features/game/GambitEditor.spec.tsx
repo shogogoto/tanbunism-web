@@ -67,6 +67,33 @@ it("saves the target on a gambit rather than an effect template", async () => {
   });
 });
 
+it("does not offer unpurchased shop triggers as selectable gambits", async () => {
+  server.use(
+    http.get("*/game/catalog", () =>
+      HttpResponse.json({
+        ...sampleCatalog,
+        triggers: [
+          {
+            id: "paid",
+            name: "HP30%以下の味方",
+            condition: "hp_below",
+            threshold: 30,
+            target: "ally",
+            enabled: true,
+          },
+        ],
+        shop: [{ trigger_id: "paid", price: 120, enabled: true }],
+      }),
+    ),
+  );
+  setup();
+  const option = await screen.findByRole("option", {
+    name: "HP30%以下の味方（未解放・無効）",
+  });
+  expect(option).toBeDisabled();
+  expect(screen.getByRole("button", { name: "条件を追加" })).toBeDisabled();
+});
+
 it("selects the admin trigger variant and locks its shared condition/action target", async () => {
   server.use(
     http.get("*/game/catalog", () =>

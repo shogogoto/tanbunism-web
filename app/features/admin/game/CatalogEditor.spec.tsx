@@ -1287,6 +1287,47 @@ it("blocks deletion of a referenced skill and retains the pending row after a fa
   expect(saved).not.toHaveBeenCalled();
 });
 
+it("automatically lists defined gambits alongside items without duplicate item definitions", async () => {
+  const triggers = [
+    {
+      id: "low_hp",
+      name: "HP30%以下の味方",
+      target: "ally",
+      condition: "hp_below",
+      threshold: 30,
+      enabled: true,
+    },
+  ];
+  server.use(
+    http.get("*/admin/game/catalog", () =>
+      HttpResponse.json({ ...sampleCatalog, triggers }),
+    ),
+  );
+  render(<CatalogEditor kind="shop" />);
+  const user = userEvent.setup();
+  const row = await screen.findByRole("row", { name: "HP30%以下の味方" });
+  expect(within(row).getByText("ガンビット · 味方")).toBeVisible();
+  expect(within(row).getByLabelText("販売")).not.toBeChecked();
+  expect(within(row).getByLabelText("価格（G）")).toBeDisabled();
+  expect(screen.getByRole("row", { name: "回復薬" })).toBeVisible();
+  await user.click(within(row).getByLabelText("販売"));
+  const price = within(row).getByLabelText("価格（G）");
+  await user.clear(price);
+  await user.type(price, "120");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  const payload = saved.mock.calls.at(-1)?.[0];
+  expect(payload.shop).toEqual([
+    ...sampleCatalog.shop,
+    { trigger_id: "low_hp", price: 120, enabled: true },
+  ]);
+  expect(payload.items).toEqual(sampleCatalog.items);
+  expect(payload.triggers).toEqual(triggers);
+  expect(screen.getAllByRole("row", { name: "HP30%以下の味方" })).toHaveLength(
+    1,
+  );
+});
+
 it("configures sale availability and prices independently from item definitions", async () => {
   render(<CatalogEditor kind="shop" />);
   const user = userEvent.setup();

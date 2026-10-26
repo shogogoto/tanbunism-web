@@ -6,6 +6,7 @@ import GameIcon from "./GameIcon";
 import { gameRequest } from "./battle";
 import { type GambitRule, requestGameCatalog } from "./catalog";
 import type { GameSave } from "./domain";
+import { triggerAvailable } from "./gambitShop";
 import type { GameState } from "./state";
 import { hasThreshold, stateCondition } from "./triggerConditions";
 import {
@@ -48,6 +49,21 @@ export default function GambitEditor({
       ),
   );
   const slots = capacity?.slots ?? 1;
+  const unlocked = save.economy?.unlocked_triggers ?? [];
+  const availableTriggers = catalog?.triggers?.filter(
+    (t) => t.enabled && triggerAvailable(catalog, unlocked, t.id),
+  );
+  const triggerOptions =
+    catalog?.triggers?.map((t) => ({
+      id: t.id,
+      name: t.name,
+      disabled: !t.enabled || !triggerAvailable(catalog, unlocked, t.id),
+    })) ??
+    Object.entries(conditionLabels).map(([id, name]) => ({
+      id,
+      name,
+      disabled: false,
+    }));
   const [rules, setRules] = useState<(GambitRule & { rowId: string })[]>(() =>
     (save.gambits ?? []).map((rule) => ({
       ...rule,
@@ -231,7 +247,12 @@ export default function GambitEditor({
                   条件
                   <select
                     className={selectClass}
-                    value={rule.trigger_id ?? rule.condition}
+                    value={
+                      rule.trigger_id ??
+                      (catalog?.shop?.some((row) => "trigger_id" in row)
+                        ? ""
+                        : rule.condition)
+                    }
                     onChange={(e) =>
                       patch(index, {
                         condition:
@@ -263,14 +284,19 @@ export default function GambitEditor({
                       })
                     }
                   >
-                    {(
-                      catalog?.triggers
-                        ?.filter((t) => t.enabled)
-                        .map((t) => [t.id, t.name]) ??
-                      Object.entries(conditionLabels)
-                    ).map(([key, label]) => (
-                      <option key={key} value={key}>
-                        {label}
+                    {catalog?.triggers && (
+                      <option value="" disabled>
+                        トリガーを選択
+                      </option>
+                    )}
+                    {triggerOptions.map((option) => (
+                      <option
+                        key={option.id}
+                        value={option.id}
+                        disabled={option.disabled}
+                      >
+                        {option.name}
+                        {option.disabled && "（未解放・無効）"}
                       </option>
                     ))}
                   </select>
@@ -430,10 +456,11 @@ export default function GambitEditor({
           disabled={
             !capacity ||
             rules.length >= slots ||
+            (availableTriggers !== undefined && !availableTriggers.length) ||
             (!skills.length && !items.length)
           }
           onClick={() => {
-            const initial = catalog?.triggers?.find((t) => t.enabled);
+            const initial = availableTriggers?.[0];
             setRules((current) => [
               ...current,
               {
