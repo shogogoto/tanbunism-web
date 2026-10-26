@@ -9,6 +9,25 @@ import {
   poisonDamage,
   prepareSkillCatalog,
 } from "./catalog";
+
+it("keeps infinite state duration in normalized definitions and treats a null expiry as active", () => {
+  const skill = normalizeSkill({
+    ...sampleCatalog.skills[0],
+    effect: "buff",
+    duration_turns: "infinite",
+    stat: "attack",
+    amount: 5,
+  });
+  expect(skill.duration_turns).toBe("infinite");
+  const battle = {
+    turn: 10000,
+    effects: [
+      { skill, target_id: "player", starts_turn: 1, expires_turn: null },
+    ],
+  };
+  expect(modifiedStat(10, battle, "player", "attack")).toBe(15);
+  expect(modifiedStat(10, { ...battle, turn: 0 }, "player", "attack")).toBe(10);
+});
 import { sampleCatalog } from "./catalog.fixtures";
 
 it("migrates legacy equipment effects to shared buffs without changing item ownership", () => {

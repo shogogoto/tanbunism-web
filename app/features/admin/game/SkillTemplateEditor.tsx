@@ -21,6 +21,7 @@ import {
 } from "~/features/game/templateVariants";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import DurationInput from "./DurationInput";
 import RowOrder from "./RowOrder";
 import { SortableRow, SortableRows } from "./SortableRows";
 import TemplateVariantControls from "./TemplateVariantControls";
@@ -308,7 +309,7 @@ export default function SkillTemplateEditor({
                         </span>
                       )}
                       {status ? (
-                        <span className="text-xs">行動数</span>
+                        <span className="text-xs">持続数</span>
                       ) : (
                         <select
                           aria-label={`${prefix}効果の指定`}
@@ -333,35 +334,60 @@ export default function SkillTemplateEditor({
                           <option value="multiplier">倍率</option>
                         </select>
                       )}
-                      <Input
-                        aria-label={`${prefix}効果の値`}
-                        type="number"
-                        required
-                        className="w-24"
-                        min={status && !wrong ? 1 : 0}
-                        max={
-                          status
-                            ? 20
-                            : mode === "multiplier"
-                              ? skill.effect === "attack"
-                                ? 10
-                                : 100
-                              : 10000
-                        }
-                        step={status || mode === "fixed" ? 1 : 0.01}
-                        value={Number.isFinite(value) ? value : ""}
-                        onChange={(e) =>
-                          update(
-                            skill.id,
-                            effectPatch(
-                              skill,
-                              mode,
-                              e.target.valueAsNumber,
-                              wrong,
-                            ),
-                          )
-                        }
-                      />
+                      {status ? (
+                        <DurationInput
+                          label={`${prefix}効果の値`}
+                          min={wrong ? 0 : 1}
+                          value={
+                            value === Number.POSITIVE_INFINITY
+                              ? "infinite"
+                              : value
+                          }
+                          onChange={(duration) =>
+                            update(
+                              skill.id,
+                              effectPatch(
+                                skill,
+                                mode,
+                                duration === "infinite"
+                                  ? Number.POSITIVE_INFINITY
+                                  : duration,
+                                wrong,
+                              ),
+                            )
+                          }
+                        />
+                      ) : (
+                        <Input
+                          aria-label={`${prefix}効果の値`}
+                          type="number"
+                          required
+                          className="w-24"
+                          min={status && !wrong ? 1 : 0}
+                          max={
+                            status
+                              ? 20
+                              : mode === "multiplier"
+                                ? skill.effect === "attack"
+                                  ? 10
+                                  : 100
+                                : 10000
+                          }
+                          step={status || mode === "fixed" ? 1 : 0.01}
+                          value={Number.isFinite(value) ? value : ""}
+                          onChange={(e) =>
+                            update(
+                              skill.id,
+                              effectPatch(
+                                skill,
+                                mode,
+                                e.target.valueAsNumber,
+                                wrong,
+                              ),
+                            )
+                          }
+                        />
+                      )}
                     </fieldset>
                   );
                 }

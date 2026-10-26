@@ -18,6 +18,64 @@ import CatalogEditor from "./CatalogEditor";
 import * as skillFiles from "./skillFiles";
 import { variantRowHighlight } from "./variantRowStyles";
 
+it("edits finite/infinite persistence independently for correct and incorrect status effects", async () => {
+  server.use(
+    http.get("*/admin/game/catalog", () =>
+      HttpResponse.json({
+        ...sampleCatalog,
+        skill_templates: [
+          {
+            id: "state",
+            name: "強化",
+            effect: "buff",
+            amount: 5,
+            duration_turns: 3,
+          },
+        ],
+        skills: [
+          ...sampleCatalog.skills,
+          {
+            id: "state_skill",
+            name: "強化スキル",
+            effect: "buff",
+            mp_cost: 0,
+            template_ids: ["state"],
+          },
+        ],
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="skills" />);
+  const row = await screen.findByRole("row", { name: "強化" });
+  expect(within(row).getByText("持続数")).toBeVisible();
+  await user.selectOptions(within(row).getByLabelText("タイプ"), "reduced");
+  await user.selectOptions(
+    within(row).getByLabelText("正答効果の値の指定"),
+    "infinite",
+  );
+  await user.selectOptions(
+    within(row).getByLabelText("誤答効果の値の指定"),
+    "infinite",
+  );
+  expect(
+    within(row).queryByLabelText("正答効果の値", { exact: true }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  const payload = saved.mock.calls.at(-1)?.[0];
+  expect(
+    payload.skill_templates.find((t: { id: string }) => t.id === "state"),
+  ).toMatchObject({
+    duration_turns: "infinite",
+    on_wrong: { type: "reduced", duration_turns: "infinite" },
+  });
+  expect(
+    payload.skills.find((s: { id: string }) => s.id === "state_skill")
+      .duration_turns,
+  ).toBe("infinite");
+});
+
 it("previews and saves imported ice/lightning materials without labeling all audio CC0", async () => {
   const user = userEvent.setup();
   render(<CatalogEditor kind="skills" />);
@@ -560,7 +618,7 @@ it("changes the available variation inputs for status details and reduced action
     panel.getByRole("option", { name: "詳細：状態の値" }),
   ).toBeInTheDocument();
   expect(
-    panel.getByRole("option", { name: "効果：誤答の行動数" }),
+    panel.getByRole("option", { name: "効果：誤答の持続数" }),
   ).toBeInTheDocument();
   expect(
     panel.queryByRole("option", { name: "効果：誤答の指定" }),

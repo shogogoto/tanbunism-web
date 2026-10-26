@@ -24,18 +24,20 @@ export function effectValue(
 ): { mode: EffectMode; value: number } {
   const result =
     wrong && skill.on_wrong?.type === "reduced" ? skill.on_wrong : undefined;
-  if (isStatus(skill))
+  if (isStatus(skill)) {
+    const duration =
+      result && "apply" in result && !result.apply
+        ? 0
+        : result
+          ? "duration_turns" in result
+            ? (result.duration_turns ?? skill.duration_turns ?? 3)
+            : (skill.duration_turns ?? 3)
+          : (skill.duration_turns ?? 3);
     return {
       mode: "fixed",
-      value:
-        result && "apply" in result && !result.apply
-          ? 0
-          : result
-            ? "duration_turns" in result
-              ? (result.duration_turns ?? skill.duration_turns ?? 3)
-              : (skill.duration_turns ?? 3)
-            : (skill.duration_turns ?? 3),
+      value: duration === "infinite" ? Number.POSITIVE_INFINITY : duration,
     };
+  }
   const effect = skill.effect;
   const amount = result && "amount" in result ? result.amount : skill.amount;
   const multiplier =
@@ -62,19 +64,21 @@ export function effectPatch(
   value: number,
   wrong = false,
 ): SkillPatch {
-  if (isStatus(skill))
+  if (isStatus(skill)) {
+    const duration = value === Number.POSITIVE_INFINITY ? "infinite" : value;
     return wrong
       ? {
           on_wrong:
             skill.effect === "ailment"
-              ? { type: "reduced", apply: value > 0, duration_turns: value }
+              ? { type: "reduced", apply: value > 0, duration_turns: duration }
               : {
                   type: "reduced",
                   amount: skill.amount,
-                  duration_turns: value,
+                  duration_turns: duration,
                 },
         }
-      : { duration_turns: value };
+      : { duration_turns: duration };
+  }
   const kind =
     skill.effect === "recover_moves" ? "other" : instantResource(skill);
   const effect =

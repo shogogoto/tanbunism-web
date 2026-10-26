@@ -459,7 +459,7 @@ it("applies the pinned skill to only its target using the normal quiz answers", 
   await user.click(screen.getByRole("button", { name: "結果を処理 · 2/2" }));
   expect(screen.getByLabelText("敵1のHP")).toHaveTextContent("HP 5/15");
 });
-it.each([1, 2])(
+it.each([1, 2, 10000])(
   "uses attack buffs only on their active turns (turn=%s)",
   async (turn) => {
     const user = userEvent.setup();
@@ -477,10 +477,11 @@ it.each([1, 2])(
           stat: "attack",
           amount_mode: "percent",
           amount: 50,
+          duration_turns: turn === 10000 ? "infinite" : 1,
         }),
         target_id: "player",
         starts_turn: 1,
-        expires_turn: 2,
+        expires_turn: turn === 10000 ? null : 2,
       },
     ];
     render(
@@ -500,7 +501,11 @@ it.each([1, 2])(
     );
     if (turn === 1)
       expect(screen.getByLabelText("戦闘中の効果")).toHaveTextContent(
-        "あと1ターン",
+        "あと1行動",
+      );
+    else if (turn === 10000)
+      expect(screen.getByLabelText("戦闘中の効果")).toHaveTextContent(
+        "持続数 無限",
       );
     else
       expect(screen.queryByLabelText("戦闘中の効果")).not.toBeInTheDocument();
@@ -510,7 +515,7 @@ it.each([1, 2])(
     await user.click(screen.getByRole("button", { name: "回答を確定" }));
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0].defeated).toEqual(
-      turn === 1 ? ["enemy0", "enemy1"] : [],
+      turn !== 2 ? ["enemy0", "enemy1"] : [],
     );
   },
 );

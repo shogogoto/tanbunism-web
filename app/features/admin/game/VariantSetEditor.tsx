@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from "~/shared/components/ui/dialog";
 import { Input } from "~/shared/components/ui/input";
+import DurationInput from "./DurationInput";
 
 type FieldConfig = {
   name: string;
@@ -41,7 +42,7 @@ export const variantSetFields: Record<TemplateOverride, FieldConfig> = {
     name: "値の指定",
     options: { fixed: "定数", percent: "比率（%）" },
   },
-  duration_turns: { name: "持続する行動数", min: 1, max: 20, step: 1 },
+  duration_turns: { name: "持続数", min: 1, max: 20, step: 1 },
   stack_limit: { name: "重複上限", min: 1, max: 10, step: 1 },
   damage_type: {
     name: "計算系統",
@@ -104,8 +105,9 @@ export default function VariantSetEditor({
           ...set,
           values: set.values.map((v) => {
             const numeric =
-              config.min !== undefined ||
-              (set.field === "target_count" && v.value !== "all");
+              !(set.field === "duration_turns" && v.value === "infinite") &&
+              (config.min !== undefined ||
+                (set.field === "target_count" && v.value !== "all"));
             const value = numeric ? Number(v.value) : v.value;
             if (
               numeric &&
@@ -283,6 +285,14 @@ export default function VariantSetEditor({
                           />
                         )}
                     </div>
+                  ) : set.field === "duration_turns" ? (
+                    <DurationInput
+                      label="セットの値"
+                      value={
+                        v.value === "infinite" ? "infinite" : Number(v.value)
+                      }
+                      onChange={(value) => valuePatch(v.id, { value })}
+                    />
                   ) : options ? (
                     <select
                       aria-label="セットの値"

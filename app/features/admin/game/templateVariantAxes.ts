@@ -22,6 +22,7 @@ import {
 } from "./templateEffects";
 
 export type VariantAxis = {
+  allowInfinite?: boolean;
   id: string;
   label: string;
   options?: Record<string, string>;
@@ -193,7 +194,8 @@ export function variantAxes(
       });
     axes.push({
       id: wrong ? "wrong_power" : "power",
-      label: `効果：${prefix}${status ? "の行動数" : "の値"}`,
+      label: `効果：${prefix}${status ? "の持続数" : "の値"}`,
+      allowInfinite: status,
       min: status && !wrong ? 1 : 0,
       max: status
         ? 20
@@ -207,7 +209,14 @@ export function variantAxes(
       patch: (s, v) =>
         !wrong && s.effect === "attack" && effectValue(s).mode === "multiplier"
           ? { multiplier: Number(v) }
-          : effectPatch(s, effectValue(s, wrong).mode, Number(v), wrong),
+          : effectPatch(
+              s,
+              effectValue(s, wrong).mode,
+              v === "infinite" || v === "Infinity"
+                ? Number.POSITIVE_INFINITY
+                : Number(v),
+              wrong,
+            ),
     });
   }
   return axes;

@@ -34,6 +34,7 @@ import { playBattleSound, playSkillSound } from "./battleSound";
 import type { SkillAnimation } from "./catalog";
 import {
   actionDamage,
+  battleEffectActive,
   effectAmount,
   modifiedStat,
   poisonDamage,
@@ -813,19 +814,15 @@ function LegacyMultiBattle({
         </div>
       ) : (
         <>
-          {(battle.effects ?? []).some(
-            (e) => e.starts_turn <= battle.turn && battle.turn < e.expires_turn,
+          {(battle.effects ?? []).some((e) =>
+            battleEffectActive(e, battle.turn),
           ) && (
             <ul
               aria-label="戦闘中の効果"
               className="flex flex-wrap gap-2 text-xs"
             >
               {(battle.effects ?? [])
-                .filter(
-                  (e) =>
-                    e.starts_turn <= battle.turn &&
-                    battle.turn < e.expires_turn,
-                )
+                .filter((e) => battleEffectActive(e, battle.turn))
                 .map((e, i) => (
                   <li
                     key={`${e.skill.id}:${e.target_id}:${e.starts_turn}:${i}`}
@@ -836,7 +833,10 @@ function LegacyMultiBattle({
                       : (context.enemies.find(
                           (enemy) => enemy.id === e.target_id,
                         )?.name ?? "敵")}{" "}
-                    · {e.skill.name} · あと{e.expires_turn - battle.turn}ターン
+                    · {e.skill.name} ·{" "}
+                    {e.expires_turn == null
+                      ? "持続数 無限"
+                      : `あと${e.expires_turn - battle.turn}行動`}
                   </li>
                 ))}
             </ul>

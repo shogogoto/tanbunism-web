@@ -35,13 +35,13 @@ type InstantSkill = {
 type TimedSkill = {
   affected_element?: string | null;
   amount_mode?: "fixed" | "percent";
-  duration_turns?: number;
+  duration_turns?: number | "infinite";
   stack_limit?: number;
   multiplier?: never;
 };
 type WrongOverride = {
   amount_mode?: "fixed" | "percent";
-  duration_turns?: number;
+  duration_turns?: number | "infinite";
 };
 export type NumericWrongResult =
   | { type: "counter" | "fizzle" }
@@ -51,7 +51,7 @@ export type AttackWrongResult =
   | ({ type: "reduced"; amount: number; multiplier: number } & WrongOverride);
 export type AilmentWrongResult =
   | { type: "counter" | "fizzle" }
-  | { type: "reduced"; apply: boolean; duration_turns?: number };
+  | { type: "reduced"; apply: boolean; duration_turns?: number | "infinite" };
 export const statusStatLabels = {
   maxHp: "HP",
   maxMp: "MP",
@@ -114,7 +114,7 @@ export type SkillPatch = Partial<
     amount_mode: "fixed" | "percent";
     stat: StatusStat;
     affected_element: string | null;
-    duration_turns: number;
+    duration_turns: number | "infinite";
     stack_limit: number;
     ailment: "poison" | "curse" | "regen" | "refresh";
     on_wrong: AttackWrongResult | NumericWrongResult | AilmentWrongResult;
@@ -302,7 +302,7 @@ export function skillTemplate(
           effect: "buff",
           stat: "attack",
           amount_mode: "fixed",
-          duration_turns: 3,
+          duration_turns: "infinite",
           stack_limit: 1,
           on_wrong: { type: "fizzle" },
         }
@@ -639,8 +639,14 @@ export type BattleEffect = {
   skill: SkillDefinition;
   target_id: string;
   starts_turn: number;
-  expires_turn: number;
+  expires_turn: number | null;
 };
+export function battleEffectActive(effect: BattleEffect, turn: number) {
+  return (
+    effect.starts_turn <= turn &&
+    (effect.expires_turn == null || turn < effect.expires_turn)
+  );
+}
 export function effectAmount(skill: SkillDefinition, base: number) {
   return skill.amount_mode === "percent"
     ? Math.floor((base * skill.amount) / 100)
@@ -658,8 +664,7 @@ export function modifiedStat(
         e.target_id === target &&
         ["buff", "debuff"].includes(e.skill.effect) &&
         e.skill.stat === stat &&
-        e.starts_turn <= (battle?.turn ?? 0) &&
-        (battle?.turn ?? 0) < e.expires_turn,
+        battleEffectActive(e, battle?.turn ?? 0),
     )
     .reduce(
       (sum, e) =>
@@ -683,8 +688,7 @@ export function poisonDamage(
           e.target_id === target &&
           e.skill.effect === "ailment" &&
           (e.skill.ailment ?? "poison") === "poison" &&
-          e.starts_turn <= (battle?.turn ?? 0) &&
-          (battle?.turn ?? 0) < e.expires_turn,
+          battleEffectActive(e, battle?.turn ?? 0),
       )
       .reduce((sum, e) => sum + effectAmount(e.skill, maximumHp), 0),
   );

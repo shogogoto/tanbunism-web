@@ -22,6 +22,7 @@ import {
 } from "~/shared/components/ui/dialog";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
+import DurationInput from "./DurationInput";
 import VariantSetEditor, { variantSetFields } from "./VariantSetEditor";
 import {
   type VariantAxis,
@@ -285,7 +286,26 @@ export default function TemplateVariantPanel({
                 }
               />
               {axis ? (
-                axis.options ? (
+                axis.allowInfinite ? (
+                  <DurationInput
+                    label="変型の値"
+                    min={axis.min}
+                    value={
+                      axis.read(templateSkill(row)) === Number.POSITIVE_INFINITY
+                        ? "infinite"
+                        : Number(axis.read(templateSkill(row)))
+                    }
+                    onChange={(value) =>
+                      change(
+                        templates.map((item) =>
+                          item.id === row.id
+                            ? axisVariant(template, axis, String(value), row)
+                            : item,
+                        ),
+                      )
+                    }
+                  />
+                ) : axis.options ? (
                   <select
                     aria-label="変型の値"
                     className="h-9 min-w-0 rounded-md border bg-background px-2"

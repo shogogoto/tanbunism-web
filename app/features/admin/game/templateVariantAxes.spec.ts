@@ -79,7 +79,7 @@ it("adapts detail and effect choices to the current template", () => {
   expect(attackAxes.find((axis) => axis.id === "wrong_mode")).toBeDefined();
   const stateAxes = variantAxes(status);
   expect(stateAxes.find((axis) => axis.id === "power")?.label).toContain(
-    "行動数",
+    "持続数",
   );
   expect(stateAxes.find((axis) => axis.id === "wrong_mode")).toBeUndefined();
   const elemental = {

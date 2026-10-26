@@ -54,6 +54,7 @@ export type GameSave = {
           affected_element?: string | null;
           amount: number;
           amount_mode: "fixed" | "percent";
+          duration_turns?: "infinite";
         }[]
       | null;
     remaining_uses?: Record<string, number>;
