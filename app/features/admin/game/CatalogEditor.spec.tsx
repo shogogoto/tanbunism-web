@@ -160,6 +160,72 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
+it("edits templates, skills and items in order and saves the combined draft once", async () => {
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="skills" />);
+  await screen.findByRole("table", { name: "アイテム定義" });
+  expect(
+    screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
+  ).toEqual(["効果テンプレート", "スキル一覧", "アイテム一覧"]);
+  const fire = within(
+    screen.getByRole("table", { name: "スキル一覧" }),
+  ).getByRole("row", { name: "ファイア" });
+  fireEvent.change(within(fire).getByLabelText("消費MP"), {
+    target: { value: "7" },
+  });
+  const template = within(
+    screen.getByRole("table", { name: "効果テンプレート一覧" }),
+  ).getByRole("row", { name: "ファイアの効果" });
+  fireEvent.change(
+    within(template).getByLabelText("正答効果の値", { exact: true }),
+    { target: { value: "2" } },
+  );
+  await user.click(screen.getByRole("button", { name: "アイテムを追加" }));
+  const item = within(
+    screen.getByRole("table", { name: "アイテム定義" }),
+  ).getByRole("row", { name: "新しいアイテム" });
+  await user.selectOptions(within(item).getByLabelText("発動スキル"), "fire");
+  fireEvent.change(within(item).getByLabelText("使用回数"), {
+    target: { value: "30" },
+  });
+  expect(screen.getAllByRole("button", { name: "保存" })).toHaveLength(1);
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(saved).toHaveBeenCalledTimes(1);
+  const catalog = saved.mock.calls[0][0];
+  expect(
+    catalog.skills.find((s: { id: string }) => s.id === "fire"),
+  ).toMatchObject({ mp_cost: 7, multiplier: 2 });
+  expect(catalog.items.at(-1)).toMatchObject({
+    skill_id: "fire",
+    max_uses: 30,
+  });
+  expect(catalog.items.slice(0, -1)).toEqual(sampleCatalog.items);
+  expect(catalog.shop).toEqual(sampleCatalog.shop);
+});
+
+it("allows an item reference to be reassigned before deleting its skill in the same save", async () => {
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="skills" />);
+  const skill = await screen.findByRole("row", { name: "薬の回復" });
+  await user.click(within(skill).getByRole("button", { name: "削除" }));
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("アイテム");
+  expect(saved).not.toHaveBeenCalled();
+  const item = within(
+    screen.getByRole("table", { name: "アイテム定義" }),
+  ).getByRole("row", { name: "回復薬" });
+  await user.selectOptions(within(item).getByLabelText("発動スキル"), "heal");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(
+    saved.mock.calls[0][0].skills.some(
+      (s: { id: string }) => s.id === "potion",
+    ),
+  ).toBe(false);
+  expect(saved.mock.calls[0][0].items[0].skill_id).toBe("heal");
+});
+
 async function dragRow(
   user: ReturnType<typeof userEvent.setup>,
   table: HTMLElement,
@@ -196,7 +262,7 @@ it("uses sortable tables without row numbers and a separate variation column", a
   expect(skills).toHaveClass("mx-auto", "w-auto");
   expect(skills).toHaveAttribute("data-admin-layout", "content");
   expect(skills).not.toHaveClass("w-full");
-  expect(screen.getAllByRole("table")).toHaveLength(2);
+  expect(screen.getAllByRole("table")).toHaveLength(3);
   expect(
     within(skills)
       .getAllByRole("columnheader")
@@ -915,7 +981,10 @@ it("edits skills without material selection and preserves existing icon data", a
   const skill = await screen.findByRole("row", { name: "ファイア" });
   expect(skill.closest("fieldset")).toHaveClass("min-w-0");
   expect(
-    screen.queryByRole("columnheader", { name: "素材" }),
+    within(screen.getByRole("table", { name: "スキル一覧" })).queryByRole(
+      "columnheader",
+      { name: "素材" },
+    ),
   ).not.toBeInTheDocument();
   expect(
     within(skill).queryByRole("button", { name: /素材を選ぶ/ }),

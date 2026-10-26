@@ -50,3 +50,9 @@ export const Dungeons: StoryObj<typeof Demo> = {};
 export const SkillUsage: StoryObj<typeof Demo> = {
   parameters: { reactRouter: { route: "/admin/game/usage" } },
 };
+export const Skills: StoryObj<typeof Demo> = {
+  parameters: { reactRouter: { route: "/admin/game/skills" } },
+};
+export const LegacyItems: StoryObj<typeof Demo> = {
+  parameters: { reactRouter: { route: "/admin/game/items" } },
+};

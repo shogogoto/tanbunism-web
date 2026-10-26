@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, ChevronsUpDown, Swords } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Navigate, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import {
   AdminTableFrame,
@@ -478,7 +478,6 @@ export default function GameAdminManager() {
   const activeTab = [
     "dungeons",
     "skills",
-    "items",
     "enemies",
     "gambits",
     "usage",
@@ -487,6 +486,7 @@ export default function GameAdminManager() {
   ].includes(subtab ?? "")
     ? subtab
     : "balance";
+  if (subtab === "items") return <Navigate to="/admin/game/skills" replace />;
   return (
     <Tabs
       value={activeTab}
@@ -518,7 +518,6 @@ export default function GameAdminManager() {
           {(
             [
               ["skills", "スキル"],
-              ["items", "アイテム"],
               ["enemies", "敵"],
               ["gambits", "ガンビット"],
               ["usage", "スキル利用"],
@@ -555,7 +554,7 @@ export default function GameAdminManager() {
       <TabsContent value="elements" className="mt-0">
         <ElementEditor />
       </TabsContent>
-      {(["skills", "items", "enemies", "shop"] as const).map((kind) => (
+      {(["skills", "enemies", "shop"] as const).map((kind) => (
         <TabsContent key={kind} value={kind} className="mt-0">
           <CatalogEditor kind={kind} />
         </TabsContent>

@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import { AdminNativeTable, AdminTableFrame } from "~/features/admin/AdminTable";
 import GameIcon, { IconPicker } from "~/features/game/GameIcon";
 import type {
@@ -15,6 +16,7 @@ export default function DefinitionTables({
   kind,
   catalog,
   update,
+  add,
 }: {
   kind: "items" | "enemies";
   catalog: GameCatalog;
@@ -22,6 +24,7 @@ export default function DefinitionTables({
     id: string,
     patch: Partial<ItemDefinition & EnemyDefinition>,
   ) => void;
+  add?: () => void;
 }) {
   const headers = [
     "名前",
@@ -292,6 +295,22 @@ export default function DefinitionTables({
               </td>
             </tr>
           ))}
+          {kind === "items" && add && (
+            <tr className="border-t">
+              <td colSpan={5}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  aria-label="アイテムを追加"
+                  disabled={!catalog.skills.length}
+                  onClick={add}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </td>
+            </tr>
+          )}
         </tbody>
       </AdminNativeTable>
     </AdminTableFrame>

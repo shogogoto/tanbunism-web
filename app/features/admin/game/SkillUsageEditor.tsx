@@ -45,7 +45,7 @@ export default function SkillUsageEditor() {
     >
       <h2 className="text-lg font-semibold">スキルの利用設定</h2>
       <p className="text-sm text-muted-foreground">
-        アイテムと敵の使用スキルは、それぞれのタブで設定します。
+        アイテムの使用スキルはスキルタブ、敵の使用スキルは敵タブで設定します。
       </p>
       {error && (
         <p role="alert" className="text-destructive">

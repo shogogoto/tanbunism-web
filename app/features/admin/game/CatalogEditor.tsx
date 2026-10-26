@@ -99,18 +99,19 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
   const update = (
     id: string,
     patch: SkillPatch & Partial<ItemDefinition & EnemyDefinition>,
+    targetKind: Kind = kind,
   ) => {
-    if (!catalog || kind === "shop") return;
+    if (!catalog || targetKind === "shop") return;
     change({
       ...catalog,
-      ...(kind === "skills"
+      ...(targetKind === "skills"
         ? {
             skills: catalog.skills.map((skill) =>
               skill.id === id ? normalizeSkill({ ...skill, ...patch }) : skill,
             ),
           }
         : {
-            [kind]: catalog[kind].map((item) =>
+            [targetKind]: catalog[targetKind].map((item) =>
               item.id === id ? { ...item, ...patch } : item,
             ),
           }),
@@ -167,17 +168,18 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
   function add(
     effect: SkillDefinition["effect"] = "attack",
     damageType?: "physical" | "special",
+    targetKind: Kind = kind,
   ) {
-    if (!catalog || kind === "shop") return;
-    const id = `${kind.slice(0, -1)}_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
+    if (!catalog || targetKind === "shop") return;
+    const id = `${targetKind.slice(0, -1)}_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
     const base = {
       id,
-      name: `新しい${names[kind]}`,
+      name: `新しい${names[targetKind]}`,
       icon: "sparkles",
       enabled: true,
     };
     const item =
-      kind === "skills"
+      targetKind === "skills"
         ? normalizeSkill({
             ...base,
             effect,
@@ -190,7 +192,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
             mp_cost: 0,
             animation: "none",
           })
-        : kind === "items"
+        : targetKind === "items"
           ? {
               ...base,
               skill_id:
@@ -206,7 +208,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
               attack_skill_id: null,
               on_hit_skill_id: null,
             };
-    change({ ...catalog, [kind]: [...catalog[kind], item] });
+    change({ ...catalog, [targetKind]: [...catalog[targetKind], item] });
   }
   return (
     <AdminTableSection
@@ -342,6 +344,16 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
                   setError(undefined);
                 }}
               />
+            )}
+            {kind === "skills" && (
+              <AdminTableSection title="アイテム一覧" aria-label="アイテム一覧">
+                <DefinitionTables
+                  kind="items"
+                  catalog={catalog}
+                  update={(id, patch) => update(id, patch, "items")}
+                  add={() => add("attack", undefined, "items")}
+                />
+              </AdminTableSection>
             )}
             {(kind === "items" || kind === "enemies") && (
               <DefinitionTables kind={kind} catalog={catalog} update={update} />
