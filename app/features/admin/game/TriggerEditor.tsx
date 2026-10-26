@@ -5,14 +5,17 @@ import {
   AdminTableSection,
 } from "~/features/admin/AdminTable";
 import { type GameCatalog, requestGameCatalog } from "~/features/game/catalog";
+import type { TriggerTarget } from "~/features/game/catalog";
 import {
   conditionGroup,
   isStateSkill,
   stateCondition,
   stateLabels,
 } from "~/features/game/triggerConditions";
+import { triggerTargets } from "~/features/game/triggerVariants";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import TriggerVariantPanel from "./TriggerVariantPanel";
 
 const conditions = {
   always: "いつでも",
@@ -26,6 +29,7 @@ export default function TriggerEditor() {
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [variantTrigger, setVariantTrigger] = useState<string>();
   const stateSkills = catalog?.skills.filter(isStateSkill) ?? [];
   useEffect(() => {
     let active = true;
@@ -75,6 +79,7 @@ export default function TriggerEditor() {
                         condition: "hp_below",
                         threshold: 30,
                         enabled: true,
+                        target: "enemy",
                       },
                     ],
                   }
@@ -117,7 +122,7 @@ export default function TriggerEditor() {
             >
               <thead>
                 <tr>
-                  {["名前", "条件", "詳細", "有効"].map((h) => (
+                  {["名前", "対象", "条件", "詳細", "変型", "有効"].map((h) => (
                     <th key={h} className="p-2 text-left">
                       {h}
                     </th>
@@ -126,7 +131,11 @@ export default function TriggerEditor() {
               </thead>
               <tbody>
                 {catalog?.triggers?.map((t) => (
-                  <tr key={t.id} aria-label={t.name} className="border-t">
+                  <tr
+                    key={t.id}
+                    aria-label={t.name}
+                    className={`border-t ${variantTrigger === t.id ? "bg-primary/10" : ""}`}
+                  >
                     <td className="p-2">
                       <Input
                         aria-label="条件の名前"
@@ -136,6 +145,29 @@ export default function TriggerEditor() {
                         maxLength={80}
                         onChange={(e) => patch(t.id, { name: e.target.value })}
                       />
+                    </td>
+                    <td className="p-2">
+                      <select
+                        aria-label="対象"
+                        className="h-9 rounded-md border bg-background px-2"
+                        value={t.target ?? ""}
+                        onChange={(e) =>
+                          patch(t.id, {
+                            target: e.target.value as TriggerTarget,
+                          })
+                        }
+                      >
+                        {!t.target && (
+                          <option value="" disabled>
+                            旧設定
+                          </option>
+                        )}
+                        {Object.entries(triggerTargets).map(([key, name]) => (
+                          <option key={key} value={key}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="p-2">
                       <select
@@ -273,6 +305,16 @@ export default function TriggerEditor() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </div>
+                    </td>
+                    <td className="p-2">
+                      <TriggerVariantPanel
+                        trigger={t}
+                        stateSkills={stateSkills}
+                        onChange={(value) => patch(t.id, value)}
+                        onOpenChange={(open) =>
+                          setVariantTrigger(open ? t.id : undefined)
+                        }
+                      />
                     </td>
                     <td className="p-2">
                       <input

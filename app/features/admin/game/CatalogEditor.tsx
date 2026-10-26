@@ -11,6 +11,7 @@ import {
   requestGameCatalog,
   resolveCatalogTemplates,
 } from "~/features/game/catalog";
+import { rebindEffectChances } from "~/features/game/effectChances";
 import { combinationTemplate } from "~/features/game/variantSets";
 import { Button } from "~/shared/components/ui/button";
 import DefinitionTables from "./DefinitionTables";
@@ -322,6 +323,12 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
                       skill.id === skillId
                         ? {
                             ...skill,
+                            effect_chances: rebindEffectChances(
+                              skill,
+                              (skill.template_ids ?? []).map((id, i) =>
+                                i === index ? combined.id : id,
+                              ),
+                            ),
                             template_ids: (skill.template_ids ?? []).map(
                               (id, i) => (i === index ? combined.id : id),
                             ),

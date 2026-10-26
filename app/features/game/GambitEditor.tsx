@@ -8,6 +8,11 @@ import { type GambitRule, requestGameCatalog } from "./catalog";
 import type { GameSave } from "./domain";
 import type { GameState } from "./state";
 import { hasThreshold, stateCondition } from "./triggerConditions";
+import {
+  triggerConditionLabels,
+  triggerTargets,
+  triggerVariant,
+} from "./triggerVariants";
 
 const selectClass = "h-9 min-w-0 rounded-md border bg-background px-2 text-sm";
 const conditionLabels = {
@@ -159,6 +164,13 @@ export default function GambitEditor({
                 ? skills
                 : items;
           const selected = options.find((o) => o.id === rule.definition_id);
+          const triggerRoot = catalog?.triggers?.find(
+            (t) => t.id === rule.trigger_id,
+          );
+          const trigger = triggerRoot
+            ? triggerVariant(triggerRoot, rule.trigger_variant_id)
+            : undefined;
+          const fixedTarget = trigger?.target;
           return (
             <section
               key={rule.rowId}
@@ -234,6 +246,11 @@ export default function GambitEditor({
                           catalog?.triggers?.find(
                             (t) => t.id === e.target.value,
                           )?.id ?? null,
+                        trigger_variant_id: null,
+                        target:
+                          catalog?.triggers?.find(
+                            (t) => t.id === e.target.value,
+                          )?.target ?? rule.target,
                         threshold:
                           catalog?.triggers?.find(
                             (t) => t.id === e.target.value,
@@ -261,48 +278,92 @@ export default function GambitEditor({
                     ))}
                   </select>
                 </label>
-                {hasThreshold(
-                  catalog?.triggers?.find((t) => t.id === rule.trigger_id)
-                    ?.condition ?? rule.condition,
-                ) && (
-                  <label
-                    htmlFor={`${rule.rowId}-threshold`}
-                    className="w-20 text-sm"
-                  >
-                    値
-                    <Input
-                      id={`${rule.rowId}-threshold`}
-                      type="number"
-                      required
-                      min={1}
-                      max={rule.condition === "enemy_count" ? 20 : 100}
-                      value={
-                        Number.isFinite(rule.threshold) ? rule.threshold : ""
-                      }
+                {(!!triggerRoot?.variants?.length ||
+                  !!rule.trigger_variant_id) && (
+                  <label className="grid min-w-0 flex-1 gap-1 text-sm">
+                    変型
+                    <select
+                      className={selectClass}
+                      value={rule.trigger_variant_id ?? ""}
                       onChange={(e) =>
-                        patch(index, { threshold: e.target.valueAsNumber })
+                        patch(index, {
+                          trigger_variant_id: e.target.value || null,
+                        })
                       }
-                    />
+                    >
+                      <option value="">基本</option>
+                      {rule.trigger_variant_id && !trigger && (
+                        <option value={rule.trigger_variant_id}>
+                          利用不可
+                        </option>
+                      )}
+                      {triggerRoot?.variants?.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
                   </label>
                 )}
+                {!fixedTarget &&
+                  !rule.trigger_variant_id &&
+                  hasThreshold(
+                    catalog?.triggers?.find((t) => t.id === rule.trigger_id)
+                      ?.condition ?? rule.condition,
+                  ) && (
+                    <label
+                      htmlFor={`${rule.rowId}-threshold`}
+                      className="w-20 text-sm"
+                    >
+                      値
+                      <Input
+                        id={`${rule.rowId}-threshold`}
+                        type="number"
+                        required
+                        min={1}
+                        max={rule.condition === "enemy_count" ? 20 : 100}
+                        value={
+                          Number.isFinite(rule.threshold) ? rule.threshold : ""
+                        }
+                        onChange={(e) =>
+                          patch(index, { threshold: e.target.valueAsNumber })
+                        }
+                      />
+                    </label>
+                  )}
               </div>
+              {trigger && (fixedTarget || rule.trigger_variant_id) && (
+                <p
+                  className="text-sm text-muted-foreground"
+                  aria-label="条件の詳細"
+                >
+                  {triggerConditionLabels[trigger.condition]}
+                  {hasThreshold(trigger.condition) && ` ${trigger.threshold}`}
+                  {trigger.condition === "state" &&
+                    ` · ${catalog?.skills.find((s) => s.id === trigger.state_skill_id)?.name ?? "状態"} ${trigger.state_present === false ? "なし" : "あり"}`}
+                </p>
+              )}
               <div className="flex items-end gap-2">
                 <label className="grid gap-1 text-sm">
                   対象
                   <select
                     className={selectClass}
-                    value={rule.target ?? ""}
+                    disabled={!!fixedTarget}
+                    value={fixedTarget ?? rule.target ?? ""}
                     onChange={(e) =>
                       patch(index, {
                         target: e.target.value
-                          ? (e.target.value as "self" | "enemy")
+                          ? (e.target.value as GambitRule["target"])
                           : null,
                       })
                     }
                   >
                     <option value="">自動（既存設定）</option>
-                    <option value="self">自分</option>
-                    <option value="enemy">相手</option>
+                    {Object.entries(triggerTargets).map(([key, name]) => (
+                      <option key={key} value={key}>
+                        {name}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label className="grid gap-1 text-sm">
@@ -375,6 +436,7 @@ export default function GambitEditor({
             (!skills.length && !items.length)
           }
           onClick={() => {
+            const initial = catalog?.triggers?.find((t) => t.enabled);
             setRules((current) => [
               ...current,
               {
@@ -384,6 +446,15 @@ export default function GambitEditor({
                 threshold: 30,
                 action: skills.length ? "skill" : "item",
                 definition_id: (skills[0] ?? items[0]).id,
+                ...(initial
+                  ? {
+                      trigger_id: initial.id,
+                      condition: initial.condition,
+                      threshold: initial.threshold,
+                      target: initial.target,
+                      ...stateCondition(initial),
+                    }
+                  : {}),
               },
             ]);
             setSaved(false);

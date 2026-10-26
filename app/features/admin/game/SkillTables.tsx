@@ -13,6 +13,7 @@ import {
   type ElementDefinition,
   defaultElements,
 } from "~/features/game/catalog";
+import { rebindEffectChances } from "~/features/game/effectChances";
 import type { VariantSelection, VariantSet } from "~/features/game/variantSets";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
@@ -141,6 +142,15 @@ export default function SkillTables({
                         templates={templates}
                         disabled={removed || normal}
                         variantSets={variantSets}
+                        chances={skill.effect_chances}
+                        onChanceChange={(id, chance) =>
+                          update(skill.id, {
+                            effect_chances: {
+                              ...skill.effect_chances,
+                              [id]: chance,
+                            },
+                          })
+                        }
                         onCombine={
                           onCombine
                             ? (index, baseId, selections) =>
@@ -148,7 +158,10 @@ export default function SkillTables({
                             : undefined
                         }
                         onChange={(ids) =>
-                          update(skill.id, { template_ids: ids })
+                          update(skill.id, {
+                            template_ids: ids,
+                            effect_chances: rebindEffectChances(skill, ids),
+                          })
                         }
                       />
                     </td>

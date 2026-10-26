@@ -43,6 +43,12 @@ export default {
               {
                 id: "hp",
                 name: "HPが少ない",
+                target: "ally",
+                variant_field: "threshold",
+                variants: [
+                  { id: "half", name: "半分", value: 50 },
+                  { id: "low", name: "瀕死", value: 20 },
+                ],
                 condition: "hp_below",
                 threshold: 30,
                 enabled: true,
@@ -51,6 +57,7 @@ export default {
                 id: "buff",
                 name: "バフなし",
                 condition: "buff_absent",
+                target: "self",
                 threshold: 30,
                 enabled: true,
               },
@@ -58,6 +65,7 @@ export default {
                 id: "poison",
                 name: "毒状態",
                 condition: "poisoned",
+                target: "enemy",
                 threshold: 30,
                 enabled: true,
               },

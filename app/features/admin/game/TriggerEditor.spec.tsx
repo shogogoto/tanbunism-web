@@ -138,3 +138,55 @@ it("switches detail inputs for MP, enemy count and unconditional rules", async (
   await user.selectOptions(condition, "always");
   expect(row.queryByRole("spinbutton")).not.toBeInTheDocument();
 });
+
+it("saves targets and named trigger variants without expanding table rows", async () => {
+  const user = userEvent.setup();
+  render(<TriggerEditor />);
+  const row = await screen.findByRole("row", { name: "HP条件" });
+  await user.selectOptions(within(row).getByLabelText("対象"), "ally");
+  await user.click(within(row).getByRole("button", { name: "変型" }));
+  const dialog = screen.getByRole("dialog", { name: "HP条件の変型" });
+  expect(row).toHaveClass("bg-primary/10");
+  await user.click(within(dialog).getByRole("button", { name: "変型を追加" }));
+  const name = within(dialog).getByLabelText("変型の副名");
+  await user.clear(name);
+  await user.type(name, "半分");
+  const value = within(dialog).getByLabelText("変型の値");
+  await user.clear(value);
+  await user.type(value, "50");
+  await user.keyboard("{Escape}");
+  expect(row).not.toHaveClass("bg-primary/10");
+  expect(within(row).getByRole("button", { name: "変型 1" })).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(saved.mock.calls[0][0].triggers[0]).toMatchObject({
+    target: "ally",
+    variants: [{ name: "半分", value: 50 }],
+  });
+  expect(saved.mock.calls[0][0].triggers).toHaveLength(3);
+});
+
+it("uses field-specific controls for target and state-presence variants", async () => {
+  const user = userEvent.setup();
+  render(<TriggerEditor />);
+  const row = await screen.findByRole("row", { name: "HP条件" });
+  await user.click(within(row).getByRole("button", { name: "変型" }));
+  const panel = within(screen.getByRole("dialog"));
+  await user.selectOptions(panel.getByLabelText("変更する項目"), "target");
+  await user.click(panel.getByRole("button", { name: "変型を追加" }));
+  await user.selectOptions(panel.getByLabelText("変型の値"), "ally");
+  expect(panel.getByLabelText("変型の値")).toHaveValue("ally");
+  await user.selectOptions(
+    panel.getByLabelText("変更する項目"),
+    "state_present",
+  );
+  await user.click(panel.getByRole("button", { name: "変型を追加" }));
+  await user.selectOptions(panel.getByLabelText("変型の値"), "false");
+  await user.keyboard("{Escape}");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(saved.mock.calls[0][0].triggers[0]).toMatchObject({
+    variant_field: "state_present",
+    variants: [{ value: false }],
+  });
+});

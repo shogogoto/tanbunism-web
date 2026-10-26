@@ -67,6 +67,45 @@ it("saves the target on a gambit rather than an effect template", async () => {
   });
 });
 
+it("selects the admin trigger variant and locks its shared condition/action target", async () => {
+  server.use(
+    http.get("*/game/catalog", () =>
+      HttpResponse.json({
+        ...sampleCatalog,
+        triggers: [
+          {
+            id: "hp",
+            name: "HP条件",
+            condition: "hp_below",
+            target: "ally",
+            threshold: 30,
+            enabled: true,
+            variant_field: "target",
+            variants: [{ id: "foe", name: "敵", value: "enemy" }],
+          },
+        ],
+      }),
+    ),
+  );
+  const user = setup();
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "保存" })).toBeEnabled(),
+  );
+  const row = within(screen.getByRole("region", { name: "ガンビット 1" }));
+  await user.selectOptions(row.getByLabelText("条件"), "hp");
+  expect(row.getByLabelText("対象")).toBeDisabled();
+  expect(row.getByLabelText("対象")).toHaveValue("ally");
+  expect(row.queryByRole("spinbutton", { name: "値" })).not.toBeInTheDocument();
+  await user.selectOptions(row.getByLabelText("変型"), "foe");
+  expect(row.getByLabelText("対象")).toHaveValue("enemy");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls[0][0].rules[0]).toMatchObject({
+    trigger_id: "hp",
+    trigger_variant_id: "foe",
+  });
+});
+
 it("reorders conditions and saves item references without browser-only row IDs", async () => {
   const user = setup();
   const add = screen.getByRole("button", { name: "条件を追加" });

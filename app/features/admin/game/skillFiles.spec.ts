@@ -36,6 +36,19 @@ it("exports attribute definitions alongside skills for portable custom attribute
   expect(result.skills[0].element).toBe("metal");
 });
 
+it("exports binding chances without putting them on effect templates", () => {
+  const skill = sampleTemplateCatalog.skills.find((s) => s.id === "fire");
+  if (!skill) throw new Error("fixture missing");
+  const result = JSON.parse(
+    skillFileText(
+      [{ ...skill, effect_chances: { basic_spell: 30 } }],
+      sampleTemplateCatalog.skill_templates,
+    ),
+  );
+  expect(result.skills[0].effect_chances).toEqual({ basic_spell: 30 });
+  expect(result.skill_templates[0]).not.toHaveProperty("effect_chances");
+});
+
 it("writes a versioned skills-only file without granting access or exporting consumers", async () => {
   const skills = sampleCatalog.skills.map((s) => ({ ...s, enabled: false }));
   const text = skillFileText(skills);

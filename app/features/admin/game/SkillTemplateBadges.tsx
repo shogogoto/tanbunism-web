@@ -3,6 +3,7 @@ import type { SkillTemplate } from "~/features/game/catalog";
 import type { VariantSelection, VariantSet } from "~/features/game/variantSets";
 import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
+import { Input } from "~/shared/components/ui/input";
 import VariantCombinationPicker from "./VariantCombinationPicker";
 
 export default function SkillTemplateBadges({
@@ -12,11 +13,15 @@ export default function SkillTemplateBadges({
   onChange,
   variantSets = [],
   onCombine,
+  chances = {},
+  onChanceChange,
 }: {
   value: string[];
   templates: SkillTemplate[];
   disabled: boolean;
   onChange: (ids: string[]) => void;
+  chances?: Record<string, number>;
+  onChanceChange?: (id: string, chance: number) => void;
   variantSets?: VariantSet[];
   onCombine?: (
     index: number,
@@ -82,6 +87,27 @@ export default function SkillTemplateBadges({
                     ))}
                 </select>
               </span>
+              {onChanceChange && (
+                <span className="flex shrink-0 items-center gap-0.5">
+                  <Input
+                    aria-label={`効果 ${index + 1}の発動率`}
+                    title="発動率（%）"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    required
+                    value={
+                      Number.isFinite(chances[id] ?? 100)
+                        ? (chances[id] ?? 100)
+                        : ""
+                    }
+                    className="h-6 w-14 border-0 bg-transparent px-1 text-xs"
+                    onChange={(e) => onChanceChange(id, e.target.valueAsNumber)}
+                  />
+                  <span>%</span>
+                </span>
+              )}
               {template && base && onCombine && (
                 <VariantCombinationPicker
                   template={template}

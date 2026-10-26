@@ -22,6 +22,7 @@ type SkillBase = {
   sound?: SkillSound;
   template_id?: string | null;
   template_ids?: string[];
+  effect_chances?: Record<string, number>;
   effects?: Record<string, unknown>[];
   element?: string;
 };
@@ -140,6 +141,7 @@ export function normalizeSkill(
     effect,
     template_id,
     template_ids,
+    effect_chances,
     effects,
     element,
   } = skill;
@@ -158,6 +160,9 @@ export function normalizeSkill(
     damage_type: skill.damage_type ?? "physical",
     ...(template_id ? { template_id } : {}),
     ...(template_ids?.length ? { template_ids } : {}),
+    ...(effect_chances && Object.keys(effect_chances).length
+      ? { effect_chances }
+      : {}),
     ...(effects?.length ? { effects } : {}),
     ...(element ? { element } : {}),
   };
@@ -262,6 +267,7 @@ type TemplateOf<T> = T extends SkillDefinition
       | "enabled"
       | "template_id"
       | "template_ids"
+      | "effect_chances"
       | "effects"
       | "element"
       | "animation"
@@ -288,6 +294,7 @@ export function skillTemplate(
     enabled,
     template_id,
     template_ids,
+    effect_chances,
     effects,
     element,
     animation,
@@ -362,6 +369,7 @@ export function resolveCatalogTemplates(catalog: GameCatalog): GameCatalog {
         mp_cost: skill.mp_cost,
         template_id: skill.template_ids?.length ? undefined : template.id,
         template_ids: skill.template_ids,
+        effect_chances: skill.effect_chances,
         effects: skill.template_ids?.length
           ? selected
               .filter((t) => t !== undefined)
@@ -507,16 +515,30 @@ export type GameCatalog = {
   enemies: EnemyDefinition[];
   player_skills?: { skill_id: string; enabled: boolean }[];
   specialty_skills?: SpecialtySkillUse[];
-  triggers?: {
-    id: string;
-    name: string;
-    condition: GambitRule["condition"];
-    threshold: number;
-    state_kind?: GambitRule["state_kind"];
-    state_present?: boolean;
-    state_skill_id?: string | null;
-    enabled: boolean;
-  }[];
+  triggers?: TriggerDefinition[];
+};
+export type TriggerTarget = "enemy" | "self" | "ally";
+export type TriggerVariantField =
+  | "target"
+  | "condition"
+  | "threshold"
+  | "state_skill_id"
+  | "state_present";
+export type TriggerVariant = {
+  id: string;
+  name: string;
+  value: string | number | boolean;
+};
+export type TriggerDefinition = Pick<
+  GambitRule,
+  "condition" | "threshold" | "state_kind" | "state_present" | "state_skill_id"
+> & {
+  id: string;
+  name: string;
+  enabled: boolean;
+  target?: TriggerTarget | null;
+  variant_field?: TriggerVariantField;
+  variants?: TriggerVariant[];
 };
 export type SpecialtySkillUse = {
   skill_id: string;
@@ -561,13 +583,15 @@ export type GambitRule = {
   action: "skill" | "item" | "specialty";
   definition_id: string;
   trigger_id?: string | null;
-  target?: "self" | "enemy" | null;
+  trigger_variant_id?: string | null;
+  target?: TriggerTarget | null;
 };
 export type BattleAction = {
   skill: SkillDefinition;
   item_id: string | null;
   item_max_uses?: number;
   name: string;
+  target_ids?: string[] | null;
 };
 export const effectLabels: Record<SkillDefinition["effect"], string> = {
   attack: "攻撃",

@@ -30,6 +30,7 @@ export function skillFileText(
       sound,
       template_id,
       template_ids,
+      effect_chances,
       mp_cost,
     } = skill;
     return {
@@ -42,6 +43,9 @@ export function skillFileText(
       sound,
       template_id,
       template_ids,
+      ...(effect_chances && Object.keys(effect_chances).length
+        ? { effect_chances }
+        : {}),
       mp_cost,
     };
   });

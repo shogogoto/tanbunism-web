@@ -18,6 +18,34 @@ import CatalogEditor from "./CatalogEditor";
 import * as skillFiles from "./skillFiles";
 import { variantRowHighlight } from "./variantRowStyles";
 
+it("edits each skill binding's activation rate and preserves it after replacing its template", async () => {
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="skills" />);
+  const table = await screen.findByRole("table", { name: "スキル一覧" });
+  const fire = within(within(table).getByRole("row", { name: "ファイア" }));
+  const heal = within(within(table).getByRole("row", { name: "ケアル" }));
+  expect(fire.getByLabelText("効果 1の発動率")).toHaveValue(100);
+  await user.clear(fire.getByLabelText("効果 1の発動率"));
+  await user.type(fire.getByLabelText("効果 1の発動率"), "30");
+  expect(heal.getByLabelText("効果 1の発動率")).toHaveValue(100);
+  const select = fire.getByLabelText("効果テンプレート 1");
+  const another = within(select)
+    .getAllByRole("option")
+    .find(
+      (option) =>
+        (option as HTMLOptionElement).value !==
+        (select as HTMLSelectElement).value,
+    ) as HTMLOptionElement;
+  await user.selectOptions(select, another.value);
+  expect(fire.getByLabelText("効果 1の発動率")).toHaveValue(30);
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  const skill = saved.mock.calls
+    .at(-1)?.[0]
+    .skills.find((s: { id: string }) => s.id === "fire");
+  expect(skill.effect_chances).toEqual({ [another.value]: 30 });
+});
+
 it("edits finite/infinite persistence independently for correct and incorrect status effects", async () => {
   server.use(
     http.get("*/admin/game/catalog", () =>
@@ -1390,7 +1418,7 @@ it("edits MP damage and recovery through detail with independent correct and wro
   });
 });
 
-it("uses one field per column and selects each skill's animation from its gallery", async () => {
+it("keeps scalar columns separate, groups rates in effect badges and selects animations from the gallery", async () => {
   render(<CatalogEditor kind="skills" />);
   const user = userEvent.setup();
   const fire = await screen.findByRole("row", { name: "ファイア" });
@@ -1403,8 +1431,18 @@ it("uses one field per column and selects each skill's animation from its galler
   expect(
     screen.queryByRole("combobox", { name: "演出" }),
   ).not.toBeInTheDocument();
-  for (const cell of within(fire).getAllByRole("cell"))
-    expect(cell.querySelectorAll("input,select").length).toBeLessThanOrEqual(1);
+  for (const cell of within(fire).getAllByRole("cell")) {
+    const bindings = cell.querySelector("[data-template-badges]");
+    if (bindings) {
+      expect(within(cell).getByLabelText("効果テンプレート 1")).toBeVisible();
+      expect(within(cell).getByLabelText("効果 1の発動率")).toHaveValue(100);
+      expect(bindings.querySelectorAll("input,select")).toHaveLength(2);
+    } else {
+      expect(cell.querySelectorAll("input,select").length).toBeLessThanOrEqual(
+        1,
+      );
+    }
+  }
   const heal = screen.getByRole("row", { name: "ケアル" });
   await user.click(
     within(heal).getByRole("button", { name: "ケアルの演出を選ぶ" }),
