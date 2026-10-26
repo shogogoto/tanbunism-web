@@ -133,6 +133,80 @@ it("selects the admin trigger variant and locks its shared condition/action targ
   });
 });
 
+it("allows an owned variant while the base trigger remains locked", async () => {
+  server.use(
+    http.get("*/game/catalog", () =>
+      HttpResponse.json({
+        ...sampleCatalog,
+        triggers: [
+          {
+            id: "hp",
+            name: "HP条件",
+            condition: "hp_below",
+            threshold: 30,
+            target: "ally",
+            enabled: true,
+            variant_field: "threshold",
+            variants: [
+              { id: "half", name: "半分", value: 50 },
+              { id: "low", name: "低HP", value: 10 },
+            ],
+          },
+        ],
+        shop: [
+          { trigger_id: "hp", price: 10, enabled: true },
+          {
+            trigger_id: "hp",
+            trigger_variant_id: "half",
+            price: 20,
+            enabled: true,
+          },
+          {
+            trigger_id: "hp",
+            trigger_variant_id: "low",
+            price: 30,
+            enabled: true,
+          },
+        ],
+      }),
+    ),
+  );
+  const save = newSave();
+  render(
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <GambitEditor
+        revision={4}
+        save={{
+          ...save,
+          economy: {
+            gold: 0,
+            inventory: {},
+            weapon: null,
+            weapon_attack: 0,
+            ...save.economy,
+            unlocked_triggers: ["hp:half"],
+          },
+        }}
+        onSaved={onSaved}
+      />
+    </SWRConfig>,
+  );
+  const user = userEvent.setup();
+  const add = await screen.findByRole("button", { name: "条件を追加" });
+  await waitFor(() => expect(add).toBeEnabled());
+  await user.click(add);
+  const row = within(screen.getByRole("region", { name: "ガンビット 1" }));
+  expect(row.getByLabelText("変型")).toHaveValue("half");
+  expect(row.getByRole("option", { name: "基本" })).toBeDisabled();
+  expect(row.getByRole("option", { name: "低HP（未解放）" })).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls[0][0].rules[0]).toMatchObject({
+    trigger_id: "hp",
+    trigger_variant_id: "half",
+  });
+});
+
 it("reorders conditions and saves item references without browser-only row IDs", async () => {
   const user = setup();
   const add = screen.getByRole("button", { name: "条件を追加" });

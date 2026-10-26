@@ -481,7 +481,10 @@ export function isEquipmentSkill(skill: SkillDefinition): boolean {
     (effect) => effect.effect === "buff" || effect.effect === "equip_attack",
   );
 }
-export type ShopListing = ({ item_id: string } | { trigger_id: string }) & {
+export type ShopListing = (
+  | { item_id: string }
+  | { trigger_id: string; trigger_variant_id?: string | null }
+) & {
   price: number;
   enabled: boolean;
 };

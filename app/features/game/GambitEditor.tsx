@@ -6,7 +6,7 @@ import GameIcon from "./GameIcon";
 import { gameRequest } from "./battle";
 import { type GambitRule, requestGameCatalog } from "./catalog";
 import type { GameSave } from "./domain";
-import { triggerAvailable } from "./gambitShop";
+import { firstAvailableTriggerVariant, triggerAvailable } from "./gambitShop";
 import type { GameState } from "./state";
 import { hasThreshold, stateCondition } from "./triggerConditions";
 import {
@@ -51,13 +51,14 @@ export default function GambitEditor({
   const slots = capacity?.slots ?? 1;
   const unlocked = save.economy?.unlocked_triggers ?? [];
   const availableTriggers = catalog?.triggers?.filter(
-    (t) => t.enabled && triggerAvailable(catalog, unlocked, t.id),
+    (t) => firstAvailableTriggerVariant(catalog, unlocked, t) !== undefined,
   );
   const triggerOptions =
     catalog?.triggers?.map((t) => ({
       id: t.id,
       name: t.name,
-      disabled: !t.enabled || !triggerAvailable(catalog, unlocked, t.id),
+      disabled:
+        firstAvailableTriggerVariant(catalog, unlocked, t) === undefined,
     })) ??
     Object.entries(conditionLabels).map(([id, name]) => ({
       id,
@@ -264,7 +265,18 @@ export default function GambitEditor({
                           catalog?.triggers?.find(
                             (t) => t.id === e.target.value,
                           )?.id ?? null,
-                        trigger_variant_id: null,
+                        trigger_variant_id: (() => {
+                          const selected = catalog?.triggers?.find(
+                            (t) => t.id === e.target.value,
+                          );
+                          return selected && catalog
+                            ? firstAvailableTriggerVariant(
+                                catalog,
+                                unlocked,
+                                selected,
+                              )
+                            : null;
+                        })(),
                         target:
                           catalog?.triggers?.find(
                             (t) => t.id === e.target.value,
@@ -314,15 +326,44 @@ export default function GambitEditor({
                         })
                       }
                     >
-                      <option value="">基本</option>
+                      <option
+                        value=""
+                        disabled={
+                          !!catalog &&
+                          !!triggerRoot &&
+                          !triggerAvailable(catalog, unlocked, triggerRoot.id)
+                        }
+                      >
+                        基本
+                      </option>
                       {rule.trigger_variant_id && !trigger && (
                         <option value={rule.trigger_variant_id}>
                           利用不可
                         </option>
                       )}
                       {triggerRoot?.variants?.map((v) => (
-                        <option key={v.id} value={v.id}>
+                        <option
+                          key={v.id}
+                          value={v.id}
+                          disabled={
+                            !!catalog &&
+                            !triggerAvailable(
+                              catalog,
+                              unlocked,
+                              triggerRoot.id,
+                              v.id,
+                            )
+                          }
+                        >
                           {v.name}
+                          {!!catalog &&
+                            !triggerAvailable(
+                              catalog,
+                              unlocked,
+                              triggerRoot.id,
+                              v.id,
+                            ) &&
+                            "（未解放）"}
                         </option>
                       ))}
                     </select>
@@ -473,6 +514,13 @@ export default function GambitEditor({
                 ...(initial
                   ? {
                       trigger_id: initial.id,
+                      trigger_variant_id: catalog
+                        ? firstAvailableTriggerVariant(
+                            catalog,
+                            unlocked,
+                            initial,
+                          )
+                        : null,
                       condition: initial.condition,
                       threshold: initial.threshold,
                       target: initial.target,

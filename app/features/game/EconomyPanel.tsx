@@ -5,6 +5,7 @@ import { Button } from "~/shared/components/ui/button";
 import GameIcon from "./GameIcon";
 import { gameRequest } from "./battle";
 import type { GameSave } from "./domain";
+import { triggerUnlockId } from "./gambitShop";
 import { type GameState, requestGameState } from "./state";
 
 type Product = {
@@ -20,6 +21,7 @@ type Product = {
     | "dungeon_unlock"
     | "gambit";
   trigger_id?: string | null;
+  trigger_variant_id?: string | null;
   resource_id?: string | null;
   amount: number;
   amount_mode?: "fixed" | "percent";
@@ -143,7 +145,10 @@ export default function EconomyPanel({
             ? product.price !== null
             : product.kind === "gambit"
               ? (save.economy?.unlocked_triggers ?? []).includes(
-                  product.trigger_id ?? "",
+                  triggerUnlockId(
+                    product.trigger_id ?? "",
+                    product.trigger_variant_id,
+                  ),
                 )
               : (inventory[product.id] ?? 0) > 0,
         )
@@ -153,7 +158,10 @@ export default function EconomyPanel({
           const unlocked =
             product.kind === "gambit" &&
             (save.economy?.unlocked_triggers ?? []).includes(
-              product.trigger_id ?? "",
+              triggerUnlockId(
+                product.trigger_id ?? "",
+                product.trigger_variant_id,
+              ),
             );
           const maxUses =
             product.max_uses ?? (product.kind === "weapon" ? 30 : 1);
@@ -197,7 +205,7 @@ export default function EconomyPanel({
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {product.kind === "gambit"
-                    ? "トリガーを永久解放 · 変型にも利用可"
+                    ? "トリガーを永久解放"
                     : product.kind === "dungeon_unlock"
                       ? "指定リソースのダンジョンを開放"
                       : product.kind === "weapon"

@@ -1328,6 +1328,46 @@ it("automatically lists defined gambits alongside items without duplicate item d
   );
 });
 
+it("lists gambit variants and saves their sales independently of the base trigger", async () => {
+  const trigger = {
+    id: "targets",
+    name: "いつでも",
+    condition: "always",
+    target: "enemy",
+    enabled: true,
+    variant_field: "target",
+    variants: [{ id: "self", name: "自分", value: "self" }],
+  };
+  server.use(
+    http.get("*/admin/game/catalog", () =>
+      HttpResponse.json({ ...sampleCatalog, triggers: [trigger] }),
+    ),
+  );
+  render(<CatalogEditor kind="shop" />);
+  const user = userEvent.setup();
+  const variant = await screen.findByRole("row", { name: "いつでも（自分）" });
+  expect(within(variant).getByText("ガンビット · 自分自身")).toBeVisible();
+  expect(
+    within(screen.getByRole("row", { name: "いつでも" })).getByLabelText(
+      "販売",
+    ),
+  ).not.toBeChecked();
+  await user.click(within(variant).getByLabelText("販売"));
+  await user.clear(within(variant).getByLabelText("価格（G）"));
+  await user.type(within(variant).getByLabelText("価格（G）"), "80");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls.at(-1)?.[0].shop).toEqual([
+    ...sampleCatalog.shop,
+    {
+      trigger_id: "targets",
+      trigger_variant_id: "self",
+      price: 80,
+      enabled: true,
+    },
+  ]);
+});
+
 it("configures sale availability and prices independently from item definitions", async () => {
   render(<CatalogEditor kind="shop" />);
   const user = userEvent.setup();

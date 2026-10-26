@@ -74,36 +74,41 @@ it("purchases with the displayed state's revision and applies the returned balan
   expect(onSaved).toHaveBeenCalledWith(result);
 });
 
-it("buys a permanent gambit unlock rather than a consumable", async () => {
-  const product = {
-    id: "gambit:low_hp",
-    trigger_id: "low_hp",
-    name: "HP30%以下の味方",
-    price: 100,
-    kind: "gambit",
-    amount: 0,
-  };
-  vi.mocked(gameRequest).mockResolvedValueOnce({ products: [product] });
-  const { onSaved, save } = show(true);
-  const buy = await screen.findByRole("button", { name: "100 G" });
-  expect(screen.getByText("トリガーを永久解放 · 変型にも利用可")).toBeVisible();
-  expect(screen.queryByText(/回使用可/)).not.toBeInTheDocument();
-  const result = {
-    revision: 8,
-    save: {
-      ...save,
-      economy: { ...save.economy, gold: 20, unlocked_triggers: ["low_hp"] },
-    },
-  };
-  vi.mocked(gameRequest).mockResolvedValueOnce(result);
-  await userEvent.setup().click(buy);
-  expect(gameRequest).toHaveBeenCalledWith("shop/buy", {
-    revision: 7,
-    product_id: "gambit:low_hp",
-  });
-  expect(onSaved).toHaveBeenCalledWith(result);
-  expect(await screen.findByText("ガンビットを解放しました。")).toBeVisible();
-});
+it.each([null, "half"])(
+  "buys a permanent gambit unlock rather than a consumable (%s)",
+  async (variantId) => {
+    const unlockId = variantId ? `low_hp:${variantId}` : "low_hp";
+    const product = {
+      id: `gambit:${unlockId}`,
+      trigger_id: "low_hp",
+      trigger_variant_id: variantId,
+      name: "HP30%以下の味方",
+      price: 100,
+      kind: "gambit",
+      amount: 0,
+    };
+    vi.mocked(gameRequest).mockResolvedValueOnce({ products: [product] });
+    const { onSaved, save } = show(true);
+    const buy = await screen.findByRole("button", { name: "100 G" });
+    expect(screen.getByText("トリガーを永久解放")).toBeVisible();
+    expect(screen.queryByText(/回使用可/)).not.toBeInTheDocument();
+    const result = {
+      revision: 8,
+      save: {
+        ...save,
+        economy: { ...save.economy, gold: 20, unlocked_triggers: [unlockId] },
+      },
+    };
+    vi.mocked(gameRequest).mockResolvedValueOnce(result);
+    await userEvent.setup().click(buy);
+    expect(gameRequest).toHaveBeenCalledWith("shop/buy", {
+      revision: 7,
+      product_id: `gambit:${unlockId}`,
+    });
+    expect(onSaved).toHaveBeenCalledWith(result);
+    expect(await screen.findByText("ガンビットを解放しました。")).toBeVisible();
+  },
+);
 it("describes the shared buff effects of equipment", async () => {
   vi.mocked(gameRequest).mockResolvedValueOnce({
     products: [

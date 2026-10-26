@@ -2,7 +2,10 @@ import { AdminNativeTable, AdminTableFrame } from "~/features/admin/AdminTable";
 import GameIcon from "~/features/game/GameIcon";
 import type { GameCatalog, ShopListing } from "~/features/game/catalog";
 import { shopProductId } from "~/features/game/gambitShop";
-import { triggerTargets } from "~/features/game/triggerVariants";
+import {
+  triggerTargets,
+  triggerVariant,
+} from "~/features/game/triggerVariants";
 import { Input } from "~/shared/components/ui/input";
 
 export default function ShopTable({
@@ -10,7 +13,8 @@ export default function ShopTable({
   onChange,
 }: { catalog: GameCatalog; onChange: (shop: ShopListing[]) => void }) {
   const shop = catalog.shop ?? [];
-  function update(id: string, patch: Partial<ShopListing>) {
+  function update(product: ShopListing, patch: Partial<ShopListing>) {
+    const id = shopProductId(product);
     const current = shop.find((p) => shopProductId(p) === id);
     onChange(
       current
@@ -20,11 +24,7 @@ export default function ShopTable({
         : [
             ...shop,
             {
-              ...(id.startsWith("gambit:")
-                ? { trigger_id: id.slice(7) }
-                : { item_id: id }),
-              price: 0,
-              enabled: true,
+              ...product,
               ...patch,
             } as ShopListing,
           ],
@@ -37,14 +37,27 @@ export default function ShopTable({
       icon: item.icon,
       enabled: item.enabled,
       detail: catalog.skills.find((s) => s.id === item.skill_id)?.name ?? "—",
+      listing: { item_id: item.id, price: 0, enabled: true },
     })),
-    ...(catalog.triggers ?? []).map((trigger) => ({
-      id: `gambit:${trigger.id}`,
-      name: trigger.name,
-      icon: "target",
-      enabled: trigger.enabled,
-      detail: `ガンビット · ${triggerTargets[trigger.target ?? "enemy"]}`,
-    })),
+    ...(catalog.triggers ?? []).flatMap((trigger) =>
+      [null, ...(trigger.variants ?? [])].map((variant) => {
+        const listing = {
+          trigger_id: trigger.id,
+          ...(variant ? { trigger_variant_id: variant.id } : {}),
+          price: 0,
+          enabled: true,
+        };
+        const resolved = triggerVariant(trigger, variant?.id);
+        return {
+          id: shopProductId(listing),
+          name: variant ? `${trigger.name}（${variant.name}）` : trigger.name,
+          icon: "target",
+          enabled: trigger.enabled,
+          detail: `ガンビット · ${triggerTargets[resolved?.target ?? "enemy"]}`,
+          listing,
+        };
+      }),
+    ),
   ];
   return (
     <AdminTableFrame layout="content">
@@ -85,7 +98,7 @@ export default function ShopTable({
                     aria-label="販売"
                     checked={listing?.enabled ?? false}
                     onChange={(e) =>
-                      update(item.id, { enabled: e.target.checked })
+                      update(item.listing, { enabled: e.target.checked })
                     }
                   />
                 </td>
@@ -106,7 +119,7 @@ export default function ShopTable({
                         : ""
                     }
                     onChange={(e) =>
-                      update(item.id, { price: e.target.valueAsNumber })
+                      update(item.listing, { price: e.target.valueAsNumber })
                     }
                   />
                 </td>
