@@ -211,3 +211,73 @@ it("uses field-specific controls for target and state-presence variants", async 
     variants: [{ value: false }],
   });
 });
+
+it("shares a variant set across triggers and propagates later edits", async () => {
+  server.use(
+    http.get("*/admin/game/catalog", () =>
+      HttpResponse.json({
+        ...catalog,
+        triggers: [
+          catalog.triggers[0],
+          {
+            ...catalog.triggers[0],
+            id: "mp",
+            name: "MP条件",
+            condition: "mp_below",
+          },
+        ],
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  render(<TriggerEditor />);
+  await screen.findByRole("row", { name: "HP条件" });
+  await user.click(screen.getByRole("button", { name: "変型セットを管理" }));
+  let manager = within(
+    screen.getByRole("dialog", { name: "ガンビットの変型セット" }),
+  );
+  await user.click(manager.getByRole("button", { name: "セットを追加" }));
+  await user.clear(manager.getByLabelText("セット名"));
+  await user.type(manager.getByLabelText("セット名"), "残量");
+  await user.click(manager.getByRole("button", { name: "変型を追加" }));
+  await user.clear(manager.getByLabelText("変型の副名"));
+  await user.type(manager.getByLabelText("変型の副名"), "半分");
+  await user.clear(manager.getByLabelText("変型の値"));
+  await user.type(manager.getByLabelText("変型の値"), "50");
+  await user.click(manager.getByRole("button", { name: "反映" }));
+  for (const name of ["HP条件", "MP条件"]) {
+    const row = within(screen.getByRole("row", { name }));
+    await user.click(row.getByRole("button", { name: "変型" }));
+    const panel = within(screen.getByRole("dialog", { name: `${name}の変型` }));
+    await user.selectOptions(
+      panel.getByLabelText("変型セット"),
+      screen.getByRole("option", { name: "残量" }),
+    );
+    expect(panel.getByLabelText("変型の値")).toHaveValue(50);
+    expect(panel.getByLabelText("変型の値")).toBeDisabled();
+    await user.keyboard("{Escape}");
+  }
+  await user.click(screen.getByRole("button", { name: "変型セットを管理" }));
+  manager = within(
+    screen.getByRole("dialog", { name: "ガンビットの変型セット" }),
+  );
+  expect(manager.getByRole("button", { name: "残量を削除" })).toBeDisabled();
+  await user.clear(manager.getByLabelText("変型の値"));
+  await user.type(manager.getByLabelText("変型の値"), "70");
+  await user.click(manager.getByRole("button", { name: "反映" }));
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  const payload = saved.mock.calls.at(-1)?.[0];
+  expect(payload.trigger_variant_sets[0].values[0].value).toBe(70);
+  expect(
+    payload.triggers.map((t: { variant_set_id: string }) => t.variant_set_id),
+  ).toEqual([
+    payload.trigger_variant_sets[0].id,
+    payload.trigger_variant_sets[0].id,
+  ]);
+  expect(
+    payload.triggers.every(
+      (t: { variants: { value: number }[] }) => t.variants[0].value === 70,
+    ),
+  ).toBe(true);
+});

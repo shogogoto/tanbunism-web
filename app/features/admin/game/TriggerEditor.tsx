@@ -11,10 +11,14 @@ import {
   isStateSkill,
   stateCondition,
 } from "~/features/game/triggerConditions";
-import { triggerTargets } from "~/features/game/triggerVariants";
+import {
+  resolveTriggerVariantSets,
+  triggerTargets,
+} from "~/features/game/triggerVariants";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import TriggerVariantPanel from "./TriggerVariantPanel";
+import TriggerVariantSetEditor from "./TriggerVariantSetEditor";
 
 const conditions = {
   always: "いつでも",
@@ -47,12 +51,12 @@ export default function TriggerEditor() {
     setSaved(false);
     setCatalog((c) =>
       c
-        ? {
+        ? resolveTriggerVariantSets({
             ...c,
             triggers: c.triggers?.map((t) =>
               t.id === id ? { ...t, ...value } : t,
             ),
-          }
+          })
         : c,
     );
   }
@@ -61,33 +65,45 @@ export default function TriggerEditor() {
       className="space-y-4 p-4 sm:p-6"
       aria-label="ガンビット条件定義"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">ガンビットのトリガー</h2>
-        <Button
-          disabled={!catalog || busy}
-          onClick={() =>
-            setCatalog((c) =>
-              c
-                ? {
-                    ...c,
-                    triggers: [
-                      ...(c.triggers ?? []),
-                      {
-                        id: `trigger_${crypto.randomUUID().replaceAll("-", "")}`,
-                        name: "新しい条件",
-                        condition: "hp_below",
-                        threshold: 30,
-                        enabled: true,
-                        target: "enemy",
-                      },
-                    ],
-                  }
-                : c,
-            )
-          }
-        >
-          追加
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {catalog && (
+            <TriggerVariantSetEditor
+              catalog={catalog}
+              stateSkills={stateSkills}
+              onChange={(next) => {
+                setCatalog(next);
+                setSaved(false);
+              }}
+            />
+          )}
+          <Button
+            disabled={!catalog || busy}
+            onClick={() =>
+              setCatalog((c) =>
+                c
+                  ? {
+                      ...c,
+                      triggers: [
+                        ...(c.triggers ?? []),
+                        {
+                          id: `trigger_${crypto.randomUUID().replaceAll("-", "")}`,
+                          name: "新しい条件",
+                          condition: "hp_below",
+                          threshold: 30,
+                          enabled: true,
+                          target: "enemy",
+                        },
+                      ],
+                    }
+                  : c,
+              )
+            }
+          >
+            追加
+          </Button>
+        </div>
       </div>
       {error && (
         <p role="alert" className="text-destructive">
@@ -308,6 +324,32 @@ export default function TriggerEditor() {
                     <td className="p-2">
                       <TriggerVariantPanel
                         trigger={t}
+                        sets={catalog.trigger_variant_sets}
+                        onCreateSet={() => {
+                          const id = `set_${crypto.randomUUID().replaceAll("-", "")}`;
+                          setSaved(false);
+                          setCatalog(
+                            (c) =>
+                              c &&
+                              resolveTriggerVariantSets({
+                                ...c,
+                                trigger_variant_sets: [
+                                  ...(c.trigger_variant_sets ?? []),
+                                  {
+                                    id,
+                                    name: `${t.name}の変型`,
+                                    field: t.variant_field ?? "threshold",
+                                    values: structuredClone(t.variants ?? []),
+                                  },
+                                ],
+                                triggers: c.triggers?.map((root) =>
+                                  root.id === t.id
+                                    ? { ...root, variant_set_id: id }
+                                    : root,
+                                ),
+                              }),
+                          );
+                        }}
                         stateSkills={stateSkills}
                         onChange={(value) => patch(t.id, value)}
                         onOpenChange={(open) =>

@@ -5,6 +5,7 @@ import {
   type TemplateOverride,
   resolveTemplateVariants,
 } from "./templateVariants";
+import { resolveTriggerVariantSets } from "./triggerVariants";
 
 export { soundLabels } from "./soundAssets";
 
@@ -519,6 +520,7 @@ export const enemyStatLabels = {
 };
 export type EnemyStat = keyof typeof enemyStatLabels;
 export type GameCatalog = {
+  trigger_variant_sets?: TriggerVariantSet[];
   boss_multipliers_version?: 1;
   variant_sets?: import("./variantSets").VariantSet[];
   elements?: ElementDefinition[];
@@ -543,6 +545,12 @@ export type TriggerVariant = {
   name: string;
   value: string | number | boolean;
 };
+export type TriggerVariantSet = {
+  id: string;
+  name: string;
+  field: TriggerVariantField;
+  values: TriggerVariant[];
+};
 export type TriggerDefinition = Pick<
   GambitRule,
   "condition" | "threshold" | "state_present" | "state_skill_id"
@@ -553,6 +561,7 @@ export type TriggerDefinition = Pick<
   target?: TriggerTarget | null;
   variant_field?: TriggerVariantField;
   variants?: TriggerVariant[];
+  variant_set_id?: string | null;
 };
 export type SpecialtySkillUse = {
   skill_id: string;
@@ -629,7 +638,7 @@ export async function requestGameCatalog(
         ? {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(value),
+            body: JSON.stringify(resolveTriggerVariantSets(value)),
           }
         : {}),
     },
@@ -642,7 +651,7 @@ export async function requestGameCatalog(
         : "ゲーム定義を読み書きできませんでした。",
     );
   }
-  return response.json();
+  return resolveTriggerVariantSets(await response.json());
 }
 
 /** Only the selected attack action changes outgoing damage; answers still decide hits. */

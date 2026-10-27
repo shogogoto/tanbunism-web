@@ -1,4 +1,44 @@
-import type { TriggerDefinition, TriggerVariantField } from "./catalog";
+import type {
+  GameCatalog,
+  TriggerDefinition,
+  TriggerVariantField,
+} from "./catalog";
+
+export function resolveTriggerVariantSets(catalog: GameCatalog): GameCatalog {
+  const sets = catalog.trigger_variant_sets ?? [];
+  if (new Set(sets.map((s) => s.id)).size !== sets.length)
+    throw new Error("変型セットのIDが重複しています。");
+  for (const set of sets) {
+    if (!set.name.trim())
+      throw new Error("変型セットの名前を入力してください。");
+    if (new Set(set.values.map((v) => v.id)).size !== set.values.length)
+      throw new Error("候補IDが重複しています。");
+    for (const v of set.values) {
+      if (!v.name.trim()) throw new Error("変型の副名を入力してください。");
+      if (
+        set.field === "threshold" &&
+        (typeof v.value !== "number" ||
+          !Number.isInteger(v.value) ||
+          v.value < 1 ||
+          v.value > 100)
+      )
+        throw new Error("しきい値は1〜100の整数にしてください。");
+    }
+  }
+  return {
+    ...catalog,
+    triggers: catalog.triggers?.map((trigger) => {
+      if (!trigger.variant_set_id) return trigger;
+      const set = sets.find((s) => s.id === trigger.variant_set_id);
+      if (!set) throw new Error("ガンビット変型セットが見つかりません。");
+      return {
+        ...trigger,
+        variant_field: set.field,
+        variants: set.values.map((v) => ({ ...v })),
+      };
+    }),
+  };
+}
 
 export const triggerTargets = {
   enemy: "敵",
