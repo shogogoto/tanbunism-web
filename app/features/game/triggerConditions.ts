@@ -28,8 +28,10 @@ export function hasThreshold(condition: GambitRule["condition"]) {
   return [
     "hp_below",
     "hp_above",
+    "hp_equal",
     "mp_below",
     "mp_above",
+    "mp_equal",
     "enemy_count",
   ].includes(condition);
 }

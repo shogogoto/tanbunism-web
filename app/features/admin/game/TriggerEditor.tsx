@@ -248,11 +248,7 @@ export default function TriggerEditor() {
                                 <select
                                   aria-label="比較"
                                   className="h-9 rounded-md border bg-background px-2"
-                                  value={
-                                    t.condition.endsWith("above")
-                                      ? "above"
-                                      : "below"
-                                  }
+                                  value={t.condition.split("_")[1]}
                                   onChange={(e) =>
                                     patch(t.id, {
                                       condition: `${conditionGroup(t.condition)}_${e.target.value}`,
@@ -261,6 +257,7 @@ export default function TriggerEditor() {
                                 >
                                   <option value="below">以下</option>
                                   <option value="above">以上</option>
+                                  <option value="equal">同じ</option>
                                 </select>
                               </>
                             )}

@@ -187,6 +187,22 @@ it("saves targets and named trigger variants without expanding table rows", asyn
   expect(saved.mock.calls[0][0].triggers).toHaveLength(3);
 });
 
+it("saves exact HP and MP percentage comparisons", async () => {
+  const user = userEvent.setup();
+  render(<TriggerEditor />);
+  const row = within(await screen.findByRole("row", { name: "HP条件" }));
+  await user.selectOptions(row.getByLabelText("比較"), "equal");
+  expect(row.getByLabelText("比較")).toHaveValue("equal");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(saved.mock.calls.at(-1)?.[0].triggers[0].condition).toBe("hp_equal");
+  await user.selectOptions(row.getByLabelText("判定する条件"), "mp");
+  await user.selectOptions(row.getByLabelText("比較"), "equal");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(saved.mock.calls.at(-1)?.[0].triggers[0].condition).toBe("mp_equal");
+});
+
 it("uses field-specific controls for target and state-presence variants", async () => {
   const user = userEvent.setup();
   render(<TriggerEditor />);

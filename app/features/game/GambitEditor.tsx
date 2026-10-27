@@ -20,8 +20,10 @@ const conditionLabels = {
   always: "いつでも",
   hp_below: "自分のHPが以下（%）",
   hp_above: "自分のHPが以上（%）",
+  hp_equal: "自分のHPが同じ（%）",
   mp_below: "自分のMPが以下（%）",
   mp_above: "自分のMPが以上（%）",
+  mp_equal: "自分のMPが同じ（%）",
   enemy_count: "敵の数が以上",
   state: "自分の状態",
 };

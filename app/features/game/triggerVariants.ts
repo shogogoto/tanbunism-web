@@ -56,8 +56,10 @@ export const triggerConditionLabels = {
   always: "いつでも",
   hp_below: "HPが以下（%）",
   hp_above: "HPが以上（%）",
+  hp_equal: "HPが同じ（%）",
   mp_below: "MPが以下（%）",
   mp_above: "MPが以上（%）",
+  mp_equal: "MPが同じ（%）",
   enemy_count: "敵の数が以上",
   state: "状態",
 } as const;
