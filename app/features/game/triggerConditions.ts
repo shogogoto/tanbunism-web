@@ -18,10 +18,33 @@ export function stateCondition(
   } as const;
 }
 
-export function conditionGroup(condition: GambitRule["condition"]) {
+export function conditionGroup(
+  condition: GambitRule["condition"],
+  stat?: GambitRule["stat"],
+) {
+  if (condition === "stat") return stat ?? "hp";
   if (condition.startsWith("hp_")) return "hp";
   if (condition.startsWith("mp_")) return "mp";
   return condition;
+}
+
+export function statCondition(
+  rule: Pick<GambitRule, "condition" | "stat" | "stat_basis" | "comparison">,
+) {
+  const resource = rule.condition.startsWith("hp_")
+    ? "hp"
+    : rule.condition.startsWith("mp_")
+      ? "mp"
+      : null;
+  return {
+    stat: resource ?? rule.stat ?? "hp",
+    stat_basis: resource
+      ? ("percent" as const)
+      : (rule.stat_basis ?? "current"),
+    comparison: resource
+      ? (rule.condition.split("_")[1] as NonNullable<GambitRule["comparison"]>)
+      : (rule.comparison ?? "below"),
+  };
 }
 
 export function hasThreshold(condition: GambitRule["condition"]) {

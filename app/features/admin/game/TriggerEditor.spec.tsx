@@ -203,6 +203,40 @@ it("saves exact HP and MP percentage comparisons", async () => {
   expect(saved.mock.calls.at(-1)?.[0].triggers[0].condition).toBe("mp_equal");
 });
 
+it("defines stat thresholds, resource bases, and rank selection", async () => {
+  const user = userEvent.setup();
+  render(<TriggerEditor />);
+  const row = within(await screen.findByRole("row", { name: "HP条件" }));
+  expect(row.getByRole("option", { name: "未満" })).toBeInTheDocument();
+  expect(row.queryByRole("option", { name: "以下" })).not.toBeInTheDocument();
+  await user.selectOptions(row.getByLabelText("判定する条件"), "defense");
+  expect(row.queryByLabelText("値の基準")).not.toBeInTheDocument();
+  await user.selectOptions(row.getByLabelText("比較"), "lowest");
+  expect(row.queryByLabelText("しきい値")).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(saved.mock.calls.at(-1)?.[0].triggers[0]).toMatchObject({
+    condition: "stat",
+    stat: "defense",
+    comparison: "lowest",
+    stat_basis: "current",
+  });
+  await user.selectOptions(row.getByLabelText("判定する条件"), "hp");
+  await user.selectOptions(row.getByLabelText("値の基準"), "maximum");
+  await user.selectOptions(row.getByLabelText("比較"), "above");
+  await user.clear(row.getByLabelText("しきい値"));
+  await user.type(row.getByLabelText("しきい値"), "300");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(saved.mock.calls.at(-1)?.[0].triggers[0]).toMatchObject({
+    condition: "stat",
+    stat: "hp",
+    comparison: "above",
+    stat_basis: "maximum",
+    threshold: 300,
+  });
+});
+
 it("uses field-specific controls for target and state-presence variants", async () => {
   const user = userEvent.setup();
   render(<TriggerEditor />);

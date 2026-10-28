@@ -179,11 +179,18 @@ it("previews and saves imported ice/lightning materials without labeling all aud
   });
   expect(ice).toHaveAttribute("title", "Willosuna / Royalty-free");
   await user.click(ice);
-  expect(
-    gallery.querySelector('[data-skill-animation="willo_ice_shatter"]'),
-  ).toBeInTheDocument();
-  expect(battleSound.playSkillSound).toHaveBeenLastCalledWith(
-    expect.objectContaining({ animation: "willo_ice_shatter", sound: "auto" }),
+  await waitFor(() =>
+    expect(
+      gallery.querySelector('[data-skill-animation="willo_ice_shatter"]'),
+    ).toBeInTheDocument(),
+  );
+  await waitFor(() =>
+    expect(battleSound.playSkillSound).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        animation: "willo_ice_shatter",
+        sound: "auto",
+      }),
+    ),
   );
   await user.click(
     within(gallery).getByRole("button", { name: "稲妻の着弾をプレビュー" }),
@@ -242,6 +249,13 @@ const server = setupServer(
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 beforeEach(() => {
   vi.spyOn(battleSound, "playSkillSound").mockImplementation(() => undefined);
+  // These tests cover catalog editing; timing and media errors have dedicated tests.
+  vi.spyOn(battleSound, "playBattleSound").mockImplementation(
+    (_, _level, _sound, onFinished) => {
+      onFinished?.();
+      return undefined;
+    },
+  );
 });
 afterEach(() => {
   server.resetHandlers();
@@ -1667,9 +1681,13 @@ it.each([
       name: `${label}をプレビュー`,
     });
     await user.click(tile);
-    expect(
-      tile.querySelector(`img[src="/game-assets/effects/${id}.webp"]`),
-    ).toBeInTheDocument();
+    await waitFor(
+      () =>
+        expect(
+          tile.querySelector(`img[src="/game-assets/effects/${id}.webp"]`),
+        ).toBeInTheDocument(),
+      { timeout: 2500 },
+    );
     const stage = tile.querySelector(".skill-sprite");
     if (!stage) throw new Error("Missing animated thumbnail");
     fireEvent.animationEnd(stage, { animationName: "skill-sprite-play" });

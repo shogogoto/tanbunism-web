@@ -94,6 +94,37 @@ it("does not offer unpurchased shop triggers as selectable gambits", async () =>
   expect(screen.getByRole("button", { name: "条件を追加" })).toBeDisabled();
 });
 
+it("displays an admin-defined stat rank as the locked target condition", async () => {
+  server.use(
+    http.get("*/game/catalog", () =>
+      HttpResponse.json({
+        ...sampleCatalog,
+        triggers: [
+          {
+            id: "guard",
+            name: "守が低い敵",
+            condition: "stat",
+            stat: "defense",
+            stat_basis: "current",
+            comparison: "lowest",
+            target: "enemy",
+            threshold: 30,
+            enabled: true,
+          },
+        ],
+      }),
+    ),
+  );
+  const user = setup();
+  await screen.findByRole("option", { name: "守が低い敵" });
+  const row = within(screen.getByRole("region", { name: "ガンビット 1" }));
+  await user.selectOptions(row.getByLabelText("条件"), "guard");
+  expect(row.getByLabelText("条件の詳細")).toHaveTextContent(
+    "守 · 現在値 · 低い順",
+  );
+  expect(row.getByLabelText("対象")).toHaveValue("enemy");
+});
+
 it("selects the admin trigger variant and locks its shared condition/action target", async () => {
   server.use(
     http.get("*/game/catalog", () =>

@@ -13,17 +13,18 @@ import {
 } from "~/features/game/triggerConditions";
 import {
   resolveTriggerVariantSets,
+  triggerStatLabels,
   triggerTargets,
 } from "~/features/game/triggerVariants";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import StatTriggerDetails from "./StatTriggerDetails";
 import TriggerVariantPanel from "./TriggerVariantPanel";
 import TriggerVariantSetEditor from "./TriggerVariantSetEditor";
 
 const conditions = {
   always: "いつでも",
-  hp: "HP",
-  mp: "MP",
+  ...triggerStatLabels,
   enemy_count: "敵の数",
   state: "状態",
 };
@@ -188,17 +189,29 @@ export default function TriggerEditor() {
                       <select
                         aria-label="判定する条件"
                         className="h-9 rounded-md border bg-background"
-                        value={conditionGroup(t.condition)}
+                        value={conditionGroup(t.condition, t.stat)}
                         onChange={(e) => {
                           const group = e.target.value;
                           patch(t.id, {
                             condition:
                               group === "hp" || group === "mp"
                                 ? `${group}_below`
-                                : group,
+                                : group in triggerStatLabels
+                                  ? "stat"
+                                  : group,
+                            ...(group in triggerStatLabels
+                              ? {
+                                  stat: group,
+                                  stat_basis:
+                                    group === "hp" || group === "mp"
+                                      ? "percent"
+                                      : "current",
+                                  comparison: "below",
+                                }
+                              : {}),
                             ...stateCondition(t),
                             ...(group === "state" &&
-                            conditionGroup(t.condition) !== "state"
+                            conditionGroup(t.condition, t.stat) !== "state"
                               ? {
                                   state_skill_id:
                                     stateSkills.find((skill) => skill.enabled)
@@ -220,9 +233,15 @@ export default function TriggerEditor() {
                     </td>
                     <td className="p-2">
                       <div className="flex items-center gap-2">
-                        {["hp", "mp", "enemy_count"].includes(
-                          conditionGroup(t.condition),
-                        ) && (
+                        {(t.condition === "stat" ||
+                          t.condition.startsWith("hp_") ||
+                          t.condition.startsWith("mp_")) && (
+                          <StatTriggerDetails
+                            trigger={t}
+                            onChange={(value) => patch(t.id, value)}
+                          />
+                        )}
+                        {t.condition === "enemy_count" && (
                           <>
                             <Input
                               aria-label="しきい値"
@@ -240,27 +259,7 @@ export default function TriggerEditor() {
                                 })
                               }
                             />
-                            {t.condition === "enemy_count" ? (
-                              <span>体以上</span>
-                            ) : (
-                              <>
-                                <span>%</span>
-                                <select
-                                  aria-label="比較"
-                                  className="h-9 rounded-md border bg-background px-2"
-                                  value={t.condition.split("_")[1]}
-                                  onChange={(e) =>
-                                    patch(t.id, {
-                                      condition: `${conditionGroup(t.condition)}_${e.target.value}`,
-                                    })
-                                  }
-                                >
-                                  <option value="below">以下</option>
-                                  <option value="above">以上</option>
-                                  <option value="equal">同じ</option>
-                                </select>
-                              </>
-                            )}
+                            <span>体以上</span>
                           </>
                         )}
                         {conditionGroup(t.condition) === "state" && (

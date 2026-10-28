@@ -3,6 +3,37 @@ import type {
   TriggerDefinition,
   TriggerVariantField,
 } from "./catalog";
+import { statCondition } from "./triggerConditions";
+
+export const triggerStatLabels = {
+  hp: "HP",
+  mp: "MP",
+  attack: "攻",
+  defense: "守",
+  special_attack: "特攻",
+  special_defense: "特守",
+  speed: "速さ",
+} as const;
+export const triggerBasisLabels = {
+  current: "現在値",
+  maximum: "最大値",
+  percent: "残量（%）",
+} as const;
+export const triggerComparisonLabels = {
+  above: "以上",
+  below: "未満",
+  equal: "同じ",
+  lowest: "低い順",
+  highest: "高い順",
+} as const;
+
+export function triggerDescription(trigger: TriggerDefinition) {
+  if (trigger.condition !== "stat")
+    return `${triggerConditionLabels[trigger.condition]}${["always", "state"].includes(trigger.condition) ? "" : ` ${trigger.threshold}`}`;
+  const details = statCondition(trigger);
+  const rank = ["lowest", "highest"].includes(details.comparison);
+  return `${triggerStatLabels[details.stat]} · ${triggerBasisLabels[details.stat_basis]} · ${rank ? "" : `${trigger.threshold}${details.stat_basis === "percent" ? "%" : ""} `}${triggerComparisonLabels[details.comparison]}`;
+}
 
 export function resolveTriggerVariantSets(catalog: GameCatalog): GameCatalog {
   const sets = catalog.trigger_variant_sets ?? [];
@@ -19,10 +50,10 @@ export function resolveTriggerVariantSets(catalog: GameCatalog): GameCatalog {
         set.field === "threshold" &&
         (typeof v.value !== "number" ||
           !Number.isInteger(v.value) ||
-          v.value < 1 ||
-          v.value > 100)
+          v.value < 0 ||
+          v.value > 100000)
       )
-        throw new Error("しきい値は1〜100の整数にしてください。");
+        throw new Error("しきい値は0〜100000の整数にしてください。");
     }
   }
   return {
@@ -51,17 +82,21 @@ export const triggerVariantFields: Record<TriggerVariantField, string> = {
   threshold: "しきい値",
   state_skill_id: "状態スキル",
   state_present: "状態の有無",
+  stat: "ステータス",
+  stat_basis: "値の基準",
+  comparison: "比較・順位",
 };
 export const triggerConditionLabels = {
   always: "いつでも",
-  hp_below: "HPが以下（%）",
+  hp_below: "HPが未満（%）",
   hp_above: "HPが以上（%）",
   hp_equal: "HPが同じ（%）",
-  mp_below: "MPが以下（%）",
+  mp_below: "MPが未満（%）",
   mp_above: "MPが以上（%）",
   mp_equal: "MPが同じ（%）",
   enemy_count: "敵の数が以上",
   state: "状態",
+  stat: "ステータス",
 } as const;
 
 export function triggerVariant(
@@ -72,8 +107,26 @@ export function triggerVariant(
   const candidate = trigger.variants?.find((v) => v.id === id);
   if (!candidate) return undefined;
   const field = trigger.variant_field ?? "threshold";
+  const normalized =
+    (["stat", "stat_basis", "comparison"].includes(field) &&
+      trigger.condition.startsWith("hp_")) ||
+    (["stat", "stat_basis", "comparison"].includes(field) &&
+      trigger.condition.startsWith("mp_"));
+  const patch = normalized
+    ? {
+        ...statCondition(trigger),
+        condition: "stat" as const,
+        [field]: candidate.value,
+      }
+    : { [field]: candidate.value };
+  if (
+    normalized &&
+    field === "stat" &&
+    !["hp", "mp"].includes(String(candidate.value))
+  )
+    patch.stat_basis = "current";
   return {
     ...trigger,
-    [field]: candidate.value,
+    ...patch,
   };
 }

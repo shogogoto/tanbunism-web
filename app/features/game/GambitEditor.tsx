@@ -10,7 +10,7 @@ import { firstAvailableTriggerVariant, triggerAvailable } from "./gambitShop";
 import type { GameState } from "./state";
 import { hasThreshold, stateCondition } from "./triggerConditions";
 import {
-  triggerConditionLabels,
+  triggerDescription,
   triggerTargets,
   triggerVariant,
 } from "./triggerVariants";
@@ -18,13 +18,14 @@ import {
 const selectClass = "h-9 min-w-0 rounded-md border bg-background px-2 text-sm";
 const conditionLabels = {
   always: "いつでも",
-  hp_below: "自分のHPが以下（%）",
+  hp_below: "自分のHPが未満（%）",
   hp_above: "自分のHPが以上（%）",
   hp_equal: "自分のHPが同じ（%）",
-  mp_below: "自分のMPが以下（%）",
+  mp_below: "自分のMPが未満（%）",
   mp_above: "自分のMPが以上（%）",
   mp_equal: "自分のMPが同じ（%）",
   enemy_count: "敵の数が以上",
+  stat: "ステータス",
   state: "自分の状態",
 };
 export default function GambitEditor({
@@ -403,8 +404,7 @@ export default function GambitEditor({
                   className="text-sm text-muted-foreground"
                   aria-label="条件の詳細"
                 >
-                  {triggerConditionLabels[trigger.condition]}
-                  {hasThreshold(trigger.condition) && ` ${trigger.threshold}`}
+                  {triggerDescription(trigger)}
                   {trigger.condition === "state" &&
                     ` · ${catalog?.skills.find((s) => s.id === trigger.state_skill_id)?.name ?? "状態"} ${trigger.state_present === false ? "なし" : "あり"}`}
                 </p>

@@ -539,7 +539,10 @@ export type TriggerVariantField =
   | "condition"
   | "threshold"
   | "state_skill_id"
-  | "state_present";
+  | "state_present"
+  | "stat"
+  | "stat_basis"
+  | "comparison";
 export type TriggerVariant = {
   id: string;
   name: string;
@@ -553,7 +556,13 @@ export type TriggerVariantSet = {
 };
 export type TriggerDefinition = Pick<
   GambitRule,
-  "condition" | "threshold" | "state_present" | "state_skill_id"
+  | "condition"
+  | "threshold"
+  | "state_present"
+  | "state_skill_id"
+  | "stat"
+  | "stat_basis"
+  | "comparison"
 > & {
   id: string;
   name: string;
@@ -597,8 +606,19 @@ export type GambitRule = {
     | "mp_above"
     | "mp_equal"
     | "enemy_count"
+    | "stat"
     | "state";
   threshold: number;
+  stat?:
+    | "hp"
+    | "mp"
+    | "attack"
+    | "defense"
+    | "special_attack"
+    | "special_defense"
+    | "speed";
+  stat_basis?: "current" | "maximum" | "percent";
+  comparison?: "above" | "below" | "equal" | "lowest" | "highest";
   state_present?: boolean;
   state_skill_id?: string | null;
   action: "skill" | "item" | "specialty";

@@ -85,9 +85,23 @@ export function stopBattleSounds(): void {
   voices.clear();
 }
 
-type SoundSkill = Pick<SkillDefinition, "sound" | "effect" | "animation"> & {
+export type SoundSkill = Pick<
+  SkillDefinition,
+  "sound" | "effect" | "animation"
+> & {
   ailment?: "poison" | "curse" | "regen" | "refresh";
+  damage_type?: "physical" | "special";
+  effects?: Record<string, unknown>[];
 };
+
+/** Short licensed one-shots, followed by the skill's own impact sound/visual. */
+export function skillActivation(skill: SoundSkill) {
+  const primary =
+    skill.effects?.find((effect) => effect.effect === "attack") ?? skill;
+  return primary.effect === "attack" && primary.damage_type !== "special"
+    ? { sound: "slash" as const, durationMs: 260 }
+    : { sound: "magic" as const, durationMs: 600 };
+}
 
 export function resolveSkillSound(skill: SoundSkill): Preset | null {
   const sound = skill.sound ?? "auto";
@@ -121,7 +135,8 @@ export function playBattleSound(
   correct: boolean,
   impactLevel = 0,
   sound: Preset = "impact",
-): void {
+  onFinished?: () => void,
+): (() => void) | undefined {
   if (typeof window === "undefined" || !window.Audio) return;
   try {
     if (voices.size >= maxVoices) {
@@ -138,12 +153,21 @@ export function playBattleSound(
       audio.onended = null;
       audio.onerror = null;
     };
-    audio.onended = release;
-    audio.onerror = release;
+    const finish = () => {
+      release();
+      onFinished?.();
+    };
+    audio.onended = finish;
+    audio.onerror = finish;
     voices.add(audio);
     // Autoplay denial or a missing asset must never interrupt a quiz.
-    void audio.play().catch(release);
+    void audio.play().catch(finish);
+    return () => {
+      audio.pause();
+      release();
+    };
   } catch {
+    onFinished?.();
     // Audio is optional, including on browsers without media playback.
   }
 }

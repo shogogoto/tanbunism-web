@@ -4,7 +4,10 @@ import type {
   TriggerVariantSet,
 } from "~/features/game/catalog";
 import {
+  triggerBasisLabels,
+  triggerComparisonLabels,
   triggerConditionLabels,
+  triggerStatLabels,
   triggerTargets,
   triggerVariantFields,
 } from "~/features/game/triggerVariants";
@@ -93,18 +96,24 @@ export function TriggerVariantFieldsEditor({
   const field = trigger.variant_field ?? "threshold";
   const variants = trigger.variants ?? [];
   const options =
-    field === "target"
-      ? Object.entries(triggerTargets)
-      : field === "condition"
-        ? Object.entries(triggerConditionLabels)
-        : field === "state_present"
-          ? [
-              ["true", "あり"],
-              ["false", "なし"],
-            ]
-          : field === "state_skill_id"
-            ? stateSkills.map((s) => [s.id, s.name])
-            : [];
+    field === "stat"
+      ? Object.entries(triggerStatLabels)
+      : field === "stat_basis"
+        ? Object.entries(triggerBasisLabels)
+        : field === "comparison"
+          ? Object.entries(triggerComparisonLabels)
+          : field === "target"
+            ? Object.entries(triggerTargets)
+            : field === "condition"
+              ? Object.entries(triggerConditionLabels)
+              : field === "state_present"
+                ? [
+                    ["true", "あり"],
+                    ["false", "なし"],
+                  ]
+                : field === "state_skill_id"
+                  ? stateSkills.map((s) => [s.id, s.name])
+                  : [];
   const update = (id: string, patch: object) =>
     onChange({
       variants: variants.map((v) => (v.id === id ? { ...v, ...patch } : v)),
@@ -144,8 +153,8 @@ export function TriggerVariantFieldsEditor({
               aria-label="変型の値"
               className="w-24"
               type="number"
-              min={1}
-              max={100}
+              min={0}
+              max={100000}
               value={
                 Number.isFinite(Number(variant.value))
                   ? Number(variant.value)

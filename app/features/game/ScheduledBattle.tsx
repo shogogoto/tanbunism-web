@@ -11,11 +11,12 @@ import type MultiBattle from "./MultiBattle";
 import SkillEffect from "./SkillEffect";
 import Weaknesses from "./Weaknesses";
 import { type TurnInput, type TurnResult, gameRequest } from "./battle";
-import { playSkillSound } from "./battleSound";
+import type { SoundSkill } from "./battleSound";
 import type { SkillAnimation } from "./catalog";
 import { musicPreferences } from "./music";
 import type { GameState } from "./state";
 import useBattleTempo, { type BattleTempo } from "./useBattleTempo";
+import useSkillPresentation from "./useSkillPresentation";
 
 export default function ScheduledBattle({
   save,
@@ -42,6 +43,14 @@ export default function ScheduledBattle({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<TurnResult>();
+  const [presentationSkill, setPresentationSkill] = useState<SoundSkill>();
+  const [supportTargets, setSupportTargets] = useState<string[]>([]);
+  const presentationReady = useSkillPresentation(
+    result?.state.revision,
+    presentationSkill,
+    musicPreferences().enabled,
+    true,
+  );
   const [selection, setSelection] = useState("yes");
   const [retry, setRetry] = useState<TurnInput>();
   const pending = useRef(false);
@@ -91,20 +100,44 @@ export default function ScheduledBattle({
       lastResult.current = reply;
       setResult(reply);
       setRetry(undefined);
-      onSaved(reply.state);
       const hitEnemy = Object.values(reply.outgoing_damage ?? {}).some(
         (value) => value > 0,
       );
-      if ((hitEnemy || reply.damage > 0) && musicPreferences().enabled)
-        playSkillSound({
-          effect: "attack",
-          sound: "auto",
-          animation: hitEnemy
-            ? (marker.gambitAction?.skill.animation ?? "impact")
-            : (marker.enemyAction?.skill.animation ??
-              enemy?.animation ??
-              "impact"),
-        });
+      const actionSkill =
+        schedule?.actor_id === "player"
+          ? marker.gambitAction?.skill
+          : marker.enemyAction?.skill;
+      const selectedAction =
+        schedule?.actor_id === "player"
+          ? marker.gambitAction
+          : marker.enemyAction;
+      const correct = Object.values(reply.results).every(Boolean);
+      const successful = schedule?.actor_id === "player" ? correct : !correct;
+      setSupportTargets(
+        actionSkill &&
+          actionSkill.effect !== "attack" &&
+          (successful || actionSkill.on_wrong?.type === "reduced")
+          ? (selectedAction?.target_ids ?? [schedule?.actor_id ?? "player"])
+          : [],
+      );
+      setPresentationSkill(
+        actionSkill || hitEnemy || reply.damage > 0
+          ? {
+              effect: "attack",
+              ...actionSkill,
+              sound: actionSkill?.sound ?? "auto",
+              damage_type: actionSkill?.damage_type ?? "physical",
+              animation:
+                actionSkill?.animation ??
+                (hitEnemy
+                  ? (marker.gambitAction?.skill.animation ?? "impact")
+                  : (marker.enemyAction?.skill.animation ??
+                    enemy?.animation ??
+                    "impact")),
+            }
+          : undefined,
+      );
+      onSaved(reply.state);
     } catch (cause) {
       setFrozenRemaining(undefined);
       setRetry(input);
@@ -178,7 +211,9 @@ export default function ScheduledBattle({
   if (!run) return null;
   const shownResult = result ?? lastResult.current;
   const effect: SkillAnimation =
-    marker?.gambitAction?.skill.animation ?? "impact";
+    presentationSkill?.animation ??
+    marker?.gambitAction?.skill.animation ??
+    "impact";
   const enemyPanel = (
     <div className="min-w-0 shrink-0 space-y-2">
       {schedule && marker && (
@@ -202,13 +237,15 @@ export default function ScheduledBattle({
             >
               <div className="relative">
                 <EnemyAvatar identity={item.id} icon={item.icon} large />
-                {(shownResult?.outgoing_damage?.[item.id] ?? 0) > 0 && (
-                  <SkillEffect
-                    key={shownResult?.state.revision}
-                    animation={effect}
-                    onIcon
-                  />
-                )}
+                {presentationReady &&
+                  ((shownResult?.outgoing_damage?.[item.id] ?? 0) > 0 ||
+                    supportTargets.includes(item.id)) && (
+                    <SkillEffect
+                      key={shownResult?.state.revision}
+                      animation={effect}
+                      onIcon
+                    />
+                  )}
               </div>
               <span className="max-w-full truncate">{item.name}</span>
               <Weaknesses
@@ -237,16 +274,20 @@ export default function ScheduledBattle({
       simulation={simulation}
       enemyPanel={enemyPanel}
       playerEffect={
-        shownResult && shownResult.damage > 0 ? (
+        presentationReady &&
+        shownResult &&
+        (shownResult.damage > 0 || supportTargets.includes("player")) ? (
           <SkillEffect
             key={shownResult.state.revision}
             animation={
-              (marker?.enemyAction?.skill.animation ?? enemy?.animation) ===
-              "none"
-                ? "impact"
-                : (marker?.enemyAction?.skill.animation ??
-                  enemy?.animation ??
-                  "impact")
+              supportTargets.includes("player")
+                ? (presentationSkill?.animation ?? "none")
+                : (marker?.enemyAction?.skill.animation ?? enemy?.animation) ===
+                    "none"
+                  ? "impact"
+                  : (marker?.enemyAction?.skill.animation ??
+                    enemy?.animation ??
+                    "impact")
             }
             onIcon
           />

@@ -15,6 +15,7 @@ import {
 } from "~/features/game/catalog";
 import { spriteAsset } from "~/features/game/effectAssets";
 import { soundAssets } from "~/features/game/soundAssets";
+import useSkillPresentation from "~/features/game/useSkillPresentation";
 import { Button } from "~/shared/components/ui/button";
 import {
   Dialog,
@@ -60,10 +61,17 @@ export default function SkillAnimationGallery({
   const [selected, setSelected] = useState<SkillAnimation>("none");
   const [sound, setSound] = useState<SkillSound>("auto");
   const [playing, setPlaying] = useState<{ id: SkillAnimation; key: number }>();
+  const [audition, setAudition] = useState(false);
+  const presentationReady = useSkillPresentation(
+    audition ? undefined : playing?.key,
+    { ...skill, animation: selected, sound },
+    true,
+  );
   const resolved = resolveSkillSound({ ...skill, animation: selected, sound });
   useEffect(() => stopBattleSounds, []);
   const changeOpen = (next: boolean) => {
     stopBattleSounds();
+    setPlaying(undefined);
     if (next) {
       setSelected(value);
       setSound(soundValue);
@@ -71,10 +79,15 @@ export default function SkillAnimationGallery({
     }
     setOpen(next);
   };
-  const preview = (animation: SkillAnimation, nextSound: SkillSound) => {
+  const preview = (
+    animation: SkillAnimation,
+    nextSound: SkillSound,
+    soundOnly = false,
+  ) => {
     stopBattleSounds();
+    setAudition(soundOnly);
     setPlaying((p) => ({ id: animation, key: (p?.key ?? 0) + 1 }));
-    playSkillSound({ ...skill, animation, sound: nextSound });
+    if (soundOnly) playSkillSound({ ...skill, animation, sound: nextSound });
   };
   const soundTile = (id: SkillSound) => (
     <button
@@ -85,7 +98,7 @@ export default function SkillAnimationGallery({
       className="flex min-w-0 items-center gap-2 rounded-lg border p-2 text-left text-sm hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-pressed:border-primary aria-pressed:bg-primary/10"
       onClick={() => {
         setSound(id);
-        preview(selected, id);
+        preview(selected, id, true);
       }}
     >
       <Volume2 className="size-4 shrink-0" aria-hidden="true" />
@@ -116,7 +129,9 @@ export default function SkillAnimationGallery({
             aria-label="組み合わせプレビュー"
             className="relative isolate flex size-24 shrink-0 items-center justify-center overflow-hidden rounded bg-slate-950"
           >
-            {playing && selected !== "none" ? (
+            {playing &&
+            (audition || presentationReady) &&
+            selected !== "none" ? (
               <SkillEffect key={playing.key} animation={selected} preview />
             ) : (
               <Poster animation={selected} />
@@ -170,7 +185,9 @@ export default function SkillAnimationGallery({
                         setPlaying((p) => (p?.id === id ? undefined : p))
                       }
                     >
-                      {playing?.id === id && id !== "none" ? (
+                      {playing?.id === id &&
+                      (audition || presentationReady) &&
+                      id !== "none" ? (
                         <SkillEffect key={playing.key} animation={id} preview />
                       ) : (
                         <Poster animation={id} />
