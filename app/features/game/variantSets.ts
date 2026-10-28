@@ -1,7 +1,9 @@
 import type { SkillTemplate } from "./catalog";
 import type { TemplateOverride } from "./templateVariants";
+import type { VariantSelection } from "./variantCore";
+import { attachedSets, combinationKey, selectedSetValues } from "./variantCore";
 
-export type VariantSelection = { set_id: string; value_id: string };
+export type { VariantSelection } from "./variantCore";
 export type VariantSetValue = {
   id: string;
   name: string;
@@ -31,16 +33,7 @@ export function attachedVariantSets(
   sets: VariantSet[],
 ) {
   const ids = template.variant_set_ids ?? [];
-  const attached = ids.map((id) => {
-    const set = sets.find((s) => s.id === id);
-    if (!set) throw new Error("変型セットが見つかりません。");
-    return set;
-  });
-  if (
-    new Set(ids).size !== ids.length ||
-    new Set(attached.map((s) => s.field)).size !== attached.length
-  )
-    throw new Error("同じ項目を変更する変型セットは併用できません。");
+  const attached = attachedSets(ids, sets);
   if (attached.some((set) => !fieldApplies(set.field, template.effect)))
     throw new Error("この効果テンプレートでは変型セットの項目を使えません。");
   return attached;
@@ -51,24 +44,12 @@ export function selectedVariantValues(
   selections: VariantSelection[],
   sets: VariantSet[],
 ) {
-  const attached = attachedVariantSets(base, sets);
-  if (
-    new Set(selections.map((s) => s.set_id)).size !== selections.length ||
-    selections.some((s) => !attached.some((a) => a.id === s.set_id))
-  )
-    throw new Error(
-      "組み合わせの変型セットが重複しているか、テンプレートに設定されていません。",
-    );
-  const changes: Record<string, unknown> = {};
-  const labels: string[] = [];
-  for (const set of attached) {
-    const selected = selections.find((s) => s.set_id === set.id);
-    if (!selected) continue;
-    const value = set.values.find((v) => v.id === selected.value_id);
-    if (!value) throw new Error("変型セットの候補が見つかりません。");
-    changes[set.field] = value.value;
-    labels.push(value.name);
-  }
+  attachedVariantSets(base, sets);
+  const { changes, labels } = selectedSetValues(
+    base.variant_set_ids ?? [],
+    selections,
+    sets,
+  );
   if (
     Object.keys(changes).some(
       (field) => !fieldApplies(field, String(changes.effect ?? base.effect)),
@@ -86,13 +67,11 @@ export function combinationTemplate(
 ): SkillTemplate {
   const base = templates.find((t) => t.id === baseId);
   if (!base) throw new Error("効果テンプレートが見つかりません。");
-  const key = (items: VariantSelection[]) =>
-    JSON.stringify([...items].sort((a, b) => a.set_id.localeCompare(b.set_id)));
   const existing = templates.find(
     (t) =>
       t.base_template_id === baseId &&
       t.variant_selections?.length &&
-      key(t.variant_selections) === key(selections),
+      combinationKey(t.variant_selections) === combinationKey(selections),
   );
   return (
     existing ?? {

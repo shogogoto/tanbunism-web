@@ -50,7 +50,9 @@ export default function ShopTable({
         const resolved = triggerVariant(trigger, variant?.id);
         return {
           id: shopProductId(listing),
-          name: variant ? `${trigger.name}（${variant.name}）` : trigger.name,
+          name: variant
+            ? `${trigger.name}（${variant.resolved_name ?? variant.name}）`
+            : trigger.name,
           icon: "target",
           enabled: trigger.enabled,
           detail: `ガンビット · ${triggerTargets[resolved?.target ?? "enemy"]}`,

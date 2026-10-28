@@ -546,13 +546,21 @@ export type TriggerVariantField =
 export type TriggerVariant = {
   id: string;
   name: string;
-  value: string | number | boolean;
+  value?: string | number | boolean | null;
+  field?: TriggerVariantField | null;
+  child_field?: TriggerVariantField | null;
+  base_variant_id?: string | null;
+  variant_set_ids?: string[];
+  variant_selections?: import("./variantCore").VariantSelection[];
+  resolved_name?: string | null;
+  resolved_values?: Partial<TriggerDefinition> | null;
+  effective_set_ids?: string[];
 };
 export type TriggerVariantSet = {
   id: string;
   name: string;
   field: TriggerVariantField;
-  values: TriggerVariant[];
+  values: { id: string; name: string; value: string | number | boolean }[];
 };
 export type TriggerDefinition = Pick<
   GambitRule,
@@ -571,6 +579,7 @@ export type TriggerDefinition = Pick<
   variant_field?: TriggerVariantField;
   variants?: TriggerVariant[];
   variant_set_id?: string | null;
+  variant_set_ids?: string[];
 };
 export type SpecialtySkillUse = {
   skill_id: string;

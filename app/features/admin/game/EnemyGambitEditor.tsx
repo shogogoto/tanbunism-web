@@ -155,7 +155,7 @@ export default function EnemyGambitEditor({
                         )}
                         {root?.variants?.map((v) => (
                           <option key={v.id} value={v.id}>
-                            {v.name}
+                            {v.resolved_name ?? v.name}
                           </option>
                         ))}
                       </select>

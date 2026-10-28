@@ -358,7 +358,7 @@ export default function GambitEditor({
                             )
                           }
                         >
-                          {v.name}
+                          {v.resolved_name ?? v.name}
                           {!!catalog &&
                             !triggerAvailable(
                               catalog,

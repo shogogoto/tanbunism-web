@@ -49,17 +49,15 @@ export default function TriggerEditor() {
     };
   }, []);
   function patch(id: string, value: object) {
+    if (!catalog) return;
+    const next = resolveTriggerVariantSets({
+      ...catalog,
+      triggers: catalog.triggers?.map((t) =>
+        t.id === id ? { ...t, ...value } : t,
+      ),
+    });
+    setCatalog(next);
     setSaved(false);
-    setCatalog((c) =>
-      c
-        ? resolveTriggerVariantSets({
-            ...c,
-            triggers: c.triggers?.map((t) =>
-              t.id === id ? { ...t, ...value } : t,
-            ),
-          })
-        : c,
-    );
   }
   return (
     <AdminTableSection
@@ -320,31 +318,10 @@ export default function TriggerEditor() {
                     <td className="p-2">
                       <TriggerVariantPanel
                         trigger={t}
-                        sets={catalog.trigger_variant_sets}
-                        onCreateSet={() => {
-                          const id = `set_${crypto.randomUUID().replaceAll("-", "")}`;
+                        catalog={catalog}
+                        onCatalogChange={(next) => {
+                          setCatalog(next);
                           setSaved(false);
-                          setCatalog(
-                            (c) =>
-                              c &&
-                              resolveTriggerVariantSets({
-                                ...c,
-                                trigger_variant_sets: [
-                                  ...(c.trigger_variant_sets ?? []),
-                                  {
-                                    id,
-                                    name: `${t.name}の変型`,
-                                    field: t.variant_field ?? "threshold",
-                                    values: structuredClone(t.variants ?? []),
-                                  },
-                                ],
-                                triggers: c.triggers?.map((root) =>
-                                  root.id === t.id
-                                    ? { ...root, variant_set_id: id }
-                                    : root,
-                                ),
-                              }),
-                          );
                         }}
                         stateSkills={stateSkills}
                         onChange={(value) => patch(t.id, value)}

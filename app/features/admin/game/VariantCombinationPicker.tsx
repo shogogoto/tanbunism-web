@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { SkillTemplate } from "~/features/game/catalog";
+import type { SharedVariantSet } from "~/features/game/variantCore";
 import {
   type VariantSelection,
   type VariantSet,
@@ -30,10 +31,39 @@ export default function VariantCombinationPicker({
   label: string;
   onChoose: (baseId: string, selections: VariantSelection[]) => void;
 }) {
+  const attached = attachedVariantSets(base, sets);
+  return (
+    <VariantCombinationDialog
+      name={base.name}
+      attached={attached}
+      initial={template.variant_selections ?? []}
+      disabled={disabled}
+      label={label}
+      onChoose={(selected) => onChoose(base.id, selected)}
+    />
+  );
+}
+
+export function VariantCombinationDialog({
+  name,
+  attached,
+  initial = [],
+  disabled = false,
+  label,
+  buttonText = "変型",
+  onChoose,
+}: {
+  name: string;
+  attached: SharedVariantSet[];
+  initial?: VariantSelection[];
+  disabled?: boolean;
+  label: string;
+  buttonText?: string;
+  onChoose: (selections: VariantSelection[]) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<VariantSelection[]>([]);
   const [error, setError] = useState<string>();
-  const attached = attachedVariantSets(base, sets);
   if (!attached.length) return null;
   return (
     <Dialog
@@ -41,7 +71,7 @@ export default function VariantCombinationPicker({
       onOpenChange={(next) => {
         setOpen(next);
         setError(undefined);
-        if (next) setSelected(template.variant_selections ?? []);
+        if (next) setSelected(initial);
       }}
     >
       <DialogTrigger asChild>
@@ -53,7 +83,7 @@ export default function VariantCombinationPicker({
           aria-label={label}
           disabled={disabled}
         >
-          変型
+          {buttonText}
         </Button>
       </DialogTrigger>
       <DialogContent
@@ -61,7 +91,7 @@ export default function VariantCombinationPicker({
         data-dashboard-swipe-ignore
       >
         <DialogHeader>
-          <DialogTitle>{base.name}の組み合わせ</DialogTitle>
+          <DialogTitle>{name}の組み合わせ</DialogTitle>
           <DialogDescription>
             各セットから候補を選びます。共通値のまま使うこともできます。
           </DialogDescription>
@@ -100,7 +130,7 @@ export default function VariantCombinationPicker({
           type="button"
           onClick={() => {
             try {
-              onChoose(base.id, selected);
+              onChoose(selected);
               setOpen(false);
             } catch (cause) {
               setError(

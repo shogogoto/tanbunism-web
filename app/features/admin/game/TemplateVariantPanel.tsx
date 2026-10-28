@@ -24,6 +24,7 @@ import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
 import DurationInput from "./DurationInput";
 import VariantSetEditor, { variantSetFields } from "./VariantSetEditor";
+import VariantSetPicker from "./VariantSetPicker";
 import {
   type VariantAxis,
   axisVariant,
@@ -140,61 +141,35 @@ export default function TemplateVariantPanel({
             <span className="text-sm font-medium">共有する変型セット</span>
             <VariantSetEditor catalog={catalog} onChange={onChange} />
           </div>
-          {(catalog.variant_sets ?? []).map((set) => {
-            const ids = template.variant_set_ids ?? [];
-            const checked = ids.includes(set.id);
-            const conflict =
-              !checked &&
-              (catalog.variant_sets ?? []).some(
-                (other) => ids.includes(other.id) && other.field === set.field,
-              );
-            const incompatible = !(set.field in template);
-            return (
-              <label key={set.id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  aria-label={`${set.name}を使用`}
-                  checked={checked}
-                  disabled={conflict || incompatible}
-                  onChange={(e) => {
-                    try {
-                      onChange(
-                        resolveCatalogTemplates({
-                          ...catalog,
-                          skill_templates: templates.map((row) =>
-                            row.id === template.id
-                              ? {
-                                  ...row,
-                                  variant_set_ids: e.target.checked
-                                    ? [...ids, set.id]
-                                    : ids.filter((id) => id !== set.id),
-                                }
-                              : row,
-                          ),
-                        }),
-                      );
-                      setError(undefined);
-                    } catch (cause) {
-                      setError(
-                        cause instanceof Error
-                          ? cause.message
-                          : "セットを変更できませんでした。",
-                      );
-                    }
-                  }}
-                />
-                <span>{set.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {variantSetFields[set.field].name}
-                  {conflict
-                    ? "（同じ項目を使用中）"
-                    : incompatible
-                      ? "（この効果では使用不可）"
-                      : ""}
-                </span>
-              </label>
-            );
-          })}
+          <VariantSetPicker
+            sets={catalog.variant_sets ?? []}
+            selected={template.variant_set_ids ?? []}
+            labels={Object.fromEntries(
+              Object.entries(variantSetFields).map(([id, c]) => [id, c.name]),
+            )}
+            compatible={(set) => set.field in template}
+            onChange={(ids) => {
+              try {
+                onChange(
+                  resolveCatalogTemplates({
+                    ...catalog,
+                    skill_templates: templates.map((row) =>
+                      row.id === template.id
+                        ? { ...row, variant_set_ids: ids }
+                        : row,
+                    ),
+                  }),
+                );
+                setError(undefined);
+              } catch (cause) {
+                setError(
+                  cause instanceof Error
+                    ? cause.message
+                    : "セットを変更できませんでした。",
+                );
+              }
+            }}
+          />
         </fieldset>
         <div className="border-t pt-3 text-sm font-medium">個別の変型</div>
         <div className="space-y-2">

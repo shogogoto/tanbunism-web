@@ -4,6 +4,7 @@ import type {
   TriggerVariantField,
 } from "./catalog";
 import { statCondition } from "./triggerConditions";
+import { resolveTriggerTree } from "./triggerVariantTree";
 
 export const triggerStatLabels = {
   hp: "HP",
@@ -58,16 +59,9 @@ export function resolveTriggerVariantSets(catalog: GameCatalog): GameCatalog {
   }
   return {
     ...catalog,
-    triggers: catalog.triggers?.map((trigger) => {
-      if (!trigger.variant_set_id) return trigger;
-      const set = sets.find((s) => s.id === trigger.variant_set_id);
-      if (!set) throw new Error("ガンビット変型セットが見つかりません。");
-      return {
-        ...trigger,
-        variant_field: set.field,
-        variants: set.values.map((v) => ({ ...v })),
-      };
-    }),
+    triggers: catalog.triggers?.map((trigger) =>
+      resolveTriggerTree(trigger, catalog),
+    ),
   };
 }
 
@@ -106,6 +100,8 @@ export function triggerVariant(
   if (!id) return trigger;
   const candidate = trigger.variants?.find((v) => v.id === id);
   if (!candidate) return undefined;
+  if (candidate.resolved_values)
+    return { ...trigger, ...candidate.resolved_values };
   const field = trigger.variant_field ?? "threshold";
   const normalized =
     (["stat", "stat_basis", "comparison"].includes(field) &&
