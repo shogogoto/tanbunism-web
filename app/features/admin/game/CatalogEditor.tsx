@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { AdminTableSection } from "~/features/admin/AdminTable";
 import {
   type EnemyDefinition,
@@ -18,11 +18,6 @@ import DefinitionTables from "./DefinitionTables";
 import ShopTable from "./ShopTable";
 import SkillTables from "./SkillTables";
 import SkillTemplateEditor from "./SkillTemplateEditor";
-import {
-  downloadSkillFile,
-  previewSkillFile,
-  readSkillFile,
-} from "./skillFiles";
 
 type Kind = "skills" | "items" | "enemies" | "shop";
 const names = {
@@ -37,9 +32,6 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [importMessage, setImportMessage] = useState<string>();
-  const fileInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
     let active = true;
     void requestGameCatalog(true)
@@ -66,36 +58,6 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
     );
     setSaved(false);
     setError(undefined);
-    setImportMessage(undefined);
-  }
-  async function importFile(file: File) {
-    if (!catalog || saving || importing) return;
-    setImporting(true);
-    setError(undefined);
-    setImportMessage(undefined);
-    setSaved(false);
-    try {
-      const document = await readSkillFile(file);
-      const next = await previewSkillFile(catalog, document);
-      // The server has validated the complete document before any draft changes.
-      const ids = new Set(
-        (document as { skills: SkillDefinition[] }).skills.map((s) => s.id),
-      );
-      change(next);
-      setDeletions(
-        (current) => new Set([...current].filter((id) => !ids.has(id))),
-      );
-      setImportMessage(
-        "取り込みました。表を確認して「保存」で確定してください。",
-      );
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "取り込めませんでした。",
-      );
-    } finally {
-      setImporting(false);
-      if (fileInput.current) fileInput.current.value = "";
-    }
   }
   const update = (
     id: string,
@@ -120,7 +82,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
   };
   async function save(event: React.FormEvent) {
     event.preventDefault();
-    if (!catalog || saving || importing) return;
+    if (!catalog || saving) return;
     const references = [
       ...catalog.items
         .filter((i) => deletions.has(i.skill_id))
@@ -218,47 +180,6 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">{names[kind]}</h2>
-        {kind === "skills" && (
-          <div className="flex flex-wrap gap-2">
-            <input
-              ref={fileInput}
-              type="file"
-              accept=".json,application/json"
-              aria-label="スキルJSONファイル"
-              className="sr-only"
-              tabIndex={-1}
-              disabled={!catalog || saving || importing}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void importFile(file);
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!catalog || saving || importing}
-              onClick={() => fileInput.current?.click()}
-            >
-              {importing ? "取り込み中…" : "JSONを取り込む"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!catalog || saving || importing}
-              onClick={() => {
-                if (catalog)
-                  downloadSkillFile(
-                    catalog.skills.filter((s) => !deletions.has(s.id)),
-                    catalog.skill_templates,
-                    catalog.elements,
-                    catalog.variant_sets,
-                  );
-              }}
-            >
-              JSONを書き出す
-            </Button>
-          </div>
-        )}
         {kind !== "skills" && kind !== "shop" && (
           <Button
             type="button"
@@ -277,17 +198,9 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
         </p>
       )}
       {!catalog && !error && <p>読み込み中…</p>}
-      {importMessage && (
-        <output className="block text-sm text-muted-foreground">
-          {importMessage}
-        </output>
-      )}
       {catalog && (
         <form onSubmit={save} className="space-y-4">
-          <fieldset
-            disabled={saving || importing}
-            className="min-w-0 space-y-4"
-          >
+          <fieldset disabled={saving} className="min-w-0 space-y-4">
             {kind === "skills" && (
               <SkillTemplateEditor catalog={catalog} onChange={change} />
             )}
@@ -378,7 +291,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
             </output>
           )}
           <div className="flex justify-center">
-            <Button type="submit" disabled={saving || importing}>
+            <Button type="submit" disabled={saving}>
               {saving ? "保存中…" : "保存"}
             </Button>
           </div>

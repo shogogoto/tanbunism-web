@@ -42,6 +42,7 @@ import {
 import BattleSettingsManager from "../battle";
 import CatalogEditor from "./CatalogEditor";
 import ElementEditor from "./ElementEditor";
+import GameSettingsFiles from "./GameSettingsFiles";
 import SkillUsageEditor from "./SkillUsageEditor";
 import TriggerEditor from "./TriggerEditor";
 import {
@@ -473,6 +474,7 @@ function GameDungeonManager() {
 }
 
 export default function GameAdminManager() {
+  const [settingsRevision, setSettingsRevision] = useState(0);
   const { subtab } = useParams();
   const navigate = useNavigate();
   const activeTab = [
@@ -539,23 +541,46 @@ export default function GameAdminManager() {
           ))}
         </TabsList>
       </div>
-      <TabsContent value="balance" className="mt-0">
+      <GameSettingsFiles
+        onApplied={() => setSettingsRevision((value) => value + 1)}
+      />
+      <TabsContent
+        key={`balance-${settingsRevision}`}
+        value="balance"
+        className="mt-0"
+      >
         <BattleSettingsManager />
       </TabsContent>
       <TabsContent value="dungeons" className="mt-0">
         <GameDungeonManager />
       </TabsContent>
-      <TabsContent value="gambits" className="mt-0">
+      <TabsContent
+        key={`gambits-${settingsRevision}`}
+        value="gambits"
+        className="mt-0"
+      >
         <TriggerEditor />
       </TabsContent>
-      <TabsContent value="usage" className="mt-0">
+      <TabsContent
+        key={`usage-${settingsRevision}`}
+        value="usage"
+        className="mt-0"
+      >
         <SkillUsageEditor />
       </TabsContent>
-      <TabsContent value="elements" className="mt-0">
+      <TabsContent
+        key={`elements-${settingsRevision}`}
+        value="elements"
+        className="mt-0"
+      >
         <ElementEditor />
       </TabsContent>
       {(["skills", "enemies", "shop"] as const).map((kind) => (
-        <TabsContent key={kind} value={kind} className="mt-0">
+        <TabsContent
+          key={`${kind}-${settingsRevision}`}
+          value={kind}
+          className="mt-0"
+        >
           <CatalogEditor kind={kind} />
         </TabsContent>
       ))}
