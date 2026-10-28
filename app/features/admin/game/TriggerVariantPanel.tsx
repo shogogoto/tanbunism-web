@@ -11,6 +11,7 @@ import {
   combinationTrigger,
 } from "~/features/game/triggerVariantTree";
 import {
+  applicableTriggerVariantFields,
   resolveTriggerVariantSets,
   triggerVariant,
   triggerVariantFields,
@@ -27,7 +28,7 @@ import {
 import { Input } from "~/shared/components/ui/input";
 import TriggerVariantSetEditor from "./TriggerVariantSetEditor";
 import TriggerVariantValueInput, {
-  initialTriggerValue,
+  currentTriggerValue,
 } from "./TriggerVariantValueInput";
 import { VariantCombinationDialog } from "./VariantCombinationPicker";
 import { variantIdentity } from "./VariantSetManager";
@@ -66,15 +67,28 @@ export default function TriggerVariantPanel({
     : [];
   const selected = node?.effective_set_ids ?? trigger.variant_set_ids ?? [];
   const sets = catalog.trigger_variant_sets ?? [];
-  const attached = attachedSets(selected, sets);
   const children = rows.filter(
     (v) => (v.base_variant_id ?? undefined) === parentId,
   );
-  const field = node?.child_field ?? trigger.variant_field ?? "threshold";
+  const base = triggerVariant(trigger, parentId) ?? trigger;
+  const availableFields = applicableTriggerVariantFields(base);
+  const attached = attachedSets(selected, sets).filter(
+    (set) => set.field in availableFields,
+  );
   const name = node
     ? `${trigger.name}（${node.resolved_name ?? node.name}）`
     : trigger.name;
   const plain = children.filter((v) => !v.variant_selections?.length);
+  const configuredField =
+    node?.child_field ?? trigger.variant_field ?? "threshold";
+  const field =
+    configuredField in availableFields || plain.length
+      ? configuredField
+      : base.condition === "state"
+        ? "state_present"
+        : "threshold" in availableFields
+          ? "threshold"
+          : "target";
   function change(patch: Partial<TriggerDefinition>) {
     try {
       onChange(patch);
@@ -91,11 +105,7 @@ export default function TriggerVariantPanel({
     });
   }
   function chooseField(next: TriggerVariantField) {
-    const base = triggerVariant(trigger, parentId) ?? trigger;
-    const value =
-      next === "threshold"
-        ? base.threshold
-        : initialTriggerValue(next, stateSkills);
+    const value = currentTriggerValue(base, next, stateSkills);
     const variants = rows.map((v) =>
       plain.some((c) => c.id === v.id) ? { ...v, field: next, value } : v,
     );
@@ -212,6 +222,7 @@ export default function TriggerVariantPanel({
           selected={selected}
           inherited={inherited}
           labels={triggerVariantFields}
+          compatible={(set) => set.field in availableFields}
           onChange={(ids) =>
             node
               ? updateNode(node.id, {
@@ -244,7 +255,12 @@ export default function TriggerVariantPanel({
                 : chooseField(e.target.value as TriggerVariantField)
             }
           >
-            {Object.entries(triggerVariantFields).map(([id, label]) => (
+            {!(field in availableFields) && (
+              <option value={field} disabled>
+                {triggerVariantFields[field]}（この条件では未使用）
+              </option>
+            )}
+            {Object.entries(availableFields).map(([id, label]) => (
               <option key={id} value={id}>
                 {label}
               </option>
@@ -299,6 +315,7 @@ export default function TriggerVariantPanel({
                     }
                   />
                   <TriggerVariantValueInput
+                    trigger={base}
                     field={row.field ?? field}
                     value={row.value}
                     skills={stateSkills}
@@ -336,6 +353,7 @@ export default function TriggerVariantPanel({
             variant="outline"
             disabled={
               rows.length >= MAX_TRIGGER_VARIANTS ||
+              !(field in availableFields) ||
               (field === "state_skill_id" && !stateSkills.length)
             }
             onClick={() =>
@@ -347,11 +365,7 @@ export default function TriggerVariantPanel({
                     name: "新しい変型",
                     base_variant_id: parentId,
                     field,
-                    value:
-                      field === "threshold"
-                        ? (triggerVariant(trigger, parentId)?.threshold ??
-                          trigger.threshold)
-                        : initialTriggerValue(field, stateSkills),
+                    value: currentTriggerValue(base, field, stateSkills),
                   },
                 ],
               })
@@ -365,6 +379,7 @@ export default function TriggerVariantPanel({
           variant="outline"
           disabled={
             !plain.length ||
+            !(field in availableFields) ||
             plain.length > 40 ||
             sets.length >= 100 ||
             selected.some(

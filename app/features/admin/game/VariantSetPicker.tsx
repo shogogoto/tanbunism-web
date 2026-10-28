@@ -53,7 +53,7 @@ export default function VariantSetPicker({
                 : conflict
                   ? "（同じ項目を使用中）"
                   : incompatible
-                    ? "（この効果では使用不可）"
+                    ? "（この設定では使用不可）"
                     : ""}
             </span>
           </label>

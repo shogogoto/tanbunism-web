@@ -80,6 +80,35 @@ export const triggerVariantFields: Record<TriggerVariantField, string> = {
   stat_basis: "値の基準",
   comparison: "比較・順位",
 };
+
+/** Only offer fields used by the resolved condition, including nested variants. */
+export function applicableTriggerVariantFields(trigger: TriggerDefinition) {
+  const fields: TriggerVariantField[] = ["target", "condition"];
+  if (trigger.condition === "state")
+    fields.push("state_skill_id", "state_present");
+  else if (trigger.condition === "enemy_count") fields.push("threshold");
+  else if (
+    trigger.condition === "stat" ||
+    /^(hp|mp)_/.test(trigger.condition)
+  ) {
+    const details = statCondition(trigger);
+    if (!["lowest", "highest"].includes(details.comparison))
+      fields.push("threshold");
+    fields.push("stat", "comparison");
+    if (["hp", "mp"].includes(details.stat)) fields.push("stat_basis");
+  }
+  return Object.fromEntries(
+    fields.map((field) => [field, triggerVariantFields[field]]),
+  );
+}
+
+export function triggerThresholdBounds(trigger: TriggerDefinition) {
+  if (trigger.condition === "enemy_count") return { min: 1, max: 20 };
+  return {
+    min: 0,
+    max: statCondition(trigger).stat_basis === "percent" ? 100 : 100000,
+  };
+}
 export const triggerConditionLabels = {
   always: "いつでも",
   hp_below: "HPが未満（%）",

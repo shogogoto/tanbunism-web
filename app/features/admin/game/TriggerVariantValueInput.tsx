@@ -1,10 +1,15 @@
-import type { TriggerVariantField } from "~/features/game/catalog";
+import type {
+  TriggerDefinition,
+  TriggerVariantField,
+} from "~/features/game/catalog";
+import { statCondition } from "~/features/game/triggerConditions";
 import {
   triggerBasisLabels,
   triggerComparisonLabels,
   triggerConditionLabels,
   triggerStatLabels,
   triggerTargets,
+  triggerThresholdBounds,
 } from "~/features/game/triggerVariants";
 import { Input } from "~/shared/components/ui/input";
 
@@ -32,26 +37,40 @@ export function initialTriggerValue(
   if (field === "state_present") return true;
   return Object.keys(triggerFieldOptions(field, skills))[0] ?? "";
 }
+
+export function currentTriggerValue(
+  trigger: TriggerDefinition,
+  field: TriggerVariantField,
+  skills: { id: string; name: string }[],
+): string | number | boolean {
+  const value =
+    field === "stat" || field === "stat_basis" || field === "comparison"
+      ? statCondition(trigger)[field]
+      : trigger[field];
+  return value ?? initialTriggerValue(field, skills);
+}
 export default function TriggerVariantValueInput({
   field,
   value,
   onChange,
   skills,
   label = "変型の値",
+  trigger,
 }: {
   field: TriggerVariantField;
   value: unknown;
   onChange: (value: string | number | boolean) => void;
   skills: { id: string; name: string }[];
   label?: string;
+  trigger?: TriggerDefinition;
 }) {
   const options = triggerFieldOptions(field, skills);
   return field === "threshold" ? (
     <Input
       aria-label={label}
       type="number"
-      min={0}
-      max={100000}
+      {...(trigger ? triggerThresholdBounds(trigger) : { min: 0, max: 100000 })}
+      step={1}
       value={Number.isFinite(Number(value)) ? Number(value) : ""}
       onChange={(e) => onChange(e.target.valueAsNumber)}
     />

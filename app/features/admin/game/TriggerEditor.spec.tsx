@@ -240,7 +240,7 @@ it("defines stat thresholds, resource bases, and rank selection", async () => {
 it("uses field-specific controls for target and state-presence variants", async () => {
   const user = userEvent.setup();
   render(<TriggerEditor />);
-  const row = await screen.findByRole("row", { name: "HP条件" });
+  const row = await screen.findByRole("row", { name: "バフなし" });
   await user.click(within(row).getByRole("button", { name: "変型" }));
   const panel = within(screen.getByRole("dialog"));
   await user.selectOptions(panel.getByLabelText("変更する項目"), "target");
@@ -256,10 +256,54 @@ it("uses field-specific controls for target and state-presence variants", async 
   await user.keyboard("{Escape}");
   await user.click(screen.getByRole("button", { name: "保存" }));
   await screen.findByText("保存しました");
-  expect(saved.mock.calls[0][0].triggers[0]).toMatchObject({
+  expect(saved.mock.calls[0][0].triggers[1]).toMatchObject({
     variant_field: "state_present",
     variants: [{ value: false }],
   });
+});
+
+it("updates variation fields and limits when condition details change without rewriting existing variants", async () => {
+  const user = userEvent.setup();
+  render(<TriggerEditor />);
+  const row = within(await screen.findByRole("row", { name: "HP条件" }));
+  await user.click(row.getByRole("button", { name: "変型" }));
+  let panel = within(screen.getByRole("dialog"));
+  expect(
+    within(panel.getByLabelText("変更する項目")).queryByRole("option", {
+      name: "状態の有無",
+    }),
+  ).not.toBeInTheDocument();
+  await user.click(panel.getByRole("button", { name: "変型を追加" }));
+  expect(panel.getByLabelText("変型の値")).toHaveAttribute("max", "100");
+  await user.keyboard("{Escape}");
+  await user.selectOptions(row.getByLabelText("値の基準"), "current");
+  await user.click(row.getByRole("button", { name: "変型 1" }));
+  panel = within(screen.getByRole("dialog"));
+  expect(panel.getByLabelText("変型の値")).toHaveAttribute("max", "100000");
+  await user.keyboard("{Escape}");
+  await user.selectOptions(row.getByLabelText("判定する条件"), "state");
+  await user.click(row.getByRole("button", { name: "変型 1" }));
+  panel = within(screen.getByRole("dialog"));
+  const fields = within(panel.getByLabelText("変更する項目"));
+  expect(
+    fields.getByRole("option", { name: "状態スキル" }),
+  ).toBeInTheDocument();
+  expect(
+    fields.queryByRole("option", { name: "値の基準" }),
+  ).not.toBeInTheDocument();
+  expect(
+    fields.getByRole("option", { name: "しきい値（この条件では未使用）" }),
+  ).toBeDisabled();
+  expect(panel.getByLabelText("変型の値")).toHaveValue(30);
+  expect(panel.getByRole("button", { name: "変型を追加" })).toBeDisabled();
+  await user.selectOptions(
+    panel.getByLabelText("変更する項目"),
+    "state_skill_id",
+  );
+  await user.click(panel.getByRole("button", { name: "この項目に切り替える" }));
+  expect(panel.getByRole("combobox", { name: "変型の値" })).toHaveValue(
+    "poison_skill",
+  );
 });
 
 it("shares a variant set across triggers and propagates later edits", async () => {

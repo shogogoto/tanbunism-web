@@ -1,7 +1,12 @@
 import { expect, it } from "vitest";
 import type { TriggerDefinition } from "./catalog";
 import { statCondition } from "./triggerConditions";
-import { triggerDescription, triggerVariant } from "./triggerVariants";
+import {
+  applicableTriggerVariantFields,
+  triggerDescription,
+  triggerThresholdBounds,
+  triggerVariant,
+} from "./triggerVariants";
 
 const hp: TriggerDefinition = {
   id: "hp",
@@ -58,4 +63,50 @@ it("allows rank and stat variants on existing percentage definitions", () => {
     comparison: "below",
   });
   expect(hp.condition).toBe("hp_below");
+});
+
+it("uses only the fields and bounds present in each condition's details", () => {
+  expect(Object.keys(applicableTriggerVariantFields(hp))).toEqual([
+    "target",
+    "condition",
+    "threshold",
+    "stat",
+    "comparison",
+    "stat_basis",
+  ]);
+  expect(triggerThresholdBounds(hp)).toEqual({ min: 0, max: 100 });
+  const absolute = {
+    ...hp,
+    condition: "stat" as const,
+    stat_basis: "current" as const,
+  };
+  expect(triggerThresholdBounds(absolute).max).toBe(100000);
+  const rank = {
+    ...absolute,
+    stat: "defense" as const,
+    comparison: "lowest" as const,
+  };
+  expect(Object.keys(applicableTriggerVariantFields(rank))).toEqual([
+    "target",
+    "condition",
+    "stat",
+    "comparison",
+  ]);
+  const state = { ...hp, condition: "state" as const };
+  expect(Object.keys(applicableTriggerVariantFields(state))).toEqual([
+    "target",
+    "condition",
+    "state_skill_id",
+    "state_present",
+  ]);
+  const count = { ...hp, condition: "enemy_count" as const };
+  expect(Object.keys(applicableTriggerVariantFields(count))).toEqual([
+    "target",
+    "condition",
+    "threshold",
+  ]);
+  expect(triggerThresholdBounds(count)).toEqual({ min: 1, max: 20 });
+  expect(
+    Object.keys(applicableTriggerVariantFields({ ...hp, condition: "always" })),
+  ).toEqual(["target", "condition"]);
 });
