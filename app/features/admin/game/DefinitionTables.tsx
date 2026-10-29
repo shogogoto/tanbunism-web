@@ -7,6 +7,7 @@ import type {
   ItemDefinition,
 } from "~/features/game/catalog";
 import { defaultElements, isEquipmentSkill } from "~/features/game/catalog";
+import { itemCategories, itemCategory } from "~/features/game/itemCategories";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import EnemyGambitEditor from "./EnemyGambitEditor";
@@ -31,7 +32,7 @@ export default function DefinitionTables({
     "名前",
     "素材",
     ...(kind === "items"
-      ? ["発動スキル", "使用回数"]
+      ? ["カテゴリ", "発動スキル", "使用回数"]
       : ["ボス用", "能力倍率", "ガンビット", "攻撃スキル", "命中時スキル"]),
   ];
   const elements = (catalog.elements ?? defaultElements).filter(
@@ -108,6 +109,25 @@ export default function DefinitionTables({
               </td>
               {"skill_id" in item ? (
                 <>
+                  <td>
+                    <select
+                      aria-label="カテゴリ"
+                      className={selectClass}
+                      value={itemCategory(item)}
+                      onChange={(e) =>
+                        update(item.id, {
+                          category: e.target
+                            .value as ItemDefinition["category"],
+                        })
+                      }
+                    >
+                      {itemCategories.map(({ id, label }) => (
+                        <option key={id} value={id}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td>
                     <select
                       aria-label="発動スキル"

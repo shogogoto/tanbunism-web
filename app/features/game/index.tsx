@@ -1633,7 +1633,7 @@ export function GamePlay({
         }}
       >
         <DialogContent
-          className={`max-h-[90dvh] overflow-y-auto sm:max-w-lg ${menuPanel ? "top-[5dvh] translate-y-0" : ""}`}
+          className={`max-h-[90dvh] overflow-y-auto ${menuPanel ? "top-[5dvh] translate-y-0 sm:max-w-[calc(100vw-4rem)] lg:max-w-5xl" : "sm:max-w-lg"}`}
           data-dashboard-swipe-ignore
           data-game-menu={menuPanel ? "" : undefined}
         >

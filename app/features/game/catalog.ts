@@ -473,6 +473,7 @@ export type ItemDefinition = {
   enabled: boolean;
   skill_id: string;
   kind: "weapon" | "consumable";
+  category?: import("./itemCategories").ItemCategory;
   max_uses?: number;
 };
 

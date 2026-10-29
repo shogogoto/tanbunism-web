@@ -12,9 +12,66 @@ import { defaultBalance } from "./battle";
 import { sampleCatalog } from "./catalog.fixtures";
 import { newSave } from "./domain";
 
+const products = [
+  {
+    id: "sword",
+    name: "銅の剣",
+    kind: "weapon",
+    category: "weapon",
+    icon: "sword",
+    amount: 10,
+  },
+  {
+    id: "shield",
+    name: "魔除けの盾",
+    kind: "weapon",
+    category: "armor",
+    icon: "shield",
+    amount: 8,
+  },
+  {
+    id: "potion",
+    name: "HP回復薬",
+    kind: "hp",
+    category: "recovery",
+    icon: "flask",
+    amount: 30,
+  },
+  {
+    id: "ether",
+    name: "MP回復薬",
+    kind: "mp",
+    category: "recovery",
+    icon: "droplet",
+    amount: 10,
+  },
+  {
+    id: "key",
+    name: "読書メモのダンジョン開放キー",
+    kind: "dungeon_unlock",
+    category: "unlock_key",
+    icon: "key",
+    amount: 0,
+  },
+  {
+    id: "charm",
+    name: "旅のお守り",
+    kind: "skill",
+    category: "other",
+    icon: "sparkles",
+    amount: 0,
+  },
+].map((product) => ({ ...product, price: null }));
+
 // Short and long tabs intentionally share one dialog to exercise its top anchor.
 const save = {
   ...newSave(),
+  economy: {
+    gold: 300,
+    inventory: Object.fromEntries(products.map((product) => [product.id, 1])),
+    weapon: null,
+    weapon_attack: 0,
+  },
   unlockedDungeons: Array.from({ length: 30 }, (_, i) => ({
     resourceId: `resource-${i}`,
     sourceId: "source",
@@ -45,7 +102,7 @@ export default {
         http.get("*/user/:id/learning-progress", () =>
           HttpResponse.json({ level: 10 }),
         ),
-        http.get("*/game/shop", () => HttpResponse.json({ products: [] })),
+        http.get("*/game/shop", () => HttpResponse.json({ products })),
         http.get("*/game/catalog", () => HttpResponse.json(sampleCatalog)),
         http.get("*/game/gambits/capacity", () =>
           HttpResponse.json({ slots: 1, next_level: 20 }),

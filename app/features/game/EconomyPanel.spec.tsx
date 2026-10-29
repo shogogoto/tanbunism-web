@@ -74,6 +74,67 @@ it("purchases with the displayed state's revision and applies the returned balan
   expect(onSaved).toHaveBeenCalledWith(result);
 });
 
+it("groups owned items in category order and keeps explicit categories independent of effects", async () => {
+  const grouped = [
+    { id: "other", name: "お守り", kind: "skill", category: "other" },
+    {
+      id: "key",
+      name: "本の鍵",
+      kind: "dungeon_unlock",
+      category: "unlock_key",
+    },
+    { id: "recovery", name: "回復薬", kind: "hp", category: "recovery" },
+    { id: "armor", name: "盾", kind: "weapon", category: "armor" },
+    { id: "weapon", name: "剣", kind: "weapon", category: "weapon" },
+    { id: "unowned", name: "未所持の品", kind: "hp", category: "recovery" },
+  ].map((product) => ({ ...product, amount: 10, price: null }));
+  vi.mocked(gameRequest).mockResolvedValue({ products: grouped });
+  const save = {
+    ...newSave(),
+    economy: {
+      gold: 0,
+      inventory: Object.fromEntries(grouped.slice(0, -1).map((p) => [p.id, 1])),
+      weapon: null,
+      weapon_attack: 0,
+    },
+  };
+  render(
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <EconomyPanel
+        userId="grouped"
+        save={save}
+        revision={1}
+        shop={false}
+        disabled={false}
+        onSaved={vi.fn()}
+        onTab={vi.fn()}
+      />
+    </SWRConfig>,
+  );
+  await screen.findByRole("region", { name: "武器" });
+  expect(
+    screen.getAllByRole("region").map((r) => r.getAttribute("aria-label")),
+  ).toEqual(["武器", "防具", "回復", "開放キー", "その他"]);
+  expect(
+    within(screen.getByRole("region", { name: "防具" })).getByText("盾"),
+  ).toBeVisible();
+  expect(screen.queryByText("未所持の品")).not.toBeInTheDocument();
+});
+
+it("hides empty categories and groups old API products without a category", async () => {
+  show(false);
+  await screen.findByRole("region", { name: "回復" });
+  expect(
+    screen.queryByRole("region", { name: "武器" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("region", { name: "防具" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("region", { name: "その他" }),
+  ).not.toBeInTheDocument();
+});
+
 it.each([null, "half"])(
   "buys a permanent gambit unlock rather than a consumable (%s)",
   async (variantId) => {

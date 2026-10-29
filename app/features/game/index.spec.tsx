@@ -1182,6 +1182,8 @@ it("switches between status, inventory, and achievement tabs in the game menu", 
     "translate-y-0",
     "max-h-[90dvh]",
     "overflow-y-auto",
+    "sm:max-w-[calc(100vw-4rem)]",
+    "lg:max-w-5xl",
   );
   await user.click(screen.getByRole("tab", { name: "アイテム" }));
   expect(screen.getByTestId("pathname")).toHaveTextContent("/game/item");

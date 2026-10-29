@@ -162,6 +162,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
                 catalog.skills.find((s) => s.effect !== "equip_attack")?.id ??
                 "",
               kind: "consumable",
+              category: "other",
               max_uses: 1,
             }
           : {

@@ -990,6 +990,7 @@ it("references a skill from an item rather than defining a separate effect", asy
   render(<CatalogEditor kind="items" />);
   const user = userEvent.setup();
   await user.selectOptions(await screen.findByLabelText("発動スキル"), "heal");
+  await user.selectOptions(screen.getByLabelText("カテゴリ"), "recovery");
   fireEvent.change(screen.getByLabelText("使用回数"), {
     target: { value: "3" },
   });
@@ -1006,6 +1007,7 @@ it("references a skill from an item rather than defining a separate effect", asy
     id: "healing_potion",
     skill_id: "heal",
     max_uses: 1,
+    category: "recovery",
   });
 });
 
