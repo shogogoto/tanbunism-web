@@ -88,6 +88,7 @@ export type GameSave = {
   run?: Run;
   content?: DungeonContent;
   battleFeedback?: string | null;
+  quizFeedback?: string | null;
   endActionReceipt?: {
     action_id: string;
     animation?: import("./catalog").SkillAnimation;

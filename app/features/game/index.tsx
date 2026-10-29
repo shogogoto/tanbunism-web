@@ -1532,6 +1532,7 @@ export function GamePlay({
                                 void update({
                                   ...save,
                                   battleFeedback: undefined,
+                                  quizFeedback: undefined,
                                 })
                                   .catch((cause) => setError(cause.message))
                                   .finally(() => setBusy(false));
@@ -1611,7 +1612,11 @@ export function GamePlay({
             onFinished={async () => {
               setBusy(true);
               try {
-                await update({ ...save, battleFeedback: undefined });
+                await update({
+                  ...save,
+                  battleFeedback: undefined,
+                  quizFeedback: undefined,
+                });
                 localBattle.current = null;
               } catch (cause) {
                 setError(

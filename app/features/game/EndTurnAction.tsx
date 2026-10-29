@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
 import type { ReadableQuiz } from "~/features/quiz/api";
 import { Button } from "~/shared/components/ui/button";
+import BattleResultMessages from "./BattleResultMessages";
 import type { BattleTransport } from "./battle";
 import type { GameSave } from "./domain";
 import { type Direction, movePanelFocus } from "./spatialFocus";
@@ -172,12 +173,13 @@ export default function EndTurnAction({
             onConfirm={(selected) => void request(true, selected)}
           />
         </>
+      ) : busy ? (
+        <p className="text-sm">ガンビットを処理中…</p>
       ) : (
-        <p className="text-sm">
-          {busy
-            ? "ガンビットを処理中…"
-            : (session?.state.save.battleFeedback ?? "ガンビット")}
-        </p>
+        <BattleResultMessages
+          quiz={session?.state.save.quizFeedback}
+          battle={session?.state.save.battleFeedback ?? "ガンビット"}
+        />
       )}
       {error && (
         <div role="alert">

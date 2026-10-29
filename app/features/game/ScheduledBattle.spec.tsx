@@ -390,14 +390,15 @@ it("keeps keyboard focus across consecutive questions and sends no damage claims
 });
 
 it.each([true, false])(
-  "shows one concise verdict and hides synthetic review text (simulation=%s)",
+  "separates the quiz verdict from combat messages (simulation=%s)",
   async (synthetic) => {
     const user = userEvent.setup();
     function Fixture() {
       const [save, setSave] = useState(initial);
       const transport: BattleTransport = async <T,>() => {
         const copy = structuredClone(save);
-        copy.battleFeedback = "正解 · ゴーストに2ダメージ";
+        copy.quizFeedback = "正解";
+        copy.battleFeedback = "戦う · ゴーストに2ダメージ";
         return {
           state: { revision: 1, save: copy },
           results: { e: true },
@@ -427,7 +428,12 @@ it.each([true, false])(
       await user.click(screen.getByRole("button", { name: "選択肢0" }));
     await user.click(screen.getByRole("button", { name: "回答を確定" }));
     await screen.findByRole("button", { name: "次へ" });
-    expect(screen.getByText("正解 · ゴーストに2ダメージ")).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "クイズ結果" }),
+    ).toHaveTextContent("正解");
+    const battle = screen.getByRole("region", { name: "戦闘結果" });
+    expect(battle).toHaveTextContent("戦う · ゴーストに2ダメージ");
+    expect(battle).not.toHaveTextContent(/正解|不正解/);
     expect(
       screen.queryByText(/被ダメージ|撃破|正解 1\/1|模擬回答/),
     ).not.toBeInTheDocument();
@@ -443,6 +449,33 @@ it.each([true, false])(
     }
   },
 );
+
+it("restores separate quiz and combat messages from saved state without a new answer", async () => {
+  const save = initial();
+  save.quizFeedback = "正解";
+  save.battleFeedback = "戦う · ゴーストに17ダメージ";
+  const transport = vi.fn();
+  render(
+    <MemoryRouter>
+      <MultiBattle
+        save={save}
+        content={content}
+        context={context}
+        transport={transport}
+        onSaved={vi.fn()}
+        onFinished={vi.fn()}
+        onBusy={vi.fn()}
+      />
+    </MemoryRouter>,
+  );
+  expect(
+    await screen.findByRole("region", { name: "クイズ結果" }),
+  ).toHaveTextContent("正解");
+  expect(screen.getByRole("region", { name: "戦闘結果" })).toHaveTextContent(
+    "17ダメージ",
+  );
+  expect(transport).not.toHaveBeenCalled();
+});
 
 it("settles timeout once and waits for Next even after the final action", async () => {
   const finished = vi.fn(async () => undefined);

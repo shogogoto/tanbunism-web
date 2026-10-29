@@ -119,9 +119,10 @@ function Preview({ manyEnemies = false }: { manyEnemies?: boolean }) {
           marker.schedule.enemy_hp[target] - 10,
         );
       else copy.run.hp = Math.max(0, copy.run.hp - 3);
+      copy.quizFeedback = correct ? "正解" : "不正解";
       copy.battleFeedback = correct
-        ? "正解 · ゴーストに10ダメージ"
-        : "不正解 · 3ダメージを受けた";
+        ? "戦う · ゴーストに10ダメージ"
+        : "戦う · 3ダメージを受けた";
       return {
         state: { revision: marker.turn, save: copy },
         results: { [target]: correct },
@@ -135,6 +136,8 @@ function Preview({ manyEnemies = false }: { manyEnemies?: boolean }) {
       ...order.slice(0, offset),
     ].map((actor_id, index) => ({ actor_id, distance: index }));
     marker.schedule.actor_id = order[offset];
+    copy.quizFeedback = null;
+    copy.battleFeedback = null;
     marker.schedule.quiz_enemy_id =
       order[offset] === "player" ? "ghost" : order[offset];
     marker.quizIndices = { [marker.schedule.quiz_enemy_id]: 0 };

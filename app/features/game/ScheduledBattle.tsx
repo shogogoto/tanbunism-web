@@ -5,6 +5,7 @@ import QuizPreviewPrompt from "~/features/quiz/QuizPreviewPrompt";
 import { Button } from "~/shared/components/ui/button";
 import ActionQueue from "./ActionQueue";
 import BattleDialog from "./BattleDialog";
+import BattleResultMessages from "./BattleResultMessages";
 import EndTurnAction from "./EndTurnAction";
 import EnemyAvatar from "./EnemyAvatar";
 import type MultiBattle from "./MultiBattle";
@@ -369,11 +370,10 @@ export default function ScheduledBattle({
         )}
         {feedback ? (
           <>
-            <section
-              className="space-y-2 rounded-md border p-3"
-              data-battle-result
+            <BattleResultMessages
+              quiz={save.quizFeedback}
+              battle={save.battleFeedback}
             >
-              <p>{save.battleFeedback}</p>
               {quiz && !syntheticAnswers && (
                 <>
                   <QuizPreviewPrompt quiz={quiz} />
@@ -384,7 +384,7 @@ export default function ScheduledBattle({
                   </p>
                 </>
               )}
-            </section>
+            </BattleResultMessages>
             {marker && !marker.endActionDone && (
               <EndTurnAction
                 key={`${marker.id}:${marker.turn}`}
