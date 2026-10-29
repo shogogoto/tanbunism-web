@@ -26,6 +26,7 @@ import AppHeader from "./AppHeader";
 import DesktopSidebar from "./DesktopSidebar";
 import HeaderXpProgress from "./HeaderXpProgress";
 import BottomNavigation from "./components/BottomNavigation";
+import useSidebarCollapsed from "./useSidebarCollapsed";
 
 export default function SidebarLayout() {
   const { user } = useAuth();
@@ -65,7 +66,7 @@ function SidebarShell({ isMobile }: { isMobile: boolean }) {
   }, []);
   const { user } = useAuth();
   const location = useLocation();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, toggleSidebar] = useSidebarCollapsed();
   const [refreshVersion, setRefreshVersion] = useState(0);
   const isDocMode = useMatch("/docs/*");
   const docStyle = isDocMode ? "markdown-body p-4 list-md" : "";
@@ -93,10 +94,7 @@ function SidebarShell({ isMobile }: { isMobile: boolean }) {
       className="flex h-dvh w-full bg-background"
       style={{ "--app-footer-height": `${footerHeight}px` } as CSSProperties}
     >
-      <DesktopSidebar
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed((current) => !current)}
-      />
+      <DesktopSidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
       <div className="flex min-w-0 flex-1 flex-col">
         <AppHeader />
         <PullToRefresh
