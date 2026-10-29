@@ -89,6 +89,7 @@ export type GameSave = {
   content?: DungeonContent;
   battleFeedback?: string | null;
   quizFeedback?: string | null;
+  battleActionDetails?: { trigger: string | null; targets: string[] } | null;
   endActionReceipt?: {
     action_id: string;
     animation?: import("./catalog").SkillAnimation;

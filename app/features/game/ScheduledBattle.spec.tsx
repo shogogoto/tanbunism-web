@@ -454,6 +454,7 @@ it("restores separate quiz and combat messages from saved state without a new an
   const save = initial();
   save.quizFeedback = "正解";
   save.battleFeedback = "戦う · ゴーストに17ダメージ";
+  save.battleActionDetails = { trigger: "敵：いつでも", targets: ["ゴースト"] };
   const transport = vi.fn();
   render(
     <MemoryRouter>
@@ -475,6 +476,9 @@ it("restores separate quiz and combat messages from saved state without a new an
     "17ダメージ",
   );
   expect(transport).not.toHaveBeenCalled();
+  expect(screen.getByLabelText("行動の詳細")).toHaveTextContent(
+    "発動条件：敵：いつでも → 対象：ゴースト",
+  );
 });
 
 it("settles timeout once and waits for Next even after the final action", async () => {

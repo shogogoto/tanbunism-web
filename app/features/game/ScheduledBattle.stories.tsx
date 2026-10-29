@@ -120,6 +120,13 @@ function Preview({ manyEnemies = false }: { manyEnemies?: boolean }) {
         );
       else copy.run.hp = Math.max(0, copy.run.hp - 3);
       copy.quizFeedback = correct ? "正解" : "不正解";
+      copy.battleActionDetails = {
+        trigger: "いつでも（通常攻撃）",
+        targets:
+          save.battle?.schedule?.actor_id === "player"
+            ? [roster.find((enemy) => enemy.id === target)?.name ?? "敵"]
+            : ["あなた"],
+      };
       copy.battleFeedback = correct
         ? "戦う · ゴーストに10ダメージ"
         : "戦う · 3ダメージを受けた";
@@ -137,6 +144,7 @@ function Preview({ manyEnemies = false }: { manyEnemies?: boolean }) {
     ].map((actor_id, index) => ({ actor_id, distance: index }));
     marker.schedule.actor_id = order[offset];
     copy.quizFeedback = null;
+    copy.battleActionDetails = null;
     copy.battleFeedback = null;
     marker.schedule.quiz_enemy_id =
       order[offset] === "player" ? "ghost" : order[offset];

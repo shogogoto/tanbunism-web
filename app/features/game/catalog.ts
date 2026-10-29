@@ -638,6 +638,7 @@ export type GambitRule = {
   target?: TriggerTarget | null;
 };
 export type BattleAction = {
+  trigger_name?: string | null;
   skill: SkillDefinition;
   item_id: string | null;
   item_max_uses?: number;

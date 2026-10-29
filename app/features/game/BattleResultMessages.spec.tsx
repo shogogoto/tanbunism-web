@@ -34,3 +34,20 @@ it("does not invent a quiz verdict for actions without a quiz", () => {
     "回復 · 発動",
   );
 });
+
+it("shows the selected trigger and actual targets below combat results only", () => {
+  render(
+    <BattleResultMessages
+      quiz="正解"
+      battle="ゴブリンの加速 · 不発"
+      details={{ trigger: "味方：加速なし", targets: ["スケルトン"] }}
+    />,
+  );
+  const battle = screen.getByRole("region", { name: "戦闘結果" });
+  expect(within(battle).getByLabelText("行動の詳細")).toHaveTextContent(
+    "発動条件：味方：加速なし → 対象：スケルトン",
+  );
+  expect(
+    screen.getByRole("region", { name: "クイズ結果" }),
+  ).not.toHaveTextContent("発動条件");
+});

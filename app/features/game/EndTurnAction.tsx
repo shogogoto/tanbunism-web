@@ -178,6 +178,7 @@ export default function EndTurnAction({
       ) : (
         <BattleResultMessages
           quiz={session?.state.save.quizFeedback}
+          details={session?.state.save.battleActionDetails}
           battle={session?.state.save.battleFeedback ?? "ガンビット"}
         />
       )}

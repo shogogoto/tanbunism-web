@@ -373,6 +373,7 @@ export default function ScheduledBattle({
             <BattleResultMessages
               quiz={save.quizFeedback}
               battle={save.battleFeedback}
+              details={save.battleActionDetails}
             >
               {quiz && !syntheticAnswers && (
                 <>

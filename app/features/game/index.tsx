@@ -1533,6 +1533,7 @@ export function GamePlay({
                                   ...save,
                                   battleFeedback: undefined,
                                   quizFeedback: undefined,
+                                  battleActionDetails: undefined,
                                 })
                                   .catch((cause) => setError(cause.message))
                                   .finally(() => setBusy(false));
@@ -1616,6 +1617,7 @@ export function GamePlay({
                   ...save,
                   battleFeedback: undefined,
                   quizFeedback: undefined,
+                  battleActionDetails: undefined,
                 });
                 localBattle.current = null;
               } catch (cause) {
