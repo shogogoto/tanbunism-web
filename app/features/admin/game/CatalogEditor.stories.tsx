@@ -22,6 +22,34 @@ export default {
         http.get("*/admin/game/catalog", () =>
           HttpResponse.json({
             ...sampleCatalog,
+            items: [
+              ...sampleCatalog.items,
+              {
+                ...sampleCatalog.items[0],
+                id: "second_potion",
+                name: "予備の回復薬",
+              },
+              {
+                ...sampleCatalog.items[0],
+                id: "third_potion",
+                name: "携帯回復薬",
+              },
+            ],
+            enemies: [
+              ...sampleCatalog.enemies,
+              {
+                ...sampleCatalog.enemies[0],
+                id: "skull",
+                name: "スケルトン",
+                icon: "skull",
+              },
+              {
+                ...sampleCatalog.enemies[0],
+                id: "bug",
+                name: "バグ",
+                icon: "bug",
+              },
+            ],
             triggers: [
               {
                 id: "hurt",

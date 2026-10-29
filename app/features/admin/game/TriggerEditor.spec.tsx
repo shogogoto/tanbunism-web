@@ -85,9 +85,59 @@ const server = setupServer(
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   server.resetHandlers();
+  vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 afterAll(() => server.close());
+
+it("reorders triggers with the shared handle and preserves their definitions on save", async () => {
+  const user = userEvent.setup();
+  render(<TriggerEditor />);
+  const table = await screen.findByRole("table", {
+    name: "ガンビットのトリガー",
+  });
+  const rows = () =>
+    within(table)
+      .getAllByRole("row")
+      .filter((row) => row.hasAttribute("aria-label"));
+  expect(within(table).getAllByRole("columnheader")[0]).toHaveTextContent(
+    "並べ替え",
+  );
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    function (this: HTMLElement) {
+      return new DOMRect(
+        0,
+        Math.max(0, rows().indexOf(this.closest("tr") as HTMLElement)) * 100,
+        800,
+        100,
+      );
+    },
+  );
+  const handle = within(rows()[0]).getByRole("button", {
+    name: "ドラッグして並べ替え",
+  });
+  handle.focus();
+  await user.keyboard("[Space]");
+  expect(handle).toHaveAttribute("aria-pressed", "true");
+  await user.keyboard("[ArrowDown]");
+  await user.keyboard("[Space]");
+  expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual([
+    "バフなし",
+    "HP条件",
+    "毒条件",
+  ]);
+  expect(saved).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  const payload = saved.mock.calls[0][0];
+  expect(payload.triggers).toEqual([
+    catalog.triggers[1],
+    catalog.triggers[0],
+    catalog.triggers[2],
+  ]);
+  expect(payload.enemies).toEqual(catalog.enemies);
+  expect(payload.skills).toEqual(catalog.skills);
+});
 
 it("stages trigger deletion in the final column, allows undo, and removes shop listings on save", async () => {
   server.use(

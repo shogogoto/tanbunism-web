@@ -386,6 +386,57 @@ async function dragRow(
   await user.keyboard("[Space]");
 }
 
+it.each([
+  ["skills", "items", "アイテム定義"],
+  ["items", "items", "アイテム定義"],
+  ["enemies", "enemies", "敵定義"],
+] as const)(
+  "reorders %s/%s with the shared drag handle and saves only that list",
+  async (kind, section, tableName) => {
+    const catalog = {
+      ...sampleCatalog,
+      items: Array.from({ length: 3 }, (_, i) => ({
+        ...sampleCatalog.items[0],
+        id: i === 0 ? sampleCatalog.items[0].id : `item_${i}`,
+        name: `アイテム${i}`,
+      })),
+      enemies: Array.from({ length: 3 }, (_, i) => ({
+        ...sampleCatalog.enemies[0],
+        id: `enemy_${i}`,
+        name: `敵${i}`,
+      })),
+    };
+    server.use(
+      http.get("*/admin/game/catalog", () => HttpResponse.json(catalog)),
+    );
+    const user = userEvent.setup();
+    render(<CatalogEditor kind={kind} />);
+    const table = await screen.findByRole("table", { name: tableName });
+    expect(within(table).getAllByRole("columnheader")[0]).toHaveTextContent(
+      "並べ替え",
+    );
+    const rows = () =>
+      within(table)
+        .getAllByRole("row")
+        .filter((row) => row.hasAttribute("aria-label"));
+    await dragRow(user, table, rows()[0], "ArrowDown");
+    const expected = [
+      catalog[section][1],
+      catalog[section][0],
+      catalog[section][2],
+    ];
+    expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual(
+      expected.map((row) => row.name),
+    );
+    expect(saved).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    await screen.findByText("保存しました");
+    expect(saved.mock.calls[0][0][section]).toEqual(expected);
+    const other = section === "items" ? "enemies" : "items";
+    expect(saved.mock.calls[0][0][other]).toEqual(catalog[other]);
+  },
+);
+
 it("uses sortable tables without row numbers and a separate variation column", async () => {
   render(<CatalogEditor kind="skills" />);
   const skills = await screen.findByRole("table", { name: "スキル一覧" });

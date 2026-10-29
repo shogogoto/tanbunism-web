@@ -83,6 +83,18 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
           }),
     });
   };
+  function reorderDefinitions(section: "items" | "enemies", ids: string[]) {
+    if (!catalog) return;
+    const positions = new Map(ids.map((id, index) => [id, index]));
+    change({
+      ...catalog,
+      [section]: [...catalog[section]].sort(
+        (a, b) =>
+          (positions.get(a.id) ?? ids.length) -
+          (positions.get(b.id) ?? ids.length),
+      ),
+    });
+  }
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!catalog || saving) return;
@@ -281,6 +293,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
                   catalog={catalog}
                   update={(id, patch) => update(id, patch, "items")}
                   add={() => add("attack", undefined, "items")}
+                  reorder={(ids) => reorderDefinitions("items", ids)}
                 />
               </AdminTableSection>
             )}
@@ -290,6 +303,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
                 catalog={catalog}
                 update={update}
                 deletions={enemyDeletions}
+                reorder={(ids) => reorderDefinitions(kind, ids)}
                 toggleDelete={(id) => {
                   setEnemyDeletions((current) => {
                     const next = new Set(current);

@@ -21,6 +21,8 @@ import { Input } from "~/shared/components/ui/input";
 import DefinitionDeleteButton, {
   pendingDeletionClass,
 } from "./DefinitionDeleteButton";
+import RowOrder from "./RowOrder";
+import { SortableRow, SortableRows } from "./SortableRows";
 import StatTriggerDetails from "./StatTriggerDetails";
 import TriggerVariantPanel from "./TriggerVariantPanel";
 import TriggerVariantSetEditor from "./TriggerVariantSetEditor";
@@ -154,241 +156,268 @@ export default function TriggerEditor() {
       >
         <fieldset disabled={!catalog || busy} className="min-w-0">
           <AdminTableFrame layout="content">
-            <AdminNativeTable
-              aria-label="ガンビットのトリガー"
-              layout="content"
-              className="text-sm"
+            <SortableRows
+              rows={catalog?.triggers ?? []}
+              onReorder={(triggers) => {
+                if (!catalog) return;
+                setCatalog({ ...catalog, triggers });
+                setSaved(false);
+                setError(undefined);
+              }}
             >
-              <thead>
-                <tr>
-                  {["名前", "対象", "条件", "詳細", "変型", "有効", "削除"].map(
-                    (h) => (
+              <AdminNativeTable
+                aria-label="ガンビットのトリガー"
+                layout="content"
+                className="text-sm"
+              >
+                <thead>
+                  <tr>
+                    <th scope="col" className="w-8">
+                      <span className="sr-only">並べ替え</span>
+                    </th>
+                    {[
+                      "名前",
+                      "対象",
+                      "条件",
+                      "詳細",
+                      "変型",
+                      "有効",
+                      "削除",
+                    ].map((h) => (
                       <th key={h} className="p-2 text-left">
                         {h}
                       </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {catalog?.triggers?.map((t) => (
-                  <tr
-                    key={t.id}
-                    aria-label={t.name}
-                    data-pending-delete={deletions.has(t.id) || undefined}
-                    className={`border-t ${deletions.has(t.id) ? pendingDeletionClass : variantTrigger === t.id ? "bg-primary/10" : ""}`}
-                  >
-                    <td className="p-2">
-                      <Input
-                        aria-label="条件の名前"
-                        className="w-40"
-                        value={t.name}
-                        required
-                        maxLength={80}
-                        onChange={(e) => patch(t.id, { name: e.target.value })}
-                      />
-                    </td>
-                    <td className="p-2">
-                      <select
-                        aria-label="対象"
-                        className="h-9 rounded-md border bg-background px-2"
-                        value={t.target ?? ""}
-                        onChange={(e) =>
-                          patch(t.id, {
-                            target: e.target.value as TriggerTarget,
-                          })
-                        }
-                      >
-                        {!t.target && (
-                          <option value="" disabled>
-                            旧設定
-                          </option>
-                        )}
-                        {Object.entries(triggerTargets).map(([key, name]) => (
-                          <option key={key} value={key}>
-                            {name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-2">
-                      <select
-                        aria-label="判定する条件"
-                        className="h-9 rounded-md border bg-background"
-                        value={conditionGroup(t.condition, t.stat)}
-                        onChange={(e) => {
-                          const group = e.target.value;
-                          patch(t.id, {
-                            condition:
-                              group === "hp" || group === "mp"
-                                ? `${group}_below`
-                                : group in triggerStatLabels
-                                  ? "stat"
-                                  : group,
-                            ...(group in triggerStatLabels
-                              ? {
-                                  stat: group,
-                                  stat_basis:
-                                    group === "hp" || group === "mp"
-                                      ? "percent"
-                                      : "current",
-                                  comparison: "below",
-                                }
-                              : {}),
-                            ...stateCondition(t),
-                            ...(group === "state" &&
-                            conditionGroup(t.condition, t.stat) !== "state"
-                              ? {
-                                  state_skill_id:
-                                    stateSkills.find((skill) => skill.enabled)
-                                      ?.id ?? null,
-                                }
-                              : {}),
-                            ...(group === "enemy_count"
-                              ? { threshold: Math.min(t.threshold, 20) }
-                              : {}),
-                          });
-                        }}
-                      >
-                        {Object.entries(conditions).map(([id, name]) => (
-                          <option key={id} value={id}>
-                            {name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-2">
-                      <div className="flex items-center gap-2">
-                        {(t.condition === "stat" ||
-                          t.condition.startsWith("hp_") ||
-                          t.condition.startsWith("mp_")) && (
-                          <StatTriggerDetails
-                            trigger={t}
-                            onChange={(value) => patch(t.id, value)}
-                          />
-                        )}
-                        {t.condition === "enemy_count" && (
-                          <>
-                            <Input
-                              aria-label="しきい値"
-                              type="number"
-                              min={1}
-                              max={t.condition === "enemy_count" ? 20 : 100}
-                              value={
-                                Number.isFinite(t.threshold) ? t.threshold : ""
-                              }
-                              required
-                              className="w-24"
-                              onChange={(e) =>
-                                patch(t.id, {
-                                  threshold: e.target.valueAsNumber,
-                                })
-                              }
-                            />
-                            <span>体以上</span>
-                          </>
-                        )}
-                        {conditionGroup(t.condition) === "state" && (
-                          <>
-                            <select
-                              aria-label="判定する状態"
-                              required
-                              className="h-9 rounded-md border bg-background px-2"
-                              value={t.state_skill_id ?? ""}
-                              onChange={(e) =>
-                                patch(t.id, {
-                                  condition: "state",
-                                  ...stateCondition(t),
-                                  state_skill_id: e.target.value || null,
-                                })
-                              }
-                            >
-                              <option value="" disabled>
-                                状態スキルを選択
-                              </option>
-                              {t.state_skill_id &&
-                                !stateSkills.some(
-                                  (skill) => skill.id === t.state_skill_id,
-                                ) && (
-                                  <option value={t.state_skill_id}>
-                                    利用不可：{t.state_skill_id}
-                                  </option>
-                                )}
-                              {stateSkills.map((skill) => (
-                                <option key={skill.id} value={skill.id}>
-                                  {skill.name}
-                                  {!skill.enabled && "（無効）"}
-                                </option>
-                              ))}
-                            </select>
-                            <select
-                              aria-label="状態の有無"
-                              className="h-9 rounded-md border bg-background px-2"
-                              value={String(stateCondition(t).state_present)}
-                              onChange={(e) =>
-                                patch(t.id, {
-                                  condition: "state",
-                                  ...stateCondition(t),
-                                  state_present: e.target.value === "true",
-                                })
-                              }
-                            >
-                              <option value="true">あり</option>
-                              <option value="false">なし</option>
-                            </select>
-                          </>
-                        )}
-                        {t.condition === "always" && (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-2">
-                      <TriggerVariantPanel
-                        trigger={t}
-                        catalog={catalog}
-                        onCatalogChange={(next) => {
-                          setCatalog(next);
-                          setSaved(false);
-                        }}
-                        stateSkills={stateSkills}
-                        onChange={(value) => patch(t.id, value)}
-                        onOpenChange={(open) =>
-                          setVariantTrigger(open ? t.id : undefined)
-                        }
-                      />
-                    </td>
-                    <td className="p-2">
-                      <input
-                        aria-label="有効"
-                        type="checkbox"
-                        checked={t.enabled}
-                        onChange={(e) =>
-                          patch(t.id, { enabled: e.target.checked })
-                        }
-                      />
-                    </td>
-                    <td className="p-2">
-                      <DefinitionDeleteButton
-                        removed={deletions.has(t.id)}
-                        onClick={() => {
-                          setDeletions((current) => {
-                            const next = new Set(current);
-                            if (next.has(t.id)) next.delete(t.id);
-                            else next.add(t.id);
-                            return next;
-                          });
-                          setSaved(false);
-                          setError(undefined);
-                          if (variantTrigger === t.id)
-                            setVariantTrigger(undefined);
-                        }}
-                      />
-                    </td>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </AdminNativeTable>
+                </thead>
+                <tbody>
+                  {catalog?.triggers?.map((t) => (
+                    <SortableRow
+                      id={t.id}
+                      key={t.id}
+                      aria-label={t.name}
+                      data-pending-delete={deletions.has(t.id) || undefined}
+                      className={`border-t ${deletions.has(t.id) ? pendingDeletionClass : variantTrigger === t.id ? "bg-primary/10" : ""}`}
+                    >
+                      <td className="p-2">
+                        <RowOrder />
+                      </td>
+                      <td className="p-2">
+                        <Input
+                          aria-label="条件の名前"
+                          className="w-40"
+                          value={t.name}
+                          required
+                          maxLength={80}
+                          onChange={(e) =>
+                            patch(t.id, { name: e.target.value })
+                          }
+                        />
+                      </td>
+                      <td className="p-2">
+                        <select
+                          aria-label="対象"
+                          className="h-9 rounded-md border bg-background px-2"
+                          value={t.target ?? ""}
+                          onChange={(e) =>
+                            patch(t.id, {
+                              target: e.target.value as TriggerTarget,
+                            })
+                          }
+                        >
+                          {!t.target && (
+                            <option value="" disabled>
+                              旧設定
+                            </option>
+                          )}
+                          {Object.entries(triggerTargets).map(([key, name]) => (
+                            <option key={key} value={key}>
+                              {name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-2">
+                        <select
+                          aria-label="判定する条件"
+                          className="h-9 rounded-md border bg-background"
+                          value={conditionGroup(t.condition, t.stat)}
+                          onChange={(e) => {
+                            const group = e.target.value;
+                            patch(t.id, {
+                              condition:
+                                group === "hp" || group === "mp"
+                                  ? `${group}_below`
+                                  : group in triggerStatLabels
+                                    ? "stat"
+                                    : group,
+                              ...(group in triggerStatLabels
+                                ? {
+                                    stat: group,
+                                    stat_basis:
+                                      group === "hp" || group === "mp"
+                                        ? "percent"
+                                        : "current",
+                                    comparison: "below",
+                                  }
+                                : {}),
+                              ...stateCondition(t),
+                              ...(group === "state" &&
+                              conditionGroup(t.condition, t.stat) !== "state"
+                                ? {
+                                    state_skill_id:
+                                      stateSkills.find((skill) => skill.enabled)
+                                        ?.id ?? null,
+                                  }
+                                : {}),
+                              ...(group === "enemy_count"
+                                ? { threshold: Math.min(t.threshold, 20) }
+                                : {}),
+                            });
+                          }}
+                        >
+                          {Object.entries(conditions).map(([id, name]) => (
+                            <option key={id} value={id}>
+                              {name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-2">
+                        <div className="flex items-center gap-2">
+                          {(t.condition === "stat" ||
+                            t.condition.startsWith("hp_") ||
+                            t.condition.startsWith("mp_")) && (
+                            <StatTriggerDetails
+                              trigger={t}
+                              onChange={(value) => patch(t.id, value)}
+                            />
+                          )}
+                          {t.condition === "enemy_count" && (
+                            <>
+                              <Input
+                                aria-label="しきい値"
+                                type="number"
+                                min={1}
+                                max={t.condition === "enemy_count" ? 20 : 100}
+                                value={
+                                  Number.isFinite(t.threshold)
+                                    ? t.threshold
+                                    : ""
+                                }
+                                required
+                                className="w-24"
+                                onChange={(e) =>
+                                  patch(t.id, {
+                                    threshold: e.target.valueAsNumber,
+                                  })
+                                }
+                              />
+                              <span>体以上</span>
+                            </>
+                          )}
+                          {conditionGroup(t.condition) === "state" && (
+                            <>
+                              <select
+                                aria-label="判定する状態"
+                                required
+                                className="h-9 rounded-md border bg-background px-2"
+                                value={t.state_skill_id ?? ""}
+                                onChange={(e) =>
+                                  patch(t.id, {
+                                    condition: "state",
+                                    ...stateCondition(t),
+                                    state_skill_id: e.target.value || null,
+                                  })
+                                }
+                              >
+                                <option value="" disabled>
+                                  状態スキルを選択
+                                </option>
+                                {t.state_skill_id &&
+                                  !stateSkills.some(
+                                    (skill) => skill.id === t.state_skill_id,
+                                  ) && (
+                                    <option value={t.state_skill_id}>
+                                      利用不可：{t.state_skill_id}
+                                    </option>
+                                  )}
+                                {stateSkills.map((skill) => (
+                                  <option key={skill.id} value={skill.id}>
+                                    {skill.name}
+                                    {!skill.enabled && "（無効）"}
+                                  </option>
+                                ))}
+                              </select>
+                              <select
+                                aria-label="状態の有無"
+                                className="h-9 rounded-md border bg-background px-2"
+                                value={String(stateCondition(t).state_present)}
+                                onChange={(e) =>
+                                  patch(t.id, {
+                                    condition: "state",
+                                    ...stateCondition(t),
+                                    state_present: e.target.value === "true",
+                                  })
+                                }
+                              >
+                                <option value="true">あり</option>
+                                <option value="false">なし</option>
+                              </select>
+                            </>
+                          )}
+                          {t.condition === "always" && (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-2">
+                        <TriggerVariantPanel
+                          trigger={t}
+                          catalog={catalog}
+                          onCatalogChange={(next) => {
+                            setCatalog(next);
+                            setSaved(false);
+                          }}
+                          stateSkills={stateSkills}
+                          onChange={(value) => patch(t.id, value)}
+                          onOpenChange={(open) =>
+                            setVariantTrigger(open ? t.id : undefined)
+                          }
+                        />
+                      </td>
+                      <td className="p-2">
+                        <input
+                          aria-label="有効"
+                          type="checkbox"
+                          checked={t.enabled}
+                          onChange={(e) =>
+                            patch(t.id, { enabled: e.target.checked })
+                          }
+                        />
+                      </td>
+                      <td className="p-2">
+                        <DefinitionDeleteButton
+                          removed={deletions.has(t.id)}
+                          onClick={() => {
+                            setDeletions((current) => {
+                              const next = new Set(current);
+                              if (next.has(t.id)) next.delete(t.id);
+                              else next.add(t.id);
+                              return next;
+                            });
+                            setSaved(false);
+                            setError(undefined);
+                            if (variantTrigger === t.id)
+                              setVariantTrigger(undefined);
+                          }}
+                        />
+                      </td>
+                    </SortableRow>
+                  ))}
+                </tbody>
+              </AdminNativeTable>
+            </SortableRows>
           </AdminTableFrame>
           {deletions.size > 0 && (
             <output className="block mt-2 text-sm text-muted-foreground">
