@@ -6,7 +6,24 @@ import {
   triggerAvailable,
 } from "./gambitShop";
 
-it("distinguishes trigger goods from identically named item IDs", () => {
+const catalog = {
+  ...sampleCatalog,
+  triggers: [
+    {
+      id: "hp",
+      name: "HP",
+      condition: "hp_below" as const,
+      threshold: 30,
+      enabled: true,
+      variants: [
+        { id: "half", name: "半分", value: 50 },
+        { id: "low", name: "瀕死", value: 10 },
+      ],
+    },
+  ],
+};
+
+it("distinguishes trigger products from item IDs", () => {
   expect(shopProductId({ item_id: "same", price: 0, enabled: true })).toBe(
     "same",
   );
@@ -14,46 +31,27 @@ it("distinguishes trigger goods from identically named item IDs", () => {
     "gambit:same",
   );
 });
-
-it("prices variants separately and inherits base access only when not individually sold", () => {
-  const catalog = {
-    ...sampleCatalog,
-    shop: [
-      { trigger_id: "hp", price: 10, enabled: true },
-      {
-        trigger_id: "hp",
-        trigger_variant_id: "half",
-        price: 20,
-        enabled: true,
-      },
-    ],
-  };
-  expect(shopProductId(catalog.shop[1])).toBe("gambit:hp:half");
+it("requires exact ownership independent of shop listings", () => {
+  expect(triggerAvailable(catalog, [], "hp")).toBe(false);
+  expect(triggerAvailable(catalog, ["hp"], "hp")).toBe(true);
   expect(triggerAvailable(catalog, ["hp"], "hp", "half")).toBe(false);
   expect(triggerAvailable(catalog, ["hp:half"], "hp", "half")).toBe(true);
   expect(triggerAvailable(catalog, ["hp:half"], "hp")).toBe(false);
-  expect(triggerAvailable(catalog, [], "hp", "unsold")).toBe(false);
-  expect(triggerAvailable(catalog, ["hp"], "hp", "unsold")).toBe(true);
+  expect(triggerAvailable(catalog, ["hp:half"], "hp", "low")).toBe(false);
   expect(
-    firstAvailableTriggerVariant(catalog, ["hp:half"], {
-      id: "hp",
-      name: "HP",
-      enabled: true,
-      condition: "hp_below",
-      threshold: 30,
-      variants: [{ id: "half", name: "半分", value: 50 }],
-    }),
+    firstAvailableTriggerVariant(catalog, ["hp:half"], catalog.triggers[0]),
   ).toBe("half");
 });
-
-it("requires purchase for sale-configured triggers while retaining existing free triggers", () => {
-  const catalog = {
-    ...sampleCatalog,
-    shop: [{ trigger_id: "paid", price: 10, enabled: true }],
-  };
-  expect(triggerAvailable(catalog, [], "paid")).toBe(false);
-  expect(triggerAvailable(catalog, ["paid"], "paid")).toBe(true);
-  expect(triggerAvailable(catalog, [], "free")).toBe(true);
-  catalog.shop[0].enabled = false;
-  expect(triggerAvailable(catalog, [], "paid")).toBe(false);
+it("does not grant missing or disabled definitions even when owned", () => {
+  expect(triggerAvailable(catalog, ["missing"], "missing")).toBe(false);
+  expect(triggerAvailable(catalog, ["hp:missing"], "hp", "missing")).toBe(
+    false,
+  );
+  expect(
+    triggerAvailable(
+      { ...catalog, triggers: [{ ...catalog.triggers[0], enabled: false }] },
+      ["hp"],
+      "hp",
+    ),
+  ).toBe(false);
 });

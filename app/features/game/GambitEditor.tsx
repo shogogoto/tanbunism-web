@@ -1,33 +1,24 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { Button } from "~/shared/components/ui/button";
-import { Input } from "~/shared/components/ui/input";
-import GameIcon from "./GameIcon";
 import { gameRequest } from "./battle";
 import { type GambitRule, requestGameCatalog } from "./catalog";
 import type { GameSave } from "./domain";
-import { firstAvailableTriggerVariant, triggerAvailable } from "./gambitShop";
+import { triggerAvailable, triggerUnlockId } from "./gambitShop";
 import type { GameState } from "./state";
-import { hasThreshold, stateCondition } from "./triggerConditions";
 import {
   triggerDescription,
   triggerTargets,
   triggerVariant,
 } from "./triggerVariants";
 
-const selectClass = "h-9 min-w-0 rounded-md border bg-background px-2 text-sm";
-const conditionLabels = {
-  always: "いつでも",
-  hp_below: "自分のHPが未満（%）",
-  hp_above: "自分のHPが以上（%）",
-  hp_equal: "自分のHPが同じ（%）",
-  mp_below: "自分のMPが未満（%）",
-  mp_above: "自分のMPが以上（%）",
-  mp_equal: "自分のMPが同じ（%）",
-  enemy_count: "敵の数が以上",
-  stat: "ステータス",
-  state: "自分の状態",
-};
+type Selection = Pick<
+  GambitRule,
+  "enabled" | "action" | "definition_id" | "trigger_id" | "trigger_variant_id"
+>;
+const selectClass =
+  "h-9 min-w-0 w-full rounded-md border bg-background px-2 text-sm";
+
 export default function GambitEditor({
   save,
   revision,
@@ -53,30 +44,31 @@ export default function GambitEditor({
   );
   const slots = capacity?.slots ?? 1;
   const unlocked = save.economy?.unlocked_triggers ?? [];
-  const availableTriggers = catalog?.triggers?.filter(
-    (t) => firstAvailableTriggerVariant(catalog, unlocked, t) !== undefined,
+  const triggers = (catalog?.triggers ?? []).flatMap((root) =>
+    [null, ...(root.variants ?? []).map((variant) => variant.id)].flatMap(
+      (variantId) => {
+        if (
+          !catalog ||
+          !triggerAvailable(catalog, unlocked, root.id, variantId)
+        )
+          return [];
+        const trigger = triggerVariant(root, variantId);
+        if (!trigger) return [];
+        const variant = root.variants?.find((v) => v.id === variantId);
+        return [
+          {
+            key: triggerUnlockId(root.id, variantId),
+            id: root.id,
+            variantId,
+            name: variant
+              ? `${root.name}（${variant.resolved_name ?? variant.name}）`
+              : root.name,
+            trigger,
+          },
+        ];
+      },
+    ),
   );
-  const triggerOptions =
-    catalog?.triggers?.map((t) => ({
-      id: t.id,
-      name: t.name,
-      disabled:
-        firstAvailableTriggerVariant(catalog, unlocked, t) === undefined,
-    })) ??
-    Object.entries(conditionLabels).map(([id, name]) => ({
-      id,
-      name,
-      disabled: false,
-    }));
-  const [rules, setRules] = useState<(GambitRule & { rowId: string })[]>(() =>
-    (save.gambits ?? []).map((rule) => ({
-      ...rule,
-      rowId: crypto.randomUUID(),
-    })),
-  );
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string>();
-  const [saved, setSaved] = useState(false);
   const combatSkills =
     catalog?.skills.filter(
       (s) =>
@@ -91,44 +83,126 @@ export default function GambitEditor({
           "ailment",
         ].includes(s.effect),
     ) ?? [];
-  const skills = combatSkills.filter((skill) =>
-    catalog?.player_skills?.some((u) => u.enabled && u.skill_id === skill.id),
+  const actionGroups: {
+    label: string;
+    options: {
+      key: string;
+      action: Selection["action"];
+      id: string;
+      name: string;
+      icon: string;
+    }[];
+  }[] = [
+    {
+      label: "習得スキル",
+      options: combatSkills
+        .filter((s) =>
+          catalog?.player_skills?.some((u) => u.enabled && u.skill_id === s.id),
+        )
+        .map((s) => ({
+          key: `skill:${s.id}`,
+          action: "skill" as const,
+          id: s.id,
+          name: `${s.name} · MP ${s.mp_cost}`,
+          icon: s.icon,
+        })),
+    },
+    {
+      label: "所持アイテム",
+      options: (catalog?.items ?? []).flatMap((item) => {
+        const skill = combatSkills.find((s) => s.id === item.skill_id);
+        const quantity = save.economy?.inventory[item.id] ?? 0;
+        return item.enabled &&
+          item.kind === "consumable" &&
+          skill &&
+          quantity > 0
+          ? [
+              {
+                key: `item:${item.id}`,
+                action: "item" as const,
+                id: item.id,
+                name: `${item.name}：${skill.name} · 所持 ${quantity}`,
+                icon: item.icon,
+              },
+            ]
+          : [];
+      }),
+    },
+    {
+      label: "装備専門分野",
+      options: (save.specialties ?? []).flatMap((specialty) => {
+        const skill = combatSkills.find((s) => s.id === specialty.skill_id);
+        return specialty.equipped &&
+          skill &&
+          catalog?.specialty_skills?.some(
+            (u) => u.enabled && u.skill_id === skill.id,
+          )
+          ? [
+              {
+                key: `specialty:${specialty.id}`,
+                action: "specialty" as const,
+                id: specialty.id,
+                name: `${specialty.name}：${skill.name}`,
+                icon: skill.icon,
+              },
+            ]
+          : [];
+      }),
+    },
+  ];
+  const actions = actionGroups.flatMap((group) => group.options);
+  const [rules, setRules] = useState<(Selection & { rowId: string })[]>(() =>
+    (save.gambits ?? []).map((rule) => ({
+      rowId: crypto.randomUUID(),
+      enabled: rule.enabled,
+      trigger_id: rule.trigger_id,
+      trigger_variant_id: rule.trigger_variant_id ?? null,
+      action: rule.action,
+      definition_id: rule.definition_id,
+    })),
   );
-  const specialties = (save.specialties ?? [])
-    .filter((s) => s.equipped)
-    .map((s) => ({
-      ...s,
-      icon:
-        catalog?.skills.find((skill) => skill.id === s.skill_id)?.icon ??
-        "book",
-    }));
-  const items =
-    catalog?.items.filter(
-      (i) =>
-        i.enabled &&
-        i.kind === "consumable" &&
-        combatSkills.some((s) => s.id === i.skill_id),
-    ) ?? [];
-  const patch = (index: number, value: Partial<GambitRule>) => {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string>();
+  const [saved, setSaved] = useState(false);
+  const valid = rules.every(
+    (rule) =>
+      triggers.some(
+        (t) =>
+          t.id === rule.trigger_id &&
+          t.variantId === (rule.trigger_variant_id ?? null),
+      ) &&
+      actions.some(
+        (a) => a.action === rule.action && a.id === rule.definition_id,
+      ),
+  );
+  function patch(index: number, value: Partial<Selection>) {
     setRules((current) =>
-      current.map((r, i) => (i === index ? { ...r, ...value } : r)),
+      current.map((rule, i) => (i === index ? { ...rule, ...value } : rule)),
     );
     setSaved(false);
-  };
-  const reorder = (index: number, step: number) => {
+  }
+  function reorder(index: number, step: number) {
     setRules((current) => {
       const next = [...current];
       [next[index], next[index + step]] = [next[index + step], next[index]];
       return next;
     });
     setSaved(false);
-  };
+  }
   return (
     <form
       className="space-y-4"
       onSubmit={async (event) => {
         event.preventDefault();
-        if (saving || disabled || !capacity || rules.length > slots) return;
+        if (
+          saving ||
+          disabled ||
+          !catalog ||
+          !capacity ||
+          rules.length > slots ||
+          !valid
+        )
+          return;
         setSaving(true);
         setSaved(false);
         setError(undefined);
@@ -165,29 +239,26 @@ export default function GambitEditor({
         </p>
       )}
       <p className="text-sm text-muted-foreground">
-        ターン終了時に上から判定し、実行できる最初の1件を自動で使います。
+        上から判定し、実行できる最初の1件を自動で使います。
       </p>
       {(error || loadError || capacityError) && (
         <p role="alert" className="text-destructive">
           {error ?? loadError?.message ?? capacityError?.message}
         </p>
       )}
+      {catalog && !triggers.length && (
+        <p className="text-sm text-muted-foreground">
+          トリガーを入手すると設定できます。ショップで購入できます。
+        </p>
+      )}
       <fieldset disabled={disabled || saving || !catalog} className="space-y-3">
         {rules.map((rule, index) => {
-          const options =
-            rule.action === "specialty"
-              ? specialties
-              : rule.action === "skill"
-                ? skills
-                : items;
-          const selected = options.find((o) => o.id === rule.definition_id);
-          const triggerRoot = catalog?.triggers?.find(
-            (t) => t.id === rule.trigger_id,
-          );
-          const trigger = triggerRoot
-            ? triggerVariant(triggerRoot, rule.trigger_variant_id)
-            : undefined;
-          const fixedTarget = trigger?.target;
+          const triggerKey = rule.trigger_id
+            ? triggerUnlockId(rule.trigger_id, rule.trigger_variant_id)
+            : "";
+          const trigger = triggers.find((t) => t.key === triggerKey);
+          const actionKey = `${rule.action}:${rule.definition_id}`;
+          const selected = actions.find((a) => a.key === actionKey);
           return (
             <section
               key={rule.rowId}
@@ -246,250 +317,95 @@ export default function GambitEditor({
                   削除
                 </Button>
               </div>
-              <div className="flex gap-2">
-                <label className="grid min-w-0 flex-1 gap-1 text-sm">
-                  条件
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid min-w-0 gap-1 text-sm">
+                  トリガー
                   <select
+                    required
                     className={selectClass}
-                    value={
-                      rule.trigger_id ??
-                      (catalog?.shop?.some((row) => "trigger_id" in row)
-                        ? ""
-                        : rule.condition)
-                    }
-                    onChange={(e) =>
-                      patch(index, {
-                        condition:
-                          catalog?.triggers?.find(
-                            (t) => t.id === e.target.value,
-                          )?.condition ??
-                          (e.target.value as GambitRule["condition"]),
-                        trigger_id:
-                          catalog?.triggers?.find(
-                            (t) => t.id === e.target.value,
-                          )?.id ?? null,
-                        trigger_variant_id: (() => {
-                          const selected = catalog?.triggers?.find(
-                            (t) => t.id === e.target.value,
-                          );
-                          return selected && catalog
-                            ? firstAvailableTriggerVariant(
-                                catalog,
-                                unlocked,
-                                selected,
-                              )
-                            : null;
-                        })(),
-                        target:
-                          catalog?.triggers?.find(
-                            (t) => t.id === e.target.value,
-                          )?.target ?? rule.target,
-                        threshold:
-                          catalog?.triggers?.find(
-                            (t) => t.id === e.target.value,
-                          )?.threshold ?? rule.threshold,
-                        ...stateCondition(
-                          catalog?.triggers?.find(
-                            (t) => t.id === e.target.value,
-                          ) ?? {
-                            condition: e.target
-                              .value as GambitRule["condition"],
-                          },
-                        ),
-                      })
-                    }
+                    value={triggerKey}
+                    onChange={(e) => {
+                      const next = triggers.find(
+                        (t) => t.key === e.target.value,
+                      );
+                      if (next)
+                        patch(index, {
+                          trigger_id: next.id,
+                          trigger_variant_id: next.variantId,
+                        });
+                    }}
                   >
-                    {catalog?.triggers && (
-                      <option value="" disabled>
-                        トリガーを選択
+                    <option value="" disabled>
+                      トリガーを選択
+                    </option>
+                    {!trigger && triggerKey && (
+                      <option disabled value={triggerKey}>
+                        利用不可：{triggerKey}
                       </option>
                     )}
-                    {triggerOptions.map((option) => (
-                      <option
-                        key={option.id}
-                        value={option.id}
-                        disabled={option.disabled}
-                      >
-                        {option.name}
-                        {option.disabled && "（未解放・無効）"}
+                    {triggers.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.name}
                       </option>
                     ))}
                   </select>
                 </label>
-                {(!!triggerRoot?.variants?.length ||
-                  !!rule.trigger_variant_id) && (
-                  <label className="grid min-w-0 flex-1 gap-1 text-sm">
-                    変型
-                    <select
-                      className={selectClass}
-                      value={rule.trigger_variant_id ?? ""}
-                      onChange={(e) =>
+                <label className="grid min-w-0 gap-1 text-sm">
+                  スキル
+                  <select
+                    required
+                    className={selectClass}
+                    value={actionKey}
+                    onChange={(e) => {
+                      const next = actions.find(
+                        (a) => a.key === e.target.value,
+                      );
+                      if (next)
                         patch(index, {
-                          trigger_variant_id: e.target.value || null,
-                        })
-                      }
-                    >
-                      <option
-                        value=""
-                        disabled={
-                          !!catalog &&
-                          !!triggerRoot &&
-                          !triggerAvailable(catalog, unlocked, triggerRoot.id)
-                        }
-                      >
-                        基本
+                          action: next.action,
+                          definition_id: next.id,
+                        });
+                    }}
+                  >
+                    <option value="" disabled>
+                      スキルを選択
+                    </option>
+                    {!selected && (
+                      <option disabled value={actionKey}>
+                        利用不可：{rule.definition_id}
                       </option>
-                      {rule.trigger_variant_id && !trigger && (
-                        <option value={rule.trigger_variant_id}>
-                          利用不可
-                        </option>
-                      )}
-                      {triggerRoot?.variants?.map((v) => (
-                        <option
-                          key={v.id}
-                          value={v.id}
-                          disabled={
-                            !!catalog &&
-                            !triggerAvailable(
-                              catalog,
-                              unlocked,
-                              triggerRoot.id,
-                              v.id,
-                            )
-                          }
-                        >
-                          {v.resolved_name ?? v.name}
-                          {!!catalog &&
-                            !triggerAvailable(
-                              catalog,
-                              unlocked,
-                              triggerRoot.id,
-                              v.id,
-                            ) &&
-                            "（未解放）"}
-                        </option>
+                    )}
+                    {actionGroups
+                      .filter((group) => group.options.length)
+                      .map((group) => (
+                        <optgroup key={group.label} label={group.label}>
+                          {group.options.map((a) => (
+                            <option key={a.key} value={a.key}>
+                              {a.name}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
-                    </select>
-                  </label>
-                )}
-                {!fixedTarget &&
-                  !rule.trigger_variant_id &&
-                  hasThreshold(
-                    catalog?.triggers?.find((t) => t.id === rule.trigger_id)
-                      ?.condition ?? rule.condition,
-                  ) && (
-                    <label
-                      htmlFor={`${rule.rowId}-threshold`}
-                      className="w-20 text-sm"
-                    >
-                      値
-                      <Input
-                        id={`${rule.rowId}-threshold`}
-                        type="number"
-                        required
-                        min={1}
-                        max={rule.condition === "enemy_count" ? 20 : 100}
-                        value={
-                          Number.isFinite(rule.threshold) ? rule.threshold : ""
-                        }
-                        onChange={(e) =>
-                          patch(index, { threshold: e.target.valueAsNumber })
-                        }
-                      />
-                    </label>
-                  )}
+                  </select>
+                </label>
               </div>
-              {trigger && (fixedTarget || rule.trigger_variant_id) && (
+              {trigger && (
                 <p
                   className="text-sm text-muted-foreground"
                   aria-label="条件の詳細"
                 >
-                  {triggerDescription(trigger)}
-                  {trigger.condition === "state" &&
-                    ` · ${catalog?.skills.find((s) => s.id === trigger.state_skill_id)?.name ?? "状態"} ${trigger.state_present === false ? "なし" : "あり"}`}
+                  {trigger.trigger.target &&
+                    `${triggerTargets[trigger.trigger.target]} · `}
+                  {triggerDescription(trigger.trigger)}
+                  {trigger.trigger.condition === "state" &&
+                    ` · ${catalog?.skills.find((s) => s.id === trigger.trigger.state_skill_id)?.name ?? "状態"} ${trigger.trigger.state_present === false ? "なし" : "あり"}`}
                 </p>
               )}
-              <div className="flex items-end gap-2">
-                <label className="grid gap-1 text-sm">
-                  対象
-                  <select
-                    className={selectClass}
-                    disabled={!!fixedTarget}
-                    value={fixedTarget ?? rule.target ?? ""}
-                    onChange={(e) =>
-                      patch(index, {
-                        target: e.target.value
-                          ? (e.target.value as GambitRule["target"])
-                          : null,
-                      })
-                    }
-                  >
-                    <option value="">自動（既存設定）</option>
-                    {Object.entries(triggerTargets).map(([key, name]) => (
-                      <option key={key} value={key}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-1 text-sm">
-                  行動
-                  <select
-                    className={selectClass}
-                    value={rule.action}
-                    onChange={(e) => {
-                      const action = e.target.value as GambitRule["action"];
-                      patch(index, {
-                        action,
-                        definition_id:
-                          (action === "specialty"
-                            ? specialties
-                            : action === "skill"
-                              ? skills
-                              : items)[0]?.id ?? "",
-                      });
-                    }}
-                  >
-                    <option value="skill">スキル</option>
-                    <option value="item">アイテム</option>
-                    <option value="specialty">専門分野</option>
-                  </select>
-                </label>
-                <label className="grid min-w-0 flex-1 gap-1 text-sm">
-                  使用するもの
-                  <select
-                    className={selectClass}
-                    value={rule.definition_id}
-                    required
-                    onChange={(e) =>
-                      patch(index, { definition_id: e.target.value })
-                    }
-                  >
-                    <option value="" disabled>
-                      選択
-                    </option>
-                    {!selected && rule.definition_id && (
-                      <option value={rule.definition_id}>
-                        利用不可：{rule.definition_id}
-                      </option>
-                    )}
-                    {options.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.name}
-                        {"mp_cost" in option
-                          ? ` · MP ${option.mp_cost}`
-                          : ` · 所持 ${save.economy?.inventory[option.id] ?? 0}`}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {selected && (
-                  <GameIcon
-                    icon={selected.icon}
-                    className="mb-2 size-6 shrink-0"
-                  />
-                )}
-              </div>
+              {catalog && (!trigger || !selected) && (
+                <p className="text-sm text-destructive">
+                  利用可能なトリガーとスキルを選び直すか、この行を削除してください。
+                </p>
+              )}
             </section>
           );
         })}
@@ -499,36 +415,22 @@ export default function GambitEditor({
           disabled={
             !capacity ||
             rules.length >= slots ||
-            (availableTriggers !== undefined && !availableTriggers.length) ||
-            (!skills.length && !items.length)
+            !triggers.length ||
+            !actions.length
           }
           onClick={() => {
-            const initial = availableTriggers?.[0];
+            const trigger = triggers[0];
+            const action = actions[0];
+            if (!trigger || !action) return;
             setRules((current) => [
               ...current,
               {
                 rowId: crypto.randomUUID(),
                 enabled: true,
-                condition: "always",
-                threshold: 30,
-                action: skills.length ? "skill" : "item",
-                definition_id: (skills[0] ?? items[0]).id,
-                ...(initial
-                  ? {
-                      trigger_id: initial.id,
-                      trigger_variant_id: catalog
-                        ? firstAvailableTriggerVariant(
-                            catalog,
-                            unlocked,
-                            initial,
-                          )
-                        : null,
-                      condition: initial.condition,
-                      threshold: initial.threshold,
-                      target: initial.target,
-                      ...stateCondition(initial),
-                    }
-                  : {}),
+                trigger_id: trigger.id,
+                trigger_variant_id: trigger.variantId,
+                action: action.action,
+                definition_id: action.id,
               },
             ]);
             setSaved(false);
@@ -550,7 +452,12 @@ export default function GambitEditor({
         <Button
           type="submit"
           disabled={
-            disabled || saving || !catalog || !capacity || rules.length > slots
+            disabled ||
+            saving ||
+            !catalog ||
+            !capacity ||
+            rules.length > slots ||
+            !valid
           }
         >
           {saving ? "保存中…" : "保存"}

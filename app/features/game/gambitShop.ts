@@ -16,17 +16,12 @@ export function triggerAvailable(
   id: string,
   variantId?: string | null,
 ): boolean {
-  if (unlocked.includes(triggerUnlockId(id, variantId))) return true;
-  if (
-    catalog.shop?.some(
-      (row) =>
-        "trigger_id" in row &&
-        row.trigger_id === id &&
-        (row.trigger_variant_id ?? null) === (variantId ?? null),
-    )
-  )
-    return false;
-  return !variantId || triggerAvailable(catalog, unlocked, id);
+  const trigger = catalog.triggers?.find((t) => t.id === id && t.enabled);
+  return (
+    !!trigger &&
+    (!variantId || !!trigger.variants?.some((v) => v.id === variantId)) &&
+    unlocked.includes(triggerUnlockId(id, variantId))
+  );
 }
 
 export function firstAvailableTriggerVariant(

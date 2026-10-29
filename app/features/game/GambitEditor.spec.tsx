@@ -6,18 +6,51 @@ import { SWRConfig } from "swr";
 import { vi } from "vitest";
 import GambitEditor from "./GambitEditor";
 import { sampleCatalog } from "./catalog.fixtures";
-import { newSave } from "./domain";
+import { type GameSave, newSave } from "./domain";
 
+const catalog = {
+  ...sampleCatalog,
+  triggers: [
+    {
+      id: "hp",
+      name: "HP条件",
+      condition: "hp_below",
+      threshold: 30,
+      target: "ally",
+      enabled: true,
+      variant_field: "threshold",
+      variants: [
+        { id: "half", name: "半分", value: 50 },
+        { id: "low", name: "瀕死", value: 10 },
+      ],
+    },
+    {
+      id: "always",
+      name: "敵：いつでも",
+      condition: "always",
+      threshold: 30,
+      target: "enemy",
+      enabled: true,
+    },
+    {
+      id: "unsold",
+      name: "未入手の条件",
+      condition: "always",
+      threshold: 30,
+      target: "enemy",
+      enabled: true,
+    },
+  ],
+};
 const saved = vi.fn();
 const onSaved = vi.fn();
 const server = setupServer(
   http.get("*/game/gambits/capacity", () =>
     HttpResponse.json({ slots: 2, next_level: 10 }),
   ),
-  http.get("*/game/catalog", () => HttpResponse.json(sampleCatalog)),
+  http.get("*/game/catalog", () => HttpResponse.json(catalog)),
   http.put("*/game/gambits", async ({ request }) => {
-    const body = await request.json();
-    saved(body);
+    saved(await request.json());
     return HttpResponse.json({ revision: 5, save: newSave() });
   }),
 );
@@ -27,23 +60,37 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 afterAll(() => server.close());
-function setup(disabled = false) {
+function ownedSave(): GameSave & { economy: NonNullable<GameSave["economy"]> } {
+  const save = newSave();
+  return {
+    ...save,
+    economy: {
+      gold: 0,
+      inventory: { healing_potion: 1 },
+      weapon: null,
+      weapon_attack: 0,
+      ...save.economy,
+      unlocked_triggers: ["hp", "hp:half", "always"],
+    },
+    gambits: [
+      {
+        enabled: true,
+        condition: "hp_below",
+        threshold: 30,
+        trigger_id: "hp",
+        trigger_variant_id: null,
+        action: "skill",
+        definition_id: "heal",
+      },
+    ],
+  };
+}
+function setup(save = ownedSave(), disabled = false) {
   render(
     <SWRConfig value={{ provider: () => new Map() }}>
       <GambitEditor
         revision={4}
-        save={{
-          ...newSave(),
-          gambits: [
-            {
-              enabled: true,
-              condition: "hp_below",
-              threshold: 30,
-              action: "skill",
-              definition_id: "heal",
-            },
-          ],
-        }}
+        save={save}
         disabled={disabled}
         onSaved={onSaved}
       />
@@ -52,200 +99,27 @@ function setup(disabled = false) {
   return userEvent.setup();
 }
 
-it("saves the target on a gambit rather than an effect template", async () => {
+it("only combines owned triggers and skills without editable condition details", async () => {
   const user = setup();
+  const trigger = await screen.findByRole("combobox", { name: "トリガー" });
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "保存" })).toBeEnabled(),
   );
-  const row = screen.getByRole("region", { name: "ガンビット 1" });
-  await user.selectOptions(within(row).getByLabelText("対象"), "enemy");
-  await user.click(screen.getByRole("button", { name: "保存" }));
-  await waitFor(() => expect(saved).toHaveBeenCalled());
-  expect(saved.mock.calls[0][0].rules[0]).toMatchObject({
-    definition_id: "heal",
-    target: "enemy",
-  });
-});
-
-it("does not offer unpurchased shop triggers as selectable gambits", async () => {
-  server.use(
-    http.get("*/game/catalog", () =>
-      HttpResponse.json({
-        ...sampleCatalog,
-        triggers: [
-          {
-            id: "paid",
-            name: "HP30%以下の味方",
-            condition: "hp_below",
-            threshold: 30,
-            target: "ally",
-            enabled: true,
-          },
-        ],
-        shop: [{ trigger_id: "paid", price: 120, enabled: true }],
-      }),
-    ),
+  expect(
+    within(trigger)
+      .getAllByRole("option")
+      .map((o) => o.textContent),
+  ).toEqual(["トリガーを選択", "HP条件", "HP条件（半分）", "敵：いつでも"]);
+  expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("対象")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("行動")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("変型")).not.toBeInTheDocument();
+  await user.selectOptions(trigger, "hp:half");
+  expect(screen.getByLabelText("条件の詳細")).toHaveTextContent("50");
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "スキル" }),
+    "skill:fire",
   );
-  setup();
-  const option = await screen.findByRole("option", {
-    name: "HP30%以下の味方（未解放・無効）",
-  });
-  expect(option).toBeDisabled();
-  expect(screen.getByRole("button", { name: "条件を追加" })).toBeDisabled();
-});
-
-it("displays an admin-defined stat rank as the locked target condition", async () => {
-  server.use(
-    http.get("*/game/catalog", () =>
-      HttpResponse.json({
-        ...sampleCatalog,
-        triggers: [
-          {
-            id: "guard",
-            name: "守が低い敵",
-            condition: "stat",
-            stat: "defense",
-            stat_basis: "current",
-            comparison: "lowest",
-            target: "enemy",
-            threshold: 30,
-            enabled: true,
-          },
-        ],
-      }),
-    ),
-  );
-  const user = setup();
-  await screen.findByRole("option", { name: "守が低い敵" });
-  const row = within(screen.getByRole("region", { name: "ガンビット 1" }));
-  await user.selectOptions(row.getByLabelText("条件"), "guard");
-  expect(row.getByLabelText("条件の詳細")).toHaveTextContent(
-    "守 · 現在値 · 低い順",
-  );
-  expect(row.getByLabelText("対象")).toHaveValue("enemy");
-});
-
-it("selects the admin trigger variant and locks its shared condition/action target", async () => {
-  server.use(
-    http.get("*/game/catalog", () =>
-      HttpResponse.json({
-        ...sampleCatalog,
-        triggers: [
-          {
-            id: "hp",
-            name: "HP条件",
-            condition: "hp_below",
-            target: "ally",
-            threshold: 30,
-            enabled: true,
-            variant_field: "target",
-            variants: [{ id: "foe", name: "敵", value: "enemy" }],
-          },
-        ],
-      }),
-    ),
-  );
-  const user = setup();
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "保存" })).toBeEnabled(),
-  );
-  const row = within(screen.getByRole("region", { name: "ガンビット 1" }));
-  await user.selectOptions(row.getByLabelText("条件"), "hp");
-  expect(row.getByLabelText("対象")).toBeDisabled();
-  expect(row.getByLabelText("対象")).toHaveValue("ally");
-  expect(row.queryByRole("spinbutton", { name: "値" })).not.toBeInTheDocument();
-  await user.selectOptions(row.getByLabelText("変型"), "foe");
-  expect(row.getByLabelText("対象")).toHaveValue("enemy");
-  await user.click(screen.getByRole("button", { name: "保存" }));
-  await waitFor(() => expect(saved).toHaveBeenCalled());
-  expect(saved.mock.calls[0][0].rules[0]).toMatchObject({
-    trigger_id: "hp",
-    trigger_variant_id: "foe",
-  });
-});
-
-it("allows an owned variant while the base trigger remains locked", async () => {
-  server.use(
-    http.get("*/game/catalog", () =>
-      HttpResponse.json({
-        ...sampleCatalog,
-        triggers: [
-          {
-            id: "hp",
-            name: "HP条件",
-            condition: "hp_below",
-            threshold: 30,
-            target: "ally",
-            enabled: true,
-            variant_field: "threshold",
-            variants: [
-              { id: "half", name: "半分", value: 50 },
-              { id: "low", name: "低HP", value: 10 },
-            ],
-          },
-        ],
-        shop: [
-          { trigger_id: "hp", price: 10, enabled: true },
-          {
-            trigger_id: "hp",
-            trigger_variant_id: "half",
-            price: 20,
-            enabled: true,
-          },
-          {
-            trigger_id: "hp",
-            trigger_variant_id: "low",
-            price: 30,
-            enabled: true,
-          },
-        ],
-      }),
-    ),
-  );
-  const save = newSave();
-  render(
-    <SWRConfig value={{ provider: () => new Map() }}>
-      <GambitEditor
-        revision={4}
-        save={{
-          ...save,
-          economy: {
-            gold: 0,
-            inventory: {},
-            weapon: null,
-            weapon_attack: 0,
-            ...save.economy,
-            unlocked_triggers: ["hp:half"],
-          },
-        }}
-        onSaved={onSaved}
-      />
-    </SWRConfig>,
-  );
-  const user = userEvent.setup();
-  const add = await screen.findByRole("button", { name: "条件を追加" });
-  await waitFor(() => expect(add).toBeEnabled());
-  await user.click(add);
-  const row = within(screen.getByRole("region", { name: "ガンビット 1" }));
-  expect(row.getByLabelText("変型")).toHaveValue("half");
-  expect(row.getByRole("option", { name: "基本" })).toBeDisabled();
-  expect(row.getByRole("option", { name: "低HP（未解放）" })).toBeDisabled();
-  await user.click(screen.getByRole("button", { name: "保存" }));
-  await waitFor(() => expect(saved).toHaveBeenCalled());
-  expect(saved.mock.calls[0][0].rules[0]).toMatchObject({
-    trigger_id: "hp",
-    trigger_variant_id: "half",
-  });
-});
-
-it("reorders conditions and saves item references without browser-only row IDs", async () => {
-  const user = setup();
-  const add = screen.getByRole("button", { name: "条件を追加" });
-  await waitFor(() => expect(add).toBeEnabled());
-  await user.click(add);
-  const row = screen.getByRole("region", { name: "ガンビット 2" });
-  await user.selectOptions(within(row).getByLabelText("行動"), "item");
-  await user.click(screen.getByRole("button", { name: "2番を上へ" }));
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(saved).toHaveBeenCalled());
   expect(saved.mock.calls[0][0]).toEqual({
@@ -253,59 +127,163 @@ it("reorders conditions and saves item references without browser-only row IDs",
     rules: [
       {
         enabled: true,
-        condition: "always",
-        threshold: 30,
-        action: "item",
-        definition_id: "healing_potion",
-      },
-      {
-        enabled: true,
-        condition: "hp_below",
-        threshold: 30,
+        trigger_id: "hp",
+        trigger_variant_id: "half",
         action: "skill",
-        definition_id: "heal",
+        definition_id: "fire",
       },
     ],
   });
-  expect(onSaved).toHaveBeenCalledWith({ revision: 5, save: newSave() });
 });
 
-it("copies the admin's state skill reference when choosing a trigger", async () => {
-  server.use(
-    http.get("*/game/catalog", () =>
-      HttpResponse.json({
-        ...sampleCatalog,
-        triggers: [
-          {
-            id: "protected",
-            name: "プロテクトなし",
-            condition: "state",
-            threshold: 30,
-            state_skill_id: "protect",
-            state_present: false,
-            enabled: true,
-          },
-        ],
-      }),
-    ),
+it("does not allow adding rules without owned triggers, even for unsold definitions", async () => {
+  const save = ownedSave();
+  save.gambits = [];
+  save.economy.unlocked_triggers = [];
+  setup(save);
+  expect(
+    await screen.findByText(/トリガーを入手すると設定できます/),
+  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "条件を追加" })).toBeDisabled();
+  expect(screen.getByLabelText("デフォルトガンビット")).toHaveTextContent(
+    "戦う",
   );
-  const user = setup();
+});
+
+it("offers an owned variant without granting its base or sibling", async () => {
+  const save = ownedSave();
+  save.gambits = [];
+  save.economy.unlocked_triggers = ["hp:half"];
+  const user = setup(save);
+  const add = await screen.findByRole("button", { name: "条件を追加" });
+  await waitFor(() => expect(add).toBeEnabled());
+  await user.click(add);
+  const trigger = screen.getByRole("combobox", { name: "トリガー" });
+  expect(trigger).toHaveValue("hp:half");
+  expect(
+    within(trigger).queryByRole("option", { name: "HP条件" }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(trigger).queryByRole("option", { name: "HP条件（瀕死）" }),
+  ).not.toBeInTheDocument();
+});
+
+it("only offers granted skills and items actually owned by this player", async () => {
+  const save = ownedSave();
+  save.economy.inventory = {};
+  setup(save);
+  const skills = await screen.findByRole("combobox", { name: "スキル" });
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "保存" })).toBeEnabled(),
   );
-  const row = screen.getByRole("region", { name: "ガンビット 1" });
-  await user.selectOptions(within(row).getByLabelText("条件"), "protected");
+  expect(
+    within(skills).getByRole("option", { name: /ファイア/ }),
+  ).toBeVisible();
+  expect(
+    within(skills).queryByRole("option", { name: /薬の回復/ }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(skills).queryByRole("option", { name: /回復薬/ }),
+  ).not.toBeInTheDocument();
+});
+
+it("reorders combinations and saves owned item skills without condition overrides", async () => {
+  const user = setup();
+  const add = screen.getByRole("button", { name: "条件を追加" });
+  await waitFor(() => expect(add).toBeEnabled());
+  await user.click(add);
+  const row = within(screen.getByRole("region", { name: "ガンビット 2" }));
+  await user.selectOptions(
+    row.getByRole("combobox", { name: "トリガー" }),
+    "always",
+  );
+  await user.selectOptions(
+    row.getByRole("combobox", { name: "スキル" }),
+    "item:healing_potion",
+  );
+  await user.click(screen.getByRole("button", { name: "2番を上へ" }));
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls[0][0].rules).toEqual([
+    {
+      enabled: true,
+      trigger_id: "always",
+      trigger_variant_id: null,
+      action: "item",
+      definition_id: "healing_potion",
+    },
+    {
+      enabled: true,
+      trigger_id: "hp",
+      trigger_variant_id: null,
+      action: "skill",
+      definition_id: "heal",
+    },
+  ]);
+});
+
+it("only offers specialty skills from equipped specialties with enabled access", async () => {
+  server.use(
+    http.get("*/game/catalog", () =>
+      HttpResponse.json({
+        ...catalog,
+        specialty_skills: [{ skill_id: "heal", enabled: true }],
+      }),
+    ),
+  );
+  const save = ownedSave();
+  save.specialties = [
+    {
+      id: "equipped",
+      name: "治療",
+      resource_ids: ["book"],
+      skill_id: "heal",
+      equipped: true,
+    },
+    {
+      id: "unequipped",
+      name: "未装備",
+      resource_ids: ["other"],
+      skill_id: "heal",
+      equipped: false,
+    },
+    {
+      id: "locked",
+      name: "未解放",
+      resource_ids: ["another"],
+      skill_id: "fire",
+      equipped: true,
+    },
+  ];
+  const user = setup(save);
+  const skills = await screen.findByRole("combobox", { name: "スキル" });
+  expect(
+    await within(skills).findByRole("option", { name: "治療：ケアル" }),
+  ).toBeVisible();
+  expect(
+    within(skills).queryByRole("option", { name: /未装備|未解放/ }),
+  ).not.toBeInTheDocument();
+  await user.selectOptions(skills, "specialty:equipped");
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(saved).toHaveBeenCalled());
   expect(saved.mock.calls[0][0].rules[0]).toMatchObject({
-    condition: "state",
-    trigger_id: "protected",
-    state_skill_id: "protect",
-    state_present: false,
+    action: "specialty",
+    definition_id: "equipped",
   });
 });
 
-it("preserves changes after a stale save", async () => {
+it("prevents resaving an unowned previous rule until repaired or removed", async () => {
+  const save = ownedSave();
+  save.economy.unlocked_triggers = ["always"];
+  const user = setup(save);
+  const trigger = await screen.findByRole("combobox", { name: "トリガー" });
+  expect(await screen.findByText(/選び直すか/)).toBeVisible();
+  expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+  await user.selectOptions(trigger, "always");
+  expect(screen.getByRole("button", { name: "保存" })).toBeEnabled();
+});
+
+it("preserves chosen combinations after a stale save", async () => {
   server.use(
     http.put("*/game/gambits", () =>
       HttpResponse.json(
@@ -315,28 +293,26 @@ it("preserves changes after a stale save", async () => {
     ),
   );
   const user = setup();
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "保存" })).toBeEnabled(),
-  );
-  const threshold = screen.getByRole("spinbutton", { name: "値" });
-  await user.clear(threshold);
-  await user.type(threshold, "45");
+  const trigger = await screen.findByRole("combobox", { name: "トリガー" });
+  await user.selectOptions(trigger, "always");
   await user.click(screen.getByRole("button", { name: "保存" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "状態が更新されています。",
   );
-  expect(threshold).toHaveValue(45);
+  expect(trigger).toHaveValue("always");
 });
 
 it("disables editing and saving during battle", async () => {
-  setup(true);
-  await screen.findByRole("region", { name: "ガンビット 1" });
-  expect(screen.getByRole("spinbutton", { name: "値" })).toBeDisabled();
+  setup(ownedSave(), true);
+  expect(
+    await screen.findByRole("combobox", { name: "トリガー" }),
+  ).toBeDisabled();
+  expect(screen.getByRole("combobox", { name: "スキル" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "条件を追加" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
 });
 
-it("limits a new player to one slot and shows the next unlock level", async () => {
+it("limits a new player to the server-provided slot count", async () => {
   server.use(
     http.get("*/game/gambits/capacity", () =>
       HttpResponse.json({ slots: 1, next_level: 5 }),
@@ -345,5 +321,7 @@ it("limits a new player to one slot and shows the next unlock level", async () =
   setup();
   expect(await screen.findByText("ガンビット 1/1枠 · 次はLv.5")).toBeVisible();
   expect(screen.getByRole("button", { name: "条件を追加" })).toBeDisabled();
-  expect(screen.getByRole("button", { name: "保存" })).toBeEnabled();
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "保存" })).toBeEnabled(),
+  );
 });
