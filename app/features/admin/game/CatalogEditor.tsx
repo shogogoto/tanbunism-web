@@ -29,11 +29,14 @@ const names = {
 export default function CatalogEditor({ kind }: { kind: Kind }) {
   const [catalog, setCatalog] = useState<GameCatalog>();
   const [deletions, setDeletions] = useState(new Set<string>());
+  const [enemyDeletions, setEnemyDeletions] = useState(new Set<string>());
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     let active = true;
+    setDeletions(new Set());
+    setEnemyDeletions(new Set());
     void requestGameCatalog(true)
       .then((value) => {
         if (active)
@@ -105,20 +108,25 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
     setError(undefined);
     setSaved(false);
     try {
-      const next = deletions.size
-        ? {
-            ...catalog,
-            skills: catalog.skills.filter((s) => !deletions.has(s.id)),
-            player_skills: catalog.player_skills?.filter(
-              (u) => !deletions.has(u.skill_id),
-            ),
-            specialty_skills: catalog.specialty_skills?.filter(
-              (u) => !deletions.has(u.skill_id),
-            ),
-          }
-        : catalog;
+      const next =
+        deletions.size || enemyDeletions.size
+          ? {
+              ...catalog,
+              skills: catalog.skills.filter((s) => !deletions.has(s.id)),
+              enemies: catalog.enemies.filter(
+                (enemy) => !enemyDeletions.has(enemy.id),
+              ),
+              player_skills: catalog.player_skills?.filter(
+                (u) => !deletions.has(u.skill_id),
+              ),
+              specialty_skills: catalog.specialty_skills?.filter(
+                (u) => !deletions.has(u.skill_id),
+              ),
+            }
+          : catalog;
       setCatalog(await requestGameCatalog(true, next));
       setDeletions(new Set());
+      setEnemyDeletions(new Set());
       setSaved(true);
     } catch (cause) {
       setError(
@@ -277,7 +285,22 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
               </AdminTableSection>
             )}
             {(kind === "items" || kind === "enemies") && (
-              <DefinitionTables kind={kind} catalog={catalog} update={update} />
+              <DefinitionTables
+                kind={kind}
+                catalog={catalog}
+                update={update}
+                deletions={enemyDeletions}
+                toggleDelete={(id) => {
+                  setEnemyDeletions((current) => {
+                    const next = new Set(current);
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                    return next;
+                  });
+                  setSaved(false);
+                  setError(undefined);
+                }}
+              />
             )}
             {kind === "shop" && (
               <ShopTable
@@ -286,9 +309,10 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
               />
             )}
           </fieldset>
-          {deletions.size > 0 && (
+          {deletions.size + enemyDeletions.size > 0 && (
             <output className="block text-sm text-muted-foreground">
-              削除予約 {deletions.size}件 · 保存で確定します。
+              削除予約 {deletions.size + enemyDeletions.size}件 ·
+              保存で確定します。
             </output>
           )}
           <div className="flex justify-center">

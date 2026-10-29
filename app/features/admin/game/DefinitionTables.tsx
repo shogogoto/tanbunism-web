@@ -10,6 +10,9 @@ import { defaultElements, isEquipmentSkill } from "~/features/game/catalog";
 import { itemCategories, itemCategory } from "~/features/game/itemCategories";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import DefinitionDeleteButton, {
+  pendingDeletionClass,
+} from "./DefinitionDeleteButton";
 import EnemyGambitEditor from "./EnemyGambitEditor";
 import EnemyMultipliersEditor from "./EnemyMultipliersEditor";
 
@@ -19,6 +22,8 @@ export default function DefinitionTables({
   catalog,
   update,
   add,
+  deletions,
+  toggleDelete,
 }: {
   kind: "items" | "enemies";
   catalog: GameCatalog;
@@ -27,6 +32,8 @@ export default function DefinitionTables({
     patch: Partial<ItemDefinition & EnemyDefinition>,
   ) => void;
   add?: () => void;
+  deletions?: ReadonlySet<string>;
+  toggleDelete?: (id: string) => void;
 }) {
   const headers = [
     "名前",
@@ -81,6 +88,11 @@ export default function DefinitionTables({
             <th scope="col" className="p-2 text-left font-medium">
               有効
             </th>
+            {kind === "enemies" && (
+              <th scope="col" className="p-2 text-left font-medium">
+                削除
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -88,7 +100,8 @@ export default function DefinitionTables({
             <tr
               key={item.id}
               aria-label={item.name}
-              className="border-t [&>td]:p-2"
+              data-pending-delete={deletions?.has(item.id) || undefined}
+              className={`border-t [&>td]:p-2 ${deletions?.has(item.id) ? pendingDeletionClass : ""}`}
             >
               <td>
                 <Input
@@ -321,11 +334,20 @@ export default function DefinitionTables({
                   }
                 />
               </td>
+              {kind === "enemies" && (
+                <td>
+                  <DefinitionDeleteButton
+                    removed={deletions?.has(item.id) ?? false}
+                    disabled={!toggleDelete}
+                    onClick={() => toggleDelete?.(item.id)}
+                  />
+                </td>
+              )}
             </tr>
           ))}
           {kind === "items" && add && (
             <tr className="border-t">
-              <td colSpan={5}>
+              <td colSpan={headers.length + 1}>
                 <Button
                   type="button"
                   variant="ghost"

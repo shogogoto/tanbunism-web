@@ -263,6 +263,33 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
+it("stages enemy deletion in the final column, supports undo, and removes only on save", async () => {
+  const user = userEvent.setup();
+  render(<CatalogEditor kind="enemies" />);
+  const table = await screen.findByRole("table", { name: "敵定義" });
+  expect(within(table).getAllByRole("columnheader").at(-1)).toHaveTextContent(
+    "削除",
+  );
+  const row = await screen.findByRole("row", { name: "ゴースト" });
+  await user.click(within(row).getByRole("button", { name: "削除" }));
+  expect(row).toHaveAttribute("data-pending-delete", "true");
+  expect(row).toHaveClass("bg-muted");
+  expect(saved).not.toHaveBeenCalled();
+  await user.click(within(row).getByRole("button", { name: "削除を取り消す" }));
+  expect(row).not.toHaveAttribute("data-pending-delete");
+  await user.click(within(row).getByRole("button", { name: "削除" }));
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(saved.mock.calls[0][0].enemies).toEqual([]);
+  expect(saved.mock.calls[0][0].skills).toHaveLength(
+    sampleCatalog.skills.length,
+  );
+  expect(
+    screen.queryByRole("row", { name: "ゴースト" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText(/削除予約/)).not.toBeInTheDocument();
+});
+
 it("edits templates, skills and items in order and saves the combined draft once", async () => {
   const user = userEvent.setup();
   render(<CatalogEditor kind="skills" />);

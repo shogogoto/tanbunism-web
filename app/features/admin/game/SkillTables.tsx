@@ -1,4 +1,4 @@
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   AdminNativeTable,
   AdminTableFrame,
@@ -17,6 +17,9 @@ import { rebindEffectChances } from "~/features/game/effectChances";
 import type { VariantSelection, VariantSet } from "~/features/game/variantSets";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import DefinitionDeleteButton, {
+  pendingDeletionClass,
+} from "./DefinitionDeleteButton";
 import RowOrder from "./RowOrder";
 import SkillAnimationGallery from "./SkillAnimationGallery";
 import SkillTemplateBadges from "./SkillTemplateBadges";
@@ -118,7 +121,7 @@ export default function SkillTables({
                     key={skill.id}
                     aria-label={skill.name}
                     data-pending-delete={removed || undefined}
-                    className={`border-t [&>td]:p-2 ${removed ? "bg-muted text-muted-foreground [&>td:not(:last-child)]:opacity-40" : ""}`}
+                    className={`border-t [&>td]:p-2 ${removed ? pendingDeletionClass : ""}`}
                   >
                     <td>
                       <RowOrder />
@@ -236,18 +239,11 @@ export default function SkillTables({
                     </td>
 
                     <td>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="outline"
+                      <DefinitionDeleteButton
                         disabled={normal}
-                        aria-label={removed ? "削除を取り消す" : "削除"}
-                        title={removed ? "削除を取り消す" : "削除"}
-                        aria-pressed={removed}
+                        removed={removed}
                         onClick={() => toggleDelete(skill.id)}
-                      >
-                        <X aria-hidden="true" className="size-4" />
-                      </Button>
+                      />
                     </td>
                   </SortableRow>
                 );

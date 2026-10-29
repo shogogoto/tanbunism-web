@@ -89,6 +89,90 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
+it("stages trigger deletion in the final column, allows undo, and removes shop listings on save", async () => {
+  server.use(
+    http.get("*/admin/game/catalog", () =>
+      HttpResponse.json({
+        ...catalog,
+        shop: [
+          ...catalog.shop,
+          {
+            trigger_id: "hp",
+            trigger_variant_id: null,
+            price: 100,
+            enabled: true,
+          },
+        ],
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  render(<TriggerEditor />);
+  const row = await screen.findByRole("row", { name: "HP条件" });
+  const table = screen.getByRole("table", { name: "ガンビットのトリガー" });
+  expect(within(table).getAllByRole("columnheader").at(-1)).toHaveTextContent(
+    "削除",
+  );
+  await user.click(within(row).getByRole("button", { name: "削除" }));
+  expect(row).toHaveAttribute("data-pending-delete", "true");
+  expect(row).toHaveClass("bg-muted");
+  expect(saved).not.toHaveBeenCalled();
+  await user.click(within(row).getByRole("button", { name: "削除を取り消す" }));
+  expect(row).not.toHaveAttribute("data-pending-delete");
+  await user.click(within(row).getByRole("button", { name: "削除" }));
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(
+    saved.mock.calls[0][0].triggers.map((t: { id: string }) => t.id),
+  ).toEqual(["buff", "poison"]);
+  expect(saved.mock.calls[0][0].shop).toEqual(catalog.shop);
+  expect(saved.mock.calls[0][0].enemies).toEqual(catalog.enemies);
+  expect(screen.queryByRole("row", { name: "HP条件" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/削除予約/)).not.toBeInTheDocument();
+});
+
+it("blocks deleting a trigger used by an enemy without changing its gambits", async () => {
+  server.use(
+    http.get("*/admin/game/catalog", () =>
+      HttpResponse.json({
+        ...catalog,
+        enemies: [
+          {
+            ...catalog.enemies[0],
+            gambits: [{ trigger_id: "hp", skill_id: "heal", enabled: true }],
+          },
+        ],
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  render(<TriggerEditor />);
+  const row = await screen.findByRole("row", { name: "HP条件" });
+  await user.click(within(row).getByRole("button", { name: "削除" }));
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("敵「ゴースト」");
+  expect(saved).not.toHaveBeenCalled();
+  expect(row).toHaveAttribute("data-pending-delete", "true");
+});
+
+it("retains pending trigger deletions after a failed save", async () => {
+  server.use(
+    http.put("*/admin/game/catalog", () =>
+      HttpResponse.json({ detail: "保存失敗" }, { status: 500 }),
+    ),
+  );
+  const user = userEvent.setup();
+  render(<TriggerEditor />);
+  const row = await screen.findByRole("row", { name: "HP条件" });
+  await user.click(within(row).getByRole("button", { name: "削除" }));
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByRole("alert");
+  expect(row).toHaveAttribute("data-pending-delete", "true");
+  expect(
+    within(row).getByRole("button", { name: "削除を取り消す" }),
+  ).toBeEnabled();
+});
+
 it("selects state skills and edits comparison details without legacy state options", async () => {
   const user = userEvent.setup();
   render(<TriggerEditor />);

@@ -18,6 +18,9 @@ import {
 } from "~/features/game/triggerVariants";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import DefinitionDeleteButton, {
+  pendingDeletionClass,
+} from "./DefinitionDeleteButton";
 import StatTriggerDetails from "./StatTriggerDetails";
 import TriggerVariantPanel from "./TriggerVariantPanel";
 import TriggerVariantSetEditor from "./TriggerVariantSetEditor";
@@ -34,6 +37,7 @@ export default function TriggerEditor() {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [variantTrigger, setVariantTrigger] = useState<string>();
+  const [deletions, setDeletions] = useState(new Set<string>());
   const stateSkills = catalog?.skills.filter(isStateSkill) ?? [];
   useEffect(() => {
     let active = true;
@@ -113,10 +117,31 @@ export default function TriggerEditor() {
         onSubmit={async (e) => {
           e.preventDefault();
           if (!catalog || busy) return;
+          const references = catalog.enemies.filter((enemy) =>
+            enemy.gambits?.some((rule) => deletions.has(rule.trigger_id)),
+          );
+          if (references.length) {
+            setError(
+              `削除するガンビットを${references.map((enemy) => `敵「${enemy.name}」`).join("、")}が使用しています。先に参照を変更してください。`,
+            );
+            return;
+          }
           setBusy(true);
           setError(undefined);
           try {
-            setCatalog(await requestGameCatalog(true, catalog));
+            const next = {
+              ...catalog,
+              triggers: catalog.triggers?.filter(
+                (trigger) => !deletions.has(trigger.id),
+              ),
+              shop: catalog.shop?.filter(
+                (listing) =>
+                  !("trigger_id" in listing) ||
+                  !deletions.has(listing.trigger_id),
+              ),
+            };
+            setCatalog(await requestGameCatalog(true, next));
+            setDeletions(new Set());
             setSaved(true);
           } catch (cause) {
             setError(
@@ -136,11 +161,13 @@ export default function TriggerEditor() {
             >
               <thead>
                 <tr>
-                  {["名前", "対象", "条件", "詳細", "変型", "有効"].map((h) => (
-                    <th key={h} className="p-2 text-left">
-                      {h}
-                    </th>
-                  ))}
+                  {["名前", "対象", "条件", "詳細", "変型", "有効", "削除"].map(
+                    (h) => (
+                      <th key={h} className="p-2 text-left">
+                        {h}
+                      </th>
+                    ),
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -148,7 +175,8 @@ export default function TriggerEditor() {
                   <tr
                     key={t.id}
                     aria-label={t.name}
-                    className={`border-t ${variantTrigger === t.id ? "bg-primary/10" : ""}`}
+                    data-pending-delete={deletions.has(t.id) || undefined}
+                    className={`border-t ${deletions.has(t.id) ? pendingDeletionClass : variantTrigger === t.id ? "bg-primary/10" : ""}`}
                   >
                     <td className="p-2">
                       <Input
@@ -340,11 +368,33 @@ export default function TriggerEditor() {
                         }
                       />
                     </td>
+                    <td className="p-2">
+                      <DefinitionDeleteButton
+                        removed={deletions.has(t.id)}
+                        onClick={() => {
+                          setDeletions((current) => {
+                            const next = new Set(current);
+                            if (next.has(t.id)) next.delete(t.id);
+                            else next.add(t.id);
+                            return next;
+                          });
+                          setSaved(false);
+                          setError(undefined);
+                          if (variantTrigger === t.id)
+                            setVariantTrigger(undefined);
+                        }}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </AdminNativeTable>
           </AdminTableFrame>
+          {deletions.size > 0 && (
+            <output className="block mt-2 text-sm text-muted-foreground">
+              削除予約 {deletions.size}件 · 保存で確定します。
+            </output>
+          )}
           <div className="flex justify-center mt-4">
             <Button type="submit">保存</Button>
           </div>
