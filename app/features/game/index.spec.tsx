@@ -231,6 +231,7 @@ afterEach(() => server.resetHandlers());
 
 vi.mock("~/features/gamification/ResourceGrowth", () => ({
   useResourceGrowth: () => ({
+    mutate: refreshGrowth,
     data: {
       resources: [
         {
@@ -263,7 +264,10 @@ vi.mock("~/features/tanbun/detail/Preview", () => ({
   ContainedTanbunPreviews: ({ children }: { children: React.ReactNode }) =>
     children,
 }));
-const { openPreview } = vi.hoisted(() => ({ openPreview: vi.fn() }));
+const { openPreview, refreshGrowth } = vi.hoisted(() => ({
+  openPreview: vi.fn(),
+  refreshGrowth: vi.fn(async () => undefined),
+}));
 vi.mock("~/features/quiz/QuizAttempt", () => ({
   default: ({
     onAnswered,
@@ -504,6 +508,58 @@ function renderGame(path = "/game") {
     </MemoryRouter>,
   );
 }
+
+it("adds another user's dungeon using the current revision and selects it", async () => {
+  state = { revision: 7, save: newSave() };
+  const join = vi.fn();
+  server.use(
+    http.get("*/game/dungeons/public", () =>
+      HttpResponse.json([
+        {
+          resource_id: "previous",
+          name: "以前の本",
+          owner_id: "other",
+          owner_name: "別のユーザー",
+          joined: false,
+        },
+      ]),
+    ),
+    http.post("*/game/dungeons/previous/join", async ({ request }) => {
+      join(await request.json());
+      state = {
+        revision: 8,
+        save: {
+          ...state.save,
+          unlockedDungeons: [
+            {
+              sourceId: "previous",
+              resourceId: "previous",
+              name: "以前の本",
+              achievement: 0,
+              source: "shared",
+            },
+          ],
+        },
+      };
+      return HttpResponse.json(state);
+    }),
+  );
+  renderGame();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "他ユーザーのダンジョン" }),
+  );
+  await user.click(await screen.findByRole("button", { name: "追加" }));
+  await waitFor(() =>
+    expect(join).toHaveBeenCalledExactlyOnceWith({ revision: 7 }),
+  );
+  await waitFor(() => expect(refreshGrowth).toHaveBeenCalled());
+  await waitFor(() => expect(loadDungeon).toHaveBeenCalledWith("previous"));
+  expect(
+    await screen.findByRole("heading", { name: "以前の本" }),
+  ).toBeVisible();
+  expect(consumeCount).toBe(0);
+});
 
 it("keeps a delayed quiz refresh through a move and merges it without losing progress", async () => {
   const content = await loadDungeon("book");

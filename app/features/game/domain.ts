@@ -83,7 +83,7 @@ export type GameSave = {
     resourceId: string;
     name: string;
     achievement: number;
-    source?: "exploration" | "item";
+    source?: "exploration" | "item" | "shared";
   }[];
   run?: Run;
   content?: DungeonContent;

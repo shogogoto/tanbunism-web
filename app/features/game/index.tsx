@@ -46,6 +46,7 @@ import ExplorationMap from "./Map";
 import MultiBattle from "./MultiBattle";
 import { useGameMusic } from "./MusicControls";
 import PlayerStatus from "./PlayerStatus";
+import PublicDungeons from "./PublicDungeons";
 import ReviewRewards from "./ReviewRewards";
 import SpecialtiesPanel from "./SpecialtiesPanel";
 import StatEditor from "./StatEditor";
@@ -237,7 +238,11 @@ export function GamePlay({
     setFeedback(state.save.battleFeedback ?? undefined);
   }, []);
   const access = useAdventureAccess(userId);
-  const { data: growth, error: growthError } = useResourceGrowth();
+  const {
+    data: growth,
+    error: growthError,
+    mutate: refreshGrowth,
+  } = useResourceGrowth();
   useEffect(() => {
     if (!stateLoaded || save.run || selectedId) return;
     const recommended = [...(growth?.resources ?? [])].sort((a, b) =>
@@ -1098,6 +1103,28 @@ export function GamePlay({
           </Button>
         )}
         <section className="space-y-4" aria-label="冒険">
+          <PublicDungeons
+            userId={userId}
+            disabled={!stateLoaded || busy || Boolean(save.battle)}
+            onJoin={async (id) => {
+              if (busy || pendingMove.current || save.battle) return;
+              pendingMove.current = true;
+              setBusy(true);
+              try {
+                const state = await gameRequest<import("./state").GameState>(
+                  `dungeons/${encodeURIComponent(id)}/join`,
+                  { revision: revision.current },
+                  "POST",
+                );
+                applyState(state);
+                await refreshGrowth();
+                if (!run) setSelectedId(id);
+              } finally {
+                pendingMove.current = false;
+                setBusy(false);
+              }
+            }}
+          />
           {!run ? (
             <>
               <p className="text-sm text-muted-foreground">
