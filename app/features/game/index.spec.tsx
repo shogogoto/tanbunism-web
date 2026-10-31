@@ -43,6 +43,7 @@ vi.mock("~/features/auth/AuthProvider", async (importOriginal) => ({
   useAuth: () => ({ user: { uid: "player" }, isAuthenticated: true }),
 }));
 const server = setupServer(
+  http.get("*/game/dungeons/public", () => HttpResponse.json([])),
   http.get("*/game/catalog", () => HttpResponse.json(sampleCatalog)),
   http.get("*/game/gambits/capacity", () =>
     HttpResponse.json({ slots: 1, next_level: 20 }),
@@ -509,9 +510,10 @@ function renderGame(path = "/game") {
   );
 }
 
-it("adds another user's dungeon using the current revision and selects it", async () => {
+it("receives a key through the library without adding a map-row or opening the dungeon", async () => {
   state = { revision: 7, save: newSave() };
   const join = vi.fn();
+  const useKey = vi.fn();
   server.use(
     http.get("*/game/dungeons/public", () =>
       HttpResponse.json([
@@ -524,12 +526,57 @@ it("adds another user's dungeon using the current revision and selects it", asyn
         },
       ]),
     ),
-    http.post("*/game/dungeons/previous/join", async ({ request }) => {
+    http.post("*/game/dungeons/previous/key", async ({ request }) => {
       join(await request.json());
       state = {
         revision: 8,
         save: {
           ...state.save,
+          economy: {
+            gold: 0,
+            weapon: null,
+            weapon_attack: 0,
+            inventory: { "@dungeon:previous": 1 },
+            dungeon_keys: {
+              "@dungeon:previous": {
+                resource_id: "previous",
+                name: "以前の本",
+                source: "shared",
+              },
+            },
+          },
+        },
+      };
+      return HttpResponse.json(state);
+    }),
+    http.get("*/game/shop", () =>
+      HttpResponse.json({
+        products: [
+          {
+            id: "@dungeon:previous",
+            name: "以前の本のダンジョン開放キー",
+            kind: "dungeon_unlock",
+            category: "unlock_key",
+            price: null,
+            amount: 0,
+            resource_id: "previous",
+            enabled: true,
+          },
+        ],
+      }),
+    ),
+    http.post("*/game/inventory/use", async ({ request }) => {
+      useKey(await request.json());
+      state = {
+        revision: 9,
+        save: {
+          ...state.save,
+          economy: {
+            gold: 0,
+            weapon: null,
+            weapon_attack: 0,
+            inventory: { "@dungeon:previous": 0 },
+          },
           unlockedDungeons: [
             {
               sourceId: "previous",
@@ -546,18 +593,33 @@ it("adds another user's dungeon using the current revision and selects it", asyn
   );
   renderGame();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "他ユーザーのダンジョン" }),
-  );
-  await user.click(await screen.findByRole("button", { name: "追加" }));
+  expect(
+    screen.queryByRole("button", { name: "他ユーザーのダンジョン" }),
+  ).not.toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "ステータス" }));
+  await user.click(screen.getByRole("tab", { name: "旅人の書庫" }));
+  await user.click(await screen.findByRole("button", { name: "キーを入手" }));
   await waitFor(() =>
     expect(join).toHaveBeenCalledExactlyOnceWith({ revision: 7 }),
   );
+  expect(refreshGrowth).not.toHaveBeenCalled();
+  expect(state.save.unlockedDungeons ?? []).toHaveLength(0);
+  expect(state.save.economy?.inventory["@dungeon:previous"]).toBe(1);
+  await user.click(screen.getByRole("button", { name: "所持品へ" }));
+  expect(screen.getByRole("tab", { name: "アイテム" })).toHaveAttribute(
+    "data-state",
+    "active",
+  );
+  await user.click(await screen.findByRole("button", { name: "開放する" }));
+  await waitFor(() =>
+    expect(useKey).toHaveBeenCalledExactlyOnceWith({
+      revision: 8,
+      product_id: "@dungeon:previous",
+    }),
+  );
   await waitFor(() => expect(refreshGrowth).toHaveBeenCalled());
-  await waitFor(() => expect(loadDungeon).toHaveBeenCalledWith("previous"));
-  expect(
-    await screen.findByRole("heading", { name: "以前の本" }),
-  ).toBeVisible();
+  expect(state.save.unlockedDungeons?.[0].resourceId).toBe("previous");
+  expect(state.save.economy?.inventory["@dungeon:previous"]).toBe(0);
   expect(consumeCount).toBe(0);
 });
 
@@ -1183,6 +1245,7 @@ it("switches the numbered menu tabs with Ctrl+digits", async () => {
     "装備",
     "ガンビット",
     "専門分野",
+    "旅人の書庫",
     "実績",
   ];
   for (const [index, label] of tabs.entries()) {

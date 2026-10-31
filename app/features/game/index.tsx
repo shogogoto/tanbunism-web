@@ -47,10 +47,10 @@ import ExplorationMap from "./Map";
 import MultiBattle from "./MultiBattle";
 import { useGameMusic } from "./MusicControls";
 import PlayerStatus from "./PlayerStatus";
-import PublicDungeons from "./PublicDungeons";
 import ReviewRewards from "./ReviewRewards";
 import SpecialtiesPanel from "./SpecialtiesPanel";
 import StatEditor from "./StatEditor";
+import TravelersLibrary from "./TravelersLibrary";
 import { useAdventureAccess } from "./access";
 import {
   freezeRegionEnemies,
@@ -136,6 +136,7 @@ export function GamePlay({
   const panel =
     routeMenu === "status" ||
     routeMenu === "equipment" ||
+    routeMenu === "library" ||
     routeMenu === "item" ||
     routeMenu === "shop" ||
     routeMenu === "achievements" ||
@@ -147,23 +148,26 @@ export function GamePlay({
   const menuPanel =
     panel === "status" ||
     panel === "equipment" ||
+    panel === "library" ||
     panel === "item" ||
     panel === "shop" ||
     panel === "gambits" ||
     panel === "specialties" ||
     panel === "achievements";
   const menuTab =
-    panel === "equipment"
-      ? "equipment"
-      : panel === "specialties"
-        ? "specialties"
-        : panel === "gambits"
-          ? "gambits"
-          : panel === "item" || panel === "shop"
-            ? "item"
-            : panel === "achievements"
-              ? "achievements"
-              : "status";
+    panel === "library"
+      ? "library"
+      : panel === "equipment"
+        ? "equipment"
+        : panel === "specialties"
+          ? "specialties"
+          : panel === "gambits"
+            ? "gambits"
+            : panel === "item" || panel === "shop"
+              ? "item"
+              : panel === "achievements"
+                ? "achievements"
+                : "status";
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => {
@@ -185,7 +189,7 @@ export function GamePlay({
       );
       const topDialog = dialogs[dialogs.length - 1];
       if (menuPanel && topDialog?.hasAttribute("data-game-menu")) {
-        if (event.ctrlKey && /^[1-6]$/.test(event.key)) {
+        if (event.ctrlKey && /^[1-7]$/.test(event.key)) {
           event.preventDefault();
           const tab = [
             "status",
@@ -193,6 +197,7 @@ export function GamePlay({
             "equipment",
             "gambits",
             "specialties",
+            "library",
             "achievements",
           ][Number(event.key) - 1];
           void navigate(`/game/${tab}`, {
@@ -1112,28 +1117,6 @@ export function GamePlay({
           </Button>
         )}
         <section className="space-y-4" aria-label="冒険">
-          <PublicDungeons
-            userId={userId}
-            disabled={!stateLoaded || busy || Boolean(save.battle)}
-            onJoin={async (id) => {
-              if (busy || pendingMove.current || save.battle) return;
-              pendingMove.current = true;
-              setBusy(true);
-              try {
-                const state = await gameRequest<import("./state").GameState>(
-                  `dungeons/${encodeURIComponent(id)}/join`,
-                  { revision: revision.current },
-                  "POST",
-                );
-                applyState(state);
-                await refreshGrowth();
-                if (!run) setSelectedId(id);
-              } finally {
-                pendingMove.current = false;
-                setBusy(false);
-              }
-            }}
-          />
           {!run ? (
             <>
               <p className="text-sm text-muted-foreground">
@@ -1717,6 +1700,7 @@ export function GamePlay({
                     ["equipment", "装備"],
                     ["gambits", "ガンビット"],
                     ["specialties", "専門分野"],
+                    ["library", "旅人の書庫"],
                     ["achievements", "実績"],
                   ] as const
                 ).map(([value, label], index) => (
@@ -1774,6 +1758,11 @@ export function GamePlay({
                     onSaved={(state) => {
                       applyState(state);
                       void retryCombat();
+                      if (
+                        state.save.unlockedDungeons?.length !==
+                        save.unlockedDungeons?.length
+                      )
+                        void refreshGrowth();
                     }}
                     onTab={(next) => {
                       void navigate(`/game/${next}`, {
@@ -1811,6 +1800,50 @@ export function GamePlay({
                     disabled={
                       busy || Boolean(feedback) || run?.phase === "battle"
                     }
+                  />
+                )}
+              </TabsContent>
+              <TabsContent value="library">
+                {stateLoaded && (
+                  <TravelersLibrary
+                    userId={userId}
+                    disabled={
+                      busy ||
+                      Boolean(save.battle) ||
+                      Boolean(feedback) ||
+                      run?.phase === "battle"
+                    }
+                    onInventory={() =>
+                      void navigate("/game/item", {
+                        replace: true,
+                        state: location.state,
+                      })
+                    }
+                    onClaim={async (id) => {
+                      if (busy || pendingMove.current || save.battle)
+                        throw new Error(
+                          "冒険状態の更新が終わってから操作してください。",
+                        );
+                      pendingMove.current = true;
+                      setBusy(true);
+                      try {
+                        applyState(
+                          await gameRequest<import("./state").GameState>(
+                            `dungeons/${encodeURIComponent(id)}/key`,
+                            { revision: revision.current },
+                            "POST",
+                          ),
+                        );
+                      } catch (cause) {
+                        await requestGameState()
+                          .then(applyState)
+                          .catch(() => undefined);
+                        throw cause;
+                      } finally {
+                        pendingMove.current = false;
+                        setBusy(false);
+                      }
+                    }}
                   />
                 )}
               </TabsContent>

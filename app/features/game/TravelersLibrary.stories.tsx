@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { http, HttpResponse } from "msw";
 import { SWRConfig } from "swr";
-import PublicDungeons from "./PublicDungeons";
+import TravelersLibrary from "./TravelersLibrary";
 
 let joined = false;
 export default {
-  title: "Game/PublicDungeons",
-  component: PublicDungeons,
+  title: "Game/TravelersLibrary",
+  component: TravelersLibrary,
   loaders: [
     async () => {
       joined = false;
@@ -25,9 +25,10 @@ export default {
   args: {
     userId: "guest",
     disabled: false,
-    onJoin: async () => {
+    onClaim: async () => {
       joined = true;
     },
+    onInventory: () => undefined,
   },
   parameters: {
     msw: {
@@ -39,7 +40,8 @@ export default {
               name: "マスタリングTCP/IPの読書メモ",
               owner_id: "owner",
               owner_name: "作成者",
-              joined,
+              joined: false,
+              key_owned: joined,
             },
             {
               resource_id: "book-2",
@@ -53,5 +55,5 @@ export default {
       ],
     },
   },
-} satisfies Meta<typeof PublicDungeons>;
-export const Default: StoryObj<typeof PublicDungeons> = {};
+} satisfies Meta<typeof TravelersLibrary>;
+export const Default: StoryObj<typeof TravelersLibrary> = {};

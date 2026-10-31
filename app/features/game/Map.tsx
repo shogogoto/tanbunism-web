@@ -350,7 +350,7 @@ export default function ExplorationMap({
     <section
       ref={mapElement}
       aria-label="ダンジョンのマップ"
-      className={`relative isolate min-w-0 overflow-hidden bg-background ${fullscreen ? "h-dvh w-full" : "h-[calc(100dvh-8rem)] min-h-[440px] rounded-xl border sm:h-[calc(100dvh-5rem)]"}`}
+      className={`relative isolate min-w-0 overflow-hidden bg-background ${fullscreen ? "h-dvh w-full" : "h-[calc(100dvh-8rem)] min-h-0 rounded-xl border sm:h-[calc(100dvh-5rem)]"}`}
     >
       <div
         ref={viewport}

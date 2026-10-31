@@ -63,7 +63,10 @@ export type GameSave = {
         }[]
       | null;
     remaining_uses?: Record<string, number>;
-    dungeon_keys?: Record<string, { resource_id: string; name: string }>;
+    dungeon_keys?: Record<
+      string,
+      { resource_id: string; name: string; source?: "owned" | "shared" }
+    >;
     review_reward_day?: string | null;
     quiz_reward_day?: string | null;
     opened_chests?: Record<
