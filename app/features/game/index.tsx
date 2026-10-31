@@ -91,6 +91,7 @@ import {
   knownKnowledge,
   parkDungeon,
 } from "./exploration";
+import { gameMenuTabs, isGamePanel } from "./menu";
 import { exploredPlaceCount } from "./progress";
 import { recoverGameState, requestGameState } from "./state";
 import { readGameSave } from "./storage";
@@ -133,18 +134,7 @@ export function GamePlay({
     );
   }, [save.allocation]);
   const { menu: routeMenu } = useParams();
-  const panel =
-    routeMenu === "status" ||
-    routeMenu === "equipment" ||
-    routeMenu === "library" ||
-    routeMenu === "item" ||
-    routeMenu === "shop" ||
-    routeMenu === "achievements" ||
-    routeMenu === "gambits" ||
-    routeMenu === "specialties" ||
-    routeMenu === "boss"
-      ? routeMenu
-      : undefined;
+  const panel = isGamePanel(routeMenu) ? routeMenu : undefined;
   const menuPanel =
     panel === "status" ||
     panel === "equipment" ||
@@ -191,15 +181,7 @@ export function GamePlay({
       if (menuPanel && topDialog?.hasAttribute("data-game-menu")) {
         if (event.ctrlKey && /^[1-7]$/.test(event.key)) {
           event.preventDefault();
-          const tab = [
-            "status",
-            "item",
-            "equipment",
-            "gambits",
-            "specialties",
-            "library",
-            "achievements",
-          ][Number(event.key) - 1];
+          const [tab] = gameMenuTabs[Number(event.key) - 1];
           void navigate(`/game/${tab}`, {
             replace: true,
             state: location.state,
@@ -1693,17 +1675,7 @@ export function GamePlay({
                 aria-label="ゲームメニュー"
                 className="h-auto w-full flex-wrap"
               >
-                {(
-                  [
-                    ["status", "ステータス"],
-                    ["item", "アイテム"],
-                    ["equipment", "装備"],
-                    ["gambits", "ガンビット"],
-                    ["specialties", "専門分野"],
-                    ["library", "旅人の書庫"],
-                    ["achievements", "実績"],
-                  ] as const
-                ).map(([value, label], index) => (
+                {gameMenuTabs.map(([value, label], index) => (
                   <TabsTrigger
                     key={value}
                     value={value}

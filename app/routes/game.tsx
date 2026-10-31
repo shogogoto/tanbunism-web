@@ -1,19 +1,9 @@
 import { type LoaderFunctionArgs, redirect } from "react-router";
 import Game from "~/features/game";
+import { isGamePanel } from "~/features/game/menu";
 
 export function loader({ params }: Pick<LoaderFunctionArgs, "params">) {
-  if (
-    params.menu &&
-    ![
-      "status",
-      "item",
-      "shop",
-      "boss",
-      "gambits",
-      "achievements",
-      "specialties",
-    ].includes(params.menu)
-  ) {
+  if (params.menu && !isGamePanel(params.menu)) {
     return redirect("/game");
   }
   return null;

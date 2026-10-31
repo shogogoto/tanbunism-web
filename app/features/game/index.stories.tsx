@@ -104,6 +104,18 @@ export default {
         ),
         http.get("*/game/shop", () => HttpResponse.json({ products })),
         http.get("*/game/catalog", () => HttpResponse.json(sampleCatalog)),
+        http.get("*/game/dungeons/public", () =>
+          HttpResponse.json([
+            {
+              resource_id: "library-resource",
+              name: "旅人の読書メモ",
+              owner_id: "traveler",
+              owner_name: "旅人",
+              joined: false,
+              key_owned: false,
+            },
+          ]),
+        ),
         http.get("*/game/gambits/capacity", () =>
           HttpResponse.json({ slots: 1, next_level: 20 }),
         ),

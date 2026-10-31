@@ -11,13 +11,16 @@ import { setupServer } from "msw/node";
 import {
   MemoryRouter,
   Route,
+  RouterProvider,
   Routes,
+  createMemoryRouter,
   useLocation,
   useNavigate,
 } from "react-router";
 import { SWRConfig, useSWRConfig } from "swr";
 import { beforeEach, expect, it, vi } from "vitest";
 import { markTanbunSeen } from "~/features/review/api";
+import { loader as gameLoader } from "~/routes/game";
 import { GamePlay } from ".";
 
 import { adventureAccessKey } from "./access";
@@ -482,33 +485,83 @@ it("does not enter or lose local progress when another device consumed the right
   );
   expect(state.save.run).toBeUndefined();
 });
-function renderGame(path = "/game") {
+function renderGame(path = "/game", withLoader = false) {
+  const game = (
+    <GamePlay
+      userId="player"
+      playerName="プレイヤー名"
+      player={{
+        uid: "player",
+        created: "2026-10-09",
+        display_name: "プレイヤー名",
+        avatar_url: "https://example.com/profile.png",
+      }}
+    />
+  );
+  if (!withLoader)
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <Routes>
+            <Route path="/game/:menu?" element={game} />
+          </Routes>
+          <RefreshAccess />
+          <HistoryControls />
+        </SWRConfig>
+      </MemoryRouter>,
+    );
+  const router = createMemoryRouter(
+    [
+      {
+        path: "/game/:menu?",
+        loader: gameLoader,
+        hydrateFallbackElement: <p>読み込み中…</p>,
+        element: (
+          <>
+            {game}
+            <RefreshAccess />
+            <HistoryControls />
+          </>
+        ),
+      },
+    ],
+    { initialEntries: [path] },
+  );
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <SWRConfig value={{ provider: () => new Map() }}>
-        <Routes>
-          <Route
-            path="/game/:menu?"
-            element={
-              <GamePlay
-                userId="player"
-                playerName="プレイヤー名"
-                player={{
-                  uid: "player",
-                  created: "2026-10-09",
-                  display_name: "プレイヤー名",
-                  avatar_url: "https://example.com/profile.png",
-                }}
-              />
-            }
-          />
-        </Routes>
-        <RefreshAccess />
-        <HistoryControls />
-      </SWRConfig>
-    </MemoryRouter>,
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <RouterProvider router={router} />
+    </SWRConfig>,
   );
 }
+
+it.each([
+  ["equipment", "装備", "腕1"],
+  ["library", "旅人の書庫", "書庫を検索"],
+])(
+  "opens the %s screen through its real route loader",
+  async (menu, tab, label) => {
+    renderGame(`/game/${menu}`, true);
+    expect(await screen.findByRole("tab", { name: tab })).toHaveAttribute(
+      "data-state",
+      "active",
+    );
+    expect(await screen.findByLabelText(label)).toBeVisible();
+  },
+);
+
+it("opens equipment and the library by tab and hotkey through the real route loader", async () => {
+  renderGame("/game/status", true);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("tab", { name: "装備" }));
+  expect(await screen.findByLabelText("腕1")).toBeVisible();
+  await user.click(screen.getByRole("tab", { name: "旅人の書庫" }));
+  expect(await screen.findByLabelText("書庫を検索")).toBeVisible();
+  screen.getByRole("tab", { name: "旅人の書庫" }).focus();
+  await user.keyboard("{Control>}3{/Control}");
+  expect(await screen.findByLabelText("腕1")).toBeVisible();
+  await user.keyboard("{Control>}6{/Control}");
+  expect(await screen.findByLabelText("書庫を検索")).toBeVisible();
+});
 
 it("receives a key through the library without adding a map-row or opening the dungeon", async () => {
   state = { revision: 7, save: newSave() };
