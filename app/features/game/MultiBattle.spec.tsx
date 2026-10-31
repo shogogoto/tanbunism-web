@@ -93,7 +93,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("automatically processes unanswered damage at the selected tempo without advancing the turn", async () => {
+it("automatically processes unanswered damage without a tempo control or advancing the turn", async () => {
   setMusicPreferences({ enabled: false });
   const playSound = vi.spyOn(battleSound, "playBattleSound");
   server.use(
@@ -111,16 +111,17 @@ it("automatically processes unanswered damage at the selected tempo without adva
       });
     }),
   );
-  render(<Fixture deadline={Date.now() + 30} />);
+  const view = render(<Fixture deadline={Date.now() + 30} />);
   await screen.findByRole("button", { name: "結果を処理 · 1/2" });
   vi.useFakeTimers();
   const dialog = screen.getByRole("dialog", { name: "敵と遭遇" });
   const bgm = within(dialog).getByRole("button", { name: "BGM" });
   fireEvent.click(bgm);
   expect(bgm).toHaveAttribute("aria-pressed", "true");
-  fireEvent.change(screen.getByRole("combobox", { name: "戦闘テンポ" }), {
-    target: { value: "fast" },
-  });
+  expect(
+    screen.queryByRole("combobox", { name: "戦闘テンポ" }),
+  ).not.toBeInTheDocument();
+  view.rerender(<Fixture resultSeconds={0.5} />);
   await act(async () => {
     await vi.advanceTimersByTimeAsync(499);
   });
@@ -214,14 +215,23 @@ function initial(deadline = Date.now() + 45000): GameSave {
     },
   };
 }
-function Fixture({ deadline }: { deadline?: number }) {
+function Fixture({
+  deadline,
+  resultSeconds = 1,
+}: { deadline?: number; resultSeconds?: number }) {
   const [save, setSave] = useState(() => initial(deadline));
   return (
     <MemoryRouter>
       <MultiBattle
         save={save}
         content={content}
-        context={{ balance: stableBalance, enemies }}
+        context={{
+          balance: {
+            ...stableBalance,
+            battle_tempo_medium_seconds: resultSeconds,
+          },
+          enemies,
+        }}
         onSaved={(state) => setSave(state.save)}
         onFinished={async () => undefined}
         onBusy={() => undefined}

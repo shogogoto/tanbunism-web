@@ -25,6 +25,10 @@ vi.mock("~/features/quiz/QuizPreviewPrompt", () => ({
   default: () => <p>問題の詳細</p>,
 }));
 vi.mock("~/features/quiz/QuizReportButton", () => ({ default: () => null }));
+const { openExplanation } = vi.hoisted(() => ({ openExplanation: vi.fn() }));
+vi.mock("~/features/tanbun/detail/Preview", () => ({
+  useTanbunPreview: () => ({ openPreview: openExplanation, preview: null }),
+}));
 vi.mock("./useBattleTempo", () => ({
   default: () => ({ tempo: "medium", saving: false, change: vi.fn() }),
 }));
@@ -136,7 +140,7 @@ it("shows the skill selected by the enemy gambit", () => {
       />
     </MemoryRouter>,
   );
-  expect(screen.getByText("ゴーストのキュア")).toBeVisible();
+  expect(screen.getByText("ゴーストAのキュア")).toBeVisible();
 });
 
 it("shows the backend forecast from left to right without selectable enemies", () => {
@@ -157,15 +161,19 @@ it("shows the backend forecast from left to right without selectable enemies", (
     within(screen.getByRole("region", { name: "行動予測" }))
       .getAllByRole("listitem")
       .map((item) => item.getAttribute("aria-label")),
-  ).toEqual(["1: あなた", "2: ゴースト", "3: あなた"]);
+  ).toEqual(["1: あなた", "2: ゴーストA", "3: あなた"]);
   expect(
-    within(screen.getByRole("region", { name: "敵一覧" })).queryByRole(
-      "button",
-    ),
-  ).not.toBeInTheDocument();
+    within(screen.getByRole("region", { name: "敵一覧" })).getByRole("button", {
+      name: "ゴーストAの詳細",
+    }),
+  ).not.toHaveAttribute("aria-pressed");
   expect(screen.queryByText("別の領域の敵")).not.toBeInTheDocument();
   const enemies = screen.getByRole("region", { name: "敵一覧" });
-  expect(enemies).toHaveTextContent("HP 100/100");
+  expect(within(enemies).getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "100",
+  );
+  expect(enemies).not.toHaveTextContent("ゴースト");
   expect(enemies).not.toHaveTextContent(/MP|特攻|特守|速さ/);
 });
 
@@ -186,9 +194,143 @@ it("displays the server-scaled enemy HP maximum", () => {
       />
     </MemoryRouter>,
   );
-  expect(screen.getByRole("region", { name: "敵一覧" })).toHaveTextContent(
-    "HP 40/50",
+  expect(
+    screen.getByRole("progressbar", { name: "ゴーストA HP" }),
+  ).toHaveAttribute("aria-valuenow", "40");
+  expect(
+    screen.getByRole("progressbar", { name: "ゴーストA HP" }),
+  ).toHaveAttribute("aria-valuemax", "50");
+});
+it("opens exact HP and current MP without exposing them in the compact formation", async () => {
+  render(
+    <MemoryRouter>
+      <MultiBattle
+        save={initial()}
+        content={content}
+        context={context}
+        onSaved={vi.fn()}
+        onFinished={vi.fn()}
+        onBusy={vi.fn()}
+      />
+    </MemoryRouter>,
   );
+  expect(screen.queryByText("HP 100/100")).not.toBeInTheDocument();
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "ゴーストAの詳細" }));
+  expect(await screen.findByText("HP 100/100")).toBeVisible();
+  expect(screen.getByText(/MP\s*4\/12/)).toBeVisible();
+});
+
+it("keeps saved enemy letters after a defeat and distinguishes actor from target", () => {
+  const save = initial();
+  if (!save.battle?.schedule) throw new Error("Missing battle");
+  save.battle.enemies = ["second"];
+  save.battle.enemyLabels = { e: "A", second: "B" };
+  save.battle.schedule.enemy_hp = { e: 0, second: 20 };
+  save.battle.schedule.actor_id = "second";
+  save.battle.schedule.queue = [
+    { actor_id: "e", distance: 0 },
+    { actor_id: "second", distance: 1 },
+  ];
+  const nextContext = {
+    ...context,
+    enemies: [context.enemies[0], { ...context.enemies[0], id: "second" }],
+  };
+  render(
+    <MemoryRouter>
+      <MultiBattle
+        save={save}
+        content={content}
+        context={nextContext}
+        onSaved={vi.fn()}
+        onFinished={vi.fn()}
+        onBusy={vi.fn()}
+      />
+    </MemoryRouter>,
+  );
+  const enemies = screen.getByRole("region", { name: "敵一覧" });
+  expect(
+    within(enemies).queryByRole("button", { name: "ゴーストAの詳細" }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(enemies).getByRole("button", { name: "ゴーストBの詳細" }),
+  ).toHaveAttribute("data-active", "true");
+  expect(screen.getByRole("button", { name: "あなたの詳細" })).toHaveAttribute(
+    "data-target",
+    "true",
+  );
+  const queue = screen.getByRole("region", { name: "行動予測" });
+  expect(within(queue).getAllByRole("listitem")).toHaveLength(1);
+  expect(within(queue).getByRole("listitem")).toHaveAttribute(
+    "aria-label",
+    "1: ゴーストB",
+  );
+  expect(queue).not.toHaveTextContent("ゴースト");
+});
+it("places enemies in their encounter order rather than catalog order", () => {
+  const save = initial();
+  if (!save.battle?.schedule) throw new Error("Missing battle");
+  save.battle.enemies = ["second", "e"];
+  save.battle.enemyLabels = { second: "A", e: "B" };
+  save.battle.schedule.enemy_hp = { second: 20, e: 100 };
+  const otherContext = {
+    ...context,
+    enemies: [
+      { ...context.enemies[0], name: "ゴーストA", base_name: "ゴースト" },
+      { ...context.enemies[0], id: "second" },
+    ],
+  };
+  render(
+    <MemoryRouter>
+      <MultiBattle
+        save={save}
+        content={content}
+        context={otherContext}
+        onSaved={vi.fn()}
+        onFinished={vi.fn()}
+        onBusy={vi.fn()}
+      />
+    </MemoryRouter>,
+  );
+  expect(
+    within(screen.getByRole("region", { name: "敵一覧" }))
+      .getAllByRole("button")
+      .map((button) => button.getAttribute("aria-label")),
+  ).toEqual(["ゴーストAの詳細", "ゴーストBの詳細"]);
+});
+
+it("opens the answered quiz explanation beside Next without advancing combat", async () => {
+  const save = initial();
+  save.battleFeedback = "戦う · 発動";
+  save.quizFeedback = "正解";
+  if (save.battle) save.battle.endActionDone = true;
+  const transport = vi.fn();
+  render(
+    <MemoryRouter>
+      <MultiBattle
+        save={save}
+        content={content}
+        context={context}
+        transport={transport}
+        onSaved={vi.fn()}
+        onFinished={vi.fn()}
+        onBusy={vi.fn()}
+      />
+    </MemoryRouter>,
+  );
+  const next = screen.getByRole("button", { name: "次へ" });
+  const explanation = screen.getByRole("button", { name: "解説" });
+  expect(
+    next.compareDocumentPosition(explanation) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  await userEvent.setup().click(explanation);
+  expect(openExplanation).toHaveBeenCalledWith({
+    quizId: "q0",
+    role: "target",
+  });
+  expect(transport).not.toHaveBeenCalled();
 });
 
 it("keeps arrow navigation out of header settings while allowing Tab access", async () => {
@@ -213,7 +355,12 @@ it("keeps arrow navigation out of header settings while allowing Tab access", as
   );
   const first = screen.getByRole("button", { name: "選択肢0" });
   const second = screen.getByRole("button", { name: "別の選択肢" });
-  const tempo = screen.getByRole("combobox", { name: "戦闘テンポ" });
+  const help = screen.getByRole("button", {
+    name: "キーボードショートカットを開く",
+  });
+  expect(
+    screen.queryByRole("combobox", { name: "戦闘テンポ" }),
+  ).not.toBeInTheDocument();
   // Model real geometry: settings and Close are above the wide quiz choices.
   for (const element of screen
     .getByRole("dialog")
@@ -243,16 +390,15 @@ it("keeps arrow navigation out of header settings while allowing Tab access", as
   await waitFor(() => expect(first).toHaveFocus());
   await user.keyboard("{ArrowUp}");
   expect(first).toHaveFocus();
-  expect(tempo).toHaveValue("medium");
+  expect(help).not.toHaveFocus();
   await user.keyboard("{ArrowDown}");
   expect(second).toHaveFocus();
   await user.keyboard("{ArrowUp} ");
   expect(first).toHaveFocus();
   expect(first).toHaveAttribute("aria-pressed", "true");
-  await user.tab({ shift: true });
-  await user.tab({ shift: true });
-  await user.tab({ shift: true });
-  expect(tempo).toHaveFocus();
+  for (let index = 0; index < 10 && document.activeElement !== help; index++)
+    await user.tab({ shift: true });
+  expect(help).toHaveFocus();
 });
 
 it("freezes the countdown on confirmation until the next action starts", async () => {

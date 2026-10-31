@@ -22,14 +22,48 @@ function Preview({
   skill,
   enabled = true,
   revision = 1,
-}: { skill: SoundSkill; enabled?: boolean; revision?: number }) {
-  const ready = useSkillPresentation(revision, skill, enabled);
+  settings,
+}: {
+  skill: SoundSkill;
+  enabled?: boolean;
+  revision?: number;
+  settings?: Parameters<typeof useSkillPresentation>[4];
+}) {
+  const ready = useSkillPresentation(revision, skill, enabled, false, settings);
   return <output>{ready ? "effect" : "activation"}</output>;
 }
 beforeEach(() => {
   vi.useFakeTimers();
   AudioStub.instances = [];
   vi.stubGlobal("Audio", AudioStub);
+});
+it("uses the configured startup sound and skips startup when set to none", () => {
+  const view = render(
+    <Preview
+      skill={{
+        effect: "attack",
+        damage_type: "physical",
+        animation: "impact",
+        sound: "auto",
+      }}
+      settings={{ physical_activation_sound: "willo_zap" }}
+    />,
+  );
+  expect(AudioStub.instances[0].src).toBe(battleSoundFiles.willo_zap);
+  view.rerender(
+    <Preview
+      revision={2}
+      skill={{
+        effect: "attack",
+        damage_type: "special",
+        animation: "fire",
+        sound: "auto",
+      }}
+      settings={{ magical_activation_sound: "none" }}
+    />,
+  );
+  expect(screen.getByText("effect")).toBeVisible();
+  expect(AudioStub.instances.at(-1)?.src).toBe(battleSoundFiles.fire_burst);
 });
 afterEach(() => {
   stopBattleSounds();

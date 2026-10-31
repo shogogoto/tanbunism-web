@@ -275,6 +275,21 @@ it("saves tempo seconds and rejects an inverted speed order", async () => {
     battle_tempo_fast_seconds: 0.7,
   });
 });
+it("saves independently selected activation sounds, including no sound", async () => {
+  render(<BattleSettingsManager />);
+  const user = userEvent.setup();
+  await user.selectOptions(await screen.findByLabelText("物理"), "willo_zap");
+  await user.selectOptions(screen.getByLabelText("魔法"), "none");
+  expect(
+    screen.getByRole("button", { name: "魔法の発動前SEを試聴" }),
+  ).toBeDisabled();
+  await user.click(screen.getAllByRole("button", { name: "保存" })[0]);
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(saved.mock.calls[0][0]).toMatchObject({
+    physical_activation_sound: "willo_zap",
+    magical_activation_sound: "none",
+  });
+});
 it("saves player time and live enemy corrections without quiz-type weights", async () => {
   render(<BattleSettingsManager />);
   const user = userEvent.setup();

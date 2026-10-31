@@ -985,9 +985,11 @@ it("resumes a scheduled battle without retreating or resetting its deadline and 
   );
   const view = renderGame();
   expect(await screen.findByRole("region", { name: "行動予測" })).toBeVisible();
-  expect(screen.getByRole("region", { name: "敵一覧" })).toHaveTextContent(
-    "HP 7/20",
-  );
+  const enemyHp = within(
+    screen.getByRole("region", { name: "敵一覧" }),
+  ).getByRole("progressbar");
+  expect(enemyHp).toHaveAttribute("aria-valuenow", "7");
+  expect(enemyHp).toHaveAttribute("aria-valuemax", "20");
   view.unmount();
   renderGame();
   expect(await screen.findByRole("region", { name: "行動予測" })).toBeVisible();

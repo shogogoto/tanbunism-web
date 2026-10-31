@@ -1,7 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { SkillSound } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
+import ActivationSoundSettings, {
+  type ActivationSoundKey,
+} from "./ActivationSoundSettings";
 import DamageEffectSettings, {
   effectLabelKeys,
   effectThresholdKeys,
@@ -242,6 +246,15 @@ export default function BattleSettingsManager() {
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const changeActivationSound = useCallback(
+    (key: ActivationSoundKey, value: SkillSound) => {
+      setSettings((current) =>
+        current ? { ...current, [key]: value } : current,
+      );
+      setSaved(false);
+    },
+    [],
+  );
   const [practiceTrials, setPracticeTrials] = useState<PracticeEnemyTrial[]>(
     [],
   );
@@ -406,6 +419,11 @@ export default function BattleSettingsManager() {
                   計算方式は戦闘開始時に固定。模擬戦では保存前の設定を使用します。
                 </p>
               </section>
+              <ActivationSoundSettings
+                physical={settings.physical_activation_sound}
+                magical={settings.magical_activation_sound}
+                onChange={changeActivationSound}
+              />
               {groups.map((group) => (
                 <section
                   key={group.label}

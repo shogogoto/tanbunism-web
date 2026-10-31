@@ -28,6 +28,8 @@ export const defaultBalance = {
   gambit_levels_per_slot: 5,
   specialty_levels_per_slot: 20,
   base_hp: 35,
+  physical_activation_sound: "slash" as import("./catalog").SkillSound,
+  magical_activation_sound: "magic" as import("./catalog").SkillSound,
   chest_gold: 30,
   chest_healing_potions: 0,
   chest_step_potions: 1,
@@ -102,6 +104,7 @@ export const defaultBalance = {
 };
 export type GameBalance = typeof defaultBalance;
 export type LiveEnemy = RegionEnemy & {
+  base_name?: string | null;
   hp: number;
   attack: number;
   mp?: number;

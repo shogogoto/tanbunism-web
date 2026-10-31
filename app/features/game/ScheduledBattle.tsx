@@ -2,21 +2,21 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { HotkeyHelpButton } from "~/features/hotkeys/GlobalHotkeys";
 import QuizAttempt from "~/features/quiz/QuizAttempt";
 import QuizPreviewPrompt from "~/features/quiz/QuizPreviewPrompt";
+import { useTanbunPreview } from "~/features/tanbun/detail/Preview";
 import { Button } from "~/shared/components/ui/button";
 import ActionQueue from "./ActionQueue";
 import BattleDialog from "./BattleDialog";
+import BattleFormation from "./BattleFormation";
 import BattleResultMessages from "./BattleResultMessages";
 import EndTurnAction from "./EndTurnAction";
-import EnemyAvatar from "./EnemyAvatar";
 import type MultiBattle from "./MultiBattle";
 import SkillEffect from "./SkillEffect";
-import Weaknesses from "./Weaknesses";
 import { type TurnInput, type TurnResult, gameRequest } from "./battle";
+import { enemyDisplayName, enemyLabel } from "./battleLabels";
 import type { SoundSkill } from "./battleSound";
 import type { SkillAnimation } from "./catalog";
 import { musicPreferences } from "./music";
 import type { GameState } from "./state";
-import useBattleTempo, { type BattleTempo } from "./useBattleTempo";
 import useSkillPresentation from "./useSkillPresentation";
 
 export default function ScheduledBattle({
@@ -51,6 +51,7 @@ export default function ScheduledBattle({
     presentationSkill,
     musicPreferences().enabled,
     true,
+    context.balance,
   );
   const [selection, setSelection] = useState("yes");
   const [retry, setRetry] = useState<TurnInput>();
@@ -58,7 +59,14 @@ export default function ScheduledBattle({
   const lastResult = useRef<TurnResult | undefined>(undefined);
   const panel = useRef<HTMLDivElement>(null);
   const advanceButton = useRef<HTMLButtonElement>(null);
-  const tempo = useBattleTempo();
+  const { openPreview, preview } = useTanbunPreview();
+  const [hideDefeated, setHideDefeated] = useState(false);
+  useEffect(() => {
+    setHideDefeated(false);
+    if (!result || !presentationReady) return;
+    const timer = setTimeout(() => setHideDefeated(true), 600);
+    return () => clearTimeout(timer);
+  }, [result, presentationReady]);
   const target = schedule?.quiz_enemy_id;
   const enemy = context.enemies.find((e) => e.id === target);
   const quizIndex = target
@@ -201,69 +209,115 @@ export default function ScheduledBattle({
     feedback && (!marker || marker.endActionDone) && !marker?.endAction;
   useLayoutEffect(() => {
     if (busy) return;
-    if (feedback) advanceButton.current?.focus();
+    if (feedback) advanceButton.current?.focus({ preventScroll: true });
     else
       panel.current
         ?.querySelector<HTMLButtonElement>(
           "button[data-quiz-option-index], button[data-simulation-option]",
         )
-        ?.focus();
+        ?.focus({ preventScroll: true });
   }, [busy, feedback]);
   if (!run) return null;
   const shownResult = result ?? lastResult.current;
+  const acting = schedule?.actor_id ?? shownResult?.actor_id ?? null;
   const effect: SkillAnimation =
     presentationSkill?.animation ??
     marker?.gambitAction?.skill.animation ??
     "impact";
-  const enemyPanel = (
+  const labels = Object.fromEntries(
+    encounterIds.current.map((id) => [
+      id,
+      enemyLabel(
+        id,
+        displayMarker.current?.enemyLabels ?? {},
+        encounterIds.current,
+      ),
+    ]),
+  );
+  const hp = marker
+    ? (schedule?.enemy_hp ?? {})
+    : (shownResult?.enemy_hp ?? schedule?.enemy_hp ?? {});
+  const activeAction =
+    acting === "player" ? marker?.gambitAction : marker?.enemyAction;
+  const primaryEffects = activeAction?.skill.effects?.length
+    ? activeAction.skill.effects
+    : activeAction
+      ? [activeAction.skill]
+      : [];
+  const counts = primaryEffects.map(
+    (effect) =>
+      effect.target_count ?? (effect.target === "all_enemies" ? "all" : 1),
+  );
+  const targetCount = counts.includes("all")
+    ? "all"
+    : Math.max(
+        1,
+        ...counts.filter((value): value is number => typeof value === "number"),
+      );
+  const targetCandidates =
+    acting === "player"
+      ? (marker?.gambitAction?.target_ids ?? [target ?? ""])
+      : acting
+        ? (marker?.enemyAction?.target_ids ?? ["player"])
+        : [];
+  const actionTargets = targetCandidates.slice(
+    0,
+    targetCount === "all" ? undefined : targetCount,
+  );
+  function effectFor(id: string) {
+    if (!presentationReady || !shownResult) return undefined;
+    const affected =
+      id === "player"
+        ? shownResult.damage > 0
+        : (shownResult.outgoing_damage?.[id] ?? 0) > 0;
+    const playerHit =
+      marker?.enemyAction?.skill.animation ?? enemy?.animation ?? "impact";
+    return affected || supportTargets.includes(id) ? (
+      <SkillEffect
+        key={shownResult.state.revision}
+        animation={
+          id === "player" && !supportTargets.includes(id)
+            ? playerHit === "none"
+              ? "impact"
+              : playerHit
+            : effect
+        }
+        onIcon
+      />
+    ) : undefined;
+  }
+  const battlefield = (
     <div className="min-w-0 shrink-0 space-y-2">
-      {schedule && marker && (
+      <BattleFormation
+        run={run}
+        player={player}
+        playerName={playerName}
+        context={context}
+        labels={labels}
+        hp={hp}
+        maximum={schedule?.enemy_max_hp}
+        mp={schedule?.enemy_mp}
+        maximumMp={schedule?.enemy_max_mp}
+        acting={acting}
+        targets={actionTargets}
+        effectFor={effectFor}
+        enemies={encounterIds.current.flatMap((id) => {
+          const item = context.enemies.find((enemy) => enemy.id === id);
+          return item &&
+            ((hp[id] ?? 0) > 0 || (Boolean(shownResult) && !hideDefeated))
+            ? [item]
+            : [];
+        })}
+      />
+      {schedule && (
         <ActionQueue
-          schedule={schedule}
+          schedule={{ ...schedule, actor_id: acting }}
           context={context}
           player={player}
           playerName={playerName}
+          labels={labels}
         />
       )}
-      <section
-        aria-label="敵一覧"
-        className="flex flex-wrap justify-evenly gap-2 rounded-lg border border-rose-500/30 p-2"
-      >
-        {context.enemies
-          .filter((item) => encounterIds.current.includes(item.id))
-          .map((item) => (
-            <div
-              key={item.id}
-              className={`flex min-w-0 flex-1 basis-24 flex-col items-center gap-1 rounded-md p-2 text-sm ${schedule?.actor_id === item.id ? "bg-rose-500/10" : ""}`}
-            >
-              <div className="relative">
-                <EnemyAvatar identity={item.id} icon={item.icon} large />
-                {presentationReady &&
-                  ((shownResult?.outgoing_damage?.[item.id] ?? 0) > 0 ||
-                    supportTargets.includes(item.id)) && (
-                    <SkillEffect
-                      key={shownResult?.state.revision}
-                      animation={effect}
-                      onIcon
-                    />
-                  )}
-              </div>
-              <span className="max-w-full truncate">{item.name}</span>
-              <Weaknesses
-                ids={item.weaknesses}
-                resistances={item.resistances}
-                elements={context.elements}
-              />
-              <span className="tabular-nums">
-                HP{" "}
-                {(marker
-                  ? schedule?.enemy_hp[item.id]
-                  : shownResult?.enemy_hp?.[item.id]) ?? 0}
-                /{schedule?.enemy_max_hp?.[item.id] ?? item.hp}
-              </span>
-            </div>
-          ))}
-      </section>
     </div>
   );
   return (
@@ -273,47 +327,10 @@ export default function ScheduledBattle({
       playerName={playerName}
       busy={busy}
       simulation={simulation}
-      enemyPanel={enemyPanel}
-      playerEffect={
-        presentationReady &&
-        shownResult &&
-        (shownResult.damage > 0 || supportTargets.includes("player")) ? (
-          <SkillEffect
-            key={shownResult.state.revision}
-            animation={
-              supportTargets.includes("player")
-                ? (presentationSkill?.animation ?? "none")
-                : (marker?.enemyAction?.skill.animation ?? enemy?.animation) ===
-                    "none"
-                  ? "impact"
-                  : (marker?.enemyAction?.skill.animation ??
-                    enemy?.animation ??
-                    "impact")
-            }
-            onIcon
-          />
-        ) : undefined
-      }
+      battlefield={battlefield}
       remainingTimeMs={remaining}
       totalTimeSeconds={run.answerSeconds ?? undefined}
-      headerControls={
-        <div className="flex items-center gap-1">
-          <select
-            aria-label="戦闘テンポ"
-            className="h-8 rounded-md border bg-background"
-            value={tempo.tempo}
-            disabled={tempo.saving}
-            onChange={(event) =>
-              void tempo.change(event.target.value as BattleTempo)
-            }
-          >
-            <option value="slow">遅</option>
-            <option value="medium">中</option>
-            <option value="fast">速</option>
-          </select>
-          <HotkeyHelpButton />
-        </div>
-      }
+      headerControls={<HotkeyHelpButton />}
       footer={
         !feedback && (
           <Button
@@ -401,14 +418,27 @@ export default function ScheduledBattle({
                 }}
               />
             )}
-            <Button
-              ref={advanceButton}
-              data-battle-advance
-              disabled={busy || !ready}
-              onClick={() => void advance()}
-            >
-              次へ
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                ref={advanceButton}
+                data-battle-advance
+                disabled={busy || !ready}
+                onClick={() => void advance()}
+              >
+                次へ
+              </Button>
+              {quiz && !syntheticAnswers && (
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    openPreview({ quizId: quiz.quiz_id, role: "target" })
+                  }
+                >
+                  解説
+                </Button>
+              )}
+            </div>
+            {preview}
           </>
         ) : (
           quiz && (
@@ -416,7 +446,7 @@ export default function ScheduledBattle({
               <p className="text-sm">
                 {schedule?.actor_id === "player"
                   ? `${playerName ?? "あなた"}の${marker?.gambitAction?.name ?? "攻撃"}`
-                  : `${enemy?.name ?? "敵"}の${marker?.enemyAction?.name ?? "攻撃"}`}
+                  : `${enemyDisplayName(enemy?.base_name ?? enemy?.name ?? "敵", labels[enemy?.id ?? ""] ?? "")}の${marker?.enemyAction?.name ?? "攻撃"}`}
               </p>
               {syntheticAnswers ? (
                 <div className="space-y-3">

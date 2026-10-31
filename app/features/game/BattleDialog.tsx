@@ -24,6 +24,7 @@ export default function BattleDialog({
   headerControls,
   busy,
   enemyPanel,
+  battlefield,
   playerEffect,
   simulation = false,
   remainingTimeMs,
@@ -37,6 +38,7 @@ export default function BattleDialog({
   headerControls?: ReactNode;
   busy: boolean;
   enemyPanel?: ReactNode;
+  battlefield?: ReactNode;
   playerEffect?: ReactNode;
   simulation?: boolean;
   remainingTimeMs?: number;
@@ -81,7 +83,7 @@ export default function BattleDialog({
           }}
           onOpenAutoFocus={(event) => {
             const target = content.current?.querySelector<HTMLButtonElement>(
-              '[aria-label="敵一覧"] button:not(:disabled), button[data-quiz-option-index]:not(:disabled), button[data-simulation-option]:not(:disabled), [data-battle-advance]:not(:disabled)',
+              "button[data-quiz-option-index]:not(:disabled), button[data-simulation-option]:not(:disabled), [data-battle-advance]:not(:disabled)",
             );
             event.preventDefault();
             (target ?? content.current)?.focus();
@@ -210,28 +212,32 @@ export default function BattleDialog({
             data-battle-scroll
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain space-y-3 pr-1"
           >
-            <div className="shrink-0">
-              <PlayerStatus
-                run={run}
-                name={playerName}
-                player={player}
-                effect={playerEffect}
-              />
-            </div>
-            {enemyPanel ?? (
-              <section
-                aria-label="敵"
-                className="flex shrink-0 flex-col items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-center"
-              >
-                <EnemyAvatar
-                  identity={run.enemyId ?? `${run.resourceId}:${run.kills}`}
-                  large
-                />
-                <h3 className="text-sm font-medium">敵</h3>
-                <p className="text-sm tabular-nums">
-                  HP {run.enemyHp}/{run.enemyMaxHp}
-                </p>
-              </section>
+            {battlefield ?? (
+              <>
+                <div className="shrink-0">
+                  <PlayerStatus
+                    run={run}
+                    name={playerName}
+                    player={player}
+                    effect={playerEffect}
+                  />
+                </div>
+                {enemyPanel ?? (
+                  <section
+                    aria-label="敵"
+                    className="flex shrink-0 flex-col items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-center"
+                  >
+                    <EnemyAvatar
+                      identity={run.enemyId ?? `${run.resourceId}:${run.kills}`}
+                      large
+                    />
+                    <h3 className="text-sm font-medium">敵</h3>
+                    <p className="text-sm tabular-nums">
+                      HP {run.enemyHp}/{run.enemyMaxHp}
+                    </p>
+                  </section>
+                )}
+              </>
             )}
             {timeRatio !== undefined && (
               <div

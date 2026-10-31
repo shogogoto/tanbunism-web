@@ -121,6 +121,7 @@ export type GameSave = {
       deadline: number;
     } | null;
     enemies: string[];
+    enemyLabels?: Record<string, string>;
     quizIndices?: Record<string, number>;
     bossLevel?: number | null;
     bossQuizIds?: string[];

@@ -95,12 +95,31 @@ export type SoundSkill = Pick<
 };
 
 /** Short licensed one-shots, followed by the skill's own impact sound/visual. */
-export function skillActivation(skill: SoundSkill) {
+export function skillActivation(
+  skill: SoundSkill,
+  settings?: {
+    physical_activation_sound?: SkillSound;
+    magical_activation_sound?: SkillSound;
+  },
+) {
   const primary =
     skill.effects?.find((effect) => effect.effect === "attack") ?? skill;
-  return primary.effect === "attack" && primary.damage_type !== "special"
-    ? { sound: "slash" as const, durationMs: 260 }
-    : { sound: "magic" as const, durationMs: 600 };
+  const fallback =
+    primary.effect === "attack" && primary.damage_type !== "special"
+      ? { sound: "slash" as const, durationMs: 260 }
+      : { sound: "magic" as const, durationMs: 600 };
+  const configured =
+    fallback.sound === "slash"
+      ? settings?.physical_activation_sound
+      : settings?.magical_activation_sound;
+  return {
+    ...fallback,
+    durationMs:
+      configured && configured !== "auto" && configured !== fallback.sound
+        ? 10000
+        : fallback.durationMs,
+    sound: !configured || configured === "auto" ? fallback.sound : configured,
+  };
 }
 
 export function resolveSkillSound(skill: SoundSkill): Preset | null {

@@ -42,7 +42,7 @@ import {
 import type { GameSave } from "./domain";
 import { musicPreferences } from "./music";
 import type { GameState } from "./state";
-import useBattleTempo, { type BattleTempo } from "./useBattleTempo";
+import useBattleTempo from "./useBattleTempo";
 
 const hitAnimation = (animation?: SkillAnimation): SkillAnimation =>
   animation && animation !== "none" ? animation : "impact";
@@ -369,21 +369,6 @@ function LegacyMultiBattle({
   if (!battle || !run) return null;
   const tempoControl = (
     <div className="flex items-center gap-1">
-      <label className="flex items-center" title="戦闘テンポ">
-        <select
-          aria-label="戦闘テンポ"
-          className="h-8 w-14 rounded-md border bg-background px-1 text-sm"
-          value={tempo.tempo}
-          disabled={tempo.saving}
-          onChange={(event) =>
-            void tempo.change(event.target.value as BattleTempo)
-          }
-        >
-          <option value="slow">遅</option>
-          <option value="medium">中</option>
-          <option value="fast">速</option>
-        </select>
-      </label>
       <HotkeyHelpButton />
     </div>
   );

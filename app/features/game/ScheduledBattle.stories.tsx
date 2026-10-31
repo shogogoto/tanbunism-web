@@ -82,6 +82,12 @@ function initial(roster = enemies): GameSave {
       region: 0,
       checkpoint: "@entrance",
       enemies: roster.map((enemy) => enemy.id),
+      enemyLabels: Object.fromEntries(
+        roster.map((enemy, index) => [
+          enemy.id,
+          String.fromCharCode(65 + index),
+        ]),
+      ),
       quizIndices: { ghost: 0 },
       endActionDone: true,
       schedule: {
@@ -95,9 +101,17 @@ function initial(roster = enemies): GameSave {
   };
 }
 
-function Preview({ manyEnemies = false }: { manyEnemies?: boolean }) {
+function Preview({
+  manyEnemies = false,
+  finishingBlow = false,
+}: { manyEnemies?: boolean; finishingBlow?: boolean }) {
   const roster = manyEnemies ? crowdedEnemies : enemies;
-  const [save, setSave] = useState(() => initial(roster));
+  const [save, setSave] = useState(() => {
+    const state = initial(roster);
+    if (finishingBlow && state.battle?.schedule)
+      state.battle.schedule.enemy_hp.ghost = 10;
+    return state;
+  });
   // Fixed backend replies for isolated UI verification; no live requests/writes.
   const transport: BattleTransport = async <T,>(
     path: string,
@@ -134,6 +148,7 @@ function Preview({ manyEnemies = false }: { manyEnemies?: boolean }) {
         state: { revision: marker.turn, save: copy },
         results: { [target]: correct },
         damage: correct ? 0 : 3,
+        actor_id: save.battle?.schedule?.actor_id ?? "player",
         outgoing_damage: correct ? { [target]: 10 } : {},
       } as T;
     }
@@ -174,3 +189,4 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const ActionForecast: Story = {};
 export const ManyEnemies: Story = { args: { manyEnemies: true } };
+export const FinishingBlow: Story = { args: { finishingBlow: true } };
