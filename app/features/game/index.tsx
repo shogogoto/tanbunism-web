@@ -41,6 +41,7 @@ import AchievementsPanel from "./AchievementsPanel";
 import BattleDialog from "./BattleDialog";
 import BossPanel from "./BossPanel";
 import EconomyPanel from "./EconomyPanel";
+import EquipmentPanel from "./EquipmentPanel";
 import GambitEditor from "./GambitEditor";
 import ExplorationMap from "./Map";
 import MultiBattle from "./MultiBattle";
@@ -134,6 +135,7 @@ export function GamePlay({
   const { menu: routeMenu } = useParams();
   const panel =
     routeMenu === "status" ||
+    routeMenu === "equipment" ||
     routeMenu === "item" ||
     routeMenu === "shop" ||
     routeMenu === "achievements" ||
@@ -144,21 +146,24 @@ export function GamePlay({
       : undefined;
   const menuPanel =
     panel === "status" ||
+    panel === "equipment" ||
     panel === "item" ||
     panel === "shop" ||
     panel === "gambits" ||
     panel === "specialties" ||
     panel === "achievements";
   const menuTab =
-    panel === "specialties"
-      ? "specialties"
-      : panel === "gambits"
-        ? "gambits"
-        : panel === "item" || panel === "shop"
-          ? "item"
-          : panel === "achievements"
-            ? "achievements"
-            : "status";
+    panel === "equipment"
+      ? "equipment"
+      : panel === "specialties"
+        ? "specialties"
+        : panel === "gambits"
+          ? "gambits"
+          : panel === "item" || panel === "shop"
+            ? "item"
+            : panel === "achievements"
+              ? "achievements"
+              : "status";
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => {
@@ -180,11 +185,12 @@ export function GamePlay({
       );
       const topDialog = dialogs[dialogs.length - 1];
       if (menuPanel && topDialog?.hasAttribute("data-game-menu")) {
-        if (event.ctrlKey && /^[1-5]$/.test(event.key)) {
+        if (event.ctrlKey && /^[1-6]$/.test(event.key)) {
           event.preventDefault();
           const tab = [
             "status",
             "item",
+            "equipment",
             "gambits",
             "specialties",
             "achievements",
@@ -771,6 +777,7 @@ export function GamePlay({
         save.allocation,
         balance ?? defaultBalance,
         save.economy?.weapon_attack,
+        save.economy?.equipment_buffs,
       );
       if (entering.run)
         entering = {
@@ -820,6 +827,7 @@ export function GamePlay({
         save.allocation,
         balance ?? defaultBalance,
         save.economy?.weapon_attack,
+        save.economy?.equipment_buffs,
       );
       if (restarting.run)
         restarting.run = {
@@ -919,6 +927,7 @@ export function GamePlay({
           save.allocation,
           balance ?? defaultBalance,
           save.economy?.weapon_attack,
+          save.economy?.equipment_buffs,
         );
         next.run = { ...next.run, ...stats, hp: stats.maxHp, mp: stats.maxMp };
       }
@@ -1705,6 +1714,7 @@ export function GamePlay({
                   [
                     ["status", "ステータス"],
                     ["item", "アイテム"],
+                    ["equipment", "装備"],
                     ["gambits", "ガンビット"],
                     ["specialties", "専門分野"],
                     ["achievements", "実績"],
@@ -1745,6 +1755,7 @@ export function GamePlay({
                     inBattle={run?.phase === "battle"}
                     currentHp={run?.hp}
                     weaponAttack={save.economy?.weapon_attack}
+                    equipmentBuffs={save.economy?.equipment_buffs}
                     onPointsChange={setAllocationPoints}
                     onSaved={applyState}
                   />
@@ -1769,6 +1780,22 @@ export function GamePlay({
                         replace: true,
                         state: location.state,
                       });
+                    }}
+                  />
+                )}
+              </TabsContent>
+              <TabsContent value="equipment">
+                {stateLoaded && (
+                  <EquipmentPanel
+                    userId={userId}
+                    save={save}
+                    revision={revision.current}
+                    disabled={
+                      busy || Boolean(feedback) || run?.phase === "battle"
+                    }
+                    onSaved={(state) => {
+                      applyState(state);
+                      void retryCombat();
                     }}
                   />
                 )}

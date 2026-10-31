@@ -1,6 +1,7 @@
 import { apiErrorMessage } from "~/shared/lib/apiErrorMessage";
 import { networkFetch } from "~/shared/lib/networkFetch";
 import type { RegionEnemy } from "./api";
+import type { GameSave } from "./domain";
 import type { GameState } from "./state";
 
 export type Allocation = {
@@ -205,9 +206,10 @@ export function playerStats(
   allocation: Allocation | undefined,
   balance: GameBalance,
   weaponAttack = 0,
+  equipmentBuffs?: NonNullable<GameSave["economy"]>["equipment_buffs"],
 ) {
   const a = allocation ?? emptyAllocation;
-  return {
+  const stats = {
     maxHp: Math.min(100000, balance.base_hp + a.hp * balance.hp_per_point),
     maxMp: Math.min(
       100000,
@@ -215,7 +217,9 @@ export function playerStats(
     ),
     attack: Math.min(
       100000,
-      balance.base_attack + a.attack * balance.attack_per_point + weaponAttack,
+      balance.base_attack +
+        a.attack * balance.attack_per_point +
+        (equipmentBuffs ? 0 : weaponAttack),
     ),
     defense: Math.min(
       100000,
@@ -238,6 +242,17 @@ export function playerStats(
         (a.speed ?? 0) * (balance.speed_per_point ?? 1),
     ),
   };
+  const base = { ...stats };
+  for (const buff of equipmentBuffs ?? []) {
+    if (!(buff.stat in base)) continue;
+    const key = buff.stat as keyof typeof stats;
+    const delta =
+      buff.amount_mode === "percent"
+        ? Math.floor((base[key] * buff.amount) / 100)
+        : buff.amount;
+    stats[key] = Math.min(100000, stats[key] + delta);
+  }
+  return stats;
 }
 
 /** No enemy HP is sent to the server. A max-HP change never heals a damaged enemy. */

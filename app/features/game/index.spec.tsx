@@ -1175,7 +1175,14 @@ it("switches the numbered menu tabs with Ctrl+digits", async () => {
   expect(
     await screen.findByRole("dialog", { name: "ゲームメニュー" }),
   ).toBeVisible();
-  const tabs = ["ステータス", "アイテム", "ガンビット", "専門分野", "実績"];
+  const tabs = [
+    "ステータス",
+    "アイテム",
+    "装備",
+    "ガンビット",
+    "専門分野",
+    "実績",
+  ];
   for (const [index, label] of tabs.entries()) {
     const tab = screen.getByRole("tab", { name: label });
     expect(tab).toHaveTextContent(String(index + 1));

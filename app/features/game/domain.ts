@@ -38,6 +38,10 @@ export type GameSave = {
     inventory: Record<string, number>;
     unlocked_triggers?: string[];
     weapon: string | null;
+    equipment?: Record<
+      string,
+      { item_id: string; max_uses: number; defensive: boolean }
+    > | null;
     weapon_attack: number;
     weapon_max_uses?: number;
     equipment_buffs?:
@@ -173,6 +177,7 @@ export function enterDungeon(
     save.allocation,
     defaultBalance,
     save.economy?.weapon_attack,
+    save.economy?.equipment_buffs,
   );
   const maxHp = stats.maxHp;
   return {

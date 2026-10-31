@@ -13,10 +13,11 @@ import {
 } from "./itemCategories";
 import { type GameState, requestGameState } from "./state";
 
-type Product = {
+export type Product = {
   id: string;
   name: string;
   category?: ItemCategory;
+  equipment_part?: "arm" | "body" | "feet" | "head" | "accessory" | null;
   price: number | null;
   kind:
     | "weapon"
@@ -43,7 +44,7 @@ type Product = {
     affected_element?: string | null;
   }[];
 };
-type Shop = {
+export type Shop = {
   products: Product[];
   specialties?: {
     resource_id: string;
@@ -68,7 +69,7 @@ export default function EconomyPanel({
   shop: boolean;
   disabled: boolean;
   onSaved: (state: GameState) => void;
-  onTab: (panel: "shop" | "item") => void;
+  onTab: (panel: "shop" | "item" | "equipment") => void;
 }) {
   const {
     data,
@@ -168,7 +169,11 @@ export default function EconomyPanel({
             <div className="grid gap-3 md:grid-cols-2">
               {products.map((product) => {
                 const quantity = inventory[product.id] ?? 0;
-                const equipped = save.economy?.weapon === product.id;
+                const equipped = save.economy?.equipment
+                  ? Object.values(save.economy.equipment).some(
+                      (item) => item.item_id === product.id,
+                    )
+                  : save.economy?.weapon === product.id;
                 const unlocked =
                   product.kind === "gambit" &&
                   (save.economy?.unlocked_triggers ?? []).includes(
@@ -254,7 +259,11 @@ export default function EconomyPanel({
                     <Button
                       disabled={disabled || busy || unavailable}
                       variant="outline"
-                      onClick={() =>
+                      onClick={() => {
+                        if (!shop && product.kind === "weapon") {
+                          onTab("equipment");
+                          return;
+                        }
                         void act(
                           product,
                           shop
@@ -262,8 +271,8 @@ export default function EconomyPanel({
                             : product.kind === "weapon"
                               ? "equip"
                               : "use",
-                        )
-                      }
+                        );
+                      }}
                     >
                       {unlocked
                         ? "解放済み"
@@ -272,9 +281,7 @@ export default function EconomyPanel({
                             ? "所持済み"
                             : `${product.price} G`
                           : product.kind === "weapon"
-                            ? equipped
-                              ? "外す"
-                              : "装備"
+                            ? "装備画面"
                             : product.kind === "dungeon_unlock"
                               ? product.enabled === false
                                 ? "開放済み"

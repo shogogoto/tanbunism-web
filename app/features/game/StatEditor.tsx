@@ -16,6 +16,7 @@ import {
   gameRequest,
   playerStats,
 } from "./battle";
+import type { GameSave } from "./domain";
 import type { GameState } from "./state";
 
 const statDefinitions = [
@@ -70,6 +71,7 @@ export default function StatEditor({
   inBattle,
   currentHp,
   weaponAttack,
+  equipmentBuffs,
   onPointsChange,
   onSaved,
 }: {
@@ -79,6 +81,7 @@ export default function StatEditor({
   inBattle: boolean;
   currentHp?: number;
   weaponAttack?: number;
+  equipmentBuffs?: NonNullable<GameSave["economy"]>["equipment_buffs"];
   onPointsChange?: (used: number) => void;
   onSaved: (state: GameState) => void;
 }) {
@@ -91,7 +94,7 @@ export default function StatEditor({
   const budget = Math.max(0, level - 1) * 3;
   const used = Object.values(draft).reduce((sum, n) => sum + n, 0);
   const remaining = Math.max(0, budget - used);
-  const stats = playerStats(draft, balance, weaponAttack);
+  const stats = playerStats(draft, balance, weaponAttack, equipmentBuffs);
   useEffect(() => onPointsChange?.(used), [onPointsChange, used]);
 
   function adjust(key: keyof Allocation, amount: number) {

@@ -7,6 +7,7 @@ import type {
   ItemDefinition,
 } from "~/features/game/catalog";
 import { defaultElements, isEquipmentSkill } from "~/features/game/catalog";
+import { equipmentParts } from "~/features/game/equipmentSlots";
 import { itemCategories, itemCategory } from "~/features/game/itemCategories";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
@@ -43,7 +44,7 @@ export default function DefinitionTables({
     "名前",
     "素材",
     ...(kind === "items"
-      ? ["カテゴリ", "発動スキル", "使用回数"]
+      ? ["カテゴリ", "装備部位", "発動スキル", "使用回数"]
       : ["ボス用", "能力倍率", "ガンビット", "攻撃スキル", "命中時スキル"]),
   ];
   const elements = (catalog.elements ?? defaultElements).filter(
@@ -152,6 +153,29 @@ export default function DefinitionTables({
                         {itemCategories.map(({ id, label }) => (
                           <option key={id} value={id}>
                             {label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <select
+                        aria-label="装備部位"
+                        className={selectClass}
+                        disabled={item.kind !== "weapon"}
+                        value={item.equipment_part ?? ""}
+                        onChange={(e) =>
+                          update(item.id, {
+                            equipment_part:
+                              (e.target
+                                .value as ItemDefinition["equipment_part"]) ||
+                              null,
+                          })
+                        }
+                      >
+                        <option value="">自動</option>
+                        {equipmentParts.map((part) => (
+                          <option key={part.id} value={part.id}>
+                            {part.label}
                           </option>
                         ))}
                       </select>

@@ -475,6 +475,7 @@ export type ItemDefinition = {
   kind: "weapon" | "consumable";
   category?: import("./itemCategories").ItemCategory;
   max_uses?: number;
+  equipment_part?: "arm" | "body" | "feet" | "head" | "accessory" | null;
 };
 
 export function isEquipmentSkill(skill: SkillDefinition): boolean {

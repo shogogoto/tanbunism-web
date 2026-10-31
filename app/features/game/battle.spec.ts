@@ -8,6 +8,18 @@ import {
 import { enterDungeon, newSave } from "./domain";
 
 describe("allocated stats and browser-local enemy HP", () => {
+  it("combines equipment buffs against base stats without double-counting attack", () => {
+    const base = playerStats(undefined, defaultBalance);
+    const stats = playerStats(undefined, defaultBalance, 3, [
+      { stat: "attack", amount: 3, amount_mode: "fixed" },
+      { stat: "defense", amount: 4, amount_mode: "fixed" },
+      { stat: "maxHp", amount: 50, amount_mode: "percent" },
+      { stat: "maxHp", amount: 50, amount_mode: "percent" },
+    ]);
+    expect(stats.attack).toBe(base.attack + 3);
+    expect(stats.defense).toBe(base.defense + 4);
+    expect(stats.maxHp).toBe(base.maxHp + 2 * Math.floor(base.maxHp / 2));
+  });
   it("level alone never raises stats", () => {
     expect(enterDungeon(newSave(), "book", "本", 100).run).toEqual(
       enterDungeon(newSave(), "book", "本", 1).run,
