@@ -22,6 +22,18 @@ npm run dev # Your application will be available at `http://localhost:5173`.
 npm run build # Create a production build
 ```
 
+## TypeScript and build tools
+
+`npm run typecheck` uses the native TypeScript 7 compiler (`tsc`). The
+`@typescript/native` dependency is an npm alias for TypeScript 7, while the
+`typescript` dependency aliases `@typescript/typescript6` for tools that still
+need the JavaScript compiler API. Keep both aliases: `npx tsc --version` should
+report 7.x; `npx tsc6 --version` reports the compatibility compiler.
+This follows the [official side-by-side setup](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-60).
+
+Vite 8 uses Rolldown/Oxc for app builds. Use `npm ci` to reproduce the checked
+versions of the compiler, Vite plugins, Vitest, and Storybook in CI.
+
 ## Generating Backend API Client
 ```bash
 npm run generate:api

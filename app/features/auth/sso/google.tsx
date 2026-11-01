@@ -1,4 +1,9 @@
-import { Link, Navigate, redirect } from "react-router";
+import {
+  type ClientLoaderFunctionArgs,
+  Link,
+  Navigate,
+  redirect,
+} from "react-router";
 import GoogleIcon from "~/shared/components/icons/Google";
 import { Button } from "~/shared/components/ui/button";
 import {
@@ -6,7 +11,6 @@ import {
   oauthGoogleCookieCallbackGoogleCookieCallbackGet,
 } from "~/shared/generated/google/google";
 import { shouldOpenExternal, useHandleGoogleSSOExternal } from "./lib";
-import type { Route } from ".react-router/types/app/routes/sso/google/+types/callback";
 
 export async function authorize() {
   const res = await oauthGoogleCookieAuthorizeGoogleCookieAuthorizeGet(
@@ -19,7 +23,7 @@ export async function authorize() {
   console.error("Google SSO authorization failed", { cause: res });
   return redirect("/");
 }
-export async function receiveCookie({ request }: Route.ClientLoaderArgs) {
+export async function receiveCookie({ request }: ClientLoaderFunctionArgs) {
   const urlParams = new URLSearchParams(new URL(request.url).search);
   const code = urlParams.get("code");
   const state = urlParams.get("state");

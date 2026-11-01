@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "react-router";
 import { useDebounce } from "~/shared/hooks/useDebounce";
 
@@ -38,6 +45,7 @@ export function createGenericSearchContext<T extends Record<string, unknown>>(
     });
 
     const debouncedParams = useDebounce(immediateParams, debounceMs);
+    const previousUrlState = useRef(immediateParams);
 
     // state -> URL の同期
     // biome-ignore lint/correctness/useExhaustiveDependencies: `searchParams` 意図的に除外 state -> 古いurl に置き換えてしまうのを防ぐ
@@ -72,7 +80,13 @@ export function createGenericSearchContext<T extends Record<string, unknown>>(
         const newValue = config[key].deserialize(searchParams);
         newState[key] = newValue;
       }
-      setImmediateParams(newState);
+      // Pagination updates must not discard edits still waiting for debounce.
+      if (
+        JSON.stringify(newState) !== JSON.stringify(previousUrlState.current)
+      ) {
+        previousUrlState.current = newState;
+        setImmediateParams(newState);
+      }
     }, [searchParams, config]); // immediateParams を依存配列から外して無限ループを防止
 
     const value = useMemo(

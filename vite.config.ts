@@ -1,5 +1,3 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import mdx from "@mdx-js/rollup";
 import netlifyReactRouter from "@netlify/vite-plugin-react-router";
 import { reactRouter } from "@react-router/dev/vite";
@@ -7,22 +5,15 @@ import tailwindcss from "@tailwindcss/vite";
 import reactVitest from "@vitejs/plugin-react";
 import remarkGfm from "remark-gfm";
 import mkcert from "vite-plugin-mkcert";
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
-//
-const dirname =
-  typeof __dirname !== "undefined"
-    ? __dirname
-    : path.dirname(fileURLToPath(import.meta.url));
-
 export default defineConfig({
+  resolve: { tsconfigPaths: true },
   plugins: [
     process.env.NODE_ENV === "development" &&
       process.env.VITE_HTTPS !== "false" &&
       mkcert(),
     tailwindcss(),
     process.env.VITEST ? reactVitest() : reactRouter(), // storybookのテスト解消
-    tsconfigPaths(),
     netlifyReactRouter(),
     {
       enforce: "pre",
@@ -44,6 +35,8 @@ export default defineConfig({
     },
   ],
   test: {
+    // Multi-screen jsdom integrations can exceed 5s under CI worker contention.
+    testTimeout: 10_000,
     globals: true, // `describe`, `it`, `expect` テスト関数のインポート省略
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts", "fake-indexeddb/auto"],
