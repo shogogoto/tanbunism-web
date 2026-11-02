@@ -3,6 +3,7 @@ import Game from "~/features/game";
 import { isGamePanel } from "~/features/game/menu";
 
 export function loader({ params }: Pick<LoaderFunctionArgs, "params">) {
+  if (params.menu === "equipment") return redirect("/game/status");
   if (params.menu && !isGamePanel(params.menu)) {
     return redirect("/game");
   }

@@ -15,6 +15,7 @@ const products = [
     icon: "sword",
     max_uses: 30,
     skill_name: "物理攻撃力アップ",
+    equipment_buffs: [{ stat: "attack", amount: 3, amount_mode: "fixed" }],
   },
   {
     id: "armor",
@@ -24,6 +25,10 @@ const products = [
     icon: "shield",
     max_uses: 30,
     skill_name: "守備力アップ",
+    equipment_buffs: [
+      { stat: "defense", amount: 5, amount_mode: "fixed" },
+      { stat: "maxHp", amount: 20, amount_mode: "percent" },
+    ],
   },
   {
     id: "boots",
@@ -33,6 +38,7 @@ const products = [
     icon: "footprints",
     max_uses: 30,
     skill_name: "速さアップ",
+    equipment_buffs: [{ stat: "speed", amount: 2, amount_mode: "fixed" }],
   },
 ];
 const initial: GameState = {

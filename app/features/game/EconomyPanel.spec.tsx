@@ -60,7 +60,7 @@ function show(shop: boolean, disabled = false) {
 it("purchases with the displayed state's revision and applies the returned balance", async () => {
   const { onSaved, save } = show(true);
   const button = await screen.findByRole("button", { name: "100 G" });
-  expect(screen.getByText("攻 +3 · 30回使用可")).toBeVisible();
+  expect(screen.getByText("攻撃力 +3 · 30回使用可")).toBeVisible();
   const result = {
     revision: 8,
     save: { ...save, economy: { ...save.economy, gold: 20 } },
@@ -184,9 +184,9 @@ it("describes the shared buff effects of equipment", async () => {
   });
   show(true);
   expect(
-    await screen.findByText("守 +4 · 特攻 +50% · 30回使用可"),
+    await screen.findByText("守備力 +4 · 特攻 +50% · 30回使用可"),
   ).toBeVisible();
-  expect(screen.queryByText("攻 +3 · 30回使用可")).not.toBeInTheDocument();
+  expect(screen.queryByText("攻撃力 +3 · 30回使用可")).not.toBeInTheDocument();
 });
 
 it("describes elemental equipment as increased power and resistance", async () => {

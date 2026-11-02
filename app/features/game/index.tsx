@@ -134,10 +134,14 @@ export function GamePlay({
     );
   }, [save.allocation]);
   const { menu: routeMenu } = useParams();
-  const panel = isGamePanel(routeMenu) ? routeMenu : undefined;
+  const panel =
+    routeMenu === "equipment"
+      ? "status"
+      : isGamePanel(routeMenu)
+        ? routeMenu
+        : undefined;
   const menuPanel =
     panel === "status" ||
-    panel === "equipment" ||
     panel === "library" ||
     panel === "item" ||
     panel === "shop" ||
@@ -147,17 +151,15 @@ export function GamePlay({
   const menuTab =
     panel === "library"
       ? "library"
-      : panel === "equipment"
-        ? "equipment"
-        : panel === "specialties"
-          ? "specialties"
-          : panel === "gambits"
-            ? "gambits"
-            : panel === "item" || panel === "shop"
-              ? "item"
-              : panel === "achievements"
-                ? "achievements"
-                : "status";
+      : panel === "specialties"
+        ? "specialties"
+        : panel === "gambits"
+          ? "gambits"
+          : panel === "item" || panel === "shop"
+            ? "item"
+            : panel === "achievements"
+              ? "achievements"
+              : "status";
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => {
@@ -179,10 +181,14 @@ export function GamePlay({
       );
       const topDialog = dialogs[dialogs.length - 1];
       if (menuPanel && topDialog?.hasAttribute("data-game-menu")) {
-        if (event.ctrlKey && /^[1-7]$/.test(event.key)) {
+        const tab =
+          event.ctrlKey && /^[1-9]$/.test(event.key)
+            ? gameMenuTabs[Number(event.key) - 1]
+            : undefined;
+        if (tab) {
           event.preventDefault();
-          const [tab] = gameMenuTabs[Number(event.key) - 1];
-          void navigate(`/game/${tab}`, {
+          const [value] = tab;
+          void navigate(`/game/${value}`, {
             replace: true,
             state: location.state,
           });
@@ -1703,19 +1709,41 @@ export function GamePlay({
                     </span>
                   </span>
                 </div>
-                {level && stateLoaded && (
-                  <StatEditor
-                    level={level}
-                    allocation={save.allocation}
-                    balance={balance ?? defaultBalance}
-                    inBattle={run?.phase === "battle"}
-                    currentHp={run?.hp}
-                    weaponAttack={save.economy?.weapon_attack}
-                    equipmentBuffs={save.economy?.equipment_buffs}
-                    onPointsChange={setAllocationPoints}
-                    onSaved={applyState}
-                  />
-                )}
+                <div className="grid items-start gap-6 lg:grid-cols-2">
+                  <section
+                    aria-label="能力値・育成"
+                    className="min-w-0 space-y-3"
+                  >
+                    <h3 className="text-sm font-semibold">能力値・育成</h3>
+                    {level && stateLoaded && (
+                      <StatEditor
+                        level={level}
+                        allocation={save.allocation}
+                        balance={balance ?? defaultBalance}
+                        inBattle={run?.phase === "battle"}
+                        currentHp={run?.hp}
+                        weaponAttack={save.economy?.weapon_attack}
+                        equipmentBuffs={save.economy?.equipment_buffs}
+                        onPointsChange={setAllocationPoints}
+                        onSaved={applyState}
+                      />
+                    )}
+                  </section>
+                  {stateLoaded && (
+                    <EquipmentPanel
+                      userId={userId}
+                      save={save}
+                      revision={revision.current}
+                      disabled={
+                        busy || Boolean(feedback) || run?.phase === "battle"
+                      }
+                      onSaved={(state) => {
+                        applyState(state);
+                        void retryCombat();
+                      }}
+                    />
+                  )}
+                </div>
               </TabsContent>
               <TabsContent value="item">
                 {stateLoaded && (
@@ -1741,22 +1769,6 @@ export function GamePlay({
                         replace: true,
                         state: location.state,
                       });
-                    }}
-                  />
-                )}
-              </TabsContent>
-              <TabsContent value="equipment">
-                {stateLoaded && (
-                  <EquipmentPanel
-                    userId={userId}
-                    save={save}
-                    revision={revision.current}
-                    disabled={
-                      busy || Boolean(feedback) || run?.phase === "battle"
-                    }
-                    onSaved={(state) => {
-                      applyState(state);
-                      void retryCombat();
                     }}
                   />
                 )}

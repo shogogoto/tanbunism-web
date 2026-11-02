@@ -5,6 +5,7 @@ import { Button } from "~/shared/components/ui/button";
 import GameIcon from "./GameIcon";
 import { gameRequest } from "./battle";
 import type { GameSave } from "./domain";
+import { describeEquipmentEffects } from "./equipmentEffects";
 import { triggerUnlockId } from "./gambitShop";
 import {
   type ItemCategory,
@@ -69,7 +70,7 @@ export default function EconomyPanel({
   shop: boolean;
   disabled: boolean;
   onSaved: (state: GameState) => void;
-  onTab: (panel: "shop" | "item" | "equipment") => void;
+  onTab: (panel: "shop" | "item" | "status") => void;
 }) {
   const {
     data,
@@ -234,13 +235,11 @@ export default function EconomyPanel({
                             ? "指定リソースのダンジョンを開放"
                             : product.kind === "weapon"
                               ? product.equipment_buffs?.length
-                                ? product.equipment_buffs
-                                    .map(
-                                      (buff) =>
-                                        `${buff.affected_element ? `${product.element_names?.[buff.affected_element] ?? buff.affected_element} ` : ""}${({ attack: "攻", defense: "守", specialAttack: "特攻", specialDefense: "特守", maxHp: "HP", maxMp: "MP", damageDealt: "属性威力", damageTaken: "属性耐性" } as Record<string, string>)[buff.stat] ?? buff.stat} +${buff.amount}${buff.amount_mode === "percent" ? "%" : ""}`,
-                                    )
-                                    .join(" · ")
-                                : `攻 +${product.amount}`
+                                ? describeEquipmentEffects(
+                                    product.equipment_buffs,
+                                    product.element_names,
+                                  )
+                                : `攻撃力 +${product.amount}`
                               : product.kind === "hp"
                                 ? `HP ${product.amount}${product.amount_mode === "percent" ? "%" : ""}回復`
                                 : product.kind === "mp"
@@ -261,7 +260,7 @@ export default function EconomyPanel({
                       variant="outline"
                       onClick={() => {
                         if (!shop && product.kind === "weapon") {
-                          onTab("equipment");
+                          onTab("status");
                           return;
                         }
                         void act(
@@ -281,7 +280,7 @@ export default function EconomyPanel({
                             ? "所持済み"
                             : `${product.price} G`
                           : product.kind === "weapon"
-                            ? "装備画面"
+                            ? "装備を変更"
                             : product.kind === "dungeon_unlock"
                               ? product.enabled === false
                                 ? "開放済み"

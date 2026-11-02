@@ -2,7 +2,80 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import StatEditor from "./StatEditor";
-import { defaultBalance } from "./battle";
+import { defaultBalance, emptyAllocation } from "./battle";
+
+it("keeps unsaved allocation edits when equipment refreshes the same server allocation", async () => {
+  const props = {
+    level: 3,
+    balance: { ...defaultBalance, base_hp: 35, hp_per_point: 5 },
+    inBattle: false,
+    onSaved: vi.fn(),
+  };
+  const view = render(
+    <StatEditor {...props} allocation={{ ...emptyAllocation }} />,
+  );
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "最大HPにポイントを割り振る" }));
+  const equipmentBuffs = [
+    { stat: "maxHp" as const, amount: 20, amount_mode: "percent" as const },
+  ];
+  view.rerender(
+    <StatEditor
+      {...props}
+      allocation={{ ...emptyAllocation }}
+      equipmentBuffs={equipmentBuffs}
+    />,
+  );
+  expect(screen.getByLabelText("1ポイント割り振り済み")).toBeVisible();
+  expect(screen.getByText("48")).toBeVisible();
+  expect(screen.getByLabelText("最大HPの装備補正")).toHaveTextContent(
+    "装備 +8",
+  );
+  view.rerender(
+    <StatEditor
+      {...props}
+      allocation={{ ...emptyAllocation, hp: 2 }}
+      equipmentBuffs={equipmentBuffs}
+    />,
+  );
+  expect(screen.getByLabelText("2ポイント割り振り済み")).toBeVisible();
+  expect(screen.getByText("54")).toBeVisible();
+});
+
+it("shows effective equipment bonuses using the same rounding and caps as the total stats", () => {
+  render(
+    <StatEditor
+      level={1}
+      balance={{
+        ...defaultBalance,
+        base_hp: 35,
+        base_mp: 10,
+        base_attack: 99998,
+      }}
+      inBattle={false}
+      weaponAttack={10}
+      equipmentBuffs={[
+        { stat: "maxHp", amount: 20, amount_mode: "percent" },
+        { stat: "maxMp", amount: 5, amount_mode: "fixed" },
+        { stat: "attack", amount: 10, amount_mode: "fixed" },
+        { stat: "speed", amount: 2, amount_mode: "fixed" },
+      ]}
+      onSaved={vi.fn()}
+    />,
+  );
+  expect(screen.getByLabelText("最大HPの装備補正")).toHaveTextContent(
+    "装備 +7",
+  );
+  expect(screen.getByLabelText("最大MPの装備補正")).toHaveTextContent(
+    "装備 +5",
+  );
+  expect(screen.getByLabelText("攻撃力の装備補正")).toHaveTextContent(
+    "装備 +2",
+  );
+  expect(screen.getByLabelText("速さの装備補正")).toHaveTextContent("装備 +2");
+  expect(screen.queryByLabelText("守備力の装備補正")).not.toBeInTheDocument();
+});
 
 it("previews allocation, enforces the total budget, and resets freely", async () => {
   const user = userEvent.setup();

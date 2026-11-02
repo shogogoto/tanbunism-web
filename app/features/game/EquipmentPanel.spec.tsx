@@ -20,6 +20,8 @@ const products = [
     kind: "weapon",
     equipment_part: "arm",
     max_uses: 30,
+    amount: 3,
+    equipment_buffs: [{ stat: "attack", amount: 3, amount_mode: "fixed" }],
   },
   {
     id: "armor",
@@ -53,7 +55,12 @@ function show(disabled = false) {
         weapon_attack: 3,
         remaining_uses: { sword: 8 },
         equipment: {
-          arm1: { item_id: "sword", max_uses: 30, defensive: false },
+          arm1: {
+            item_id: "sword",
+            max_uses: 30,
+            defensive: false,
+            buffs: [{ stat: "attack", amount: 3, amount_mode: "fixed" }],
+          },
         },
       },
     },
@@ -87,12 +94,19 @@ it("shows seven slots with their compatible owned items and remaining uses", asy
   await waitFor(() => expect(screen.getByLabelText("腕1")).toBeEnabled());
   for (const slot of equipmentSlots)
     expect(screen.getByLabelText(slot.label)).toBeVisible();
-  expect(screen.getByText("残り 8回")).toBeVisible();
   expect(
-    within(screen.getByLabelText("体")).getByRole("option", { name: "鎧" }),
+    within(screen.getByLabelText("腕1の装備効果")).getByText("耐久 8/30回"),
+  ).toBeVisible();
+  expect(
+    within(screen.getByLabelText("腕1の装備効果")).getByText("攻撃力 +3"),
+  ).toBeVisible();
+  expect(
+    within(screen.getByLabelText("体")).getByRole("option", { name: /^鎧/ }),
   ).toBeInTheDocument();
   expect(
-    within(screen.getByLabelText("体")).queryByRole("option", { name: "銅剣" }),
+    within(screen.getByLabelText("体")).queryByRole("option", {
+      name: /^銅剣/,
+    }),
   ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("option", { name: "回復薬" }),
@@ -117,7 +131,9 @@ it("moves a piece to another arm using the current revision and keeps durability
   await waitFor(() => expect(onSaved).toHaveBeenCalledWith(next));
   expect(screen.getByLabelText("腕1")).toHaveValue("");
   expect(screen.getByLabelText("腕2")).toHaveValue("sword");
-  expect(screen.getByText("残り 8回")).toBeVisible();
+  expect(
+    within(screen.getByLabelText("腕2の装備効果")).getByText("耐久 8/30回"),
+  ).toBeVisible();
 });
 
 it("unequips the item in the chosen slot", async () => {
@@ -146,7 +162,69 @@ it("unequips the item in the chosen slot", async () => {
 
 it("prevents equipment changes during combat", async () => {
   show(true);
-  await screen.findByRole("option", { name: "鎧" });
+  await screen.findByRole("option", { name: /^鎧/ });
   for (const slot of equipmentSlots)
     expect(screen.getByLabelText(slot.label)).toBeDisabled();
+});
+
+it("describes candidate effects and their own remaining durability before equipping", async () => {
+  vi.mocked(gameRequest).mockResolvedValueOnce({
+    products: products.map((product) =>
+      product.id === "armor"
+        ? {
+            ...product,
+            equipment_buffs: [
+              { stat: "maxHp", amount: 20, amount_mode: "percent" },
+              { stat: "maxMp", amount: 10, amount_mode: "fixed" },
+              { stat: "speed", amount: 2, amount_mode: "fixed" },
+              {
+                stat: "damageTaken",
+                amount: 25,
+                amount_mode: "percent",
+                affected_element: "fire",
+              },
+            ],
+            element_names: { fire: "炎" },
+          }
+        : product,
+    ),
+  });
+  show();
+  expect(
+    await screen.findByRole("option", {
+      name: "鎧 · 最大HP +20% · 最大MP +10 · 速さ +2 · 炎 属性耐性 +25% · 耐久 30/30回",
+    }),
+  ).toBeVisible();
+});
+
+it("keeps the equipped snapshot's effects and maximum uses after catalog edits", async () => {
+  vi.mocked(gameRequest).mockResolvedValueOnce({
+    products: products.map((product) =>
+      product.id === "sword"
+        ? {
+            ...product,
+            max_uses: 99,
+            equipment_buffs: [
+              { stat: "attack", amount: 99, amount_mode: "fixed" },
+            ],
+          }
+        : product,
+    ),
+  });
+  show();
+  await waitFor(() => expect(screen.getByLabelText("腕1")).toBeEnabled());
+  const details = screen.getByLabelText("腕1の装備効果");
+  expect(details).toHaveTextContent("攻撃力 +3");
+  expect(details).toHaveTextContent("耐久 8/30回");
+  expect(details).not.toHaveTextContent("99");
+});
+
+it("shows saved equipment effects even when the item disappears from the catalog", async () => {
+  vi.mocked(gameRequest).mockResolvedValueOnce({ products: [] });
+  show();
+  await waitFor(() => expect(screen.getByLabelText("腕1")).toBeEnabled());
+  expect(screen.getByLabelText("腕1の装備効果")).toHaveTextContent("攻撃力 +3");
+  expect(screen.getByLabelText("腕1の装備効果")).toHaveTextContent(
+    "耐久 8/30回",
+  );
 });

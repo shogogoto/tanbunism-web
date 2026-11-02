@@ -1,7 +1,6 @@
 export const gameMenuTabs = [
   ["status", "ステータス"],
   ["item", "アイテム"],
-  ["equipment", "装備"],
   ["gambits", "ガンビット"],
   ["specialties", "専門分野"],
   ["library", "旅人の書庫"],

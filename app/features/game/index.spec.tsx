@@ -535,7 +535,7 @@ function renderGame(path = "/game", withLoader = false) {
 }
 
 it.each([
-  ["equipment", "装備", "腕1"],
+  ["equipment", "ステータス", "腕1"],
   ["library", "旅人の書庫", "書庫を検索"],
 ])(
   "opens the %s screen through its real route loader",
@@ -549,18 +549,100 @@ it.each([
   },
 );
 
-it("opens equipment and the library by tab and hotkey through the real route loader", async () => {
+it("combines equipment with status and opens the library by tab and hotkey through the real route loader", async () => {
   renderGame("/game/status", true);
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("tab", { name: "装備" }));
+  await screen.findByRole("tab", { name: "ステータス" });
   expect(await screen.findByLabelText("腕1")).toBeVisible();
+  expect(screen.queryByRole("tab", { name: "装備" })).not.toBeInTheDocument();
   await user.click(screen.getByRole("tab", { name: "旅人の書庫" }));
   expect(await screen.findByLabelText("書庫を検索")).toBeVisible();
   screen.getByRole("tab", { name: "旅人の書庫" }).focus();
-  await user.keyboard("{Control>}3{/Control}");
+  await user.keyboard("{Control>}1{/Control}");
   expect(await screen.findByLabelText("腕1")).toBeVisible();
-  await user.keyboard("{Control>}6{/Control}");
+  await user.keyboard("{Control>}5{/Control}");
   expect(await screen.findByLabelText("書庫を検索")).toBeVisible();
+});
+
+it("updates equipment bonuses and durability in status without switching screens", async () => {
+  state.save.economy = {
+    gold: 0,
+    inventory: { sword: 1 },
+    weapon: null,
+    weapon_attack: 0,
+    equipment: {},
+    equipment_buffs: [],
+    remaining_uses: { sword: 8 },
+  };
+  const equip = vi.fn();
+  server.use(
+    http.get("*/game/shop", () =>
+      HttpResponse.json({
+        products: [
+          {
+            id: "sword",
+            name: "試験の剣",
+            kind: "weapon",
+            amount: 8,
+            equipment_part: "arm",
+            max_uses: 30,
+            equipment_buffs: [
+              { stat: "attack", amount: 8, amount_mode: "fixed" },
+            ],
+          },
+        ],
+      }),
+    ),
+    http.post("*/game/inventory/equip", async ({ request }) => {
+      equip(await request.json());
+      const economy = state.save.economy;
+      if (!economy) throw new Error("Missing equipment inventory");
+      state = {
+        revision: state.revision + 1,
+        save: {
+          ...state.save,
+          economy: {
+            ...economy,
+            weapon: "sword",
+            weapon_attack: 8,
+            equipment: {
+              arm1: {
+                item_id: "sword",
+                max_uses: 30,
+                defensive: false,
+                buffs: [{ stat: "attack", amount: 8, amount_mode: "fixed" }],
+              },
+            },
+            equipment_buffs: [
+              { stat: "attack", amount: 8, amount_mode: "fixed" },
+            ],
+          },
+        },
+      };
+      return HttpResponse.json(state);
+    }),
+  );
+  renderGame("/game/status", true);
+  const select = await screen.findByLabelText("腕1");
+  await waitFor(() => expect(select).toBeEnabled());
+  const revision = state.revision;
+  await userEvent.setup().selectOptions(select, "sword");
+  expect(await screen.findByLabelText("攻撃力の装備補正")).toHaveTextContent(
+    "装備 +8",
+  );
+  expect(screen.getByLabelText("腕1の装備効果")).toHaveTextContent("攻撃力 +8");
+  expect(screen.getByLabelText("腕1の装備効果")).toHaveTextContent(
+    "耐久 8/30回",
+  );
+  expect(equip).toHaveBeenCalledWith({
+    revision,
+    product_id: "sword",
+    slot: "arm1",
+  });
+  expect(screen.getByRole("tab", { name: "ステータス" })).toHaveAttribute(
+    "data-state",
+    "active",
+  );
 });
 
 it("receives a key through the library without adding a map-row or opening the dungeon", async () => {
@@ -1295,7 +1377,6 @@ it("switches the numbered menu tabs with Ctrl+digits", async () => {
   const tabs = [
     "ステータス",
     "アイテム",
-    "装備",
     "ガンビット",
     "専門分野",
     "旅人の書庫",
@@ -1311,6 +1392,11 @@ it("switches the numbered menu tabs with Ctrl+digits", async () => {
       "active",
     );
   }
+  await user.keyboard("{Control>}7{/Control}");
+  expect(screen.getByRole("tab", { name: "実績" })).toHaveAttribute(
+    "data-state",
+    "active",
+  );
   expect(state.revision).toBe(0);
   expect(consumeCount).toBe(0);
 });

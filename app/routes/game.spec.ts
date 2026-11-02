@@ -5,6 +5,11 @@ import { loader } from "./game";
 vi.mock("~/features/game", () => ({ default: () => null }));
 
 describe("game menu routes", () => {
+  it("redirects old equipment links to the combined status screen", () => {
+    expect(
+      loader({ params: { menu: "equipment" } })?.headers.get("Location"),
+    ).toBe("/game/status");
+  });
   it.each([undefined, ...gameMenuTabs.map(([tab]) => tab), "shop", "boss"])(
     "accepts menu %s",
     (menu) => {

@@ -1,10 +1,11 @@
 import { Shield, Sword } from "lucide-react";
 import { useRef, useState } from "react";
 import useSWR from "swr";
-import type { Shop } from "./EconomyPanel";
+import type { Product, Shop } from "./EconomyPanel";
 import GameIcon from "./GameIcon";
 import { gameRequest } from "./battle";
 import type { GameSave } from "./domain";
+import { describeEquipmentEffects } from "./equipmentEffects";
 import { equipmentSlots } from "./equipmentSlots";
 import { type GameState, requestGameState } from "./state";
 
@@ -36,9 +37,32 @@ export default function EquipmentPanel({
             item_id: economy.weapon,
             max_uses: economy.weapon_max_uses ?? 30,
             defensive: false,
+            buffs: economy?.equipment_buffs ?? undefined,
           },
         }
       : {});
+  function details(itemId: string, product?: Product) {
+    const snapshot = Object.values(equipped).find(
+      (item) => item.item_id === itemId,
+    );
+    const maxUses = snapshot?.max_uses ?? product?.max_uses ?? 30;
+    const remaining = Math.max(
+      0,
+      Math.min(economy?.remaining_uses?.[itemId] ?? maxUses, maxUses),
+    );
+    const effects = snapshot?.buffs ?? product?.equipment_buffs;
+    const fallbackAmount =
+      product?.amount ??
+      (itemId === economy?.weapon ? economy.weapon_attack : undefined);
+    return {
+      effects: effects?.length
+        ? describeEquipmentEffects(effects, product?.element_names)
+        : fallbackAmount !== undefined
+          ? `攻撃力 +${fallbackAmount}`
+          : "効果情報なし",
+      durability: `耐久 ${remaining}/${maxUses}回`,
+    };
+  }
   async function change(slot: string, itemId: string) {
     if (disabled || pending.current) return;
     const product = itemId || equipped[slot]?.item_id;
@@ -68,6 +92,7 @@ export default function EquipmentPanel({
   }
   return (
     <section aria-label="装備" className="space-y-4">
+      <h3 className="text-sm font-semibold">装備</h3>
       {(error || loadError) && (
         <p role="alert" className="text-sm text-destructive">
           {error ?? loadError.message}
@@ -80,6 +105,9 @@ export default function EquipmentPanel({
           const product = data?.products.find(
             (item) => item.id === current?.item_id,
           );
+          const equippedDetails = current
+            ? details(current.item_id, product)
+            : undefined;
           const candidates = (data?.products ?? []).filter(
             (item) =>
               item.kind === "weapon" &&
@@ -94,11 +122,11 @@ export default function EquipmentPanel({
               key={slot.id}
               className={`flex min-w-0 items-start gap-3 rounded-xl border p-4 ${current ? "border-primary/40 bg-primary/5" : "bg-muted/10"}`}
             >
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-muted/50">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted/50">
                 {product ? (
-                  <GameIcon icon={product.icon} className="size-7" />
+                  <GameIcon icon={product.icon} className="size-5" />
                 ) : (
-                  <Icon className="size-6 text-muted-foreground" />
+                  <Icon className="size-5 text-muted-foreground" />
                 )}
               </div>
               <div className="min-w-0 flex-1 space-y-2">
@@ -125,6 +153,8 @@ export default function EquipmentPanel({
                   {candidates.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}
+                      {current?.item_id !== item.id &&
+                        ` · ${details(item.id, item).effects} · ${details(item.id, item).durability}`}
                       {Object.entries(equipped).some(
                         ([id, value]) =>
                           id !== slot.id && value.item_id === item.id,
@@ -134,16 +164,18 @@ export default function EquipmentPanel({
                     </option>
                   ))}
                 </select>
-                {current && (
-                  <p className="text-xs text-muted-foreground">
-                    {product?.skill_name && (
-                      <span className="mr-2">{product.skill_name}</span>
-                    )}
-                    残り{" "}
-                    {economy?.remaining_uses?.[current.item_id] ??
-                      current.max_uses}
-                    回
-                  </p>
+                {equippedDetails && (
+                  <div
+                    aria-label={`${slot.label}の装備効果`}
+                    className="space-y-1 text-xs"
+                  >
+                    <p className="text-emerald-700 dark:text-emerald-400">
+                      {equippedDetails.effects}
+                    </p>
+                    <p className="text-muted-foreground tabular-nums">
+                      {equippedDetails.durability}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

@@ -30,6 +30,23 @@ export type Run = {
   answerSeconds?: number | null;
   enemyId?: string | null;
 };
+export type EquipmentBuff = {
+  stat:
+    | "attack"
+    | "defense"
+    | "specialAttack"
+    | "specialDefense"
+    | "maxHp"
+    | "maxMp"
+    | "speed"
+    | "damageDealt"
+    | "damageTaken";
+  affected_element?: string | null;
+  amount: number;
+  amount_mode: "fixed" | "percent";
+  duration_turns?: "infinite";
+};
+
 export type GameSave = {
   version: 2;
   totalSteps?: number;
@@ -40,28 +57,16 @@ export type GameSave = {
     weapon: string | null;
     equipment?: Record<
       string,
-      { item_id: string; max_uses: number; defensive: boolean }
+      {
+        item_id: string;
+        max_uses: number;
+        defensive: boolean;
+        buffs?: EquipmentBuff[];
+      }
     > | null;
     weapon_attack: number;
     weapon_max_uses?: number;
-    equipment_buffs?:
-      | {
-          stat:
-            | "attack"
-            | "defense"
-            | "specialAttack"
-            | "specialDefense"
-            | "maxHp"
-            | "maxMp"
-            | "speed"
-            | "damageDealt"
-            | "damageTaken";
-          affected_element?: string | null;
-          amount: number;
-          amount_mode: "fixed" | "percent";
-          duration_turns?: "infinite";
-        }[]
-      | null;
+    equipment_buffs?: EquipmentBuff[] | null;
     remaining_uses?: Record<string, number>;
     dungeon_keys?: Record<
       string,

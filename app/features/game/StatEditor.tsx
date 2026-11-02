@@ -7,7 +7,7 @@ import {
   WandSparkles,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "~/shared/components/ui/button";
 import {
   type Allocation,
@@ -86,8 +86,17 @@ export default function StatEditor({
   onSaved: (state: GameState) => void;
 }) {
   const [draft, setDraft] = useState({ ...emptyAllocation, ...allocation });
+  const previousAllocation = useRef({ ...emptyAllocation, ...allocation });
   useEffect(() => {
-    setDraft({ ...emptyAllocation, ...allocation });
+    const next = { ...emptyAllocation, ...allocation };
+    if (
+      (Object.keys(emptyAllocation) as (keyof Allocation)[]).some(
+        (key) => next[key] !== previousAllocation.current[key],
+      )
+    ) {
+      previousAllocation.current = next;
+      setDraft(next);
+    }
   }, [allocation]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -95,6 +104,7 @@ export default function StatEditor({
   const used = Object.values(draft).reduce((sum, n) => sum + n, 0);
   const remaining = Math.max(0, budget - used);
   const stats = playerStats(draft, balance, weaponAttack, equipmentBuffs);
+  const unequippedStats = playerStats(draft, balance);
   useEffect(() => onPointsChange?.(used), [onPointsChange, used]);
 
   function adjust(key: keyof Allocation, amount: number) {
@@ -145,6 +155,14 @@ export default function StatEditor({
                 <p className="text-xl font-semibold tabular-nums">
                   {value(stats)}
                 </p>
+                {value(stats) !== value(unequippedStats) && (
+                  <p
+                    aria-label={`${label}の装備補正`}
+                    className="text-xs text-emerald-700 dark:text-emerald-400 tabular-nums"
+                  >
+                    装備 +{value(stats) - value(unequippedStats)}
+                  </p>
+                )}
                 {key === "hp" && currentHp !== undefined && (
                   <p className="text-xs text-muted-foreground tabular-nums">
                     現在HP {Math.min(currentHp, stats.maxHp)}/{stats.maxHp}
