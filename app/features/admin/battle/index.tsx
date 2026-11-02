@@ -139,14 +139,6 @@ const groups = [
     keys: ["gambit_levels_per_slot", "specialty_levels_per_slot"],
   },
   {
-    label: "領域の宝箱",
-    rules: [
-      "各領域の最後に1箱。開封は歩数消費なし",
-      "全領域共通。設定変更は未開封の箱に反映",
-    ],
-    keys: ["chest_gold", "chest_healing_potions", "chest_step_potions"],
-  },
-  {
     label: "戦闘結果の表示テンポ",
     inline: true,
     keys: [

@@ -7,6 +7,7 @@ export type ChestReward = {
   gold: number;
   healing_potion: number;
   step_potion: number;
+  items?: Record<string, { name: string; quantity: number }>;
 };
 export const chestId = (region: number) => `@chest:${region}`;
 export function chestRegion(id: string): number | undefined {
@@ -34,10 +35,23 @@ export function regionChests(map: DungeonMap) {
   );
 }
 export function chestMessage(reward: ChestReward) {
+  const items = new Map(
+    Object.entries(reward.items ?? {}).map(([id, item]) => [id, { ...item }]),
+  );
+  for (const [id, name, quantity] of [
+    ["healing_potion", "回復薬", reward.healing_potion],
+    ["step_potion", "歩数回復薬", reward.step_potion],
+  ] as const) {
+    if (!quantity) continue;
+    const previous = items.get(id);
+    items.set(id, {
+      name: previous?.name ?? name,
+      quantity: (previous?.quantity ?? 0) + quantity,
+    });
+  }
   const contents = [
     reward.gold && `${reward.gold} G`,
-    reward.healing_potion && `回復薬 ×${reward.healing_potion}`,
-    reward.step_potion && `歩数回復薬 ×${reward.step_potion}`,
+    ...[...items.values()].map((item) => `${item.name} ×${item.quantity}`),
   ]
     .filter(Boolean)
     .join("、");

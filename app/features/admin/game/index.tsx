@@ -43,6 +43,7 @@ import BattleSettingsManager from "../battle";
 import CatalogEditor from "./CatalogEditor";
 import ElementEditor from "./ElementEditor";
 import GameSettingsFiles from "./GameSettingsFiles";
+import RewardsEditor from "./RewardsEditor";
 import SkillUsageEditor from "./SkillUsageEditor";
 import TriggerEditor from "./TriggerEditor";
 import {
@@ -485,6 +486,7 @@ export default function GameAdminManager() {
     "usage",
     "shop",
     "elements",
+    "rewards",
   ].includes(subtab ?? "")
     ? subtab
     : "balance";
@@ -525,6 +527,7 @@ export default function GameAdminManager() {
               ["usage", "専門分野"],
               ["shop", "ショップ"],
               ["elements", "属性"],
+              ["rewards", "報酬"],
             ] as const
           ).map(([id, label], index) => (
             <TabsTrigger
@@ -584,6 +587,13 @@ export default function GameAdminManager() {
           <CatalogEditor kind={kind} />
         </TabsContent>
       ))}
+      <TabsContent
+        key={`rewards-${settingsRevision}`}
+        value="rewards"
+        className="mt-0"
+      >
+        <RewardsEditor />
+      </TabsContent>
     </Tabs>
   );
 }

@@ -16,6 +16,7 @@ import GameAdminManager from ".";
 import { alignAdminDungeonRegions, listAdminGameDungeons } from "./api";
 
 vi.mock("../battle", () => ({ default: () => null }));
+vi.mock("./RewardsEditor", () => ({ default: () => <p>報酬設定</p> }));
 vi.mock("./CatalogEditor", () => ({
   default: ({ kind }: { kind: string }) => <p>{kind}カタログ</p>,
 }));
@@ -106,7 +107,7 @@ it("removes the item subtab and uses the new numbering for actual t-number short
   const skillTab = screen.getByRole("tab", { name: "スキル" });
   const list = skillTab.closest('[role="tablist"]');
   if (!list) throw new Error("Missing game tabs");
-  expect(within(list as HTMLElement).getAllByRole("tab")).toHaveLength(8);
+  expect(within(list as HTMLElement).getAllByRole("tab")).toHaveLength(9);
   expect(
     screen.queryByRole("tab", { name: "アイテム" }),
   ).not.toBeInTheDocument();
@@ -138,6 +139,15 @@ it("removes the item subtab and uses the new numbering for actual t-number short
   expect(screen.getByLabelText("現在のURL")).toHaveTextContent(
     "/admin/game/shop",
   );
+  expect(screen.getByRole("tab", { name: "報酬" })).toHaveAttribute(
+    "title",
+    "t → 9",
+  );
+  await user.keyboard("t9");
+  expect(screen.getByLabelText("現在のURL")).toHaveTextContent(
+    "/admin/game/rewards",
+  );
+  expect(screen.getByText("報酬設定")).toBeVisible();
   await user.keyboard("t3");
   expect(screen.getByLabelText("現在のURL")).toHaveTextContent(
     "/admin/game/skills",

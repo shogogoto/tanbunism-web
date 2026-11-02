@@ -227,19 +227,15 @@ it("places ordinary labels above their inputs and preserves editable formulas", 
   expect(within(damage).getByLabelText("倍率")).toHaveValue(1);
 });
 
-it("edits the shared contents of unopened region chests", async () => {
+it("leaves chest controls to the rewards tab without resetting their values", async () => {
   const user = userEvent.setup();
   render(<BattleSettingsManager />);
-  const gold = await screen.findByLabelText("ゴールド / 宝箱");
-  await user.clear(gold);
-  await user.type(gold, "80");
-  const potion = screen.getByLabelText("歩数回復薬 / 宝箱");
-  await user.clear(potion);
-  await user.type(potion, "2");
+  await screen.findByLabelText("遅（秒）");
+  expect(screen.queryByLabelText("ゴールド / 宝箱")).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() =>
     expect(saved).toHaveBeenCalledWith(
-      expect.objectContaining({ chest_gold: 80, chest_step_potions: 2 }),
+      expect.objectContaining({ chest_gold: 30, chest_step_potions: 1 }),
     ),
   );
 });
