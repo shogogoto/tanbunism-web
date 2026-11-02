@@ -71,7 +71,7 @@ export const soundAssets = {
   heal_7: { label: "回復 7", group: "回復・強化" },
   buff: { label: "強化", group: "回復・強化" },
   debuff: { label: "弱体", group: "魔法・状態" },
-  magic: { label: "魔法", group: "魔法・状態" },
+  magic: { label: "詠唱（魔法発動）", group: "魔法・状態" },
   poison: { label: "毒", group: "魔法・状態" },
   poison_2: { label: "粘液 2", group: "魔法・状態" },
   poison_3: { label: "粘液 3", group: "魔法・状態" },

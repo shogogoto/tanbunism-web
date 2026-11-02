@@ -71,6 +71,16 @@ it("assigns an intentional sound to every visual effect", () => {
   }
 });
 
+it("keeps the default incantation short and fades its boundaries", () => {
+  const wav = readFileSync(`public${battleSoundFiles.magic}`);
+  expect(soundAssets.magic.label).toBe("詠唱（魔法発動）");
+  const seconds = wav.readUInt32LE(40) / wav.readUInt32LE(28);
+  expect(seconds).toBeGreaterThan(0.5);
+  expect(seconds).toBeLessThan(1);
+  expect(wav.readInt16LE(44)).toBe(0);
+  expect(wav.readInt16LE(wav.length - 2)).toBe(0);
+});
+
 it("pairs the new ice and lightning visuals with short, complete locally hosted sounds", () => {
   expect(animationSounds.willo_ice_shatter).toBe("willo_ice_shatter");
   expect(animationSounds.willo_zap).toBe("willo_zap");

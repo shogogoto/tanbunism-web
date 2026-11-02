@@ -76,6 +76,7 @@ function Location() {
   return <output aria-label="現在のURL">{useLocation().pathname}</output>;
 }
 function setup(path: string) {
+  vi.mocked(listAdminGameDungeons).mockResolvedValue([]);
   render(
     <MemoryRouter initialEntries={[path]}>
       <HistoryPanelProvider>
@@ -107,7 +108,7 @@ it("removes the item subtab and uses the new numbering for actual t-number short
   const skillTab = screen.getByRole("tab", { name: "スキル" });
   const list = skillTab.closest('[role="tablist"]');
   if (!list) throw new Error("Missing game tabs");
-  expect(within(list as HTMLElement).getAllByRole("tab")).toHaveLength(9);
+  expect(within(list as HTMLElement).getAllByRole("tab")).toHaveLength(8);
   expect(
     screen.queryByRole("tab", { name: "アイテム" }),
   ).not.toBeInTheDocument();
@@ -139,19 +140,31 @@ it("removes the item subtab and uses the new numbering for actual t-number short
   expect(screen.getByLabelText("現在のURL")).toHaveTextContent(
     "/admin/game/shop",
   );
-  expect(screen.getByRole("tab", { name: "報酬" })).toHaveAttribute(
-    "title",
-    "t → 9",
-  );
-  await user.keyboard("t9");
+  expect(screen.queryByRole("tab", { name: "報酬" })).not.toBeInTheDocument();
+  await user.keyboard("t2");
   expect(screen.getByLabelText("現在のURL")).toHaveTextContent(
-    "/admin/game/rewards",
+    "/admin/game/dungeons",
   );
   expect(screen.getByText("報酬設定")).toBeVisible();
   await user.keyboard("t3");
   expect(screen.getByLabelText("現在のURL")).toHaveTextContent(
     "/admin/game/skills",
   );
+});
+
+it("redirects the old rewards URL to the combined dungeon tab", async () => {
+  vi.mocked(listAdminGameDungeons).mockResolvedValue([]);
+  setup("/admin/game/rewards");
+  await waitFor(() =>
+    expect(screen.getByLabelText("現在のURL")).toHaveTextContent(
+      "/admin/game/dungeons",
+    ),
+  );
+  expect(screen.getByRole("tab", { name: "ダンジョン" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  expect(screen.getByText("報酬設定")).toBeVisible();
 });
 
 it("redirects the retired item URL to the combined skills editor", async () => {

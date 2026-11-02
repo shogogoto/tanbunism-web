@@ -694,8 +694,8 @@ export default function SkillTemplateEditor({
                             }
                           >
                             <option value="counter">反撃</option>
-                            <option value="fizzle">不発</option>
-                            <option value="reduced">軽減</option>
+                            <option value="fizzle">不発＋反撃</option>
+                            <option value="reduced">軽減＋反撃</option>
                           </select>
                         )}
                       </fieldset>

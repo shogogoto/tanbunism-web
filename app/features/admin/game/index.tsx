@@ -231,7 +231,7 @@ function GameDungeonManager() {
     <AdminTableSection className="space-y-4 p-4 sm:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">ダンジョン母集団</h2>
+          <h2 className="text-lg font-semibold">ダンジョン一覧</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             ユーザーごとのダンジョンと、領域別に固定されたクイズ母集団を管理します。
           </p>
@@ -486,11 +486,12 @@ export default function GameAdminManager() {
     "usage",
     "shop",
     "elements",
-    "rewards",
   ].includes(subtab ?? "")
     ? subtab
     : "balance";
   if (subtab === "items") return <Navigate to="/admin/game/skills" replace />;
+  if (subtab === "rewards")
+    return <Navigate to="/admin/game/dungeons" replace />;
   return (
     <Tabs
       value={activeTab}
@@ -509,15 +510,11 @@ export default function GameAdminManager() {
             </kbd>
             ゲームバランス
           </TabsTrigger>
-          <TabsTrigger
-            value="dungeons"
-            aria-label="ダンジョン母集団"
-            title="t → 2"
-          >
+          <TabsTrigger value="dungeons" aria-label="ダンジョン" title="t → 2">
             <kbd className="mr-1 font-mono text-[10px] text-muted-foreground">
               2
             </kbd>
-            ダンジョン母集団
+            ダンジョン
           </TabsTrigger>
           {(
             [
@@ -527,7 +524,6 @@ export default function GameAdminManager() {
               ["usage", "専門分野"],
               ["shop", "ショップ"],
               ["elements", "属性"],
-              ["rewards", "報酬"],
             ] as const
           ).map(([id, label], index) => (
             <TabsTrigger
@@ -554,8 +550,16 @@ export default function GameAdminManager() {
       >
         <BattleSettingsManager />
       </TabsContent>
-      <TabsContent value="dungeons" className="mt-0">
+      <TabsContent
+        key={`dungeons-${settingsRevision}`}
+        value="dungeons"
+        className="mt-0 space-y-6"
+      >
         <GameDungeonManager />
+        <section className="border-t pt-6" aria-label="ダンジョンの報酬">
+          <h2 className="text-center text-lg font-semibold">報酬</h2>
+          <RewardsEditor />
+        </section>
       </TabsContent>
       <TabsContent
         key={`gambits-${settingsRevision}`}
@@ -587,13 +591,6 @@ export default function GameAdminManager() {
           <CatalogEditor kind={kind} />
         </TabsContent>
       ))}
-      <TabsContent
-        key={`rewards-${settingsRevision}`}
-        value="rewards"
-        className="mt-0"
-      >
-        <RewardsEditor />
-      </TabsContent>
     </Tabs>
   );
 }

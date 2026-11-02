@@ -107,7 +107,7 @@ export function skillActivation(
   const fallback =
     primary.effect === "attack" && primary.damage_type !== "special"
       ? { sound: "slash" as const, durationMs: 260 }
-      : { sound: "magic" as const, durationMs: 600 };
+      : { sound: "magic" as const, durationMs: 900 };
   const configured =
     fallback.sound === "slash"
       ? settings?.physical_activation_sound

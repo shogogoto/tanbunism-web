@@ -49,7 +49,7 @@ allow use under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
 | fire_2.wav … fire_7.wav | spell_fire_02.ogg … spell_fire_07.ogg | rubberduck, same RPG pack |
 | heal_2.wav … heal_7.wav | Cure3.wav … Cure8.wav | Someoneman, same Cure Magic pack |
 | poison_2.wav … poison_4.wav | creature_slime_02.ogg … creature_slime_04.ogg | rubberduck, same RPG pack |
-| magic.wav | spell_01.ogg | rubberduck, same RPG pack |
+| magic.wav | fantasy_magic_button_1.mp3 (first 0.9 seconds, 40ms edge fades) | Almitory, [Fantasy Magic Spell](https://opengameart.org/content/fantasy-magic-spell), CC0 |
 | metal.wav, metal_2.wav | metal_01.ogg, metal_02.ogg | rubberduck, same RPG pack |
 | coins.wav | item_coins_01.ogg | rubberduck, same RPG pack |
 | stones.wav | stones_01.ogg | rubberduck, same RPG pack |
@@ -116,3 +116,4 @@ Every visual animation has an explicit default in
 visual pairing, with a skill-category fallback only when no visual is selected.
 Explicit sound selections and `none` remain overrides. The picker shows the
 resolved default so that "auto" is not an unexplained choice.
+- https://opengameart.org/sites/default/files/fantasy_magic_button_1.mp3

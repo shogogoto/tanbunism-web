@@ -156,7 +156,7 @@ export function variantAxes(
     axes.push({
       id: "type",
       label: "タイプ",
-      options: { counter: "反撃", fizzle: "不発", reduced: "軽減" },
+      options: { counter: "反撃", fizzle: "不発＋反撃", reduced: "軽減＋反撃" },
       read: (s) => s.on_wrong?.type ?? "fizzle",
       patch: (s, v) =>
         v === "reduced"

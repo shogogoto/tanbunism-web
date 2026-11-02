@@ -73,7 +73,7 @@ afterEach(() => {
 
 it.each([
   ["physical", "slash", 260],
-  ["special", "magic", 600],
+  ["special", "magic", 900],
 ] as const)(
   "plays %s activation before the skill effect",
   (damage_type, sound, delay) => {

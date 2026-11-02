@@ -33,7 +33,8 @@ const sources = {
   ...Object.fromEntries(
     [2, 3, 4].map((n) => [`poison_${n}`, [`rpg/creature_slime_0${n}.ogg`]]),
   ),
-  magic: ["rpg/spell_01.ogg"],
+  // A short rising incantation, before the element-specific impact.
+  magic: ["fantasy_magic_button_1.mp3", 0, 0.9, 0.04],
   metal: ["rpg/metal_01.ogg"],
   metal_2: ["rpg/metal_02.ogg"],
   coins: ["rpg/item_coins_01.ogg"],
