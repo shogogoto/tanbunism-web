@@ -57,6 +57,7 @@ export default function ScheduledBattle({
   const [retry, setRetry] = useState<TurnInput>();
   const pending = useRef(false);
   const lastResult = useRef<TurnResult | undefined>(undefined);
+  const actionStartHp = useRef<Record<string, number>>({});
   const panel = useRef<HTMLDivElement>(null);
   const advanceButton = useRef<HTMLButtonElement>(null);
   const { openPreview, preview } = useTanbunPreview();
@@ -105,7 +106,9 @@ export default function ScheduledBattle({
     onBusy(true);
     setError(undefined);
     try {
+      const startingHp = { ...schedule?.enemy_hp };
       const reply = await transport<TurnResult>("battle/turn", input);
+      actionStartHp.current = startingHp;
       lastResult.current = reply;
       setResult(reply);
       setRetry(undefined);
@@ -304,7 +307,10 @@ export default function ScheduledBattle({
         enemies={encounterIds.current.flatMap((id) => {
           const item = context.enemies.find((enemy) => enemy.id === id);
           return item &&
-            ((hp[id] ?? 0) > 0 || (Boolean(shownResult) && !hideDefeated))
+            ((hp[id] ?? 0) > 0 ||
+              (Boolean(shownResult) &&
+                !hideDefeated &&
+                (actionStartHp.current[id] ?? 0) > 0))
             ? [item]
             : [];
         })}

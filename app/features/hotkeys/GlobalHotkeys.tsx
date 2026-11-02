@@ -11,6 +11,7 @@ import {
 import { useLocation, useNavigate } from "react-router";
 import { useAuth } from "~/features/auth/AuthProvider";
 import LogoutDialogContent from "~/features/auth/SignOutDialog";
+import { gameMenuTabs } from "~/features/game/menu";
 import { Button } from "~/shared/components/ui/button";
 import {
   Dialog,
@@ -171,6 +172,13 @@ export default function GlobalHotkeys() {
 
       // プレビュー中は背後の問題・タブを変更しない。項目移動もdialog内のみ。
       if (dialogOpen) {
+        if (
+          !event.ctrlKey &&
+          (key === "h" || key === "l") &&
+          dialogOpen.hasAttribute("data-game-menu") &&
+          moveActiveTab(key === "h" ? -1 : 1, dialogOpen)
+        )
+          event.preventDefault();
         if (
           !waitingForDestination.current &&
           !event.ctrlKey &&
@@ -396,7 +404,11 @@ function contextHotkeys(pathname: string, search: string): HotkeyDefinition[] {
   if (pathname === "/game" || pathname.startsWith("/game/")) {
     return [
       { keys: ["s"], label: "ステータスを開く" },
-      { keys: ["Ctrl", "1–5"], label: "ゲームメニューの番号のタブへ移動" },
+      {
+        keys: ["Ctrl", `1–${gameMenuTabs.length}`],
+        label: "ゲームメニューの番号のタブへ移動",
+      },
+      { keys: ["h", "l"], label: "ゲームメニューの前後のタブへ移動" },
       { keys: ["矢印"], label: "地点を選ぶ／戦闘パネルを移動" },
       { keys: ["Space"], label: "戦闘の選択肢を選択・解除" },
       { keys: ["Enter"], label: "移動・回答・結果の処理" },
@@ -605,8 +617,8 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-function moveActiveTab(offset: -1 | 1): boolean {
-  const activeTab = document.querySelector<HTMLElement>(
+function moveActiveTab(offset: -1 | 1, root: ParentNode = document): boolean {
+  const activeTab = root.querySelector<HTMLElement>(
     '[role="tab"][aria-selected="true"]',
   );
   const tabList = activeTab?.closest('[role="tablist"]');

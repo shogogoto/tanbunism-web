@@ -300,6 +300,101 @@ it("places enemies in their encounter order rather than catalog order", () => {
   ).toEqual(["ゴーストAの詳細", "ゴーストBの詳細"]);
 });
 
+it("never resurrects a previously defeated enemy during a later answer's presentation", async () => {
+  const user = userEvent.setup();
+  function Fixture() {
+    const [save, setSave] = useState(() => {
+      const value = initial();
+      if (!value.battle?.schedule) throw new Error("Missing battle");
+      value.battle.enemies = ["e", "second"];
+      value.battle.enemyLabels = { e: "A", second: "B" };
+      value.battle.quizIndices = { e: 0, second: 1 };
+      value.battle.schedule.enemy_hp = { e: 10, second: 100 };
+      return value;
+    });
+    const transport: BattleTransport = async <T,>(path: string) => {
+      const copy = structuredClone(save);
+      const marker = copy.battle;
+      if (!marker?.schedule) throw new Error("Missing battle");
+      if (path === "battle/next") {
+        copy.battleFeedback = null;
+        marker.schedule.actor_id = "player";
+        marker.schedule.quiz_enemy_id = "second";
+        return { revision: 2, save: copy } as T;
+      }
+      const target = marker.schedule.quiz_enemy_id ?? "e";
+      marker.schedule.enemy_hp[target] -= 10;
+      marker.schedule.actor_id = null;
+      marker.enemies = ["second"];
+      marker.turn++;
+      copy.battleFeedback = "戦う · 10ダメージ";
+      return {
+        state: { revision: marker.turn, save: copy },
+        results: { [target]: true },
+        damage: 0,
+        outgoing_damage: { [target]: 10 },
+      } as T;
+    };
+    return (
+      <MultiBattle
+        save={save}
+        content={content}
+        context={{
+          ...context,
+          enemies: [
+            context.enemies[0],
+            { ...context.enemies[0], id: "second", name: "スケルトン" },
+          ],
+        }}
+        syntheticAnswers
+        transport={transport}
+        onSaved={(state) => setSave(state.save)}
+        onFinished={vi.fn()}
+        onBusy={vi.fn()}
+      />
+    );
+  }
+  render(
+    <MemoryRouter>
+      <Fixture />
+    </MemoryRouter>,
+  );
+  await user.click(screen.getByRole("button", { name: "回答を確定" }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("button", { name: "ゴーストAの詳細" }),
+    ).not.toBeInTheDocument(),
+  );
+  await user.click(screen.getByRole("button", { name: "次へ" }));
+  const enemyPane = screen.getByRole("region", { name: "敵一覧" });
+  let reappeared = false;
+  const observer = new MutationObserver((changes) => {
+    for (const change of changes)
+      for (const node of change.addedNodes) {
+        if (
+          node instanceof Element &&
+          (node.matches('[data-battle-actor="e"]') ||
+            node.querySelector('[data-battle-actor="e"]'))
+        )
+          reappeared = true;
+      }
+  });
+  observer.observe(enemyPane, { childList: true, subtree: true });
+  try {
+    await user.click(await screen.findByRole("button", { name: "回答を確定" }));
+    expect(await screen.findByRole("button", { name: "次へ" })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "ゴーストAの詳細" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "スケルトンBの詳細" }),
+    ).toBeVisible();
+    expect(reappeared).toBe(false);
+  } finally {
+    observer.disconnect();
+  }
+});
+
 it("opens the answered quiz explanation beside Next without advancing combat", async () => {
   const save = initial();
   save.battleFeedback = "戦う · 発動";

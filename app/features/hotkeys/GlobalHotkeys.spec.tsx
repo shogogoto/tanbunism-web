@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router";
 import { vi } from "vitest";
 import ResourceShelf from "~/features/user/UserDetail/ResourceShelf";
@@ -97,6 +97,84 @@ function renderHotkeys(children?: ReactNode, initialEntry = "/") {
     </MemoryRouter>,
   );
 }
+
+function GameMenuTabs({ overlay = false }: { overlay?: boolean }) {
+  const [active, setActive] = useState("ステータス");
+  return (
+    <>
+      <div role="tablist">
+        <button type="button" role="tab" aria-selected="true">
+          背後のタブ
+        </button>
+      </div>
+      <dialog open aria-label="ゲームメニュー" data-game-menu>
+        <div role="tablist">
+          {["ステータス", "アイテム", "実績"].map((name) => (
+            <button
+              key={name}
+              type="button"
+              role="tab"
+              aria-selected={active === name}
+              onClick={() => setActive(name)}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+        <input aria-label="メニュー内入力" />
+      </dialog>
+      {overlay && (
+        <dialog open aria-label="上に開いた解説">
+          <button type="button">解説内のボタン</button>
+        </dialog>
+      )}
+    </>
+  );
+}
+
+it("h/l immediately switch only the open game menu tabs, including wrapping", async () => {
+  renderHotkeys(<GameMenuTabs />, "/game/status");
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("tab", { name: "ステータス" }));
+  await user.keyboard("l");
+  expect(screen.getByRole("tab", { name: "アイテム" })).toHaveFocus();
+  expect(screen.getByRole("tab", { name: "アイテム" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await user.keyboard("h");
+  expect(screen.getByRole("tab", { name: "ステータス" })).toHaveFocus();
+  await user.keyboard("h");
+  expect(screen.getByRole("tab", { name: "実績" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await user.keyboard("l");
+  expect(screen.getByRole("tab", { name: "ステータス" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await user.click(screen.getByRole("textbox", { name: "メニュー内入力" }));
+  await user.keyboard("hl");
+  expect(screen.getByRole("textbox", { name: "メニュー内入力" })).toHaveValue(
+    "hl",
+  );
+  expect(screen.getByRole("tab", { name: "ステータス" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+});
+
+it("h/l do not change the game menu behind another dialog", async () => {
+  renderHotkeys(<GameMenuTabs overlay />, "/game/status");
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "解説内のボタン" }));
+  await user.keyboard("hl");
+  expect(screen.getByRole("tab", { name: "ステータス" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+});
 
 it("プロフィールでは / でリソースの絞り込みへ優先的にフォーカスし、入力中は干渉しない", async () => {
   const user = userEvent.setup();

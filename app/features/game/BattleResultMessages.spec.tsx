@@ -22,6 +22,10 @@ it.each(["正解", "不正解", "時間切れ", "1/2問正解"])(
     );
     expect(battleResult).not.toHaveTextContent(/正解|時間切れ|答え/);
     expect(quizResult).not.toHaveTextContent("ダメージ");
+    expect(
+      battleResult.compareDocumentPosition(quizResult) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   },
 );
 

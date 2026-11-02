@@ -14,18 +14,6 @@ export default function BattleResultMessages({
 }) {
   return (
     <div className="space-y-3" data-battle-result>
-      {(quiz || children) && (
-        <section
-          aria-label="クイズ結果"
-          className="space-y-2 rounded-md border p-3"
-        >
-          <div className="flex items-center gap-2">
-            <h3 className="text-xs text-muted-foreground">クイズ</h3>
-            {quiz && <p className="font-medium">{quiz}</p>}
-          </div>
-          {children}
-        </section>
-      )}
       {battle && (
         <section
           aria-label="戦闘結果"
@@ -49,6 +37,18 @@ export default function BattleResultMessages({
               )}
             </p>
           )}
+        </section>
+      )}
+      {(quiz || children) && (
+        <section
+          aria-label="クイズ結果"
+          className="space-y-2 rounded-md border p-3"
+        >
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs text-muted-foreground">クイズ</h3>
+            {quiz && <p className="font-medium">{quiz}</p>}
+          </div>
+          {children}
         </section>
       )}
     </div>

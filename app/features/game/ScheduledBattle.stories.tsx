@@ -142,7 +142,7 @@ function Preview({
             : ["あなた"],
       };
       copy.battleFeedback = correct
-        ? "戦う · ゴーストに10ダメージ"
+        ? `戦う · ${roster.find((enemy) => enemy.id === target)?.name ?? "敵"}に10ダメージ`
         : "戦う · 3ダメージを受けた";
       return {
         state: { revision: marker.turn, save: copy },
@@ -152,17 +152,26 @@ function Preview({
         outgoing_damage: correct ? { [target]: 10 } : {},
       } as T;
     }
-    const offset = marker.turn % order.length;
+    const liveOrder = order.filter(
+      (id) =>
+        id === "player" ||
+        (marker.schedule && (marker.schedule.enemy_hp[id] ?? 0) > 0),
+    );
+    const offset = marker.turn % liveOrder.length;
     marker.schedule.queue = [
-      ...order.slice(offset),
-      ...order.slice(0, offset),
+      ...liveOrder.slice(offset),
+      ...liveOrder.slice(0, offset),
     ].map((actor_id, index) => ({ actor_id, distance: index }));
-    marker.schedule.actor_id = order[offset];
+    marker.schedule.actor_id = liveOrder[offset];
     copy.quizFeedback = null;
     copy.battleActionDetails = null;
     copy.battleFeedback = null;
     marker.schedule.quiz_enemy_id =
-      order[offset] === "player" ? "ghost" : order[offset];
+      liveOrder[offset] === "player"
+        ? (roster.find(
+            (enemy) => (marker.schedule?.enemy_hp[enemy.id] ?? 0) > 0,
+          )?.id ?? "ghost")
+        : liveOrder[offset];
     marker.quizIndices = { [marker.schedule.quiz_enemy_id]: 0 };
     copy.battleFeedback = null;
     copy.run.answerDeadline = Date.now() + 300000;
