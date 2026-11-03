@@ -1,5 +1,6 @@
 import { AdminTableSection } from "~/features/admin/AdminTable";
 import type { GameCatalog } from "~/features/game/catalog";
+import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import DefinitionDeleteButton from "./DefinitionDeleteButton";
@@ -38,7 +39,7 @@ export default function GambitSetEditor({
                 </th>
                 {header("名前", "名前")}
                 {header("行動", "行動")}
-                <th scope="col">使用する敵</th>
+                <th scope="col">敵</th>
                 <th scope="col">削除</th>
               </tr>
             </thead>
@@ -76,8 +77,63 @@ export default function GambitSetEditor({
                         onChange={(rules) => update(group.id, { rules })}
                       />
                     </td>
-                    <td className="max-w-64 text-sm">
-                      {users.map((enemy) => enemy.name).join("、") || "—"}
+                    <td className="text-sm">
+                      <div className="flex w-48 flex-wrap items-center gap-1">
+                        {users.map((enemy) => (
+                          <Badge
+                            key={enemy.id}
+                            variant="secondary"
+                            className="gap-1"
+                          >
+                            {enemy.name}
+                            <button
+                              type="button"
+                              aria-label={`${group.name}から${enemy.name}を解除`}
+                              onClick={() =>
+                                onChange({
+                                  ...catalog,
+                                  enemies: catalog.enemies.map((item) =>
+                                    item.id === enemy.id
+                                      ? { ...item, gambit_set_id: null }
+                                      : item,
+                                  ),
+                                })
+                              }
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        ))}
+                        <select
+                          aria-label={`${group.name}に敵を追加`}
+                          className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                          value=""
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            if (id)
+                              onChange({
+                                ...catalog,
+                                enemies: catalog.enemies.map((enemy) =>
+                                  enemy.id === id
+                                    ? { ...enemy, gambit_set_id: group.id }
+                                    : enemy,
+                                ),
+                              });
+                          }}
+                        >
+                          <option value="">敵を追加…</option>
+                          {catalog.enemies
+                            .filter((enemy) => enemy.gambit_set_id !== group.id)
+                            .map((enemy) => (
+                              <option key={enemy.id} value={enemy.id}>
+                                {enemy.name}
+                                {enemy.gambit_set_id
+                                  ? `（${sets.find((set) => set.id === enemy.gambit_set_id)?.name ?? "別セット"}から移動）`
+                                  : ""}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
                     </td>
                     <td>
                       <DefinitionDeleteButton

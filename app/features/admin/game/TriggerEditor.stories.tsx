@@ -14,6 +14,38 @@ export default {
         http.get("*/admin/game/catalog", () =>
           HttpResponse.json({
             ...sampleCatalog,
+            gambit_sets: [
+              {
+                id: "healer",
+                name: "回復役",
+                rules: [
+                  {
+                    trigger_id: "hp",
+                    trigger_variant_id: "half",
+                    skill_id: "heal",
+                    enabled: true,
+                  },
+                  { trigger_id: "buff", skill_id: "defense_up", enabled: true },
+                ],
+              },
+              {
+                id: "mage",
+                name: "魔法使い",
+                rules: [
+                  { trigger_id: "poison", skill_id: "fire", enabled: true },
+                ],
+              },
+            ],
+            enemies: [
+              { ...sampleCatalog.enemies[0], gambit_set_id: "healer" },
+              {
+                ...sampleCatalog.enemies[0],
+                id: "skull",
+                name: "スケルトン",
+                icon: "skull",
+                gambit_set_id: "mage",
+              },
+            ],
             skills: [
               ...sampleCatalog.skills,
               normalizeSkill({
