@@ -125,17 +125,14 @@ it("adds and removes weakness/resistance badges in one attribute column and pers
   screen.getByRole("button", { name: "ゴーストの氷：耐性" }).focus();
   await user.keyboard(" ");
   expect(
+    screen.getByRole("button", { name: "ゴーストの氷：弱点" }),
+  ).toBeVisible();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "ゴーストの氷：弱点" }));
+  expect(
     screen.getByRole("button", { name: "ゴーストの氷：耐性" }),
   ).toBeVisible();
-  await user.click(screen.getByRole("button", { name: "氷を弱点にする" }));
-  expect(
-    screen.getByRole("button", { name: "ゴーストの氷：弱点" }),
-  ).toBeVisible();
-  await user.click(screen.getByRole("button", { name: "氷を弱点にする" }));
-  expect(
-    screen.getByRole("button", { name: "ゴーストの氷：弱点" }),
-  ).toBeVisible();
-  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   await user.click(
     screen.getByRole("button", { name: "ゴーストの氷の相性を削除" }),
   );

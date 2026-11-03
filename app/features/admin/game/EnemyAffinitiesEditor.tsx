@@ -81,24 +81,17 @@ export default function EnemyAffinitiesEditor({
                 borderColor: `color-mix(in srgb, ${element.color} 40%, transparent)`,
               }}
             >
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label={`${enemy.name}の${element.name}：${weak ? "弱点" : "耐性"}`}
-                    className="inline-flex items-center gap-1 rounded-l-full px-2 py-1 hover:bg-current/10 focus-visible:outline-2"
-                  >
-                    <GameIcon icon={element.icon} className="size-3" />
-                    {element.name} {weak ? "弱点" : "耐性"}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-64"
-                  aria-label={`${enemy.name}の${element.name}の相性を編集`}
-                >
-                  {choices(element)}
-                </PopoverContent>
-              </Popover>
+              <button
+                type="button"
+                aria-label={`${enemy.name}の${element.name}：${weak ? "弱点" : "耐性"}`}
+                title={`クリックで${weak ? "耐性" : "弱点"}に切り替え`}
+                disabled={!element.enabled}
+                onClick={() => change(element.id, weak ? "resistant" : "weak")}
+                className="inline-flex items-center gap-1 rounded-l-full px-2 py-1 hover:bg-current/10 focus-visible:outline-2 disabled:opacity-50"
+              >
+                <GameIcon icon={element.icon} className="size-3" />
+                {element.name} {weak ? "弱点" : "耐性"}
+              </button>
               <button
                 type="button"
                 aria-label={`${enemy.name}の${element.name}の相性を削除`}
