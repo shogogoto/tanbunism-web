@@ -52,21 +52,24 @@ it("edits shared gambit rules with trigger targets from the gambit tab", async (
   );
   const user = userEvent.setup();
   render(<TriggerEditor />);
-  await user.click(await screen.findByRole("button", { name: "行動 0" }));
-  const dialog = within(
-    screen.getByRole("dialog", { name: "回復と攻撃のガンビット" }),
+  const actions = within(
+    await screen.findByRole("table", { name: "回復と攻撃のガンビット" }),
   );
-  await user.click(dialog.getByRole("button", { name: "条件を追加" }));
-  let row = within(dialog.getByRole("row", { name: "ガンビット 1" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole("button", { name: "回復と攻撃に条件を追加" }),
+  );
+  let row = within(actions.getByRole("row", { name: "ガンビット 1" }));
   expect(row.getByText("味方")).toBeVisible();
   await user.selectOptions(row.getByLabelText("使用スキル"), "heal");
   await user.selectOptions(row.getByLabelText("変型"), "half");
-  await user.click(dialog.getByRole("button", { name: "条件を追加" }));
-  row = within(dialog.getByRole("row", { name: "ガンビット 2" }));
+  await user.click(
+    screen.getByRole("button", { name: "回復と攻撃に条件を追加" }),
+  );
+  row = within(actions.getByRole("row", { name: "ガンビット 2" }));
   await user.selectOptions(row.getByLabelText("トリガー"), "always");
-  row = within(dialog.getByRole("row", { name: "ガンビット 2" }));
+  row = within(actions.getByRole("row", { name: "ガンビット 2" }));
   expect(row.getByText("敵")).toBeVisible();
-  await user.click(dialog.getByRole("button", { name: "閉じる" }));
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(saved).toHaveBeenCalled());
   expect(saved.mock.calls.at(-1)?.[0].gambit_sets[0].rules).toEqual([
