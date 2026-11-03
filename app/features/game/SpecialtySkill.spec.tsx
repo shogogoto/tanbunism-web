@@ -95,27 +95,39 @@ beforeEach(() => {
     };
   });
 });
-afterEach(() => vi.useRealTimers());
-
-it("opens a real quiz and confirms with Space and Enter without a second MP request", async () => {
-  show();
-  const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "専門分野 · MP 3" }));
-  const option = await screen.findByRole("button", { name: "正解の用語" });
-  expect(option).toHaveFocus();
-  await user.keyboard(" {Enter}");
-  await waitFor(() => expect(result).toHaveBeenCalled());
-  expect(gameRequest).toHaveBeenCalledWith("battle/skill/answer", {
-    skill_id: "skill",
-    selected: ["a"],
-    enemy_hp: { enemy: 10 },
-  });
-  expect(
-    vi
-      .mocked(gameRequest)
-      .mock.calls.filter(([path]) => path === "battle/skill/start"),
-  ).toHaveLength(1);
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
+
+it.each([0, 0.999])(
+  "opens a shuffled real quiz and confirms with Space and Enter without a second MP request (random=%s)",
+  async (random) => {
+    vi.spyOn(Math, "random").mockReturnValue(random);
+    show();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "専門分野 · MP 3" }));
+    const option = await screen.findByRole("button", { name: "正解の用語" });
+    const options = screen
+      .getAllByRole("button")
+      .filter((button) => button.hasAttribute("data-quiz-option-index"));
+    await waitFor(() => expect(options[0]).toHaveFocus());
+    if (option !== options[0]) await user.keyboard("{ArrowDown}");
+    expect(option).toHaveFocus();
+    await user.keyboard(" {Enter}");
+    await waitFor(() => expect(result).toHaveBeenCalled());
+    expect(gameRequest).toHaveBeenCalledWith("battle/skill/answer", {
+      skill_id: "skill",
+      selected: ["a"],
+      enemy_hp: { enemy: 10 },
+    });
+    expect(
+      vi
+        .mocked(gameRequest)
+        .mock.calls.filter(([path]) => path === "battle/skill/start"),
+    ).toHaveLength(1);
+  },
+);
 
 it("settles a timed-out specialty as unanswered even after its dialog is closed", async () => {
   duration = 1500;
