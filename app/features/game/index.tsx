@@ -161,6 +161,11 @@ export function GamePlay({
   const [facility, setFacility] = useState<"shop" | "library">();
   const navigate = useNavigate();
   const location = useLocation();
+  const previousFacility = location.state?.returnFacility;
+  const returnFacility =
+    previousFacility === "shop" || previousFacility === "library"
+      ? previousFacility
+      : undefined;
   useEffect(() => {
     function menuHotkey(event: KeyboardEvent) {
       if (
@@ -200,11 +205,21 @@ export function GamePlay({
   }, [menuPanel, navigate, location.state]);
   function openPanel(panel: "status" | "item" | "boss") {
     setFacility(undefined);
-    void navigate(`/game/${panel}`, { state: { gamePanelFromMap: true } });
+    void navigate(`/game/${panel}`, {
+      state: {
+        gamePanelFromMap: true,
+        ...(facility ? { returnFacility: facility } : {}),
+      },
+    });
   }
   function closePanel() {
     if (location.state?.gamePanelFromMap) void navigate(-1);
     else void navigate("/game", { replace: true });
+  }
+  function returnToFacility() {
+    if (!returnFacility) return;
+    closePanel();
+    setFacility(returnFacility);
   }
   const [showDestinations, setShowDestinations] = useState(false);
   const [legacy, setLegacy] = useState<GameSave>();
@@ -1691,6 +1706,7 @@ export function GamePlay({
         onOpenChange={(open) => {
           if (!open) {
             if (facility) setFacility(undefined);
+            else if (returnFacility) returnToFacility();
             else closePanel();
           }
         }}
@@ -1698,7 +1714,7 @@ export function GamePlay({
         <DialogContent
           className={`max-h-[90dvh] overflow-y-auto ${menuPanel || facility ? "top-[5dvh] translate-y-0 sm:max-w-[calc(100vw-4rem)] lg:max-w-5xl" : "sm:max-w-lg"}`}
           data-dashboard-swipe-ignore
-          data-game-menu={menuPanel ? "" : undefined}
+          data-game-menu={menuPanel && !facility ? "" : undefined}
         >
           <DialogHeader>
             <DialogTitle>
@@ -1716,6 +1732,17 @@ export function GamePlay({
               </DialogDescription>
             )}
           </DialogHeader>
+          {menuPanel && !facility && returnFacility && (
+            <Button
+              variant="outline"
+              className="w-fit"
+              onClick={returnToFacility}
+            >
+              {returnFacility === "shop"
+                ? "ショップに戻る"
+                : "旅人の書庫に戻る"}
+            </Button>
+          )}
           {panel === "boss" && (
             <BossPanel
               save={save}

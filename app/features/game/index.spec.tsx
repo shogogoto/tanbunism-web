@@ -1473,37 +1473,69 @@ it("switches between status, inventory, and achievement tabs in the game menu", 
   ).toBeVisible();
 });
 
-it("opens the shop after a paid entrance visit while keeping the map mounted", async () => {
-  state = {
-    revision: 1,
-    save: {
-      ...enterDungeon(newSave(), "book", "本", 1),
-      economy: { gold: 120, inventory: {}, weapon: null, weapon_attack: 0 },
-    },
-  };
-  renderGame();
-  const user = userEvent.setup();
-  const map = await screen.findByRole("region", { name: "ダンジョンのマップ" });
-  expect(
-    screen.queryByRole("button", { name: "所持ゴールド 120" }),
-  ).not.toBeInTheDocument();
-  await user.click(await screen.findByRole("button", { name: "ショップ" }));
-  expect(state.save.run?.moves).toBe(0);
-  await user.click(screen.getByRole("button", { name: "ショップへ移動・1歩" }));
-  expect(await screen.findByRole("dialog", { name: "ショップ" })).toBeVisible();
-  expect(map).toBeInTheDocument();
-  expect(state.save.run?.moves).toBe(1);
-  expect(consumeCount).toBe(0);
-  expect(screen.getByTestId("pathname")).toHaveTextContent("/game");
-  await user.click(screen.getByRole("button", { name: "所持品を見る" }));
-  expect(screen.getByTestId("pathname")).toHaveTextContent("/game/item");
-  expect(
-    screen.queryByRole("button", { name: "ショップ" }),
-  ).not.toBeInTheDocument();
-  expect(state.save.run?.moves).toBe(1);
-  await user.keyboard("{Escape}");
-  expect(screen.getByTestId("pathname")).toHaveTextContent("/game");
-});
+it.each([0, 4])(
+  "returns to the paid shop without another move (used moves=%s)",
+  async (usedMoves) => {
+    state = {
+      revision: 1,
+      save: {
+        ...enterDungeon(newSave(), "book", "本", 1),
+        economy: { gold: 120, inventory: {}, weapon: null, weapon_attack: 0 },
+      },
+    };
+    if (!state.save.run) throw new Error("Expected run");
+    state.save.run.moves = usedMoves;
+    renderGame();
+    const user = userEvent.setup();
+    const map = await screen.findByRole("region", {
+      name: "ダンジョンのマップ",
+    });
+    expect(
+      screen.queryByRole("button", { name: "所持ゴールド 120" }),
+    ).not.toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "ショップ" }));
+    expect(state.save.run?.moves).toBe(usedMoves);
+    await user.click(
+      screen.getByRole("button", { name: "ショップへ移動・1歩" }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "ショップ" }),
+    ).toBeVisible();
+    expect(map).toBeInTheDocument();
+    expect(state.save.run?.moves).toBe(usedMoves + 1);
+    expect(consumeCount).toBe(0);
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/game");
+    await user.click(screen.getByRole("button", { name: "所持品を見る" }));
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/game/item");
+    expect(
+      screen.queryByRole("button", { name: "ショップ" }),
+    ).not.toBeInTheDocument();
+    expect(state.save.run?.moves).toBe(usedMoves + 1);
+    const revisionAfterVisit = state.revision;
+    await user.click(screen.getByRole("tab", { name: "ステータス" }));
+    await user.click(screen.getByRole("button", { name: "ショップに戻る" }));
+    expect(
+      await screen.findByRole("dialog", { name: "ショップ" }),
+    ).toBeVisible();
+    expect(state.save.run?.moves).toBe(usedMoves + 1);
+    expect(state.revision).toBe(revisionAfterVisit);
+    await user.click(screen.getByRole("button", { name: "所持品を見る" }));
+    await user.keyboard("{Escape}");
+    expect(
+      await screen.findByRole("dialog", { name: "ショップ" }),
+    ).toBeVisible();
+    expect(state.save.run?.moves).toBe(usedMoves + 1);
+    expect(state.revision).toBe(revisionAfterVisit);
+    await user.keyboard("{Escape}");
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/game");
+    await user.click(
+      screen.getByRole("button", { name: "アイテムボックスを開く" }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "ショップに戻る" }),
+    ).not.toBeInTheDocument();
+  },
+);
 
 it("opens the travelers library with the last move, closes without another charge and blocks exhausted visits", async () => {
   const save = enterDungeon(newSave(), "book", "本", 1);
