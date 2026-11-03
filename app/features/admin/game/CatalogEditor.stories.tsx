@@ -22,6 +22,20 @@ export default {
         http.get("*/admin/game/catalog", () =>
           HttpResponse.json({
             ...sampleCatalog,
+            gambit_sets: [
+              {
+                id: "healer",
+                name: "回復役",
+                rules: [
+                  {
+                    trigger_id: "hurt",
+                    trigger_variant_id: "half",
+                    skill_id: "heal",
+                    enabled: true,
+                  },
+                ],
+              },
+            ],
             items: [
               ...sampleCatalog.items,
               {

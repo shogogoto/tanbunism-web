@@ -104,28 +104,30 @@ it("sets skill element independently of templates and configures attribute buffs
   ).toBe(true);
 });
 
-it("cycles per-element columns through neutral, weak and resistant and persists them", async () => {
+it("adds and removes weakness/resistance badges in one attribute column and persists them", async () => {
   const user = userEvent.setup();
   const view = render(<CatalogEditor kind="enemies" />);
   await user.click(
-    await screen.findByRole("button", { name: "ゴーストの炎：中立" }),
+    await screen.findByRole("button", { name: "ゴーストの属性相性を編集" }),
   );
-  await user.click(screen.getByRole("button", { name: "ゴーストの炎：弱点" }));
+  await user.click(screen.getByRole("button", { name: "炎を弱点にする" }));
+  await user.click(screen.getByRole("button", { name: "炎を耐性にする" }));
   expect(
     screen.getByRole("button", { name: "ゴーストの炎：耐性" }),
   ).toBeVisible();
-  await user.click(screen.getByRole("button", { name: "ゴーストの光：中立" }));
-  await user.click(screen.getByRole("button", { name: "ゴーストの氷：中立" }));
-  await user.click(screen.getByRole("button", { name: "ゴーストの氷：弱点" }));
+  await user.click(screen.getByRole("button", { name: "光を弱点にする" }));
+  await user.click(screen.getByRole("button", { name: "氷を耐性にする" }));
+  await user.keyboard("{Escape}");
   screen.getByRole("button", { name: "ゴーストの氷：耐性" }).focus();
   await user.keyboard(" ");
   expect(
-    screen.getByRole("button", { name: "ゴーストの氷：中立" }),
-  ).toBeVisible();
+    screen.queryByRole("button", { name: "ゴーストの氷：耐性" }),
+  ).not.toBeInTheDocument();
   for (const element of defaultElements)
     expect(
-      screen.getByRole("columnheader", { name: `${element.name} ↕` }),
-    ).toBeVisible();
+      screen.queryByRole("columnheader", { name: `${element.name} ↕` }),
+    ).not.toBeInTheDocument();
+  expect(screen.getByRole("columnheader", { name: "属性 ↕" })).toBeVisible();
   await user.click(screen.getByRole("button", { name: "保存" }));
   await screen.findByText("保存しました");
   const payload = saved.mock.calls[0][0];

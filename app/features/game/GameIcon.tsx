@@ -158,7 +158,13 @@ export function IconPicker({
   value,
   onChange,
   label = "素材",
-}: { value: string; onChange: (value: string) => void; label?: string }) {
+  iconOnly = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label?: string;
+  iconOnly?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [filters, setFilters] = useState(readIconFilters);
   const [recent, setRecent] = useState<string[]>(readRecentIcons);
@@ -216,11 +222,18 @@ export function IconPicker({
       }}
     >
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" aria-label={`${label}を選ぶ`}>
-          <GameIcon icon={value} />
-          {characterAsset(value)?.label ??
-            gameIcons[value as keyof typeof gameIcons]?.label ??
-            "選択"}
+        <Button
+          type="button"
+          variant="outline"
+          size={iconOnly ? "icon" : "default"}
+          title={label}
+          aria-label={`${label}を選ぶ`}
+        >
+          <GameIcon icon={value} className={iconOnly ? "size-6" : "size-4"} />
+          {!iconOnly &&
+            (characterAsset(value)?.label ??
+              gameIcons[value as keyof typeof gameIcons]?.label ??
+              "選択")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85dvh] overflow-y-auto">

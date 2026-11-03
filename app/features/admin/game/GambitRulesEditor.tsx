@@ -1,10 +1,6 @@
 import { useState } from "react";
 import { AdminNativeTable, AdminTableFrame } from "~/features/admin/AdminTable";
-import type {
-  EnemyDefinition,
-  EnemyGambitRule,
-  GameCatalog,
-} from "~/features/game/catalog";
+import type { EnemyGambitRule, GameCatalog } from "~/features/game/catalog";
 import {
   triggerTargets,
   triggerVariant,
@@ -17,17 +13,18 @@ import {
   DialogTrigger,
 } from "~/shared/components/ui/dialog";
 
-export default function EnemyGambitEditor({
-  enemy,
+export default function GambitRulesEditor({
+  name,
+  rules,
   catalog,
   onChange,
 }: {
-  enemy: EnemyDefinition;
+  name: string;
+  rules: EnemyGambitRule[];
   catalog: GameCatalog;
   onChange: (rules: EnemyGambitRule[]) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const rules = enemy.gambits ?? [];
   const triggers = catalog.triggers ?? [];
   const skills = catalog.skills.filter(
     (s) =>
@@ -48,14 +45,14 @@ export default function EnemyGambitEditor({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button type="button" size="sm" variant="outline">
-          ガンビット {rules.length}
+          行動 {rules.length}
         </Button>
       </DialogTrigger>
       <DialogContent
         aria-describedby={undefined}
         className="max-h-[85dvh] overflow-y-auto sm:max-w-4xl"
       >
-        <DialogTitle>{enemy.name}のガンビット</DialogTitle>
+        <DialogTitle>{name}のガンビット</DialogTitle>
         <AdminTableFrame layout="content">
           <AdminNativeTable
             layout="content"
@@ -234,7 +231,7 @@ export default function EnemyGambitEditor({
           条件を追加
         </Button>
         <p className="text-xs text-muted-foreground">
-          味方はこの敵自身も含みます。実行できる最初の1件を使い、未設定・条件不一致・MP不足なら攻撃スキルに戻ります。変更は表の保存で確定します。
+          味方は行動者自身も含みます。優先順に判定し、実行できる最初の1件を使います。未設定・条件不一致・MP不足なら通常攻撃します。変更は表の保存で確定します。
         </p>
         <Button type="button" onClick={() => setOpen(false)}>
           閉じる

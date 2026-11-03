@@ -18,6 +18,7 @@ import { Input } from "~/shared/components/ui/input";
 import DefinitionDeleteButton, {
   pendingDeletionClass,
 } from "./DefinitionDeleteButton";
+import GambitSetEditor from "./GambitSetEditor";
 import RowOrder from "./RowOrder";
 import SortableAdminTable from "./SortableAdminTable";
 import { SortableRow } from "./SortableRows";
@@ -123,6 +124,19 @@ export default function TriggerEditor() {
           if (references.length) {
             setError(
               `削除するガンビットを${references.map((enemy) => `敵「${enemy.name}」`).join("、")}が使用しています。先に参照を変更してください。`,
+            );
+            return;
+          }
+          const usedSets =
+            catalog.gambit_sets?.filter((group) =>
+              group.rules.some((rule) => deletions.has(rule.trigger_id)),
+            ) ?? [];
+          if (usedSets.length) {
+            const enemies = catalog.enemies.filter((enemy) =>
+              usedSets.some((group) => group.id === enemy.gambit_set_id),
+            );
+            setError(
+              `削除するトリガーを${usedSets.map((group) => `ガンビットセット「${group.name}」`).join("、")}${enemies.length ? `（${enemies.map((enemy) => `敵「${enemy.name}」`).join("、")}）` : ""}が使用しています。先にセットの参照を変更してください。`,
             );
             return;
           }
@@ -440,6 +454,15 @@ export default function TriggerEditor() {
             <output className="block mt-2 text-sm text-muted-foreground">
               削除予約 {deletions.size}件 · 保存で確定します。
             </output>
+          )}
+          {catalog && (
+            <GambitSetEditor
+              catalog={catalog}
+              onChange={(next) => {
+                setCatalog(next);
+                setSaved(false);
+              }}
+            />
           )}
           <div className="flex justify-center mt-4">
             <Button type="submit">保存</Button>

@@ -557,7 +557,7 @@ export default function GameAdminManager() {
       >
         <GameDungeonManager />
         <section className="border-t pt-6" aria-label="ダンジョンの報酬">
-          <h2 className="text-center text-lg font-semibold">報酬</h2>
+          <h2 className="text-left text-lg font-semibold">報酬</h2>
           <RewardsEditor />
         </section>
       </TabsContent>

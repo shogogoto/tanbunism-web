@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { http, HttpResponse } from "msw";
 import { defaultBalance } from "~/features/game/battle";
 import { sampleCatalog } from "~/features/game/catalog.fixtures";
-import type { RewardSettings } from "~/features/game/rewards";
+import type { GoldSettings, RewardSettings } from "~/features/game/rewards";
 import RewardsEditor from "./RewardsEditor";
 import type { GameSettingsDocument } from "./gameSettingsFiles";
 
@@ -45,6 +45,49 @@ export default {
   parameters: {
     msw: {
       handlers: [
+        http.post("*/admin/game/rewards/gold-preview", async ({ request }) => {
+          const { settings, power, achievement } = (await request.json()) as {
+            settings: GoldSettings;
+            power: number;
+            achievement: number;
+          };
+          const bonus =
+            settings.power_formula === "sqrt"
+              ? Math.sqrt(power / settings.power_reference)
+              : Math.log1p(power / settings.power_reference);
+          const amount =
+            (settings.base + bonus * settings.power_coefficient) *
+            (1 +
+              (Math.max(0, achievement - 1) *
+                settings.achievement_growth_percent) /
+                100);
+          return HttpResponse.json(
+            Object.fromEntries(
+              (["enemy", "chest"] as const).map((source) => [
+                source,
+                Object.fromEntries(
+                  [
+                    ["min", -1],
+                    ["typical", 0],
+                    ["max", 1],
+                  ].map(([key, variation]) => [
+                    key,
+                    Math.min(
+                      1000000,
+                      Math.floor(
+                        amount *
+                          settings[`${source}_multiplier`] *
+                          (1 +
+                            (Number(variation) * settings.variance_percent) /
+                              100),
+                      ),
+                    ),
+                  ]),
+                ),
+              ]),
+            ),
+          );
+        }),
         http.get("*/admin/game/settings-file", () =>
           HttpResponse.json(original),
         ),

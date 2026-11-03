@@ -19,13 +19,15 @@ import {
   recentIconKey,
 } from "~/features/game/iconPickerPreferences";
 import CatalogEditor from "./CatalogEditor";
+import TriggerEditor from "./TriggerEditor";
 import { variantRowHighlight } from "./variantRowStyles";
 
-it("edits enemy gambits with trigger targets and saves them from the main table", async () => {
+it("edits shared gambit rules with trigger targets from the gambit tab", async () => {
   server.use(
     http.get("*/admin/game/catalog", () =>
       HttpResponse.json({
         ...sampleCatalog,
+        gambit_sets: [{ id: "behaviour", name: "回復と攻撃", rules: [] }],
         triggers: [
           {
             id: "hurt",
@@ -49,10 +51,10 @@ it("edits enemy gambits with trigger targets and saves them from the main table"
     ),
   );
   const user = userEvent.setup();
-  render(<CatalogEditor kind="enemies" />);
-  await user.click(await screen.findByRole("button", { name: "ガンビット 0" }));
+  render(<TriggerEditor />);
+  await user.click(await screen.findByRole("button", { name: "行動 0" }));
   const dialog = within(
-    screen.getByRole("dialog", { name: "ゴーストのガンビット" }),
+    screen.getByRole("dialog", { name: "回復と攻撃のガンビット" }),
   );
   await user.click(dialog.getByRole("button", { name: "条件を追加" }));
   let row = within(dialog.getByRole("row", { name: "ガンビット 1" }));
@@ -67,7 +69,7 @@ it("edits enemy gambits with trigger targets and saves them from the main table"
   await user.click(dialog.getByRole("button", { name: "閉じる" }));
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(saved).toHaveBeenCalled());
-  expect(saved.mock.calls.at(-1)?.[0].enemies[0].gambits).toEqual([
+  expect(saved.mock.calls.at(-1)?.[0].gambit_sets[0].rules).toEqual([
     {
       trigger_id: "hurt",
       trigger_variant_id: "half",
@@ -1815,14 +1817,16 @@ it("configures enemy icons and attacks and surfaces save failures", async () => 
     "max-w-full",
   );
   const user = userEvent.setup();
-  await user.selectOptions(await screen.findByLabelText("攻撃スキル"), "fire");
+  const hp = await screen.findByLabelText("HP倍率");
+  await user.clear(hp);
+  await user.type(hp, "2");
   await user.click(screen.getByRole("checkbox", { name: "ボス用" }));
   await user.click(screen.getByRole("button", { name: "保存" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "スキルの参照が不正です。",
   );
   expect(screen.queryByText("保存しました")).not.toBeInTheDocument();
-  expect(screen.getByLabelText("攻撃スキル")).toHaveValue("fire");
+  expect(screen.getByLabelText("HP倍率")).toHaveValue(2);
 });
 
 it("edits boss multipliers only in enemy definitions and preserves consolidated values", async () => {
@@ -1845,16 +1849,12 @@ it("edits boss multipliers only in enemy definitions and preserves consolidated 
   );
   const user = userEvent.setup();
   render(<CatalogEditor kind="enemies" />);
-  await user.click(
-    await screen.findByRole("button", { name: "ボスの能力倍率" }),
-  );
-  const dialog = within(screen.getByRole("dialog", { name: "ボスの能力倍率" }));
+  const dialog = within(await screen.findByRole("row", { name: "ボス" }));
   expect(dialog.queryByText(/ボス共通倍率/)).not.toBeInTheDocument();
-  expect(dialog.getByLabelText("HP")).toHaveValue(6);
-  expect(dialog.getByLabelText("攻撃力")).toHaveValue(1.875);
-  await user.clear(dialog.getByLabelText("HP"));
-  await user.type(dialog.getByLabelText("HP"), "7.5");
-  await user.keyboard("{Escape}");
+  expect(dialog.getByLabelText("HP倍率")).toHaveValue(6);
+  expect(dialog.getByLabelText("攻撃力倍率")).toHaveValue(1.875);
+  await user.clear(dialog.getByLabelText("HP倍率"));
+  await user.type(dialog.getByLabelText("HP倍率"), "7.5");
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(saved).toHaveBeenCalled());
   expect(saved.mock.calls.at(-1)?.[0].enemies[0].multipliers).toMatchObject({
@@ -1864,15 +1864,10 @@ it("edits boss multipliers only in enemy definitions and preserves consolidated 
   expect(saved.mock.calls.at(-1)?.[0].boss_multipliers_version).toBe(1);
 });
 
-it("edits enemy stat multipliers without adding seven table columns", async () => {
+it("edits all seven enemy stat multipliers inline without obsolete skill columns", async () => {
   render(<CatalogEditor kind="enemies" />);
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "ゴーストの能力倍率" }),
-  );
-  const dialog = within(
-    screen.getByRole("dialog", { name: "ゴーストの能力倍率" }),
-  );
+  const dialog = within(await screen.findByRole("row", { name: "ゴースト" }));
   for (const [label, value] of [
     ["HP", "2"],
     ["MP", "0.5"],
@@ -1882,14 +1877,15 @@ it("edits enemy stat multipliers without adding seven table columns", async () =
     ["特守", "2"],
     ["速さ", "0.5"],
   ]) {
-    const input = dialog.getByLabelText(label);
+    const input = dialog.getByLabelText(`${label}倍率`);
     await user.clear(input);
     await user.type(input, value);
   }
-  await user.keyboard("{Escape}");
+  expect(dialog.queryByLabelText("攻撃スキル")).not.toBeInTheDocument();
+  expect(dialog.queryByLabelText("命中時スキル")).not.toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "ゴーストの能力倍率" }),
-  ).toHaveTextContent("7能力を補正");
+    dialog.getByRole("button", { name: "ゴーストの素材を選ぶ" }).textContent,
+  ).toBe("");
   expect(saved).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(saved).toHaveBeenCalled());

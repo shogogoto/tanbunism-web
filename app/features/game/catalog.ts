@@ -502,6 +502,7 @@ export type EnemyDefinition = {
   attack_skill_id: string | null;
   on_hit_skill_id?: string | null;
   gambits?: EnemyGambitRule[];
+  gambit_set_id?: string | null;
   weaknesses?: string[];
   resistances?: string[];
 };
@@ -511,6 +512,7 @@ export type EnemyGambitRule = {
   skill_id: string;
   enabled: boolean;
 };
+export type GambitSet = { id: string; name: string; rules: EnemyGambitRule[] };
 export const enemyStatLabels = {
   hp: "HP",
   mp: "MP",
@@ -532,6 +534,7 @@ export type GameCatalog = {
   items: ItemDefinition[];
   shop?: ShopListing[];
   enemies: EnemyDefinition[];
+  gambit_sets?: GambitSet[];
   player_skills?: { skill_id: string; enabled: boolean }[];
   specialty_skills?: SpecialtySkillUse[];
   triggers?: TriggerDefinition[];
@@ -658,6 +661,22 @@ export const effectLabels: Record<SkillDefinition["effect"], string> = {
   debuff: "debuff：能力低下",
   ailment: "状態異常",
 };
+/** Preserve existing per-enemy rules when moving editing into shared sets. */
+export function migrateEnemyGambitSets(catalog: GameCatalog): GameCatalog {
+  const sets = [...(catalog.gambit_sets ?? [])];
+  const enemies = catalog.enemies.map((enemy) => {
+    if (enemy.gambit_set_id || !enemy.gambits?.length) return enemy;
+    const id = `gambit_${crypto.randomUUID().replaceAll("-", "")}`;
+    sets.push({
+      id,
+      name: `${enemy.name}の行動`.slice(0, 80),
+      rules: enemy.gambits,
+    });
+    return { ...enemy, gambits: [], gambit_set_id: id };
+  });
+  return { ...catalog, enemies, gambit_sets: sets };
+}
+
 export async function requestGameCatalog(
   admin = false,
   value?: GameCatalog,
@@ -686,7 +705,10 @@ export async function requestGameCatalog(
         : "ゲーム定義を読み書きできませんでした。",
     );
   }
-  return resolveTriggerVariantSets(await response.json());
+  const catalog = await response.json();
+  return resolveTriggerVariantSets(
+    admin ? migrateEnemyGambitSets(catalog) : catalog,
+  );
 }
 
 /** Only the selected attack action changes outgoing damage; answers still decide hits. */

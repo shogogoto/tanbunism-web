@@ -14,6 +14,7 @@ import {
 } from "~/features/game/rewards";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import GoldPreview from "./GoldPreview";
 import {
   type GameSettingsDocument,
   exportGameSettings,
@@ -87,7 +88,7 @@ function GoldEditor({
   return (
     <AdminTableSection
       title="Gold（共通計算）"
-      className="space-y-4"
+      className="mx-0 w-full space-y-4"
       aria-label="Goldの共通計算"
     >
       <div className="flex flex-wrap items-end gap-2 text-sm">
@@ -406,142 +407,145 @@ export default function RewardsEditor() {
       </div>
     );
   return (
-    <form
-      className="space-y-8 p-4"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        if (pending.current) return;
-        pending.current = true;
-        setBusy(true);
-        setError("");
-        setMessage("");
-        try {
-          const preview = await previewGameSettings({
-            format: "tanbunism.game-settings",
-            version: 1,
-            catalog: { rewards },
-            balance: fixed,
-          });
-          apply(await saveGameSettings(preview));
-          setMessage("保存しました。未開封の宝箱から反映されます。");
-        } catch (reason) {
-          setError(String(reason));
-        } finally {
-          pending.current = false;
-          setBusy(false);
-        }
-      }}
-    >
-      <fieldset disabled={busy} className="min-w-0 space-y-8">
-        <GoldEditor
-          value={rewards.gold ?? defaultGoldSettings}
-          onChange={(gold) => setRewards({ ...rewards, gold })}
-        />
-        <AdminTableSection title="宝箱" className="space-y-4">
-          <label className="flex flex-col gap-1 text-sm">
-            アイテムのドロップ候補
-            <select
-              aria-label="宝箱のドロップ候補"
-              className={selectClass}
-              value={rewards.chest_table_id ?? ""}
-              onChange={(event) =>
+    <div className="space-y-6">
+      <GoldPreview settings={rewards.gold ?? defaultGoldSettings} />
+      <form
+        className="space-y-8 p-4"
+        onSubmit={async (event) => {
+          event.preventDefault();
+          if (pending.current) return;
+          pending.current = true;
+          setBusy(true);
+          setError("");
+          setMessage("");
+          try {
+            const preview = await previewGameSettings({
+              format: "tanbunism.game-settings",
+              version: 1,
+              catalog: { rewards },
+              balance: fixed,
+            });
+            apply(await saveGameSettings(preview));
+            setMessage("保存しました。未開封の宝箱から反映されます。");
+          } catch (reason) {
+            setError(String(reason));
+          } finally {
+            pending.current = false;
+            setBusy(false);
+          }
+        }}
+      >
+        <fieldset disabled={busy} className="min-w-0 space-y-8">
+          <GoldEditor
+            value={rewards.gold ?? defaultGoldSettings}
+            onChange={(gold) => setRewards({ ...rewards, gold })}
+          />
+          <AdminTableSection title="宝箱" className="mx-0 w-full space-y-4">
+            <label className="flex flex-col gap-1 text-sm">
+              アイテムのドロップ候補
+              <select
+                aria-label="宝箱のドロップ候補"
+                className={selectClass}
+                value={rewards.chest_table_id ?? ""}
+                onChange={(event) =>
+                  setRewards({
+                    ...rewards,
+                    chest_table_id: event.target.value || null,
+                  })
+                }
+              >
+                <option value="">なし（共通追加のみ）</option>
+                {rewards.tables.map((table) => (
+                  <option key={table.id} value={table.id}>
+                    {table.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex flex-wrap gap-3">
+              <NumberField
+                label="共通追加: 回復薬"
+                value={fixed.chest_healing_potions}
+                max={100}
+                onChange={(chest_healing_potions) =>
+                  setFixed({ ...fixed, chest_healing_potions })
+                }
+              />
+              <NumberField
+                label="共通追加: 歩数回復薬"
+                value={fixed.chest_step_potions}
+                max={100}
+                onChange={(chest_step_potions) =>
+                  setFixed({ ...fixed, chest_step_potions })
+                }
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              各領域の最後に1箱。開封済みの内容は変わりません。無効なアイテム・スキルは抽選対象外です。
+            </p>
+          </AdminTableSection>
+          {rewards.tables.map((table) => (
+            <RewardTableEditor
+              key={table.id}
+              table={table}
+              catalog={catalog}
+              onChange={(value) =>
                 setRewards({
                   ...rewards,
-                  chest_table_id: event.target.value || null,
+                  tables: rewards.tables.map((current) =>
+                    current.id === table.id ? value : current,
+                  ),
                 })
               }
+              onDelete={() =>
+                setRewards({
+                  ...rewards,
+                  chest_table_id:
+                    rewards.chest_table_id === table.id
+                      ? null
+                      : rewards.chest_table_id,
+                  tables: rewards.tables.filter(
+                    (current) => current.id !== table.id,
+                  ),
+                })
+              }
+            />
+          ))}
+          <div className="text-center">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={rewards.tables.length >= 100}
+              onClick={() => {
+                const table: RewardTable = {
+                  id: `reward_${crypto.randomUUID().replaceAll("-", "")}`,
+                  name: "新しいドロップ候補",
+                  tier_interval: 5,
+                  draws: 1,
+                  item_chance: 100,
+                  entries: [],
+                };
+                setRewards({
+                  ...rewards,
+                  tables: [...rewards.tables, table],
+                  chest_table_id: rewards.chest_table_id ?? table.id,
+                });
+              }}
             >
-              <option value="">なし（共通追加のみ）</option>
-              {rewards.tables.map((table) => (
-                <option key={table.id} value={table.id}>
-                  {table.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex flex-wrap gap-3">
-            <NumberField
-              label="共通追加: 回復薬"
-              value={fixed.chest_healing_potions}
-              max={100}
-              onChange={(chest_healing_potions) =>
-                setFixed({ ...fixed, chest_healing_potions })
-              }
-            />
-            <NumberField
-              label="共通追加: 歩数回復薬"
-              value={fixed.chest_step_potions}
-              max={100}
-              onChange={(chest_step_potions) =>
-                setFixed({ ...fixed, chest_step_potions })
-              }
-            />
+              ＋ ドロップ候補
+            </Button>
           </div>
-          <p className="text-sm text-muted-foreground">
-            各領域の最後に1箱。開封済みの内容は変わりません。無効なアイテム・スキルは抽選対象外です。
+          <div className="text-center">
+            <Button type="submit">{busy ? "保存中…" : "保存"}</Button>
+          </div>
+        </fieldset>
+        {error && (
+          <p role="alert" className="text-center text-destructive">
+            {error}
           </p>
-        </AdminTableSection>
-        {rewards.tables.map((table) => (
-          <RewardTableEditor
-            key={table.id}
-            table={table}
-            catalog={catalog}
-            onChange={(value) =>
-              setRewards({
-                ...rewards,
-                tables: rewards.tables.map((current) =>
-                  current.id === table.id ? value : current,
-                ),
-              })
-            }
-            onDelete={() =>
-              setRewards({
-                ...rewards,
-                chest_table_id:
-                  rewards.chest_table_id === table.id
-                    ? null
-                    : rewards.chest_table_id,
-                tables: rewards.tables.filter(
-                  (current) => current.id !== table.id,
-                ),
-              })
-            }
-          />
-        ))}
-        <div className="text-center">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={rewards.tables.length >= 100}
-            onClick={() => {
-              const table: RewardTable = {
-                id: `reward_${crypto.randomUUID().replaceAll("-", "")}`,
-                name: "新しいドロップ候補",
-                tier_interval: 5,
-                draws: 1,
-                item_chance: 100,
-                entries: [],
-              };
-              setRewards({
-                ...rewards,
-                tables: [...rewards.tables, table],
-                chest_table_id: rewards.chest_table_id ?? table.id,
-              });
-            }}
-          >
-            ＋ ドロップ候補
-          </Button>
-        </div>
-        <div className="text-center">
-          <Button type="submit">{busy ? "保存中…" : "保存"}</Button>
-        </div>
-      </fieldset>
-      {error && (
-        <p role="alert" className="text-center text-destructive">
-          {error}
-        </p>
-      )}
-      {message && <output className="block text-center">{message}</output>}
-    </form>
+        )}
+        {message && <output className="block text-center">{message}</output>}
+      </form>
+    </div>
   );
 }

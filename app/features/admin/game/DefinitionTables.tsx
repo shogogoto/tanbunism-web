@@ -1,11 +1,16 @@
 import { Plus } from "lucide-react";
-import GameIcon, { IconPicker, gameIcons } from "~/features/game/GameIcon";
+import { IconPicker, gameIcons } from "~/features/game/GameIcon";
 import type {
   EnemyDefinition,
   GameCatalog,
   ItemDefinition,
 } from "~/features/game/catalog";
-import { defaultElements, isEquipmentSkill } from "~/features/game/catalog";
+import {
+  type EnemyStat,
+  defaultElements,
+  enemyStatLabels,
+  isEquipmentSkill,
+} from "~/features/game/catalog";
 import { characterAsset } from "~/features/game/characterAssets";
 import { equipmentParts } from "~/features/game/equipmentSlots";
 import { itemCategories, itemCategory } from "~/features/game/itemCategories";
@@ -14,8 +19,7 @@ import { Input } from "~/shared/components/ui/input";
 import DefinitionDeleteButton, {
   pendingDeletionClass,
 } from "./DefinitionDeleteButton";
-import EnemyGambitEditor from "./EnemyGambitEditor";
-import EnemyMultipliersEditor from "./EnemyMultipliersEditor";
+import EnemyAffinitiesEditor from "./EnemyAffinitiesEditor";
 import RowOrder from "./RowOrder";
 import SortableAdminTable from "./SortableAdminTable";
 import { SortableRow } from "./SortableRows";
@@ -46,7 +50,12 @@ export default function DefinitionTables({
     "素材",
     ...(kind === "items"
       ? ["カテゴリ", "装備部位", "発動スキル", "使用回数"]
-      : ["ボス用", "能力倍率", "ガンビット", "攻撃スキル", "命中時スキル"]),
+      : [
+          "ボス用",
+          ...Object.values(enemyStatLabels).map((label) => `${label}倍率`),
+          "ガンビットセット",
+          "属性",
+        ]),
   ];
   const elements = (catalog.elements ?? defaultElements).filter(
     (element) =>
@@ -61,7 +70,7 @@ export default function DefinitionTables({
     <SortableAdminTable<ItemDefinition | EnemyDefinition>
       rows={catalog[kind]}
       onReorder={(rows) => reorder(rows.map((row) => row.id))}
-      className="whitespace-nowrap text-sm"
+      className={`whitespace-nowrap text-sm ${kind === "enemies" ? "[&_tr>td]:px-1 [&_tr>th]:px-1" : ""}`}
       aria-label={kind === "items" ? "アイテム定義" : "敵定義"}
       value={(item, column) => {
         const skillName = (id?: string | null) =>
@@ -92,50 +101,48 @@ export default function DefinitionTables({
             return item.max_uses ?? (item.kind === "weapon" ? 30 : 1);
         } else {
           if (column === "ボス用") return Number(item.boss);
-          if (column === "能力倍率")
-            return Object.values(item.multipliers ?? {}).join("/");
-          if (column === "ガンビット") return item.gambits?.length ?? 0;
-          if (column === "攻撃スキル") return skillName(item.attack_skill_id);
-          if (column === "命中時スキル") return skillName(item.on_hit_skill_id);
-          if (column.startsWith("element:")) {
-            const element = column.slice(8);
-            return item.weaknesses?.includes(element)
-              ? 1
-              : item.resistances?.includes(element)
-                ? -1
-                : 0;
-          }
+          const stat = (Object.keys(enemyStatLabels) as EnemyStat[]).find(
+            (stat) => column === `${enemyStatLabels[stat]}倍率`,
+          );
+          if (stat) return item.multipliers?.[stat] ?? 1;
+          if (column === "ガンビットセット")
+            return (
+              catalog.gambit_sets?.find(
+                (group) => group.id === item.gambit_set_id,
+              )?.name ?? ""
+            );
+          if (column === "属性")
+            return [
+              ...(item.weaknesses ?? []),
+              ...(item.resistances ?? []),
+            ].join("/");
         }
         return "";
       }}
     >
       {({ sorted, header }) => (
         <>
-          {kind === "enemies" && (
-            <caption className="caption-top p-2 text-left text-xs text-muted-foreground">
-              属性はクリックで「中立 → 弱点 → 耐性 → 中立」と切り替えます。
-            </caption>
-          )}
           <thead className="bg-muted/40">
             <tr>
               <th scope="col" className="w-8">
                 <span className="sr-only">並べ替え</span>
               </th>
-              {headers.map((h) => header(h, h))}
-              {kind === "enemies" &&
-                elements.map((element) =>
-                  header(
-                    `element:${element.id}`,
-                    <span
-                      className="inline-flex items-center gap-1"
-                      style={{ color: element.color }}
-                    >
-                      <GameIcon icon={element.icon} className="size-3" />
-                      {element.name}
-                      {!element.enabled && "（無効）"}
-                    </span>,
+              {headers.map((h) =>
+                header(
+                  h,
+                  h.endsWith("倍率") ? (
+                    <abbr title={h} className="no-underline">
+                      {h
+                        .replace("攻撃力", "攻")
+                        .replace("守備力", "守")
+                        .replace("速さ", "速")
+                        .replace("倍率", "×")}
+                    </abbr>
+                  ) : (
+                    h
                   ),
-                )}
+                ),
+              )}
               {header("有効", "有効")}
               {kind === "enemies" && header("削除", "削除")}
             </tr>
@@ -157,13 +164,14 @@ export default function DefinitionTables({
                     aria-label="名前"
                     required
                     maxLength={80}
-                    className="w-40"
+                    className={kind === "enemies" ? "w-28" : "w-40"}
                     value={item.name}
                     onChange={(e) => update(item.id, { name: e.target.value })}
                   />
                 </td>
                 <td>
                   <IconPicker
+                    iconOnly={kind === "enemies"}
                     label={`${item.name}の素材`}
                     value={item.icon}
                     onChange={(icon) => update(item.id, { icon })}
@@ -284,118 +292,61 @@ export default function DefinitionTables({
                         }
                       />
                     </td>
+                    {(Object.keys(enemyStatLabels) as EnemyStat[]).map(
+                      (stat) => (
+                        <td key={stat}>
+                          <Input
+                            type="number"
+                            aria-label={`${enemyStatLabels[stat]}倍率`}
+                            className="w-14 px-1 text-center text-xs"
+                            min={0.01}
+                            max={400}
+                            step="any"
+                            required
+                            value={
+                              Number.isNaN(item.multipliers?.[stat])
+                                ? ""
+                                : (item.multipliers?.[stat] ?? 1)
+                            }
+                            onChange={(event) =>
+                              update(item.id, {
+                                multipliers: {
+                                  ...item.multipliers,
+                                  [stat]: event.target.valueAsNumber,
+                                },
+                              })
+                            }
+                          />
+                        </td>
+                      ),
+                    )}
                     <td>
-                      <EnemyMultipliersEditor
+                      <select
+                        aria-label="ガンビットセット"
+                        className={`${selectClass} w-32`}
+                        value={item.gambit_set_id ?? ""}
+                        onChange={(event) =>
+                          update(item.id, {
+                            gambit_set_id: event.target.value || null,
+                            gambits: [],
+                          })
+                        }
+                      >
+                        <option value="">なし（通常攻撃）</option>
+                        {catalog.gambit_sets?.map((group) => (
+                          <option key={group.id} value={group.id}>
+                            {group.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <EnemyAffinitiesEditor
                         enemy={item}
+                        elements={elements}
                         onChange={(patch) => update(item.id, patch)}
                       />
                     </td>
-                    <td>
-                      <EnemyGambitEditor
-                        enemy={item}
-                        catalog={catalog}
-                        onChange={(gambits) => update(item.id, { gambits })}
-                      />
-                    </td>
-                    <td>
-                      <select
-                        aria-label="攻撃スキル"
-                        className={selectClass}
-                        value={item.attack_skill_id ?? ""}
-                        onChange={(e) =>
-                          update(item.id, {
-                            attack_skill_id: e.target.value || null,
-                          })
-                        }
-                      >
-                        <option value="">通常攻撃</option>
-                        {catalog.skills
-                          .filter((s) =>
-                            s.effects?.length
-                              ? s.effects.some(
-                                  (effect) => effect.effect === "attack",
-                                )
-                              : s.effect === "attack",
-                          )
-                          .map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
-                          ))}
-                      </select>
-                    </td>
-                    <td>
-                      <select
-                        aria-label="命中時スキル"
-                        className={selectClass}
-                        value={item.on_hit_skill_id ?? ""}
-                        onChange={(e) =>
-                          update(item.id, {
-                            on_hit_skill_id: e.target.value || null,
-                          })
-                        }
-                      >
-                        <option value="">なし</option>
-                        {catalog.skills
-                          .filter((s) =>
-                            s.effects?.length
-                              ? s.effects.every(
-                                  (effect) =>
-                                    effect.effect === "debuff" ||
-                                    effect.effect === "ailment",
-                                )
-                              : s.effect === "debuff" || s.effect === "ailment",
-                          )
-                          .map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
-                          ))}
-                      </select>
-                    </td>
-                    {elements.map((element) => {
-                      const state = item.weaknesses?.includes(element.id)
-                        ? "weak"
-                        : item.resistances?.includes(element.id)
-                          ? "resistant"
-                          : "neutral";
-                      const label = {
-                        weak: "弱点",
-                        resistant: "耐性",
-                        neutral: "中立",
-                      }[state];
-                      return (
-                        <td key={element.id} className="text-center">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={!element.enabled}
-                            aria-label={`${item.name}の${element.name}：${label}`}
-                            title="中立 → 弱点 → 耐性 → 中立"
-                            className={`min-w-14 ${state === "weak" ? "border-rose-500/50 bg-rose-500/10 text-rose-500" : state === "resistant" ? "border-sky-500/50 bg-sky-500/10 text-sky-500" : "text-muted-foreground"}`}
-                            onClick={() =>
-                              update(item.id, {
-                                weaknesses: [
-                                  ...(item.weaknesses ?? []).filter(
-                                    (key) => key !== element.id,
-                                  ),
-                                  ...(state === "neutral" ? [element.id] : []),
-                                ],
-                                resistances: [
-                                  ...(item.resistances ?? []).filter(
-                                    (key) => key !== element.id,
-                                  ),
-                                  ...(state === "weak" ? [element.id] : []),
-                                ],
-                              })
-                            }
-                          >
-                            {label}
-                          </Button>
-                        </td>
-                      );
-                    })}
                   </>
                 )}
                 <td>

@@ -99,6 +99,11 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
     event.preventDefault();
     if (!catalog || saving) return;
     const references = [
+      ...(catalog.gambit_sets ?? [])
+        .filter((group) =>
+          group.rules.some((rule) => deletions.has(rule.skill_id)),
+        )
+        .map((group) => `ガンビットセット「${group.name}」`),
       ...catalog.items
         .filter((i) => deletions.has(i.skill_id))
         .map((i) => `アイテム「${i.name}」`),
