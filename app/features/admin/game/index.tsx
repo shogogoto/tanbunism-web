@@ -228,7 +228,7 @@ function GameDungeonManager() {
   }
 
   return (
-    <AdminTableSection className="space-y-4 p-4 sm:p-6">
+    <AdminTableSection className="mx-0 w-full space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">ダンジョン一覧</h2>
@@ -553,13 +553,18 @@ export default function GameAdminManager() {
       <TabsContent
         key={`dungeons-${settingsRevision}`}
         value="dungeons"
-        className="mt-0 space-y-6"
+        className="mt-0"
       >
-        <GameDungeonManager />
-        <section className="border-t pt-6" aria-label="ダンジョンの報酬">
-          <h2 className="text-left text-lg font-semibold">報酬</h2>
-          <RewardsEditor />
-        </section>
+        <AdminTableSection
+          aria-label="ダンジョン設定"
+          className="w-full max-w-7xl space-y-6 p-4 sm:p-6"
+        >
+          <GameDungeonManager />
+          <section className="border-t pt-6" aria-label="ダンジョンの報酬">
+            <h2 className="text-left text-lg font-semibold">報酬</h2>
+            <RewardsEditor />
+          </section>
+        </AdminTableSection>
       </TabsContent>
       <TabsContent
         key={`gambits-${settingsRevision}`}

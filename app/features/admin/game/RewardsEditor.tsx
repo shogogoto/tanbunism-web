@@ -410,7 +410,7 @@ export default function RewardsEditor() {
     <div className="space-y-6">
       <GoldPreview settings={rewards.gold ?? defaultGoldSettings} />
       <form
-        className="space-y-8 p-4"
+        className="space-y-8"
         onSubmit={async (event) => {
           event.preventDefault();
           if (pending.current) return;

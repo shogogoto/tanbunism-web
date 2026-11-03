@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Button } from "~/shared/components/ui/button";
@@ -14,6 +14,22 @@ export default function NotificationPage() {
     enablePush,
     disablePush,
   } = useNotifications();
+
+  // Read status updates the badge immediately; new-item styling lasts for this visit.
+  const [newIds, setNewIds] = useState(
+    () =>
+      new Set(
+        notifications.filter((item) => !item.read_at).map((item) => item.uid),
+      ),
+  );
+  useEffect(() => {
+    const unread = notifications.filter((item) => !item.read_at);
+    if (!unread.length) return;
+    setNewIds((current) => {
+      if (unread.every((item) => current.has(item.uid))) return current;
+      return new Set([...current, ...unread.map((item) => item.uid)]);
+    });
+  }, [notifications]);
 
   useEffect(() => {
     if (unreadCount > 0) void markAllRead();
@@ -53,6 +69,7 @@ export default function NotificationPage() {
       ) : (
         <div className="divide-y border" aria-label="通知一覧">
           {notifications.map((notification) => {
+            const isNew = !notification.read_at || newIds.has(notification.uid);
             const content = (
               <div
                 key={`${notification.uid}-content`}
@@ -61,7 +78,7 @@ export default function NotificationPage() {
                 <span
                   className={cn(
                     "mt-1.5 size-1.5 shrink-0 rounded-full",
-                    notification.read_at ? "bg-transparent" : "bg-primary",
+                    isNew ? "bg-primary" : "bg-transparent",
                   )}
                 />
                 <div className="min-w-0 flex-1">
@@ -81,7 +98,7 @@ export default function NotificationPage() {
             );
             const className = cn(
               "block w-full text-left",
-              !notification.read_at && "bg-accent/40",
+              isNew && "bg-accent/40",
               notification.href && "transition-colors hover:bg-accent",
             );
             return notification.href ? (

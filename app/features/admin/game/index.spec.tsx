@@ -146,6 +146,14 @@ it("removes the item subtab and uses the new numbering for actual t-number short
     "/admin/game/dungeons",
   );
   expect(screen.getByText("報酬設定")).toBeVisible();
+  const content = screen.getByRole("region", { name: "ダンジョン設定" });
+  expect(content).toHaveClass("mx-auto", "w-full", "max-w-7xl");
+  expect(content).toContainElement(
+    screen.getByRole("heading", { name: "ダンジョン一覧" }),
+  );
+  expect(content).toContainElement(
+    screen.getByRole("heading", { name: "報酬" }),
+  );
   await user.keyboard("t3");
   expect(screen.getByLabelText("現在のURL")).toHaveTextContent(
     "/admin/game/skills",

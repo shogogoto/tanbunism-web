@@ -1,8 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { http, HttpResponse } from "msw";
+import { Route, Routes } from "react-router";
 import { defaultBalance } from "~/features/game/battle";
 import { sampleCatalog } from "~/features/game/catalog.fixtures";
 import type { GoldSettings, RewardSettings } from "~/features/game/rewards";
+import GameAdminManager from ".";
 import RewardsEditor from "./RewardsEditor";
 import type { GameSettingsDocument } from "./gameSettingsFiles";
 
@@ -45,6 +47,7 @@ export default {
   parameters: {
     msw: {
       handlers: [
+        http.get("*/admin/game/dungeons", () => HttpResponse.json([])),
         http.post("*/admin/game/rewards/gold-preview", async ({ request }) => {
           const { settings, power, achievement } = (await request.json()) as {
             settings: GoldSettings;
@@ -117,3 +120,11 @@ export default {
   },
 } satisfies Meta<typeof RewardsEditor>;
 export const Default: StoryObj<typeof RewardsEditor> = {};
+export const DungeonLayout: StoryObj<typeof RewardsEditor> = {
+  parameters: { reactRouter: { route: "/admin/game/dungeons" } },
+  render: () => (
+    <Routes>
+      <Route path="/admin/game/:subtab" element={<GameAdminManager />} />
+    </Routes>
+  ),
+};
