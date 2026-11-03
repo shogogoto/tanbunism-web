@@ -271,10 +271,13 @@ describe("QuizSession", () => {
     expect(screen.getByText("Coverageを広げる")).toBeInTheDocument();
     expect(screen.getByText("TERM2SENT")).toBeInTheDocument();
 
-    await user.keyboard("1");
-    expect(
-      screen.getByRole("button", { name: /1.*演算の順序を交換できる/ }),
-    ).toHaveAttribute("aria-pressed", "true");
+    const correctOption = screen.getByRole("button", {
+      name: /^\d+\. 演算の順序を交換できる$/,
+    });
+    const shortcut = correctOption.textContent?.trim().match(/^(\d+)\./)?.[1];
+    if (!shortcut) throw new Error("Missing displayed option number");
+    await user.keyboard(shortcut);
+    expect(correctOption).toHaveAttribute("aria-pressed", "true");
     await user.keyboard("{Enter}");
 
     expect(await screen.findByText("正解です")).toBeInTheDocument();
@@ -312,12 +315,12 @@ describe("QuizSession", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "1. 演算の順序を交換できる",
+        name: /^\d+\. 演算の順序を交換できる$/,
       }),
     );
     await user.click(
       screen.getByRole("button", {
-        name: "1. 演算しても相手を変化させない元",
+        name: /^\d+\. 演算しても相手を変化させない元$/,
       }),
     );
     expect(screen.getByText("2問すべて回答済み")).toBeInTheDocument();
@@ -345,12 +348,12 @@ describe("QuizSession", () => {
     await screen.findByText(secondRecommendation.quiz.statement);
     await user.click(
       screen.getByRole("button", {
-        name: "1. 演算の順序を交換できる",
+        name: /^\d+\. 演算の順序を交換できる$/,
       }),
     );
     await user.click(
       screen.getByRole("button", {
-        name: "1. 演算しても相手を変化させない元",
+        name: /^\d+\. 演算しても相手を変化させない元$/,
       }),
     );
     await user.click(screen.getByRole("button", { name: "まとめて回答" }));

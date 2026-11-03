@@ -36,7 +36,10 @@ import {
   prepareAdditionalStudyPlanQuizzes,
   recommendQuizzes,
 } from "./api";
+import { shuffleOptionIds } from "./optionOrder";
 import { quizOptionLabel } from "./relationPresentation";
+
+type SessionRecommendation = QuizRecommendation & { optionOrder: string[] };
 
 type LoadState =
   | { status: "loading" }
@@ -56,9 +59,9 @@ export default function QuizSession({
   const requestedPlanId = selectedPlanId ?? searchParams.get("plan");
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [planId, setPlanId] = useState("");
-  const [recommendations, setRecommendations] = useState<QuizRecommendation[]>(
-    [],
-  );
+  const [recommendations, setRecommendations] = useState<
+    SessionRecommendation[]
+  >([]);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [results, setResults] = useState<Record<string, QuizResult>>({});
   const [activeQuizIndex, setActiveQuizIndex] = useState(0);
@@ -146,7 +149,7 @@ export default function QuizSession({
     setSubmitError(undefined);
 
     async function loadRecommendations() {
-      let accumulated: QuizRecommendation[] = [];
+      let accumulated: SessionRecommendation[] = [];
       const errors: string[] = [];
       for (const quizType of planQuizTypes) {
         if (!active) return;
@@ -158,10 +161,17 @@ export default function QuizSession({
           });
           if (!active) return;
           const byId = new Map(
-            [...accumulated, ...loaded].map((item) => [
-              item.quiz.quiz_id,
-              item,
-            ]),
+            [
+              ...accumulated,
+              ...loaded.map((item) => ({
+                ...item,
+                optionOrder:
+                  accumulated.find(
+                    (previous) => previous.quiz.quiz_id === item.quiz.quiz_id,
+                  )?.optionOrder ??
+                  shuffleOptionIds(Object.keys(item.quiz.options)),
+              })),
+            ].map((item) => [item.quiz.quiz_id, item]),
           );
           accumulated = [...byId.values()];
           setRecommendations(accumulated);
@@ -306,7 +316,7 @@ export default function QuizSession({
 
     const activeRecommendation = recommendations[activeQuizIndex];
     const optionIds = activeRecommendation
-      ? Object.keys(activeRecommendation.quiz.options)
+      ? activeRecommendation.optionOrder
       : [];
     const optionIndex = Number(event.key) - 1;
     if (
@@ -541,7 +551,7 @@ function QuizQuestion({
 }: {
   index: number;
   total: number;
-  recommendation: QuizRecommendation;
+  recommendation: SessionRecommendation;
   selected: string[];
   result?: QuizResult;
   isActive: boolean;
@@ -586,7 +596,8 @@ function QuizQuestion({
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {Object.entries(quiz.options).map(([id, label], optionIndex) => {
+            {recommendation.optionOrder.map((id, optionIndex) => {
+              const label = quiz.options[id];
               const isSelected = selected.includes(id);
               const isAnswerCorrect =
                 result !== undefined && quiz.correct.includes(id);

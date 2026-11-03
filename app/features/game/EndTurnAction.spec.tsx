@@ -112,9 +112,13 @@ it("automatically starts once, answers two resource quizzes with keyboard, and n
   const user = userEvent.setup();
   await screen.findByText(/1\/2問/);
   for (let i = 0; i < 2; i++) {
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: /正しい答え/ })).toHaveFocus(),
-    );
+    const options = screen.getAllByRole("button", {
+      name: /正しい答え|違う答え/,
+    });
+    const correct = screen.getByRole("button", { name: /正しい答え/ });
+    await waitFor(() => expect(options[0]).toHaveFocus());
+    if (document.activeElement !== correct) await user.keyboard("{ArrowDown}");
+    expect(correct).toHaveFocus();
     await user.keyboard(" {Enter}");
     if (i === 0) await screen.findByText(/2\/2問/);
   }

@@ -5,10 +5,12 @@ import {
   AdminTableSection,
 } from "~/features/admin/AdminTable";
 import type { GameCatalog } from "~/features/game/catalog";
-import type {
-  RewardEntry,
-  RewardSettings,
-  RewardTable,
+import {
+  type GoldSettings,
+  type RewardEntry,
+  type RewardSettings,
+  type RewardTable,
+  defaultGoldSettings,
 } from "~/features/game/rewards";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
@@ -20,7 +22,6 @@ import {
 } from "./gameSettingsFiles";
 
 type FixedRewards = {
-  chest_gold: number;
   chest_healing_potions: number;
   chest_step_potions: number;
 };
@@ -63,6 +64,74 @@ function NumberField({
   );
 }
 
+function GoldEditor({
+  value,
+  onChange,
+}: { value: GoldSettings; onChange: (value: GoldSettings) => void }) {
+  const number = (
+    key: Exclude<keyof GoldSettings, "power_formula">,
+    label: string,
+    max: number,
+    min = 0,
+    step = 1,
+  ) => (
+    <NumberField
+      label={label}
+      value={value[key]}
+      max={max}
+      min={min}
+      step={step}
+      onChange={(next) => onChange({ ...value, [key]: next })}
+    />
+  );
+  return (
+    <AdminTableSection
+      title="Gold（共通計算）"
+      className="space-y-4"
+      aria-label="Goldの共通計算"
+    >
+      <div className="flex flex-wrap items-end gap-2 text-sm">
+        <span className="pb-2">Gold = (</span>
+        {number("base", "基本Gold", 100000)}
+        <span className="pb-2">+</span>
+        {number("power_coefficient", "Power補正", 100000, 0, 0.1)}
+        <span className="pb-2">×</span>
+        <label className="flex flex-col gap-1">
+          Powerの計算
+          <select
+            aria-label="GoldのPower計算"
+            className={selectClass}
+            value={value.power_formula}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                power_formula: event.target
+                  .value as GoldSettings["power_formula"],
+              })
+            }
+          >
+            <option value="sqrt">√(Power / 基準Power)</option>
+            <option value="log">log(1 + Power / 基準Power)</option>
+          </select>
+        </label>
+        {number("power_reference", "基準Power", 1000000000, 0.01, 0.01)}
+        <span className="pb-2">) × [1 + (達成度 − 1) ×</span>
+        {number("achievement_growth_percent", "達成度成長率 (%)", 1000)}
+        <span className="pb-2">%] × (1 ±</span>
+        {number("variance_percent", "バラツキ (%)", 50)}
+        <span className="pb-2">%) × 倍率</span>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        {number("enemy_multiplier", "敵ドロップの倍率", 100, 0, 0.1)}
+        {number("chest_multiplier", "宝箱の倍率", 100, 0, 0.1)}
+      </div>
+      <p className="text-sm text-muted-foreground">
+        敵1体・宝箱1個あたり。達成度は最低1として計算し、最後に小数点以下を切り捨てます。アイテム候補とは独立した設定です。
+      </p>
+    </AdminTableSection>
+  );
+}
+
 function RewardTableEditor({
   table,
   catalog,
@@ -94,7 +163,7 @@ function RewardTableEditor({
           <span className="block text-muted-foreground">名前</span>
           <Input
             id={`${table.id}-name`}
-            aria-label="報酬表の名前"
+            aria-label="候補セットの名前"
             value={table.name}
             required
             maxLength={80}
@@ -104,37 +173,11 @@ function RewardTableEditor({
         <Button
           type="button"
           variant="outline"
-          aria-label="報酬表を削除"
+          aria-label="候補セットを削除"
           onClick={onDelete}
         >
           ×
         </Button>
-      </div>
-      <div className="flex flex-wrap items-end gap-2 text-sm">
-        <span className="pb-2">Gold =</span>
-        <NumberField
-          label="基本Gold"
-          value={table.base_gold}
-          max={100000}
-          onChange={(base_gold) => patch({ base_gold })}
-        />
-        <span className="pb-2">+</span>
-        <NumberField
-          label="Power係数"
-          value={table.gold_per_power}
-          max={100000}
-          step={0.1}
-          onChange={(gold_per_power) => patch({ gold_per_power })}
-        />
-        <span className="pb-2">× √(Power /</span>
-        <NumberField
-          label="基準Power"
-          value={table.power_reference}
-          min={1}
-          max={1000000000}
-          onChange={(power_reference) => patch({ power_reference })}
-        />
-        <span className="pb-2">)</span>
       </div>
       <div className="flex flex-wrap gap-3">
         <NumberField
@@ -318,7 +361,6 @@ export default function RewardsEditor() {
     chest_table_id: null,
   });
   const [fixed, setFixed] = useState<FixedRewards>({
-    chest_gold: 30,
     chest_healing_potions: 0,
     chest_step_potions: 1,
   });
@@ -329,10 +371,12 @@ export default function RewardsEditor() {
   const apply = useCallback((document: GameSettingsDocument) => {
     const loaded = document.catalog as GameCatalog;
     setCatalog(loaded);
-    setRewards(loaded.rewards ?? { tables: [], chest_table_id: null });
+    setRewards({
+      ...(loaded.rewards ?? { tables: [], chest_table_id: null }),
+      gold: { ...defaultGoldSettings, ...loaded.rewards?.gold },
+    });
     const balance = document.balance ?? {};
     setFixed({
-      chest_gold: Number(balance.chest_gold ?? 30),
       chest_healing_potions: Number(balance.chest_healing_potions ?? 0),
       chest_step_potions: Number(balance.chest_step_potions ?? 1),
     });
@@ -389,11 +433,15 @@ export default function RewardsEditor() {
       }}
     >
       <fieldset disabled={busy} className="min-w-0 space-y-8">
+        <GoldEditor
+          value={rewards.gold ?? defaultGoldSettings}
+          onChange={(gold) => setRewards({ ...rewards, gold })}
+        />
         <AdminTableSection title="宝箱" className="space-y-4">
           <label className="flex flex-col gap-1 text-sm">
-            報酬表
+            アイテムのドロップ候補
             <select
-              aria-label="宝箱の報酬表"
+              aria-label="宝箱のドロップ候補"
               className={selectClass}
               value={rewards.chest_table_id ?? ""}
               onChange={(event) =>
@@ -403,7 +451,7 @@ export default function RewardsEditor() {
                 })
               }
             >
-              <option value="">固定報酬のみ</option>
+              <option value="">なし（共通追加のみ）</option>
               {rewards.tables.map((table) => (
                 <option key={table.id} value={table.id}>
                   {table.name}
@@ -412,14 +460,6 @@ export default function RewardsEditor() {
             </select>
           </label>
           <div className="flex flex-wrap gap-3">
-            {!rewards.chest_table_id && (
-              <NumberField
-                label="固定Gold"
-                value={fixed.chest_gold}
-                max={100000}
-                onChange={(chest_gold) => setFixed({ ...fixed, chest_gold })}
-              />
-            )}
             <NumberField
               label="共通追加: 回復薬"
               value={fixed.chest_healing_potions}
@@ -456,6 +496,7 @@ export default function RewardsEditor() {
             }
             onDelete={() =>
               setRewards({
+                ...rewards,
                 chest_table_id:
                   rewards.chest_table_id === table.id
                     ? null
@@ -475,22 +516,20 @@ export default function RewardsEditor() {
             onClick={() => {
               const table: RewardTable = {
                 id: `reward_${crypto.randomUUID().replaceAll("-", "")}`,
-                name: "新しい報酬表",
-                base_gold: fixed.chest_gold,
-                gold_per_power: 10,
-                power_reference: 100,
+                name: "新しいドロップ候補",
                 tier_interval: 5,
                 draws: 1,
                 item_chance: 100,
                 entries: [],
               };
               setRewards({
+                ...rewards,
                 tables: [...rewards.tables, table],
                 chest_table_id: rewards.chest_table_id ?? table.id,
               });
             }}
           >
-            ＋ 報酬表
+            ＋ ドロップ候補
           </Button>
         </div>
         <div className="text-center">

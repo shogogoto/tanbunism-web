@@ -18,6 +18,7 @@ import {
 import QuizPrompt from "./QuizPrompt";
 import QuizReportButton from "./QuizReportButton";
 import { type QuizChain, type ReadableQuiz, answerQuiz } from "./api";
+import { useQuizOptionOrder } from "./optionOrder";
 import { quizOptionLabel } from "./relationPresentation";
 
 type Props = {
@@ -55,6 +56,7 @@ export default function QuizAttempt({
   allowReport = true,
 }: Props) {
   const { mutate } = useSWRConfig();
+  const optionOrder = useQuizOptionOrder(quiz);
   const [selected, setSelected] = useState<string[]>([]);
   const [chain, setChain] = useState<QuizChain>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -137,7 +139,8 @@ export default function QuizAttempt({
         />
       )}
       <div ref={optionsRef} className="space-y-1">
-        {Object.entries(quiz.options).map(([optionId, option], index) => {
+        {optionOrder.map((optionId, index) => {
+          const option = quiz.options[optionId];
           const label = quizOptionLabel(quiz, option);
           const isSelected = selected.includes(optionId);
           const isCorrect = Boolean(answer) && quiz.correct.includes(optionId);

@@ -12,9 +12,6 @@ const rewards: RewardSettings = {
     {
       id: "treasure",
       name: "領域の宝箱",
-      base_gold: 30,
-      gold_per_power: 10,
-      power_reference: 100,
       tier_interval: 5,
       draws: 1,
       item_chance: 100,

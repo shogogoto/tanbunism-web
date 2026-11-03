@@ -7,6 +7,50 @@ import { answerQuiz } from "./api";
 
 vi.mock("./api", () => ({ answerQuiz: vi.fn() }));
 
+it("shuffles per attempt, keeps the displayed order on rerender and submits original IDs", async () => {
+  const random = vi.spyOn(Math, "random").mockReturnValue(0);
+  try {
+    const quiz = {
+      quiz_id: "shuffle",
+      quiz_type: "sent2term" as const,
+      statement: "例",
+      prompt: { subject: "例", answer_kind: "term" as const },
+      options: { "1": "A", "2": "B", "3": "C" },
+      correct: ["2"],
+      created: "2026-01-01T00:00:00Z",
+      no_correct_option: false,
+    };
+    const confirm = vi.fn();
+    const content = (key: number) => (
+      <MemoryRouter>
+        <QuizAttempt
+          key={key}
+          quiz={{ ...quiz, options: { ...quiz.options } }}
+          allowReport={false}
+          onConfirm={confirm}
+        />
+      </MemoryRouter>
+    );
+    const view = render(content(1));
+    const labels = () =>
+      screen
+        .getAllByRole("button")
+        .filter((button) => button.hasAttribute("data-quiz-option-index"))
+        .map((button) => button.getAttribute("aria-label"));
+    expect(labels()).toEqual(["B", "C", "A"]);
+    await userEvent.click(screen.getByRole("button", { name: /^B$/ }));
+    random.mockReturnValue(0.999);
+    view.rerender(content(1));
+    expect(labels()).toEqual(["B", "C", "A"]);
+    await userEvent.click(screen.getByRole("button", { name: "回答を確定" }));
+    expect(confirm).toHaveBeenCalledWith(["2"]);
+    view.rerender(content(2));
+    expect(labels()).toEqual(["A", "B", "C"]);
+  } finally {
+    random.mockRestore();
+  }
+});
+
 it("参照方向を補足しても元の選択肢IDで回答する", async () => {
   const user = userEvent.setup();
   vi.mocked(answerQuiz).mockResolvedValue({
