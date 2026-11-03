@@ -1,7 +1,7 @@
 import { ExternalLink, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { toast } from "sonner";
+import { adminFeedback as toast } from "~/features/admin/AdminFeedback";
 import { AdminTable as Table } from "~/features/admin/AdminTable";
 import {
   AlertDialog,
@@ -111,11 +111,7 @@ export default function OrphanedTanbunManager({ kind }: Props) {
       setSelected(new Set());
       await load();
     } catch (deleteError) {
-      setError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : `${label}を削除できませんでした。`,
-      );
+      setError(toast.error(deleteError, `${label}を削除できませんでした。`));
     } finally {
       setIsDeleting(false);
     }

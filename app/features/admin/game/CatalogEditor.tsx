@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react";
+import {
+  AdminActionStatus,
+  adminFeedback,
+} from "~/features/admin/AdminFeedback";
 import { AdminTableSection } from "~/features/admin/AdminTable";
 import {
   type EnemyDefinition,
@@ -117,7 +121,9 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
     ];
     if (references.length) {
       setError(
-        `削除するスキルを${references.join("、")}が使用しています。先に参照を変更してください。`,
+        adminFeedback.error(
+          `削除するスキルを${references.join("、")}が使用しています。先に参照を変更してください。`,
+        ),
       );
       return;
     }
@@ -145,10 +151,9 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
       setDeletions(new Set());
       setEnemyDeletions(new Set());
       setSaved(true);
+      adminFeedback.success();
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "保存できませんでした。",
-      );
+      setError(adminFeedback.error(cause, "保存できませんでした。"));
     } finally {
       setSaving(false);
     }
@@ -339,7 +344,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
               {saving ? "保存中…" : "保存"}
             </Button>
           </div>
-          {saved && <output className="block text-center">保存しました</output>}
+          {saved && <AdminActionStatus />}
         </form>
       )}
     </AdminTableSection>

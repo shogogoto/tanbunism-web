@@ -9,6 +9,7 @@ import {
   sampleTemplateCatalog,
   sampleVariantSetCatalog,
 } from "~/features/game/catalog.fixtures";
+import { Toaster } from "~/shared/components/ui/sonner";
 import CatalogEditor from "./CatalogEditor";
 
 export default {
@@ -154,6 +155,7 @@ export default {
         <main className="min-w-0 flex-1">
           <Story />
         </main>
+        <Toaster richColors closeButton />
       </div>
     ),
   ],
@@ -193,4 +195,24 @@ export const Items: StoryObj<typeof CatalogEditor> = {
 };
 export const Enemies: StoryObj<typeof CatalogEditor> = {
   args: { kind: "enemies" },
+};
+export const SaveFailure: StoryObj<typeof CatalogEditor> = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get("*/admin/game/catalog", () =>
+          HttpResponse.json(sampleCatalog),
+        ),
+        http.put("*/admin/game/catalog", () =>
+          HttpResponse.json(
+            {
+              detail:
+                "保存できませんでした。接続を確認して再試行してください。",
+            },
+            { status: 503 },
+          ),
+        ),
+      ],
+    },
+  },
 };

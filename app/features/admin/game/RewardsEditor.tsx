@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
+  AdminActionStatus,
+  adminFeedback,
+} from "~/features/admin/AdminFeedback";
+import {
   AdminNativeTable,
   AdminTableFrame,
   AdminTableSection,
@@ -426,9 +430,15 @@ export default function RewardsEditor() {
               balance: fixed,
             });
             apply(await saveGameSettings(preview));
-            setMessage("保存しました。未開封の宝箱から反映されます。");
+            setMessage(
+              adminFeedback.success(
+                "保存しました。未開封の宝箱から反映されます。",
+              ),
+            );
           } catch (reason) {
-            setError(String(reason));
+            setError(
+              adminFeedback.error(reason, "報酬設定を保存できませんでした。"),
+            );
           } finally {
             pending.current = false;
             setBusy(false);
@@ -544,7 +554,7 @@ export default function RewardsEditor() {
             {error}
           </p>
         )}
-        {message && <output className="block text-center">{message}</output>}
+        {message && <AdminActionStatus message={message} />}
       </form>
     </div>
   );

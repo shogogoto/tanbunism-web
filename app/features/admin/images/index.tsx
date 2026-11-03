@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { adminFeedback as toast } from "~/features/admin/AdminFeedback";
 import { AdminNativeTable } from "~/features/admin/AdminTable";
 import { imageRequest } from "~/features/user/ImageUploader/api";
 import { getTransformedImageUrl } from "~/features/user/libs/image";
@@ -178,9 +178,10 @@ export default function ImageManager() {
       await load();
     } catch (cause) {
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "画像の削除に失敗しました。更新して現在の状態を確認してください。",
+        toast.error(
+          cause,
+          "画像の削除に失敗しました。更新して現在の状態を確認してください。",
+        ),
       );
     } finally {
       setBusy(false);

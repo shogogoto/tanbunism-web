@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { toast } from "sonner";
+import { adminFeedback as toast } from "~/features/admin/AdminFeedback";
 import { Button } from "~/shared/components/ui/button";
 import {
   Dialog,
@@ -58,11 +58,7 @@ export default function UserDataTransfer({
     try {
       setPreview(await previewUserTransfer(source.uid, targetId));
     } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "移行内容を取得できませんでした",
-      );
+      setError(toast.error(error, "移行内容を取得できませんでした"));
     } finally {
       setBusy(false);
     }
@@ -86,7 +82,7 @@ export default function UserDataTransfer({
         ),
       );
     } catch (error) {
-      setError(error instanceof Error ? error.message : "移行できませんでした");
+      setError(toast.error(error, "移行できませんでした"));
       setPreview(undefined);
     } finally {
       setBusy(false);

@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import {
+  AdminActionStatus,
+  adminFeedback,
+} from "~/features/admin/AdminFeedback";
 import type { SkillSound } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
@@ -328,7 +332,7 @@ export default function BattleSettingsManager() {
         </p>
       )}
       <div className="space-y-6">
-        {saved && <output className="block">ゲーム設定を保存しました</output>}
+        {saved && <AdminActionStatus message="ゲーム設定を保存しました" />}
         {settings && (
           <div className="space-y-4">
             <form
@@ -338,7 +342,9 @@ export default function BattleSettingsManager() {
                 setError(undefined);
                 setSaved(false);
                 if (settings.min_enemies > settings.max_encounter_enemies) {
-                  setError("下限は上限以下にしてください。");
+                  setError(
+                    adminFeedback.error("下限は上限以下にしてください。"),
+                  );
                   return;
                 }
                 if (
@@ -349,7 +355,11 @@ export default function BattleSettingsManager() {
                       settings.battle_tempo_slow_seconds
                   )
                 ) {
-                  setError("戦闘テンポは遅・中・速の順に短くしてください。");
+                  setError(
+                    adminFeedback.error(
+                      "戦闘テンポは遅・中・速の順に短くしてください。",
+                    ),
+                  );
                   return;
                 }
                 const thresholds = effectThresholdKeys.map(
@@ -361,11 +371,17 @@ export default function BattleSettingsManager() {
                     thresholds[1] < thresholds[2]
                   )
                 ) {
-                  setError("演出の区切りは小さい順に設定してください。");
+                  setError(
+                    adminFeedback.error(
+                      "演出の区切りは小さい順に設定してください。",
+                    ),
+                  );
                   return;
                 }
                 if (effectLabelKeys.some((key) => !settings[key].trim())) {
-                  setError("演出の文言を入力してください。");
+                  setError(
+                    adminFeedback.error("演出の文言を入力してください。"),
+                  );
                   return;
                 }
                 setSaving(true);
@@ -373,8 +389,16 @@ export default function BattleSettingsManager() {
                   .then((value) => {
                     setSettings(value);
                     setSaved(true);
+                    adminFeedback.success("ゲーム設定を保存しました");
                   })
-                  .catch((cause) => setError(cause.message))
+                  .catch((cause) =>
+                    setError(
+                      adminFeedback.error(
+                        cause,
+                        "ゲーム設定を保存できませんでした。",
+                      ),
+                    ),
+                  )
                   .finally(() => setSaving(false));
               }}
             />

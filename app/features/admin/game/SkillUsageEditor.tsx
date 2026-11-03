@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import {
+  AdminActionStatus,
+  adminFeedback,
+} from "~/features/admin/AdminFeedback";
+import {
   AdminNativeTable,
   AdminTableFrame,
   AdminTableSection,
@@ -64,8 +68,9 @@ export default function SkillUsageEditor() {
           try {
             setCatalog(await requestGameCatalog(true, catalog));
             setSaved(true);
+            adminFeedback.success();
           } catch (e) {
-            setError(e instanceof Error ? e.message : "保存できませんでした。");
+            setError(adminFeedback.error(e, "保存できませんでした。"));
           } finally {
             setBusy(false);
           }
@@ -266,7 +271,7 @@ export default function SkillUsageEditor() {
             {busy ? "保存中…" : "保存"}
           </Button>
         </div>
-        {saved && <output className="block text-center">保存しました</output>}
+        {saved && <AdminActionStatus />}
       </form>
     </AdminTableSection>
   );

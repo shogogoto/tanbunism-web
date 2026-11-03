@@ -8,8 +8,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 import { useSWRConfig } from "swr";
+import { adminFeedback as toast } from "~/features/admin/AdminFeedback";
 import { AdminTable as Table } from "~/features/admin/AdminTable";
 import { adventureAccessKey } from "~/features/game/access";
 import { invalidateGamification } from "~/features/gamification/invalidate";
@@ -120,7 +120,7 @@ export default function AdminUserManager() {
       );
       setStatusTarget(undefined);
     } catch (mutationError) {
-      setError(errorMessage(mutationError));
+      setError(toast.error(errorMessage(mutationError)));
     } finally {
       setIsMutating(false);
     }
@@ -139,7 +139,7 @@ export default function AdminUserManager() {
       setAdminTarget(undefined);
       setAdminConfirmation("");
     } catch (cause) {
-      setError(errorMessage(cause));
+      setError(toast.error(errorMessage(cause)));
     } finally {
       setIsMutating(false);
     }
@@ -157,7 +157,7 @@ export default function AdminUserManager() {
       toast.success(`${adventureTarget.email} の冒険待ち時間を解除しました`);
       setAdventureTarget(undefined);
     } catch (cause) {
-      setError(errorMessage(cause));
+      setError(toast.error(errorMessage(cause)));
     } finally {
       setIsMutating(false);
     }
@@ -171,7 +171,7 @@ export default function AdminUserManager() {
     try {
       setResources(await listAdminUserResources(user.uid));
     } catch (loadError) {
-      setError(errorMessage(loadError));
+      setError(toast.error(errorMessage(loadError)));
       setResourceOwner(undefined);
     } finally {
       setResourcesLoading(false);
@@ -189,7 +189,7 @@ export default function AdminUserManager() {
       setNewPassword("");
       setPasswordConfirmation("");
     } catch (mutationError) {
-      setError(errorMessage(mutationError));
+      setError(toast.error(errorMessage(mutationError)));
     } finally {
       setIsMutating(false);
     }
@@ -213,7 +213,7 @@ export default function AdminUserManager() {
       setDeleteTarget(undefined);
       setUserDeleteConfirmation("");
     } catch (mutationError) {
-      setError(errorMessage(mutationError));
+      setError(toast.error(errorMessage(mutationError)));
     } finally {
       setIsMutating(false);
     }
@@ -226,7 +226,7 @@ export default function AdminUserManager() {
     try {
       setDeletionImpact(await getAdminResourceDeletionImpact(resource.uid));
     } catch (loadError) {
-      setError(errorMessage(loadError));
+      setError(toast.error(errorMessage(loadError)));
     } finally {
       setIsMutating(false);
     }
@@ -257,7 +257,7 @@ export default function AdminUserManager() {
       setDeletionImpact(undefined);
       setConfirmation("");
     } catch (deleteError) {
-      setError(errorMessage(deleteError));
+      setError(toast.error(errorMessage(deleteError)));
     } finally {
       setIsMutating(false);
     }

@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react";
+import {
+  AdminActionStatus,
+  adminFeedback,
+} from "~/features/admin/AdminFeedback";
 import { AdminTableSection } from "~/features/admin/AdminTable";
 import { type GameCatalog, requestGameCatalog } from "~/features/game/catalog";
 import type { TriggerTarget } from "~/features/game/catalog";
@@ -123,7 +127,9 @@ export default function TriggerEditor() {
           );
           if (references.length) {
             setError(
-              `削除するガンビットを${references.map((enemy) => `敵「${enemy.name}」`).join("、")}が使用しています。先に参照を変更してください。`,
+              adminFeedback.error(
+                `削除するガンビットを${references.map((enemy) => `敵「${enemy.name}」`).join("、")}が使用しています。先に参照を変更してください。`,
+              ),
             );
             return;
           }
@@ -136,7 +142,9 @@ export default function TriggerEditor() {
               usedSets.some((group) => group.id === enemy.gambit_set_id),
             );
             setError(
-              `削除するトリガーを${usedSets.map((group) => `ガンビットセット「${group.name}」`).join("、")}${enemies.length ? `（${enemies.map((enemy) => `敵「${enemy.name}」`).join("、")}）` : ""}が使用しています。先にセットの参照を変更してください。`,
+              adminFeedback.error(
+                `削除するトリガーを${usedSets.map((group) => `ガンビットセット「${group.name}」`).join("、")}${enemies.length ? `（${enemies.map((enemy) => `敵「${enemy.name}」`).join("、")}）` : ""}が使用しています。先にセットの参照を変更してください。`,
+              ),
             );
             return;
           }
@@ -157,10 +165,9 @@ export default function TriggerEditor() {
             setCatalog(await requestGameCatalog(true, next));
             setDeletions(new Set());
             setSaved(true);
+            adminFeedback.success();
           } catch (cause) {
-            setError(
-              cause instanceof Error ? cause.message : "保存できませんでした。",
-            );
+            setError(adminFeedback.error(cause, "保存できませんでした。"));
           } finally {
             setBusy(false);
           }
@@ -469,7 +476,7 @@ export default function TriggerEditor() {
           </div>
         </fieldset>
       </form>
-      {saved && <output>保存しました</output>}
+      {saved && <AdminActionStatus />}
     </AdminTableSection>
   );
 }

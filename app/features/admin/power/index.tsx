@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { useSWRConfig } from "swr";
+import { adminFeedback as toast } from "~/features/admin/AdminFeedback";
 import type { PowerWeights } from "~/features/gamification/PowerBreakdown";
 import { invalidateGamification } from "~/features/gamification/invalidate";
 import { Button } from "~/shared/components/ui/button";
@@ -64,7 +64,9 @@ export default function PowerSettingsManager() {
       toast.success("Power設定を更新しました");
     } catch {
       setError(
-        "Power設定の保存・表示更新に失敗しました。設定を再確認してください。",
+        toast.error(
+          "Power設定の保存・表示更新に失敗しました。設定を再確認してください。",
+        ),
       );
     } finally {
       setSaving(false);

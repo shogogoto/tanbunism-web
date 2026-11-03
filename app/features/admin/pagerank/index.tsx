@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import useSWR from "swr";
+import { adminFeedback } from "~/features/admin/AdminFeedback";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
@@ -63,8 +64,9 @@ export default function PageRankManager() {
       await pageRankRequest("jobs", "POST", { resource_ids: [...selected] });
       setSelected(new Set());
       await jobs.mutate();
+      adminFeedback.success("PageRankの計算を受け付けました");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "受付に失敗しました。");
+      setError(adminFeedback.error(error, "受付に失敗しました。"));
     } finally {
       setBusy(false);
     }
@@ -77,10 +79,9 @@ export default function PageRankManager() {
         await pageRankRequest<PageRankSettings>("settings", "PUT", draft),
         false,
       );
+      adminFeedback.success("PageRank設定を保存しました");
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "設定保存に失敗しました。",
-      );
+      setError(adminFeedback.error(error, "設定保存に失敗しました。"));
     } finally {
       setSaving(false);
     }

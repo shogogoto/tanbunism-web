@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { adminFeedback as toast } from "~/features/admin/AdminFeedback";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
@@ -41,7 +41,7 @@ export default function WorkloadSettingsManager() {
       setResourceImport(savedImport);
       toast.success("負荷制御の設定を更新しました");
     } catch (saveError) {
-      setError(errorMessage(saveError));
+      setError(toast.error(errorMessage(saveError)));
     } finally {
       setIsSaving(false);
     }

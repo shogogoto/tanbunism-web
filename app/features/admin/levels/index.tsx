@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { useSWRConfig } from "swr";
+import { adminFeedback as toast } from "~/features/admin/AdminFeedback";
 import { invalidateGamification } from "~/features/gamification/invalidate";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
@@ -42,7 +42,9 @@ export default function LevelSettingsManager() {
       toast.success("レベル設定を更新しました");
     } catch {
       setError(
-        "レベル設定の保存・表示更新に失敗しました。設定を再確認してください。",
+        toast.error(
+          "レベル設定の保存・表示更新に失敗しました。設定を再確認してください。",
+        ),
       );
     } finally {
       setSaving(false);

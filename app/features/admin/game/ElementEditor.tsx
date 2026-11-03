@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import {
+  AdminActionStatus,
+  adminFeedback,
+} from "~/features/admin/AdminFeedback";
+import {
   AdminNativeTable,
   AdminTableFrame,
   AdminTableSection,
@@ -70,12 +74,9 @@ export default function ElementEditor() {
             try {
               setCatalog(await requestGameCatalog(true, catalog));
               setSaved(true);
+              adminFeedback.success();
             } catch (cause) {
-              setError(
-                cause instanceof Error
-                  ? cause.message
-                  : "保存できませんでした。",
-              );
+              setError(adminFeedback.error(cause, "保存できませんでした。"));
             } finally {
               setBusy(false);
             }
@@ -181,7 +182,7 @@ export default function ElementEditor() {
               <Button type="submit">{busy ? "保存中…" : "保存"}</Button>
             </div>
           </fieldset>
-          {saved && <output className="block text-center">保存しました</output>}
+          {saved && <AdminActionStatus />}
         </form>
       )}
     </AdminTableSection>

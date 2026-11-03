@@ -1,4 +1,8 @@
 import { useRef, useState } from "react";
+import {
+  AdminActionStatus,
+  adminFeedback,
+} from "~/features/admin/AdminFeedback";
 import { Button } from "~/shared/components/ui/button";
 import {
   Dialog,
@@ -50,7 +54,7 @@ export default function GameSettingsFiles({
     try {
       await action();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "処理に失敗しました。");
+      setError(adminFeedback.error(cause, "処理に失敗しました。"));
     } finally {
       setBusy(false);
     }
@@ -76,6 +80,9 @@ export default function GameSettingsFiles({
                   await readGameSettingsFile(file),
                 );
                 setPreview(next);
+                adminFeedback.info(
+                  "JSONを読み込みました。変更内容を確認してください。",
+                );
               });
           }}
         />
@@ -92,9 +99,10 @@ export default function GameSettingsFiles({
           variant="outline"
           disabled={busy}
           onClick={() =>
-            void run(async () =>
-              downloadGameSettings(await exportGameSettings()),
-            )
+            void run(async () => {
+              downloadGameSettings(await exportGameSettings());
+              adminFeedback.success("ゲーム設定JSONを書き出しました");
+            })
           }
         >
           JSONを書き出す
@@ -108,9 +116,7 @@ export default function GameSettingsFiles({
           {error}
         </p>
       )}
-      {message && (
-        <output className="mt-2 block text-center text-sm">{message}</output>
-      )}
+      {message && <AdminActionStatus message={message} />}
       <Dialog
         open={!!preview}
         onOpenChange={(open) => {
@@ -180,7 +186,9 @@ export default function GameSettingsFiles({
                     await saveGameSettings(preview);
                     setPreview(undefined);
                     setMessage(
-                      "ゲーム設定を反映しました。変更前の設定はバックアップに書き出しました。",
+                      adminFeedback.success(
+                        "ゲーム設定を反映しました。変更前の設定はバックアップに書き出しました。",
+                      ),
                     );
                     onApplied();
                   });

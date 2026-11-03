@@ -1,6 +1,6 @@
 import { RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { adminFeedback as toast } from "~/features/admin/AdminFeedback";
 import { AdminTable as Table } from "~/features/admin/AdminTable";
 import {
   AlertDialog,
@@ -80,11 +80,7 @@ export default function BrokenQuizManager() {
       setSelected(new Set());
       await load();
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "クイズを削除できませんでした。",
-      );
+      setError(toast.error(caught, "クイズを削除できませんでした。"));
     } finally {
       setDeleting(false);
     }

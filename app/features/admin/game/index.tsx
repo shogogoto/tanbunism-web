@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, ChevronsUpDown, Swords } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
-import { toast } from "sonner";
+import { adminFeedback as toast } from "~/features/admin/AdminFeedback";
 import {
   AdminTableFrame,
   AdminTableSection,
@@ -195,9 +195,7 @@ function GameDungeonManager() {
       setTarget(undefined);
       await refresh();
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "再構築に失敗しました。",
-      );
+      setError(toast.error(cause, "再構築に失敗しました。"));
     } finally {
       setMutating(false);
     }
@@ -219,9 +217,7 @@ function GameDungeonManager() {
       );
       await refresh();
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "整列できませんでした。",
-      );
+      setError(toast.error(cause, "整列できませんでした。"));
     } finally {
       setMutating(false);
     }
