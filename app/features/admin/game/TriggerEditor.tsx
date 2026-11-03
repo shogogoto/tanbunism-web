@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  AdminNativeTable,
-  AdminTableFrame,
-  AdminTableSection,
-} from "~/features/admin/AdminTable";
+import { AdminTableSection } from "~/features/admin/AdminTable";
 import { type GameCatalog, requestGameCatalog } from "~/features/game/catalog";
 import type { TriggerTarget } from "~/features/game/catalog";
 import {
@@ -13,6 +9,7 @@ import {
 } from "~/features/game/triggerConditions";
 import {
   resolveTriggerVariantSets,
+  triggerDescription,
   triggerStatLabels,
   triggerTargets,
 } from "~/features/game/triggerVariants";
@@ -22,7 +19,8 @@ import DefinitionDeleteButton, {
   pendingDeletionClass,
 } from "./DefinitionDeleteButton";
 import RowOrder from "./RowOrder";
-import { SortableRow, SortableRows } from "./SortableRows";
+import SortableAdminTable from "./SortableAdminTable";
+import { SortableRow } from "./SortableRows";
 import StatTriggerDetails from "./StatTriggerDetails";
 import TriggerVariantPanel from "./TriggerVariantPanel";
 import TriggerVariantSetEditor from "./TriggerVariantSetEditor";
@@ -155,21 +153,42 @@ export default function TriggerEditor() {
         }}
       >
         <fieldset disabled={!catalog || busy} className="min-w-0">
-          <AdminTableFrame layout="content">
-            <SortableRows
-              rows={catalog?.triggers ?? []}
-              onReorder={(triggers) => {
-                if (!catalog) return;
-                setCatalog({ ...catalog, triggers });
-                setSaved(false);
-                setError(undefined);
-              }}
-            >
-              <AdminNativeTable
-                aria-label="ガンビットのトリガー"
-                layout="content"
-                className="text-sm"
-              >
+          <SortableAdminTable
+            rows={catalog?.triggers ?? []}
+            onReorder={(triggers) => {
+              if (!catalog) return;
+              setCatalog({ ...catalog, triggers });
+              setSaved(false);
+              setError(undefined);
+            }}
+            aria-label="ガンビットのトリガー"
+            className="text-sm"
+            value={(trigger, column) => {
+              if (column === "名前") return trigger.name;
+              if (column === "対象")
+                return triggerTargets[trigger.target ?? "enemy"];
+              if (column === "条件")
+                return (
+                  conditions[
+                    conditionGroup(
+                      trigger.condition,
+                      trigger.stat,
+                    ) as keyof typeof conditions
+                  ] ?? trigger.condition
+                );
+              if (column === "詳細") {
+                if (trigger.condition === "state")
+                  return `${stateSkills.find((skill) => skill.id === trigger.state_skill_id)?.name ?? ""}:${trigger.state_present ?? true}`;
+                return triggerDescription(trigger);
+              }
+              if (column === "変型") return trigger.variants?.length ?? 0;
+              if (column === "有効") return Number(trigger.enabled);
+              if (column === "削除") return Number(deletions.has(trigger.id));
+              return "";
+            }}
+          >
+            {({ sorted, header }) => (
+              <>
                 <thead>
                   <tr>
                     <th scope="col" className="w-8">
@@ -183,15 +202,11 @@ export default function TriggerEditor() {
                       "変型",
                       "有効",
                       "削除",
-                    ].map((h) => (
-                      <th key={h} className="p-2 text-left">
-                        {h}
-                      </th>
-                    ))}
+                    ].map((h) => header(h, h))}
                   </tr>
                 </thead>
                 <tbody>
-                  {catalog?.triggers?.map((t) => (
+                  {sorted.map((t) => (
                     <SortableRow
                       id={t.id}
                       key={t.id}
@@ -372,19 +387,21 @@ export default function TriggerEditor() {
                         </div>
                       </td>
                       <td className="p-2">
-                        <TriggerVariantPanel
-                          trigger={t}
-                          catalog={catalog}
-                          onCatalogChange={(next) => {
-                            setCatalog(next);
-                            setSaved(false);
-                          }}
-                          stateSkills={stateSkills}
-                          onChange={(value) => patch(t.id, value)}
-                          onOpenChange={(open) =>
-                            setVariantTrigger(open ? t.id : undefined)
-                          }
-                        />
+                        {catalog && (
+                          <TriggerVariantPanel
+                            trigger={t}
+                            catalog={catalog}
+                            onCatalogChange={(next) => {
+                              setCatalog(next);
+                              setSaved(false);
+                            }}
+                            stateSkills={stateSkills}
+                            onChange={(value) => patch(t.id, value)}
+                            onOpenChange={(open) =>
+                              setVariantTrigger(open ? t.id : undefined)
+                            }
+                          />
+                        )}
                       </td>
                       <td className="p-2">
                         <input
@@ -416,9 +433,9 @@ export default function TriggerEditor() {
                     </SortableRow>
                   ))}
                 </tbody>
-              </AdminNativeTable>
-            </SortableRows>
-          </AdminTableFrame>
+              </>
+            )}
+          </SortableAdminTable>
           {deletions.size > 0 && (
             <output className="block mt-2 text-sm text-muted-foreground">
               削除予約 {deletions.size}件 · 保存で確定します。

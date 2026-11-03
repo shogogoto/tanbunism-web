@@ -1,12 +1,12 @@
 import { Plus } from "lucide-react";
-import { AdminNativeTable, AdminTableFrame } from "~/features/admin/AdminTable";
-import GameIcon, { IconPicker } from "~/features/game/GameIcon";
+import GameIcon, { IconPicker, gameIcons } from "~/features/game/GameIcon";
 import type {
   EnemyDefinition,
   GameCatalog,
   ItemDefinition,
 } from "~/features/game/catalog";
 import { defaultElements, isEquipmentSkill } from "~/features/game/catalog";
+import { characterAsset } from "~/features/game/characterAssets";
 import { equipmentParts } from "~/features/game/equipmentSlots";
 import { itemCategories, itemCategory } from "~/features/game/itemCategories";
 import { Button } from "~/shared/components/ui/button";
@@ -17,7 +17,8 @@ import DefinitionDeleteButton, {
 import EnemyGambitEditor from "./EnemyGambitEditor";
 import EnemyMultipliersEditor from "./EnemyMultipliersEditor";
 import RowOrder from "./RowOrder";
-import { SortableRow, SortableRows } from "./SortableRows";
+import SortableAdminTable from "./SortableAdminTable";
+import { SortableRow } from "./SortableRows";
 
 const selectClass = "h-9 rounded-md border bg-background px-2 text-sm";
 export default function DefinitionTables({
@@ -57,16 +58,59 @@ export default function DefinitionTables({
       ),
   );
   return (
-    <AdminTableFrame layout="content">
-      <SortableRows<ItemDefinition | EnemyDefinition>
-        rows={catalog[kind]}
-        onReorder={(rows) => reorder(rows.map((row) => row.id))}
-      >
-        <AdminNativeTable
-          layout="content"
-          className="whitespace-nowrap text-sm"
-          aria-label={kind === "items" ? "アイテム定義" : "敵定義"}
-        >
+    <SortableAdminTable<ItemDefinition | EnemyDefinition>
+      rows={catalog[kind]}
+      onReorder={(rows) => reorder(rows.map((row) => row.id))}
+      className="whitespace-nowrap text-sm"
+      aria-label={kind === "items" ? "アイテム定義" : "敵定義"}
+      value={(item, column) => {
+        const skillName = (id?: string | null) =>
+          catalog.skills.find((skill) => skill.id === id)?.name ?? "";
+        if (column === "名前") return item.name;
+        if (column === "素材")
+          return (
+            characterAsset(item.icon)?.label ??
+            gameIcons[item.icon as keyof typeof gameIcons]?.label ??
+            item.icon
+          );
+        if (column === "有効") return Number(item.enabled);
+        if (column === "削除") return Number(deletions?.has(item.id));
+        if ("skill_id" in item) {
+          if (column === "カテゴリ")
+            return (
+              itemCategories.find(
+                (category) => category.id === itemCategory(item),
+              )?.label ?? ""
+            );
+          if (column === "装備部位")
+            return (
+              equipmentParts.find((part) => part.id === item.equipment_part)
+                ?.label ?? ""
+            );
+          if (column === "発動スキル") return skillName(item.skill_id);
+          if (column === "使用回数")
+            return item.max_uses ?? (item.kind === "weapon" ? 30 : 1);
+        } else {
+          if (column === "ボス用") return Number(item.boss);
+          if (column === "能力倍率")
+            return Object.values(item.multipliers ?? {}).join("/");
+          if (column === "ガンビット") return item.gambits?.length ?? 0;
+          if (column === "攻撃スキル") return skillName(item.attack_skill_id);
+          if (column === "命中時スキル") return skillName(item.on_hit_skill_id);
+          if (column.startsWith("element:")) {
+            const element = column.slice(8);
+            return item.weaknesses?.includes(element)
+              ? 1
+              : item.resistances?.includes(element)
+                ? -1
+                : 0;
+          }
+        }
+        return "";
+      }}
+    >
+      {({ sorted, header }) => (
+        <>
           {kind === "enemies" && (
             <caption className="caption-top p-2 text-left text-xs text-muted-foreground">
               属性はクリックで「中立 → 弱点 → 耐性 → 中立」と切り替えます。
@@ -77,38 +121,27 @@ export default function DefinitionTables({
               <th scope="col" className="w-8">
                 <span className="sr-only">並べ替え</span>
               </th>
-              {headers.map((h) => (
-                <th key={h} scope="col" className="p-2 text-left font-medium">
-                  {h}
-                </th>
-              ))}
+              {headers.map((h) => header(h, h))}
               {kind === "enemies" &&
-                elements.map((element) => (
-                  <th
-                    key={element.id}
-                    scope="col"
-                    className="p-2 text-center font-medium"
-                    style={{ color: element.color }}
-                  >
-                    <span className="inline-flex items-center gap-1">
+                elements.map((element) =>
+                  header(
+                    `element:${element.id}`,
+                    <span
+                      className="inline-flex items-center gap-1"
+                      style={{ color: element.color }}
+                    >
                       <GameIcon icon={element.icon} className="size-3" />
                       {element.name}
                       {!element.enabled && "（無効）"}
-                    </span>
-                  </th>
-                ))}
-              <th scope="col" className="p-2 text-left font-medium">
-                有効
-              </th>
-              {kind === "enemies" && (
-                <th scope="col" className="p-2 text-left font-medium">
-                  削除
-                </th>
-              )}
+                    </span>,
+                  ),
+                )}
+              {header("有効", "有効")}
+              {kind === "enemies" && header("削除", "削除")}
             </tr>
           </thead>
           <tbody>
-            {catalog[kind].map((item) => (
+            {sorted.map((item) => (
               <SortableRow
                 id={item.id}
                 key={item.id}
@@ -403,8 +436,8 @@ export default function DefinitionTables({
               </tr>
             )}
           </tbody>
-        </AdminNativeTable>
-      </SortableRows>
-    </AdminTableFrame>
+        </>
+      )}
+    </SortableAdminTable>
   );
 }

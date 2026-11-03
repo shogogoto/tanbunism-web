@@ -1,6 +1,6 @@
 # Dungeon Crawl sprites
 
-45 unmodified 32 × 32 PNG sprites selected from **Dungeon Crawl 32x32 tiles**.
+60 unmodified 32 × 32 PNG sprites selected from **Dungeon Crawl 32x32 tiles**.
 The original directory structure and filenames are retained. The imported files
 are registered in `app/features/game/crawlAssets.ts`.
 
@@ -11,6 +11,10 @@ are registered in `app/features/game/crawlAssets.ts`.
   and artist/sign-off list `utility/Filtered List.txt` are included unchanged.
 - Retrieved: 2026-10-16.
 - Modifications: none. Rendered using CSS `image-rendering: pixelated`.
+
+15 equipment sprites added on 2026-11-03: leather/chain/plate armour, robe,
+four helmets/hats, three boots, gloves/gauntlets and two cloaks.
+Reproduce this addition with `node scripts/import-equipment-assets.mjs /path/to/crawl-tiles.zip`.
 
 The categories in the picker describe suggested uses, not game rules. Choosing a
 shield image does not implement defensive equipment, and choosing a spell image

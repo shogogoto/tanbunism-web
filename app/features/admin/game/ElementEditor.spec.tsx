@@ -5,6 +5,10 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import { defaultElements } from "~/features/game/catalog";
 import { sampleCatalog } from "~/features/game/catalog.fixtures";
+import {
+  iconFilterKey,
+  recentIconKey,
+} from "~/features/game/iconPickerPreferences";
 import CatalogEditor from "./CatalogEditor";
 import ElementEditor from "./ElementEditor";
 
@@ -21,6 +25,8 @@ const server = setupServer(
 );
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
+  sessionStorage.removeItem(iconFilterKey);
+  localStorage.removeItem(recentIconKey);
   server.resetHandlers();
   saved.mockClear();
 });
@@ -118,7 +124,7 @@ it("cycles per-element columns through neutral, weak and resistant and persists 
   ).toBeVisible();
   for (const element of defaultElements)
     expect(
-      screen.getByRole("columnheader", { name: element.name }),
+      screen.getByRole("columnheader", { name: `${element.name} ↕` }),
     ).toBeVisible();
   await user.click(screen.getByRole("button", { name: "保存" }));
   await screen.findByText("保存しました");

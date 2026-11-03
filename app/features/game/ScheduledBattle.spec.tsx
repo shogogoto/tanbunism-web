@@ -448,8 +448,12 @@ it("keeps arrow navigation out of header settings while allowing Tab access", as
       />
     </MemoryRouter>,
   );
-  const first = screen.getByRole("button", { name: "選択肢0" });
-  const second = screen.getByRole("button", { name: "別の選択肢" });
+  // Quiz choices are shuffled; model geometry in the actual displayed order.
+  const [first, second] = screen
+    .getByRole("dialog")
+    .querySelectorAll<HTMLButtonElement>("[data-quiz-option-index]");
+  expect(first).toBeDefined();
+  expect(second).toBeDefined();
   const help = screen.getByRole("button", {
     name: "キーボードショートカットを開く",
   });

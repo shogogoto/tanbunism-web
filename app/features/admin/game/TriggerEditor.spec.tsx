@@ -103,6 +103,9 @@ it("reorders triggers with the shared handle and preserves their definitions on 
   expect(within(table).getAllByRole("columnheader")[0]).toHaveTextContent(
     "並べ替え",
   );
+  await user.click(within(table).getByRole("button", { name: "名前 ↕" }));
+  await user.click(within(table).getByRole("button", { name: "名前 ↑" }));
+  const sortedIds = rows().map((row) => row.getAttribute("aria-label"));
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
     function (this: HTMLElement) {
       return new DOMRect(
@@ -121,20 +124,22 @@ it("reorders triggers with the shared handle and preserves their definitions on 
   expect(handle).toHaveAttribute("aria-pressed", "true");
   await user.keyboard("[ArrowDown]");
   await user.keyboard("[Space]");
-  expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual([
-    "バフなし",
-    "HP条件",
-    "毒条件",
-  ]);
+  const expectedNames = [sortedIds[1], sortedIds[0], ...sortedIds.slice(2)];
+  expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual(
+    expectedNames,
+  );
+  expect(
+    within(table).getByRole("button", { name: "名前 ↕" }).closest("th"),
+  ).toHaveAttribute("aria-sort", "none");
   expect(saved).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "保存" }));
   await screen.findByText("保存しました");
   const payload = saved.mock.calls[0][0];
-  expect(payload.triggers).toEqual([
-    catalog.triggers[1],
-    catalog.triggers[0],
-    catalog.triggers[2],
-  ]);
+  expect(payload.triggers).toEqual(
+    expectedNames.map((name) =>
+      catalog.triggers.find((trigger) => trigger.name === name),
+    ),
+  );
   expect(payload.enemies).toEqual(catalog.enemies);
   expect(payload.skills).toEqual(catalog.skills);
 });
@@ -227,7 +232,7 @@ it("selects state skills and edits comparison details without legacy state optio
   const user = userEvent.setup();
   render(<TriggerEditor />);
   const row = await screen.findByRole("row", { name: "HP条件" });
-  expect(screen.getByRole("columnheader", { name: "詳細" })).toBeVisible();
+  expect(screen.getByRole("columnheader", { name: "詳細 ↕" })).toBeVisible();
   expect(
     screen.queryByRole("columnheader", { name: "初期値n" }),
   ).not.toBeInTheDocument();

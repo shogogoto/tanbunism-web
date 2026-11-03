@@ -3,7 +3,7 @@
 Battle SE use locally hosted third-party CC0 audio. See
 [sound sources, licenses and conversion instructions](./sounds/SOURCES.md).
 
-The material gallery also includes 45 CC0 Dungeon Crawl sprites (enemies, bosses,
+The material gallery also includes 60 CC0 Dungeon Crawl sprites (enemies, bosses,
 equipment, items, magic and scenery). See [their source and license notes](./crawl/SOURCES.md).
 These pixel sprites are separate from the six original illustrations below.
 

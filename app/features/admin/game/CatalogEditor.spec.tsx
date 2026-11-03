@@ -14,6 +14,10 @@ import {
   sampleCatalog,
   sampleTemplateCatalog,
 } from "~/features/game/catalog.fixtures";
+import {
+  iconFilterKey,
+  recentIconKey,
+} from "~/features/game/iconPickerPreferences";
 import CatalogEditor from "./CatalogEditor";
 import { variantRowHighlight } from "./variantRowStyles";
 
@@ -257,6 +261,8 @@ beforeEach(() => {
   );
 });
 afterEach(() => {
+  sessionStorage.removeItem(iconFilterKey);
+  localStorage.removeItem(recentIconKey);
   server.resetHandlers();
   vi.clearAllMocks();
   vi.restoreAllMocks();
@@ -565,13 +571,131 @@ it.each([
   },
 );
 
-it.each(["スキル一覧", "効果テンプレート一覧"])(
+it("sorts shop prices numerically, saves mixed product order and keeps unsold products disabled", async () => {
+  const original = {
+    ...sampleCatalog,
+    items: ["C", "A", "B"].map((name, i) => ({
+      ...sampleCatalog.items[0],
+      id: `item_${i}`,
+      name,
+    })),
+    triggers: [
+      {
+        id: "hp",
+        name: "HP",
+        condition: "hp_below",
+        threshold: 30,
+        enabled: true,
+        target: "ally",
+        variants: [{ id: "half", name: "半分", value: 50 }],
+      },
+    ],
+    shop: [
+      { item_id: "item_0", price: 100, enabled: true },
+      {
+        trigger_id: "hp",
+        trigger_variant_id: "half",
+        price: 20,
+        enabled: true,
+      },
+      { item_id: "item_1", price: 3, enabled: false },
+    ],
+  };
+  let persisted = original;
+  server.use(
+    http.get("*/admin/game/catalog", () => HttpResponse.json(persisted)),
+    http.put("*/admin/game/catalog", async ({ request }) => {
+      persisted = (await request.json()) as typeof original;
+      saved(persisted);
+      return HttpResponse.json(persisted);
+    }),
+  );
+  const user = userEvent.setup();
+  const view = render(<CatalogEditor kind="shop" />);
+  const table = await screen.findByRole("table", { name: "ショップ販売設定" });
+  const rows = () =>
+    within(table)
+      .getAllByRole("row")
+      .filter((row) => row.hasAttribute("aria-label"));
+  const names = () => rows().map((row) => row.getAttribute("aria-label"));
+  expect(names()).toEqual(["C", "HP（半分）", "A", "B", "HP"]);
+  await user.click(within(table).getByRole("button", { name: "価格（G） ↕" }));
+  expect(names()).toEqual(["B", "HP", "A", "HP（半分）", "C"]);
+  await dragRow(user, table, rows()[0], "ArrowDown");
+  expect(names()).toEqual(["HP", "B", "A", "HP（半分）", "C"]);
+  expect(
+    within(table).getByRole("button", { name: "価格（G） ↕" }).closest("th"),
+  ).toHaveAttribute("aria-sort", "none");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("保存しました");
+  expect(persisted.shop).toEqual([
+    { trigger_id: "hp", price: 0, enabled: false },
+    { item_id: "item_2", price: 0, enabled: false },
+    original.shop[2],
+    original.shop[1],
+    original.shop[0],
+  ]);
+  expect(persisted.items).toEqual(original.items);
+  expect(persisted.triggers).toMatchObject(original.triggers);
+  expect(persisted.triggers.map((trigger) => trigger.id)).toEqual(
+    original.triggers.map((trigger) => trigger.id),
+  );
+  view.unmount();
+  render(<CatalogEditor kind="shop" />);
+  const reloaded = await screen.findByRole("table", {
+    name: "ショップ販売設定",
+  });
+  expect(
+    within(reloaded)
+      .getAllByRole("row")
+      .filter((row) => row.hasAttribute("aria-label"))
+      .map((row) => row.getAttribute("aria-label")),
+  ).toEqual(["HP", "B", "A", "HP（半分）", "C"]);
+});
+
+it.each([
+  "スキル一覧",
+  "効果テンプレート一覧",
+  "アイテム定義",
+  "敵定義",
+  "ショップ販売設定",
+])(
   "uses the visible sorted order when manually reordering %s",
   async (tableName) => {
+    if (["アイテム定義", "敵定義", "ショップ販売設定"].includes(tableName)) {
+      server.use(
+        http.get("*/admin/game/catalog", () =>
+          HttpResponse.json({
+            ...sampleCatalog,
+            items: ["C", "A", "B"].map((name, i) => ({
+              ...sampleCatalog.items[0],
+              id: `item_${i}`,
+              name,
+            })),
+            enemies: ["C", "A", "B"].map((name, i) => ({
+              ...sampleCatalog.enemies[0],
+              id: `enemy_${i}`,
+              name,
+            })),
+          }),
+        ),
+      );
+    }
     const user = userEvent.setup();
-    render(<CatalogEditor kind="skills" />);
+    render(
+      <CatalogEditor
+        kind={
+          tableName === "敵定義"
+            ? "enemies"
+            : tableName === "ショップ販売設定"
+              ? "shop"
+              : "skills"
+        }
+      />,
+    );
     const table = await screen.findByRole("table", { name: tableName });
-    await user.click(within(table).getByRole("button", { name: "名前 ↕" }));
+    const heading = tableName === "ショップ販売設定" ? "アイテム ↕" : "名前 ↕";
+    await user.click(within(table).getByRole("button", { name: heading }));
     const rows = () =>
       within(table)
         .getAllByRole("row")
@@ -581,10 +705,10 @@ it.each(["スキル一覧", "効果テンプレート一覧"])(
     expect(rows().map((row) => row.getAttribute("aria-label"))).toEqual([
       sorted[1],
       sorted[0],
-      sorted[2],
+      ...sorted.slice(2),
     ]);
     expect(
-      within(table).getByRole("button", { name: "名前 ↕" }).closest("th"),
+      within(table).getByRole("button", { name: heading }).closest("th"),
     ).toHaveAttribute("aria-sort", "none");
   },
 );

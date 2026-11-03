@@ -1,9 +1,5 @@
 import { Plus } from "lucide-react";
-import {
-  AdminNativeTable,
-  AdminTableFrame,
-  AdminTableSection,
-} from "~/features/admin/AdminTable";
+import { AdminTableSection } from "~/features/admin/AdminTable";
 import type {
   SkillDefinition,
   SkillPatch,
@@ -23,8 +19,8 @@ import DefinitionDeleteButton, {
 import RowOrder from "./RowOrder";
 import SkillAnimationGallery from "./SkillAnimationGallery";
 import SkillTemplateBadges from "./SkillTemplateBadges";
-import { SortableRow, SortableRows } from "./SortableRows";
-import useTableSort from "./useTableSort";
+import SortableAdminTable from "./SortableAdminTable";
+import { SortableRow } from "./SortableRows";
 
 export default function SkillTables({
   skills,
@@ -61,7 +57,7 @@ export default function SkillTables({
     (skill.template_ids ?? [])
       .map((id) => templates.find((t) => t.id === id)?.name ?? id)
       .join("、");
-  const { sorted, header, resetSort } = useTableSort(skills, (skill, column) =>
+  const sortValue = (skill: SkillDefinition, column: string) =>
     column === "order"
       ? skills.findIndex((row) => row.id === skill.id)
       : column === "templates"
@@ -77,23 +73,18 @@ export default function SkillTables({
                 ? Number(deletions.has(skill.id))
                 : column === "animation"
                   ? (skill.animation ?? "none")
-                  : skill.name,
-  );
+                  : skill.name;
   return (
     <AdminTableSection aria-label="スキル一覧" title="スキル一覧">
-      <AdminTableFrame layout="content">
-        <SortableRows
-          rows={sorted}
-          onReorder={(rows) => {
-            reorder(rows);
-            resetSort();
-          }}
-        >
-          <AdminNativeTable
-            aria-label="スキル一覧"
-            layout="content"
-            className="text-sm"
-          >
+      <SortableAdminTable
+        rows={skills}
+        value={sortValue}
+        onReorder={reorder}
+        aria-label="スキル一覧"
+        className="text-sm"
+      >
+        {({ sorted, header }) => (
+          <>
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>
                 <th scope="col" className="w-8">
@@ -262,9 +253,9 @@ export default function SkillTables({
                 </td>
               </tr>
             </tbody>
-          </AdminNativeTable>
-        </SortableRows>
-      </AdminTableFrame>
+          </>
+        )}
+      </SortableAdminTable>
     </AdminTableSection>
   );
 }

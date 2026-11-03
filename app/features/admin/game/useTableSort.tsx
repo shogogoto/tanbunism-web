@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 export default function useTableSort<T>(
   rows: T[],
@@ -18,7 +18,7 @@ export default function useTableSort<T>(
         return sort.descending ? -comparison : comparison;
       })
     : rows;
-  function header(column: string, label: string) {
+  function header(column: string, label: ReactNode) {
     const active = sort?.column === column;
     return (
       <th

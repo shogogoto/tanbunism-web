@@ -3,6 +3,7 @@ export type GameArtwork = {
   src: string;
   category: "enemy" | "boss" | "item" | "equipment" | "magic" | "scenery";
   pixelated?: boolean;
+  equipmentPart?: "arm" | "body" | "feet" | "head" | "accessory";
 };
 
 /** Unmodified CC0 sprites; paths preserve their names in the upstream archive. */
@@ -10,11 +11,13 @@ const sprite = (
   label: string,
   category: GameArtwork["category"],
   file: string,
+  equipmentPart?: GameArtwork["equipmentPart"],
 ): GameArtwork => ({
   label,
   category,
   src: `/game-assets/crawl/${file}`,
   pixelated: true,
+  equipmentPart,
 });
 
 export const crawlAssets = {
@@ -71,6 +74,96 @@ export const crawlAssets = {
     "魔導書",
     "equipment",
     "item/book/book_of_the_dead.png",
+  ),
+  crawl_leather_armour: sprite(
+    "革の鎧",
+    "equipment",
+    "item/armour/leather_armour1.png",
+    "body",
+  ),
+  crawl_chain_mail: sprite(
+    "鎖の鎧",
+    "equipment",
+    "item/armour/chain_mail1.png",
+    "body",
+  ),
+  crawl_plate_mail: sprite(
+    "板金の鎧",
+    "equipment",
+    "item/armour/plate_mail1.png",
+    "body",
+  ),
+  crawl_robe: sprite(
+    "魔術師のローブ",
+    "equipment",
+    "item/armour/robe1.png",
+    "body",
+  ),
+  crawl_leather_helm: sprite(
+    "革の兜",
+    "equipment",
+    "item/armour/headgear/elven_leather_helm.png",
+    "head",
+  ),
+  crawl_visored_helm: sprite(
+    "面頬付きの兜",
+    "equipment",
+    "item/armour/headgear/helmet1_visored.png",
+    "head",
+  ),
+  crawl_etched_helm: sprite(
+    "紋様の兜",
+    "equipment",
+    "item/armour/headgear/helmet2_etched.png",
+    "head",
+  ),
+  crawl_wizard_hat: sprite(
+    "魔術師の帽子",
+    "equipment",
+    "item/armour/headgear/wizard_hat1.png",
+    "head",
+  ),
+  crawl_leather_boots: sprite(
+    "革のブーツ",
+    "equipment",
+    "item/armour/boots1_brown.png",
+    "feet",
+  ),
+  crawl_jackboots: sprite(
+    "軍用ブーツ",
+    "equipment",
+    "item/armour/boots2_jackboots.png",
+    "feet",
+  ),
+  crawl_striped_boots: sprite(
+    "縞のブーツ",
+    "equipment",
+    "item/armour/boots3_stripe.png",
+    "feet",
+  ),
+  crawl_gloves: sprite(
+    "革の手袋",
+    "equipment",
+    "item/armour/glove1.png",
+    "accessory",
+  ),
+  crawl_gauntlets: sprite(
+    "金属の籠手",
+    "equipment",
+    "item/armour/glove4_gauntlets.png",
+    "accessory",
+  ),
+  crawl_leather_cloak: sprite(
+    "革のマント",
+    "equipment",
+    "item/armour/cloak1_leather.png",
+    "accessory",
+  ),
+  crawl_cloak: sprite(
+    "旅人のマント",
+    "equipment",
+    "item/armour/cloak3.png",
+    "accessory",
   ),
   crawl_red_potion: sprite("赤い薬", "item", "item/potion/ruby.png"),
   crawl_blue_potion: sprite("青い薬", "item", "item/potion/brilliant_blue.png"),

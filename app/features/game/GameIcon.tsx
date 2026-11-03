@@ -66,6 +66,14 @@ import {
 } from "~/shared/components/ui/dialog";
 import { Input } from "~/shared/components/ui/input";
 import { characterAsset, characterAssets } from "./characterAssets";
+import {
+  type IconFilters,
+  defaultIconFilters,
+  readIconFilters,
+  readRecentIcons,
+  rememberIcon,
+  writeIconFilters,
+} from "./iconPickerPreferences";
 
 export const gameIcons = {
   apple: { label: "りんご", Icon: Apple },
@@ -152,25 +160,61 @@ export function IconPicker({
   label = "素材",
 }: { value: string; onChange: (value: string) => void; label?: string }) {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("all");
-  const [style, setStyle] = useState("all");
+  const [filters, setFilters] = useState(readIconFilters);
+  const [recent, setRecent] = useState<string[]>(readRecentIcons);
+  const { query, category, style } = filters;
+  function filter(patch: Partial<IconFilters>) {
+    const next = { ...filters, ...patch };
+    setFilters(next);
+    writeIconFilters(next);
+  }
+  function select(id: string) {
+    setRecent(rememberIcon(id));
+    onChange(id);
+    setOpen(false);
+  }
   const choices = [
     ...Object.entries(characterAssets).map(([id, item]) => ({
       id,
       label: item.label,
       category: item.category,
       style: characterAsset(id)?.pixelated ? "pixel" : "illustration",
+      keywords: {
+        body: "体 鎧 防具 ローブ",
+        head: "頭 兜 帽子 ヘルム",
+        feet: "足 靴 ブーツ",
+        accessory: "手 マント アクセサリ",
+        arm: "腕 武器 盾",
+        none: "",
+      }[characterAsset(id)?.equipmentPart ?? "none"],
     })),
     ...Object.entries(gameIcons).map(([id, item]) => ({
       id,
       label: item.label,
       category: "icon",
       style: "line",
+      keywords: "",
     })),
   ];
+  const filtered = choices.filter(
+    (item) =>
+      (category === "all" || category === item.category) &&
+      (style === "all" || style === item.style) &&
+      `${item.id} ${item.label} ${item.keywords}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase()),
+  );
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) {
+          setFilters(readIconFilters());
+          setRecent(readRecentIcons());
+        }
+        setOpen(next);
+      }}
+    >
       <DialogTrigger asChild>
         <Button type="button" variant="outline" aria-label={`${label}を選ぶ`}>
           <GameIcon icon={value} />
@@ -186,12 +230,46 @@ export function IconPicker({
             名前で絞り込んで素材を選択してください。
           </DialogDescription>
         </DialogHeader>
-        <Input
-          aria-label="素材を検索"
-          placeholder="素材を検索"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <div className="flex gap-2">
+          <Input
+            aria-label="素材を検索"
+            placeholder="素材を検索"
+            value={query}
+            maxLength={200}
+            onChange={(e) => filter({ query: e.target.value })}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            aria-label="絞り込みをリセット"
+            onClick={() => filter(defaultIconFilters)}
+          >
+            リセット
+          </Button>
+        </div>
+        {recent.some((id) => choices.some((choice) => choice.id === id)) && (
+          <section aria-label="最近使った素材" className="space-y-2">
+            <h3 className="text-sm font-medium">最近使った素材</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {recent
+                .map((id) => choices.find((choice) => choice.id === id))
+                .filter((choice) => choice !== undefined)
+                .map((choice) => (
+                  <button
+                    key={choice.id}
+                    type="button"
+                    aria-label={`最近使った${choice.label}を選ぶ`}
+                    title={choice.label}
+                    className="flex min-w-0 flex-col items-center gap-1 rounded border p-2 text-xs hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => select(choice.id)}
+                  >
+                    <GameIcon icon={choice.id} className="size-10" />
+                    <span className="w-full truncate">{choice.label}</span>
+                  </button>
+                ))}
+            </div>
+          </section>
+        )}
         <fieldset aria-label="素材の種類" className="flex flex-wrap gap-2">
           {[
             ["all", "すべて"],
@@ -209,7 +287,7 @@ export function IconPicker({
               size="sm"
               variant={category === id ? "default" : "outline"}
               aria-pressed={category === id}
-              onClick={() => setCategory(id)}
+              onClick={() => filter({ category: id })}
             >
               {label}
             </Button>
@@ -228,41 +306,36 @@ export function IconPicker({
               size="sm"
               variant={style === id ? "default" : "outline"}
               aria-pressed={style === id}
-              onClick={() => setStyle(id)}
+              onClick={() => filter({ style: id })}
             >
               {label}
             </Button>
           ))}
         </fieldset>
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {choices
-            .filter(
-              (item) =>
-                (category === "all" || category === item.category) &&
-                (style === "all" || style === item.style) &&
-                `${item.id} ${item.label}`
-                  .toLowerCase()
-                  .includes(query.toLowerCase()),
-            )
-            .map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={value === item.id}
-                onClick={() => {
-                  onChange(item.id);
-                  setOpen(false);
-                }}
-                className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-lg border p-2 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring aria-pressed:border-primary"
-              >
-                <GameIcon
-                  icon={item.id}
-                  className={item.category === "icon" ? "size-8" : "size-20"}
-                />
-                {item.label}
-              </button>
-            ))}
+          {filtered.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={value === item.id}
+              onClick={() => {
+                select(item.id);
+              }}
+              className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-lg border p-2 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring aria-pressed:border-primary"
+            >
+              <GameIcon
+                icon={item.id}
+                className={item.category === "icon" ? "size-8" : "size-20"}
+              />
+              {item.label}
+            </button>
+          ))}
         </div>
+        {!filtered.length && (
+          <p className="text-sm text-muted-foreground">
+            該当する素材がありません。絞り込みをリセットしてください。
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">
           ドット絵：
           <a

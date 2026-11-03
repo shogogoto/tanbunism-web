@@ -6,6 +6,12 @@ import userEvent from "@testing-library/user-event";
 import EnemyAvatar from "./EnemyAvatar";
 import GameIcon, { IconPicker } from "./GameIcon";
 import { characterAsset, characterAssets } from "./characterAssets";
+import { iconFilterKey, recentIconKey } from "./iconPickerPreferences";
+
+afterEach(() => {
+  sessionStorage.removeItem(iconFilterKey);
+  localStorage.removeItem(recentIconKey);
+});
 
 it("ships a real PNG or WebP for every registered artwork", () => {
   for (const asset of Object.values(characterAssets)) {
@@ -71,4 +77,49 @@ it("renders boss artwork at a larger size instead of a vector icon", () => {
   );
   expect(container.firstElementChild).toHaveClass("size-40");
   expect(container.querySelector("svg")).not.toBeInTheDocument();
+});
+
+it("shares filters and recent equipment choices across already-mounted pickers and remounts", async () => {
+  const user = userEvent.setup();
+  const first = vi.fn();
+  const second = vi.fn();
+  const view = render(
+    <>
+      <IconPicker label="一つ目の素材" value="flask" onChange={first} />
+      <IconPicker label="二つ目の素材" value="flask" onChange={second} />
+    </>,
+  );
+  await user.click(screen.getByRole("button", { name: "一つ目の素材を選ぶ" }));
+  await user.click(screen.getByRole("button", { name: "装備" }));
+  await user.click(screen.getByRole("button", { name: "ドット絵" }));
+  await user.type(screen.getByLabelText("素材を検索"), "足");
+  expect(screen.getByRole("button", { name: "革のブーツ" })).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "革の鎧" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "革のブーツ" }));
+  expect(first).toHaveBeenCalledWith("crawl_leather_boots");
+  await user.click(screen.getByRole("button", { name: "二つ目の素材を選ぶ" }));
+  expect(screen.getByLabelText("素材を検索")).toHaveValue("足");
+  expect(screen.getByRole("button", { name: "装備" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await user.click(
+    within(screen.getByRole("region", { name: "最近使った素材" })).getByRole(
+      "button",
+      { name: "最近使った革のブーツを選ぶ" },
+    ),
+  );
+  expect(second).toHaveBeenCalledWith("crawl_leather_boots");
+  view.unmount();
+  render(<IconPicker value="shield" onChange={second} />);
+  await user.click(screen.getByRole("button", { name: "素材を選ぶ" }));
+  expect(screen.getByLabelText("素材を検索")).toHaveValue("足");
+  expect(
+    screen.getByRole("button", { name: "最近使った革のブーツを選ぶ" }),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "絞り込みをリセット" }));
+  expect(screen.getByLabelText("素材を検索")).toHaveValue("");
+  expect(screen.getByRole("button", { name: "面頬付きの兜" })).toBeVisible();
 });

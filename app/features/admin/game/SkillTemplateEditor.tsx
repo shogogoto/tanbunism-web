@@ -1,9 +1,5 @@
 import { Plus, X } from "lucide-react";
-import {
-  AdminNativeTable,
-  AdminTableFrame,
-  AdminTableSection,
-} from "~/features/admin/AdminTable";
+import { AdminTableSection } from "~/features/admin/AdminTable";
 import {
   type GameCatalog,
   type SkillDefinition,
@@ -23,7 +19,8 @@ import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import DurationInput from "./DurationInput";
 import RowOrder from "./RowOrder";
-import { SortableRow, SortableRows } from "./SortableRows";
+import SortableAdminTable from "./SortableAdminTable";
+import { SortableRow } from "./SortableRows";
 import TemplateVariantControls from "./TemplateVariantControls";
 import {
   changeDetail,
@@ -38,7 +35,6 @@ import {
   stateResource,
   templateKind,
 } from "./templateEffects";
-import useTableSort from "./useTableSort";
 import { variantRowHighlight } from "./variantRowStyles";
 
 const selectClass = "h-9 rounded-md border bg-background px-2";
@@ -110,24 +106,18 @@ export default function SkillTemplateEditor({
       ? skill.id === variantId
       : !templates.find((row) => row.id === skill.id)?.base_template_id,
   );
-  const { sorted, header, resetSort } = useTableSort(
-    visibleRows,
-    (skill, column) => {
-      if (column === "order")
-        return rows.findIndex((row) => row.id === skill.id);
-      if (column === "type") return skill.on_wrong?.type ?? "fizzle";
-      if (column === "kind") return templateKind(skill);
-      if (column === "detail")
-        return isStatus(skill)
-          ? `${skill.effect}:${skill.stat ?? skill.ailment}`
-          : skill.effect;
-      if (column === "power") return effectValue(skill).value;
-      const value = skill[column as keyof SkillDefinition];
-      return typeof value === "string" || typeof value === "number"
-        ? value
-        : "";
-    },
-  );
+  const sortValue = (skill: SkillDefinition, column: string) => {
+    if (column === "order") return rows.findIndex((row) => row.id === skill.id);
+    if (column === "type") return skill.on_wrong?.type ?? "fizzle";
+    if (column === "kind") return templateKind(skill);
+    if (column === "detail")
+      return isStatus(skill)
+        ? `${skill.effect}:${skill.stat ?? skill.ailment}`
+        : skill.effect;
+    if (column === "power") return effectValue(skill).value;
+    const value = skill[column as keyof SkillDefinition];
+    return typeof value === "string" || typeof value === "number" ? value : "";
+  };
   function update(id: string, patch: SkillPatch) {
     commit(
       rows.map((skill) => {
@@ -177,27 +167,23 @@ export default function SkillTemplateEditor({
       aria-label="効果テンプレート"
       title={!variantId ? "効果テンプレート" : undefined}
     >
-      <AdminTableFrame layout="content">
-        <SortableRows
-          rows={sorted}
-          onReorder={(rows) => {
-            if (variantId) return;
-            commit(
-              rows.flatMap((skill) => [
-                toTemplate(skill),
-                ...templateDescendants(templates, skill.id),
-              ]),
-            );
-            resetSort();
-          }}
-        >
-          <AdminNativeTable
-            aria-label={
-              variantId ? "バリエーションの設定" : "効果テンプレート一覧"
-            }
-            layout="content"
-            className="text-sm"
-          >
+      <SortableAdminTable
+        rows={visibleRows}
+        value={sortValue}
+        onReorder={(rows) => {
+          if (variantId) return;
+          commit(
+            rows.flatMap((skill) => [
+              toTemplate(skill),
+              ...templateDescendants(templates, skill.id),
+            ]),
+          );
+        }}
+        aria-label={variantId ? "バリエーションの設定" : "効果テンプレート一覧"}
+        className="text-sm"
+      >
+        {({ sorted, header }) => (
+          <>
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>
                 <th scope="col" className="w-8">
@@ -797,9 +783,9 @@ export default function SkillTemplateEditor({
                 </tr>
               )}
             </tbody>
-          </AdminNativeTable>
-        </SortableRows>
-      </AdminTableFrame>
+          </>
+        )}
+      </SortableAdminTable>
     </AdminTableSection>
   );
 }
