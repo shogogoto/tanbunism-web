@@ -2,7 +2,51 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 import ExplorationMap from "./Map";
-import { type DungeonMap, ENTRANCE } from "./exploration";
+import { type DungeonMap, ENTRANCE, LIBRARY, SHOP } from "./exploration";
+
+it.each([
+  [SHOP, "ショップ"],
+  [LIBRARY, "旅人の書庫"],
+])(
+  "visits entrance facility %s by mouse or keyboard without opening sentence details",
+  async (id, name) => {
+    const user = userEvent.setup();
+    const onMove = vi.fn();
+    const props = {
+      map: { current: ENTRANCE, places: [], edges: [] },
+      knowledge: [],
+      onOpen: vi.fn(),
+      onMove,
+      disabled: false,
+    };
+    const view = render(<ExplorationMap {...props} />);
+    const node = screen.getByRole("button", { name });
+    await user.click(node);
+    expect(onMove).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: "詳細" }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: `${name}へ移動・1歩` }),
+    );
+    expect(onMove).toHaveBeenCalledExactlyOnceWith(id, undefined);
+    onMove.mockClear();
+    node.focus();
+    await user.keyboard("{Enter}");
+    expect(onMove).toHaveBeenCalledExactlyOnceWith(id);
+    view.rerender(
+      <ExplorationMap
+        {...props}
+        map={{
+          current: "other",
+          places: [{ id: "other", region: 0 }],
+          edges: [],
+        }}
+      />,
+    );
+    expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+  },
+);
 
 it("places unlocked bosses after their milestone, separates chests and supports keyboard challenges", async () => {
   const user = userEvent.setup();

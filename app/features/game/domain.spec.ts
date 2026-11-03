@@ -7,10 +7,33 @@ import {
   newSave,
   recoverAtEntrance,
   resumeEvent,
+  visitEntranceFacility,
 } from "./domain";
 
 const entered = () => enterDungeon(newSave(), "resource", "本", 1);
 describe("adventure rules", () => {
+  it("visits an entrance facility without healing, exploring or starting combat", () => {
+    const base = entered();
+    if (!base.run) throw new Error("Expected run");
+    const save = { ...base, run: { ...base.run, hp: 12, mp: 0, moves: 3 } };
+    const next = visitEntranceFacility(save);
+    expect(next.run).toEqual({ ...save.run, moves: 4 });
+    expect(next.maps).toEqual(save.maps);
+    expect(next.economy).toEqual(save.economy);
+    const last = visitEntranceFacility(next);
+    expect(last.run).toMatchObject({ moves: 5, phase: "rest", hp: 12, mp: 0 });
+    expect(visitEntranceFacility(last)).toBe(last);
+  });
+  it("rejects facility visits away from the entrance, during battle, feedback or without a run", () => {
+    const base = entered();
+    expect(visitEntranceFacility(newSave())).toEqual(newSave());
+    const away = move(base, "s", 0.9);
+    expect(visitEntranceFacility(away)).toBe(away);
+    const battle = move(base, "s", 0.1);
+    expect(visitEntranceFacility(battle)).toBe(battle);
+    const feedback = { ...base, battleFeedback: "結果" };
+    expect(visitEntranceFacility(feedback)).toBe(feedback);
+  });
   it("uses the fixed regional enemy attack rather than the player level", () => {
     const save = move(entered(), "s", 0.1);
     if (!save.run) throw new Error("Missing run");

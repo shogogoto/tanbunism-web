@@ -80,11 +80,14 @@ import {
   newSave,
   recoverAtEntrance,
   resumeEvent,
+  visitEntranceFacility,
 } from "./domain";
 import {
   ENTRANCE,
+  LIBRARY,
   PLACES_PER_REGION,
   RECOVERY,
+  SHOP,
   dungeonMap,
   explorationSource,
   explore,
@@ -137,29 +140,25 @@ export function GamePlay({
   const panel =
     routeMenu === "equipment"
       ? "status"
-      : isGamePanel(routeMenu)
-        ? routeMenu
-        : undefined;
+      : routeMenu === "achievements"
+        ? "specialties"
+        : isGamePanel(routeMenu)
+          ? routeMenu
+          : undefined;
   const menuPanel =
     panel === "status" ||
-    panel === "library" ||
     panel === "item" ||
-    panel === "shop" ||
     panel === "gambits" ||
-    panel === "specialties" ||
-    panel === "achievements";
+    panel === "specialties";
   const menuTab =
-    panel === "library"
-      ? "library"
-      : panel === "specialties"
-        ? "specialties"
-        : panel === "gambits"
-          ? "gambits"
-          : panel === "item" || panel === "shop"
-            ? "item"
-            : panel === "achievements"
-              ? "achievements"
-              : "status";
+    panel === "specialties"
+      ? "specialties"
+      : panel === "gambits"
+        ? "gambits"
+        : panel === "item"
+          ? "item"
+          : "status";
+  const [facility, setFacility] = useState<"shop" | "library">();
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => {
@@ -199,7 +198,8 @@ export function GamePlay({
     window.addEventListener("keydown", menuHotkey, true);
     return () => window.removeEventListener("keydown", menuHotkey, true);
   }, [menuPanel, navigate, location.state]);
-  function openPanel(panel: "status" | "item" | "shop" | "boss") {
+  function openPanel(panel: "status" | "item" | "boss") {
+    setFacility(undefined);
     void navigate(`/game/${panel}`, { state: { gamePanelFromMap: true } });
   }
   function closePanel() {
@@ -860,6 +860,31 @@ export function GamePlay({
       setBusy(false);
     }
   }
+  async function visitFacility(next: "shop" | "library") {
+    if (!stateLoaded || busy || pendingMove.current || feedback || save.battle)
+      return;
+    // Before the first adventure there is no move budget to consume.
+    if (!run) {
+      setFacility(next);
+      return;
+    }
+    const visited = visitEntranceFacility(save);
+    if (visited === save) return;
+    pendingMove.current = true;
+    setBusy(true);
+    setError(undefined);
+    try {
+      await update(visited);
+      setFacility(next);
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "施設へ移動できませんでした。",
+      );
+    } finally {
+      pendingMove.current = false;
+      setBusy(false);
+    }
+  }
   async function challengeBoss(level: number) {
     if (busy || pendingMove.current || !run) return;
     pendingMove.current = true;
@@ -1038,6 +1063,24 @@ export function GamePlay({
             </Button>
             <div className="ml-auto text-xs">{recoveryStatus}</div>
           </div>
+        )}
+        {!run && (
+          <section aria-label="入口の施設" className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              disabled={!stateLoaded || busy}
+              onClick={() => void visitFacility("shop")}
+            >
+              ショップ
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!stateLoaded || busy}
+              onClick={() => void visitFacility("library")}
+            >
+              旅人の書庫
+            </Button>
+          </section>
         )}
         {(error || access.error || growthError || progress.error) && (
           <p role="alert" className="text-sm text-destructive">
@@ -1348,12 +1391,14 @@ export function GamePlay({
                         )
                       : id === RECOVERY
                         ? recoverAtEntrance(save) !== save
-                        : run.phase === "path" ||
-                          (run.phase === "cleared" &&
-                            run.moves < MOVES_PER_EVENT) ||
-                          (id === ENTRANCE &&
-                            run.phase === "defeated" &&
-                            Boolean(access.data?.available))
+                        : id === SHOP || id === LIBRARY
+                          ? visitEntranceFacility(save) !== save
+                          : run.phase === "path" ||
+                            (run.phase === "cleared" &&
+                              run.moves < MOVES_PER_EVENT) ||
+                            (id === ENTRANCE &&
+                              run.phase === "defeated" &&
+                              Boolean(access.data?.available))
                   }
                   map={map}
                   knowledge={content?.knowledge ?? []}
@@ -1362,6 +1407,10 @@ export function GamePlay({
                     const region = chestRegion(sentenceId);
                     if (region !== undefined) void visitChest(region);
                     else if (sentenceId === RECOVERY) void recoverAtSanctuary();
+                    else if (sentenceId === SHOP || sentenceId === LIBRARY)
+                      void visitFacility(
+                        sentenceId === SHOP ? "shop" : "library",
+                      );
                     else if (
                       sentenceId === ENTRANCE &&
                       run.phase === "defeated"
@@ -1463,16 +1512,13 @@ export function GamePlay({
                       >
                         <PackageOpen aria-hidden="true" className="size-4" />
                       </Button>
-                      <button
-                        type="button"
-                        onClick={() => openPanel("shop")}
+                      <span
                         aria-label={`所持ゴールド ${save.economy?.gold ?? 0}`}
-                        title="ショップを開く"
-                        className="flex min-h-7 shrink-0 items-center gap-1 rounded-md px-1 text-xs tabular-nums text-amber-400 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-8 sm:px-1.5"
+                        className="flex min-h-7 shrink-0 items-center gap-1 px-1 text-xs tabular-nums text-amber-400 sm:min-h-8 sm:px-1.5"
                       >
                         <Coins aria-hidden="true" className="size-4" />
                         {save.economy?.gold ?? 0}
-                      </button>
+                      </span>
                     </div>
                   }
                   candidates={
@@ -1641,18 +1687,29 @@ export function GamePlay({
         )}
       {preview}
       <Dialog
-        open={Boolean(panel)}
+        open={Boolean(panel || facility)}
         onOpenChange={(open) => {
-          if (!open) closePanel();
+          if (!open) {
+            if (facility) setFacility(undefined);
+            else closePanel();
+          }
         }}
       >
         <DialogContent
-          className={`max-h-[90dvh] overflow-y-auto ${menuPanel ? "top-[5dvh] translate-y-0 sm:max-w-[calc(100vw-4rem)] lg:max-w-5xl" : "sm:max-w-lg"}`}
+          className={`max-h-[90dvh] overflow-y-auto ${menuPanel || facility ? "top-[5dvh] translate-y-0 sm:max-w-[calc(100vw-4rem)] lg:max-w-5xl" : "sm:max-w-lg"}`}
           data-dashboard-swipe-ignore
           data-game-menu={menuPanel ? "" : undefined}
         >
           <DialogHeader>
-            <DialogTitle>{menuPanel ? "ゲームメニュー" : "ボス"}</DialogTitle>
+            <DialogTitle>
+              {facility === "shop"
+                ? "ショップ"
+                : facility === "library"
+                  ? "旅人の書庫"
+                  : menuPanel
+                    ? "ゲームメニュー"
+                    : "ボス"}
+            </DialogTitle>
             {panel === "boss" && (
               <DialogDescription>
                 達成度5ごとに挑戦できます。撃破すると専門分野が開放されます。
@@ -1667,7 +1724,7 @@ export function GamePlay({
               onChallenge={(level) => void challengeBoss(level)}
             />
           )}
-          {menuPanel && (
+          {menuPanel && !facility && (
             <Tabs
               value={menuTab}
               onValueChange={(value) =>
@@ -1751,7 +1808,7 @@ export function GamePlay({
                     userId={userId}
                     save={save}
                     revision={revision.current}
-                    shop={panel === "shop"}
+                    shop={false}
                     disabled={
                       busy || Boolean(feedback) || run?.phase === "battle"
                     }
@@ -1787,57 +1844,10 @@ export function GamePlay({
                   />
                 )}
               </TabsContent>
-              <TabsContent value="library">
-                {stateLoaded && (
-                  <TravelersLibrary
-                    userId={userId}
-                    disabled={
-                      busy ||
-                      Boolean(save.battle) ||
-                      Boolean(feedback) ||
-                      run?.phase === "battle"
-                    }
-                    onInventory={() =>
-                      void navigate("/game/item", {
-                        replace: true,
-                        state: location.state,
-                      })
-                    }
-                    onClaim={async (id) => {
-                      if (busy || pendingMove.current || save.battle)
-                        throw new Error(
-                          "冒険状態の更新が終わってから操作してください。",
-                        );
-                      pendingMove.current = true;
-                      setBusy(true);
-                      try {
-                        applyState(
-                          await gameRequest<import("./state").GameState>(
-                            `dungeons/${encodeURIComponent(id)}/key`,
-                            { revision: revision.current },
-                            "POST",
-                          ),
-                        );
-                      } catch (cause) {
-                        await requestGameState()
-                          .then(applyState)
-                          .catch(() => undefined);
-                        throw cause;
-                      } finally {
-                        pendingMove.current = false;
-                        setBusy(false);
-                      }
-                    }}
-                  />
-                )}
-              </TabsContent>
-              <TabsContent value="achievements">
-                <AchievementsPanel
-                  save={save}
-                  resources={growth?.resources ?? []}
-                />
-              </TabsContent>
-              <TabsContent value="specialties">
+              <TabsContent
+                value="specialties"
+                className="grid items-start gap-6 lg:grid-cols-2"
+              >
                 <SpecialtiesPanel
                   save={save}
                   revision={revision.current}
@@ -1846,8 +1856,65 @@ export function GamePlay({
                     busy || Boolean(feedback) || run?.phase === "battle"
                   }
                 />
+                <div className="lg:max-h-[60dvh] lg:overflow-y-auto">
+                  <AchievementsPanel
+                    save={save}
+                    resources={growth?.resources ?? []}
+                  />
+                </div>
               </TabsContent>
             </Tabs>
+          )}
+          {facility === "shop" && stateLoaded && (
+            <EconomyPanel
+              userId={userId}
+              save={save}
+              revision={revision.current}
+              shop
+              disabled={busy || Boolean(feedback) || run?.phase === "battle"}
+              onSaved={(state) => {
+                applyState(state);
+                void retryCombat();
+              }}
+              onTab={openPanel}
+            />
+          )}
+          {facility === "library" && stateLoaded && (
+            <TravelersLibrary
+              userId={userId}
+              disabled={
+                busy ||
+                Boolean(save.battle) ||
+                Boolean(feedback) ||
+                run?.phase === "battle"
+              }
+              onInventory={() => openPanel("item")}
+              onClaim={async (id) => {
+                if (busy || pendingMove.current || save.battle)
+                  throw new Error(
+                    "冒険状態の更新が終わってから操作してください。",
+                  );
+                pendingMove.current = true;
+                setBusy(true);
+                try {
+                  applyState(
+                    await gameRequest<import("./state").GameState>(
+                      `dungeons/${encodeURIComponent(id)}/key`,
+                      { revision: revision.current },
+                      "POST",
+                    ),
+                  );
+                } catch (cause) {
+                  await requestGameState()
+                    .then(applyState)
+                    .catch(() => undefined);
+                  throw cause;
+                } finally {
+                  pendingMove.current = false;
+                  setBusy(false);
+                }
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>

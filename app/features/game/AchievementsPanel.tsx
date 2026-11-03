@@ -31,6 +31,7 @@ export default function AchievementsPanel({
     record.achievement = Math.floor(exploredPlaceCount(save, id) / 5);
   return (
     <section aria-label="ダンジョンの達成度" className="space-y-3">
+      <h3 className="font-medium">ダンジョンの達成度</h3>
       <p className="text-sm tabular-nums">総歩数 {save.totalSteps ?? 0} 歩</p>
       {records.size === 0 ? (
         <p className="text-sm text-muted-foreground">

@@ -11,7 +11,12 @@ import { GamePlay } from ".";
 import type { Product } from "./EconomyPanel";
 import { defaultBalance } from "./battle";
 import { sampleCatalog } from "./catalog.fixtures";
-import { type EquipmentBuff, type GameSave, newSave } from "./domain";
+import {
+  type EquipmentBuff,
+  type GameSave,
+  enterDungeon,
+  newSave,
+} from "./domain";
 import type { GameState } from "./state";
 
 const products: Product[] = (
@@ -115,6 +120,31 @@ export default {
     msw: {
       handlers: [
         http.get("*/game/state", () => HttpResponse.json(snapshot)),
+        http.post("*/game/state/recover", () => HttpResponse.json(snapshot)),
+        http.get("*/game/battle/context", () =>
+          HttpResponse.json({ balance: defaultBalance, enemies: [] }),
+        ),
+        http.get("*/quiz/study-plans", () => HttpResponse.json([])),
+        http.get("*/tanbun/", () =>
+          HttpResponse.json({
+            data: [],
+            total: 0,
+            page: 1,
+            size: 100,
+            pages: 0,
+          }),
+        ),
+        http.get("*/user/:id/resource-growth", () =>
+          HttpResponse.json({ resources: [] }),
+        ),
+        http.put("*/game/state", async ({ request }) => {
+          const update = (await request.json()) as GameState;
+          snapshot = { revision: snapshot.revision + 1, save: update.save };
+          return HttpResponse.json(snapshot);
+        }),
+        http.get("*/game/dungeons/:id/preparation", () =>
+          HttpResponse.json({ prepared_regions: 0, target_regions: 0 }),
+        ),
         http.post("*/game/inventory/equip", async ({ request }) => {
           const body = (await request.json()) as {
             revision: number;
@@ -159,7 +189,14 @@ export default {
         http.get("*/user/:id/learning-progress", () =>
           HttpResponse.json({ level: 10 }),
         ),
-        http.get("*/game/shop", () => HttpResponse.json({ products })),
+        http.get("*/game/shop", () =>
+          HttpResponse.json({
+            products: products.map((product) => ({
+              ...product,
+              price: product.kind === "dungeon_unlock" ? null : 50,
+            })),
+          }),
+        ),
         http.get("*/game/catalog", () => HttpResponse.json(sampleCatalog)),
         http.get("*/game/dungeons/public", () =>
           HttpResponse.json([
@@ -216,3 +253,20 @@ export default {
 } satisfies Meta<typeof GamePlay>;
 
 export const TabsWithDifferentHeights: StoryObj<typeof GamePlay> = {};
+
+export const EntranceFacilities: StoryObj<typeof GamePlay> = {
+  parameters: { reactRouter: { route: "/game" } },
+  loaders: [
+    async () => {
+      const adventure = enterDungeon(
+        structuredClone(save),
+        "preview-book",
+        "旅立ちの書庫",
+        1,
+      );
+      adventure.content = { knowledge: [], quizzes: [], regionEnemies: {} };
+      snapshot = { revision: 0, save: adventure };
+      return {};
+    },
+  ],
+};

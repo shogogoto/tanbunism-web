@@ -230,6 +230,35 @@ export function resumeEvent(save: GameSave): GameSave {
   };
 }
 
+/** Visiting an entrance facility consumes one move without changing the dungeon route. */
+export function visitEntranceFacility(save: GameSave): GameSave {
+  const run = save.run;
+  if (
+    !run ||
+    !["path", "cleared", "defeated"].includes(run.phase) ||
+    save.battle ||
+    save.battleFeedback ||
+    run.moves >= MOVES_PER_EVENT ||
+    (save.maps?.[run.resourceId]?.current ?? run.readIds.at(-1) ?? ENTRANCE) !==
+      ENTRANCE
+  )
+    return save;
+  const moves = run.moves + 1;
+  return {
+    ...save,
+    run: {
+      ...run,
+      moves,
+      phase:
+        run.phase === "defeated"
+          ? "defeated"
+          : moves >= MOVES_PER_EVENT
+            ? "rest"
+            : "path",
+    },
+  };
+}
+
 /** Recovery at the entrance costs one remaining move, even without a defeat. */
 export function recoverAtEntrance(save: GameSave): GameSave {
   const run = save.run;

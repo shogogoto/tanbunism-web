@@ -70,7 +70,7 @@ export default function EconomyPanel({
   shop: boolean;
   disabled: boolean;
   onSaved: (state: GameState) => void;
-  onTab: (panel: "shop" | "item" | "status") => void;
+  onTab: (panel: "item" | "status") => void;
 }) {
   const {
     data,
@@ -132,18 +132,13 @@ export default function EconomyPanel({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex gap-2">
-          <Button
-            variant={shop ? "outline" : "default"}
-            onClick={() => onTab("item")}
-          >
-            所持品
-          </Button>
-          <Button
-            variant={shop ? "default" : "outline"}
-            onClick={() => onTab("shop")}
-          >
-            ショップ
-          </Button>
+          {shop ? (
+            <Button variant="outline" onClick={() => onTab("item")}>
+              所持品を見る
+            </Button>
+          ) : (
+            <h3 className="font-medium">所持品</h3>
+          )}
         </div>
         <span className="flex items-center gap-1 text-amber-400 tabular-nums">
           <Coins className="size-4" />

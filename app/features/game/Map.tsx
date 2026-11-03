@@ -27,8 +27,10 @@ import { mapBosses } from "./boss";
 import {
   type DungeonMap,
   ENTRANCE,
+  LIBRARY,
   PLACES_PER_REGION,
   RECOVERY,
+  SHOP,
   explorationSource,
 } from "./exploration";
 import { directionalPlace } from "./navigation";
@@ -191,6 +193,22 @@ export default function ExplorationMap({
   );
   const allIds = [ENTRANCE, ...map.places.map((place) => place.id)];
   const showEntranceFacilities = map.current === ENTRANCE;
+  const facilities = [
+    { id: RECOVERY, name: "回復場所", description: "HP・MP全回復 · 1歩" },
+    {
+      id: SHOP,
+      name: "ショップ",
+      description: "アイテム・ガンビットを購入 · 1歩",
+    },
+    {
+      id: LIBRARY,
+      name: "旅人の書庫",
+      description: "他の旅人のダンジョンを探す · 1歩",
+    },
+  ];
+  const selectedFacility = facilities.find(
+    (facility) => facility.id === selected,
+  );
   const fresh = candidates.filter(
     (item) => !allIds.includes(item.knowledge.uid),
   );
@@ -210,6 +228,10 @@ export default function ExplorationMap({
     });
   }
   if (showEntranceFacilities) positions.set(RECOVERY, { x: entranceX, y: 370 });
+  if (showEntranceFacilities) {
+    positions.set(SHOP, { x: entranceX, y: 70 });
+    positions.set(LIBRARY, { x: entranceX + 230, y: 70 });
+  }
   for (const chest of chests) {
     positions.set(chest.id, {
       x:
@@ -336,7 +358,7 @@ export default function ExplorationMap({
       (selected === ENTRANCE && Boolean(onRestart))) &&
     Boolean(
       selected &&
-        (selected === RECOVERY ||
+        (selectedFacility ||
           selectedChest ||
           allIds.includes(selected) ||
           candidate),
@@ -462,13 +484,11 @@ export default function ExplorationMap({
               )}
               {[
                 ...(showEntranceFacilities
-                  ? [
-                      {
-                        from: ENTRANCE,
-                        to: RECOVERY,
-                        kind: "relation" as const,
-                      },
-                    ]
+                  ? facilities.map((facility) => ({
+                      from: ENTRANCE,
+                      to: facility.id,
+                      kind: "relation" as const,
+                    }))
                   : []),
                 ...map.edges,
                 ...bosses.map((boss) => ({
@@ -629,43 +649,45 @@ export default function ExplorationMap({
                 </button>
               );
             })}
-            {showEntranceFacilities && (
-              <button
-                type="button"
-                aria-label="回復場所"
-                aria-pressed={selected === RECOVERY}
-                tabIndex={focused === RECOVERY ? 0 : -1}
-                ref={(node) => {
-                  if (node) nodes.current.set(RECOVERY, node);
-                  else nodes.current.delete(RECOVERY);
-                }}
-                onFocus={() => {
-                  setFocused(RECOVERY);
-                  setSelected(RECOVERY);
-                }}
-                onClick={(event) => {
-                  keyboardNavigation.current = event.detail === 0;
-                  setSelected(RECOVERY);
-                  if (
-                    keyboardNavigation.current &&
-                    !disabled &&
-                    canTravel(RECOVERY)
-                  )
-                    onMove(RECOVERY);
-                }}
-                className={`absolute w-40 rounded-xl border bg-background/95 p-3 text-left text-sm shadow-lg hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected === RECOVERY ? "border-primary ring-2 ring-primary/30" : "border-sky-500/50"}`}
-                style={{
-                  left: positions.get(RECOVERY)?.x,
-                  top: positions.get(RECOVERY)?.y,
-                }}
-              >
-                <span className="block text-xs text-sky-500">入口の施設</span>
-                <span className="font-medium">回復場所</span>
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  HP全回復 · 1歩
-                </span>
-              </button>
-            )}
+            {showEntranceFacilities &&
+              facilities.map((facility) => (
+                <button
+                  key={facility.id}
+                  type="button"
+                  aria-label={facility.name}
+                  aria-pressed={selected === facility.id}
+                  tabIndex={focused === facility.id ? 0 : -1}
+                  ref={(node) => {
+                    if (node) nodes.current.set(facility.id, node);
+                    else nodes.current.delete(facility.id);
+                  }}
+                  onFocus={() => {
+                    setFocused(facility.id);
+                    setSelected(facility.id);
+                  }}
+                  onClick={(event) => {
+                    keyboardNavigation.current = event.detail === 0;
+                    setSelected(facility.id);
+                    if (
+                      keyboardNavigation.current &&
+                      !disabled &&
+                      canTravel(facility.id)
+                    )
+                      onMove(facility.id);
+                  }}
+                  className={`absolute w-40 rounded-xl border bg-background/95 p-3 text-left text-sm shadow-lg hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected === facility.id ? "border-primary ring-2 ring-primary/30" : "border-sky-500/50"}`}
+                  style={{
+                    left: positions.get(facility.id)?.x,
+                    top: positions.get(facility.id)?.y,
+                  }}
+                >
+                  <span className="block text-xs text-sky-500">入口の施設</span>
+                  <span className="font-medium">{facility.name}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {facility.description}
+                  </span>
+                </button>
+              ))}
             {[...allIds, ...fresh.map((item) => item.knowledge.uid)].map(
               (id, i) => {
                 const point = positions.get(id);
@@ -904,8 +926,8 @@ export default function ExplorationMap({
                   </h3>
                 ) : selectedDungeon ? (
                   <h3 className="font-medium">{selectedDungeon.name}</h3>
-                ) : selected === RECOVERY ? (
-                  <h3 className="font-medium">回復場所</h3>
+                ) : selectedFacility ? (
+                  <h3 className="font-medium">{selectedFacility.name}</h3>
                 ) : (
                   <PathTerms knowledge={chosen} />
                 )}
@@ -927,8 +949,8 @@ export default function ExplorationMap({
                           : "領域の最後の地点から開けられます。"
                       : selectedDungeon
                         ? "ダンジョンへ移動"
-                        : selected === RECOVERY
-                          ? "1歩使ってHPを全回復します。"
+                        : selectedFacility
+                          ? selectedFacility.description
                           : selected === ENTRANCE
                             ? "ダンジョンの入口"
                             : (chosen?.sentence ?? "単文詳細を開く")}
@@ -968,8 +990,8 @@ export default function ExplorationMap({
                     aria-label={
                       selectedChest
                         ? "宝箱へ移動"
-                        : selected === RECOVERY
-                          ? "回復場所へ移動・1歩"
+                        : selectedFacility
+                          ? `${selectedFacility.name}へ移動・1歩`
                           : selected === ENTRANCE && onRestart
                             ? "冒険を再開"
                             : candidate
@@ -981,8 +1003,8 @@ export default function ExplorationMap({
                       ? chestReward
                         ? "宝箱へ · 歩数消費なし"
                         : "宝箱を開ける · 歩数消費なし"
-                      : selected === RECOVERY
-                        ? "回復場所へ · 1歩"
+                      : selectedFacility
+                        ? `${selectedFacility.name}へ · 1歩`
                         : selected === ENTRANCE && onRestart
                           ? "冒険を再開"
                           : candidate
@@ -991,6 +1013,7 @@ export default function ExplorationMap({
                   </Button>
                 )}
                 {!selectedDungeon &&
+                  !selectedFacility &&
                   !selectedBoss &&
                   !selectedChest &&
                   selected !== ENTRANCE &&

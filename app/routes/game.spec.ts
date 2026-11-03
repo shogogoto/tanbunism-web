@@ -5,23 +5,31 @@ import { loader } from "./game";
 vi.mock("~/features/game", () => ({ default: () => null }));
 
 describe("game menu routes", () => {
+  it("redirects old achievements links to specialties", () => {
+    expect(
+      loader({ params: { menu: "achievements" } })?.headers.get("Location"),
+    ).toBe("/game/specialties");
+  });
   it("redirects old equipment links to the combined status screen", () => {
     expect(
       loader({ params: { menu: "equipment" } })?.headers.get("Location"),
     ).toBe("/game/status");
   });
-  it.each([undefined, ...gameMenuTabs.map(([tab]) => tab), "shop", "boss"])(
+  it.each([undefined, ...gameMenuTabs.map(([tab]) => tab), "boss"])(
     "accepts menu %s",
     (menu) => {
       expect(loader({ params: { menu } })).toBeNull();
     },
   );
 
-  it.each(["adventure", "unknown"])("opens adventure for menu %s", (menu) => {
-    const response = loader({
-      params: { menu },
-    });
-    expect(response?.status).toBe(302);
-    expect(response?.headers.get("Location")).toBe("/game");
-  });
+  it.each(["adventure", "unknown", "shop", "library"])(
+    "opens adventure for menu %s",
+    (menu) => {
+      const response = loader({
+        params: { menu },
+      });
+      expect(response?.status).toBe(302);
+      expect(response?.headers.get("Location")).toBe("/game");
+    },
+  );
 });

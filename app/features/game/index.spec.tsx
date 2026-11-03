@@ -536,7 +536,7 @@ function renderGame(path = "/game", withLoader = false) {
 
 it.each([
   ["equipment", "ステータス", "腕1"],
-  ["library", "旅人の書庫", "書庫を検索"],
+  ["achievements", "専門分野", "ダンジョンの達成度"],
 ])(
   "opens the %s screen through its real route loader",
   async (menu, tab, label) => {
@@ -549,19 +549,23 @@ it.each([
   },
 );
 
-it("combines equipment with status and opens the library by tab and hotkey through the real route loader", async () => {
+it("combines equipment with status and achievements with specialties through the real route loader", async () => {
   renderGame("/game/status", true);
   const user = userEvent.setup();
   await screen.findByRole("tab", { name: "ステータス" });
   expect(await screen.findByLabelText("腕1")).toBeVisible();
   expect(screen.queryByRole("tab", { name: "装備" })).not.toBeInTheDocument();
-  await user.click(screen.getByRole("tab", { name: "旅人の書庫" }));
-  expect(await screen.findByLabelText("書庫を検索")).toBeVisible();
-  screen.getByRole("tab", { name: "旅人の書庫" }).focus();
+  expect(
+    screen.queryByRole("tab", { name: "旅人の書庫" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("tab", { name: "実績" })).not.toBeInTheDocument();
+  await user.click(screen.getByRole("tab", { name: "専門分野" }));
+  expect(await screen.findByLabelText("ダンジョンの達成度")).toBeVisible();
+  screen.getByRole("tab", { name: "専門分野" }).focus();
   await user.keyboard("{Control>}1{/Control}");
   expect(await screen.findByLabelText("腕1")).toBeVisible();
-  await user.keyboard("{Control>}5{/Control}");
-  expect(await screen.findByLabelText("書庫を検索")).toBeVisible();
+  await user.keyboard("{Control>}4{/Control}");
+  expect(await screen.findByLabelText("ダンジョンの達成度")).toBeVisible();
 });
 
 it("updates equipment bonuses and durability in status without switching screens", async () => {
@@ -731,8 +735,7 @@ it("receives a key through the library without adding a map-row or opening the d
   expect(
     screen.queryByRole("button", { name: "他ユーザーのダンジョン" }),
   ).not.toBeInTheDocument();
-  await user.click(await screen.findByRole("button", { name: "ステータス" }));
-  await user.click(screen.getByRole("tab", { name: "旅人の書庫" }));
+  await user.click(await screen.findByRole("button", { name: "旅人の書庫" }));
   await user.click(await screen.findByRole("button", { name: "キーを入手" }));
   await waitFor(() =>
     expect(join).toHaveBeenCalledExactlyOnceWith({ revision: 7 }),
@@ -1349,7 +1352,8 @@ it.each(["/game/status", "/game/status/"])(
       screen.getByRole("dialog", { name: "ゲームメニュー" }),
     ).toBeVisible();
     expect(screen.getByRole("tab", { name: "アイテム" })).toBeVisible();
-    expect(screen.getByRole("tab", { name: "実績" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "専門分野" })).toBeVisible();
+    expect(screen.queryByRole("tab", { name: "実績" })).not.toBeInTheDocument();
     expect(
       screen.queryByText("育成ポイントを割り振れます。振り直しは無料です。"),
     ).toBeNull();
@@ -1374,14 +1378,7 @@ it("switches the numbered menu tabs with Ctrl+digits", async () => {
   expect(
     await screen.findByRole("dialog", { name: "ゲームメニュー" }),
   ).toBeVisible();
-  const tabs = [
-    "ステータス",
-    "アイテム",
-    "ガンビット",
-    "専門分野",
-    "旅人の書庫",
-    "実績",
-  ];
+  const tabs = ["ステータス", "アイテム", "ガンビット", "専門分野"];
   for (const [index, label] of tabs.entries()) {
     const tab = screen.getByRole("tab", { name: label });
     expect(tab).toHaveTextContent(String(index + 1));
@@ -1393,7 +1390,7 @@ it("switches the numbered menu tabs with Ctrl+digits", async () => {
     );
   }
   await user.keyboard("{Control>}7{/Control}");
-  expect(screen.getByRole("tab", { name: "実績" })).toHaveAttribute(
+  expect(screen.getByRole("tab", { name: "専門分野" })).toHaveAttribute(
     "data-state",
     "active",
   );
@@ -1459,10 +1456,8 @@ it("switches between status, inventory, and achievement tabs in the game menu", 
     "top-[5dvh]",
     "translate-y-0",
   );
-  await user.click(screen.getByRole("tab", { name: "実績" }));
-  expect(screen.getByTestId("pathname")).toHaveTextContent(
-    "/game/achievements",
-  );
+  await user.click(screen.getByRole("tab", { name: "専門分野" }));
+  expect(screen.getByTestId("pathname")).toHaveTextContent("/game/specialties");
   expect(
     screen.getByRole("region", { name: "ダンジョンの達成度" }),
   ).toBeVisible();
@@ -1478,7 +1473,7 @@ it("switches between status, inventory, and achievement tabs in the game menu", 
   ).toBeVisible();
 });
 
-it("opens the shop from the gold HUD while keeping the map mounted", async () => {
+it("opens the shop after a paid entrance visit while keeping the map mounted", async () => {
   state = {
     revision: 1,
     save: {
@@ -1488,17 +1483,71 @@ it("opens the shop from the gold HUD while keeping the map mounted", async () =>
   };
   renderGame();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "所持ゴールド 120" }),
-  );
+  const map = await screen.findByRole("region", { name: "ダンジョンのマップ" });
   expect(
-    await screen.findByRole("dialog", { name: "ゲームメニュー" }),
-  ).toBeVisible();
-  expect(screen.getByTestId("pathname")).toHaveTextContent("/game/shop");
-  await user.click(screen.getByRole("button", { name: "所持品" }));
+    screen.queryByRole("button", { name: "所持ゴールド 120" }),
+  ).not.toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "ショップ" }));
+  expect(state.save.run?.moves).toBe(0);
+  await user.click(screen.getByRole("button", { name: "ショップへ移動・1歩" }));
+  expect(await screen.findByRole("dialog", { name: "ショップ" })).toBeVisible();
+  expect(map).toBeInTheDocument();
+  expect(state.save.run?.moves).toBe(1);
+  expect(consumeCount).toBe(0);
+  expect(screen.getByTestId("pathname")).toHaveTextContent("/game");
+  await user.click(screen.getByRole("button", { name: "所持品を見る" }));
   expect(screen.getByTestId("pathname")).toHaveTextContent("/game/item");
+  expect(
+    screen.queryByRole("button", { name: "ショップ" }),
+  ).not.toBeInTheDocument();
+  expect(state.save.run?.moves).toBe(1);
   await user.keyboard("{Escape}");
   expect(screen.getByTestId("pathname")).toHaveTextContent("/game");
+});
+
+it("opens the travelers library with the last move, closes without another charge and blocks exhausted visits", async () => {
+  const save = enterDungeon(newSave(), "book", "本", 1);
+  if (!save.run) throw new Error("Expected run");
+  save.run.moves = 4;
+  state = { revision: 1, save };
+  renderGame();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "旅人の書庫" }));
+  await user.click(
+    screen.getByRole("button", { name: "旅人の書庫へ移動・1歩" }),
+  );
+  expect(
+    await screen.findByRole("dialog", { name: "旅人の書庫" }),
+  ).toBeVisible();
+  expect(await screen.findByLabelText("書庫を検索")).toBeEnabled();
+  expect(state.save.run).toMatchObject({ moves: 5, phase: "rest" });
+  await user.keyboard("{Escape}");
+  expect(
+    screen.queryByRole("dialog", { name: "旅人の書庫" }),
+  ).not.toBeInTheDocument();
+  expect(state.save.run?.moves).toBe(5);
+  await user.click(screen.getByRole("button", { name: "ショップ" }));
+  expect(
+    screen.queryByRole("button", { name: "ショップへ移動・1歩" }),
+  ).not.toBeInTheDocument();
+});
+
+it("does not open an entrance facility if saving the move fails", async () => {
+  state = { revision: 1, save: enterDungeon(newSave(), "book", "本", 1) };
+  server.use(
+    http.put("*/game/state", () =>
+      HttpResponse.json({ detail: "通信エラー" }, { status: 503 }),
+    ),
+  );
+  renderGame();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "ショップ" }));
+  await user.click(screen.getByRole("button", { name: "ショップへ移動・1歩" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("通信エラー");
+  expect(
+    screen.queryByRole("dialog", { name: "ショップ" }),
+  ).not.toBeInTheDocument();
+  expect(state.save.run?.moves).toBe(0);
 });
 
 it("shows the item box and gold beside the map player status", async () => {

@@ -71,6 +71,7 @@ export default function SpecialtiesPanel({
     "h-9 min-w-0 rounded-md border bg-background px-2 text-sm";
   return (
     <section aria-label="専門分野" className="space-y-4">
+      <h3 className="font-medium">専門分野</h3>
       <p>
         装備 {entries.filter((s) => s.equipped).length}/{data?.slots ?? 1}枠
         {data && ` · 次はLv.${data.next_level}`}
