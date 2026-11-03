@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import GameIcon from "~/features/game/GameIcon";
 import type {
   ElementDefinition,
@@ -31,8 +32,38 @@ export default function EnemyAffinitiesEditor({
       ],
     });
   }
+  function choices(element: ElementDefinition) {
+    return (
+      <div className="flex items-center gap-2 text-sm" key={element.id}>
+        <span style={{ color: element.color }}>
+          <GameIcon icon={element.icon} className="size-4" />
+        </span>
+        <span className="mr-auto">{element.name}</span>
+        {(["weak", "resistant"] as const).map((state) => {
+          const selected =
+            (state === "weak" ? enemy.weaknesses : enemy.resistances)?.includes(
+              element.id,
+            ) ?? false;
+          return (
+            <Button
+              type="button"
+              key={state}
+              size="sm"
+              variant={selected ? "default" : "outline"}
+              disabled={!element.enabled}
+              aria-pressed={selected}
+              aria-label={`${element.name}を${state === "weak" ? "弱点" : "耐性"}にする`}
+              onClick={() => change(element.id, state)}
+            >
+              {state === "weak" ? "弱点" : "耐性"}
+            </Button>
+          );
+        })}
+      </div>
+    );
+  }
   return (
-    <div className="flex w-36 flex-wrap items-center gap-1">
+    <div className="flex w-max items-center gap-1">
       {elements
         .filter(
           (element) =>
@@ -42,17 +73,41 @@ export default function EnemyAffinitiesEditor({
         .map((element) => {
           const weak = enemy.weaknesses?.includes(element.id);
           return (
-            <button
-              type="button"
+            <span
               key={element.id}
-              aria-label={`${enemy.name}の${element.name}：${weak ? "弱点" : "耐性"}`}
-              title="クリックで削除"
-              onClick={() => change(element.id)}
-              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${weak ? "border-rose-500/40 text-rose-500" : "border-sky-500/40 text-sky-500"}`}
+              className="inline-flex shrink-0 items-center rounded-full border text-xs"
+              style={{
+                color: element.color,
+                borderColor: `color-mix(in srgb, ${element.color} 40%, transparent)`,
+              }}
             >
-              <GameIcon icon={element.icon} className="size-3" />
-              {element.name} {weak ? "弱点" : "耐性"} ×
-            </button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`${enemy.name}の${element.name}：${weak ? "弱点" : "耐性"}`}
+                    className="inline-flex items-center gap-1 rounded-l-full px-2 py-1 hover:bg-current/10 focus-visible:outline-2"
+                  >
+                    <GameIcon icon={element.icon} className="size-3" />
+                    {element.name} {weak ? "弱点" : "耐性"}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-64"
+                  aria-label={`${enemy.name}の${element.name}の相性を編集`}
+                >
+                  {choices(element)}
+                </PopoverContent>
+              </Popover>
+              <button
+                type="button"
+                aria-label={`${enemy.name}の${element.name}の相性を削除`}
+                className="rounded-r-full p-1 hover:bg-current/10 focus-visible:outline-2"
+                onClick={() => change(element.id)}
+              >
+                <X className="size-3" />
+              </button>
+            </span>
           );
         })}
       <Popover>
@@ -71,37 +126,7 @@ export default function EnemyAffinitiesEditor({
           className="w-64 max-h-80 overflow-y-auto"
           aria-label={`${enemy.name}の属性相性`}
         >
-          <div className="space-y-2">
-            {elements.map((element) => (
-              <div key={element.id} className="flex items-center gap-2 text-sm">
-                <GameIcon icon={element.icon} className="size-4" />
-                <span className="mr-auto">{element.name}</span>
-                {(["weak", "resistant"] as const).map((state) => {
-                  const selected =
-                    (state === "weak"
-                      ? enemy.weaknesses
-                      : enemy.resistances
-                    )?.includes(element.id) ?? false;
-                  return (
-                    <Button
-                      type="button"
-                      key={state}
-                      size="sm"
-                      variant={selected ? "default" : "outline"}
-                      disabled={!element.enabled}
-                      aria-pressed={selected}
-                      aria-label={`${element.name}を${state === "weak" ? "弱点" : "耐性"}にする`}
-                      onClick={() =>
-                        change(element.id, selected ? undefined : state)
-                      }
-                    >
-                      {state === "weak" ? "弱点" : "耐性"}
-                    </Button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+          <div className="space-y-2">{elements.map(choices)}</div>
         </PopoverContent>
       </Popover>
     </div>
