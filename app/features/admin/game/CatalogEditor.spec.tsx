@@ -22,6 +22,17 @@ import CatalogEditor from "./CatalogEditor";
 import TriggerEditor from "./TriggerEditor";
 import { variantRowHighlight } from "./variantRowStyles";
 
+it("shows template and skill list headings without a redundant skills heading", async () => {
+  render(<CatalogEditor kind="skills" />);
+  expect(
+    await screen.findByRole("heading", { name: "効果テンプレート" }),
+  ).toBeVisible();
+  expect(screen.getByRole("heading", { name: "スキル一覧" })).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: "スキル" }),
+  ).not.toBeInTheDocument();
+});
+
 it("edits shared gambit rules with trigger targets from the gambit tab", async () => {
   server.use(
     http.get("*/admin/game/catalog", () =>

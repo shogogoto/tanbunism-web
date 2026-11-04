@@ -209,20 +209,24 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
       className="space-y-4 p-4 sm:p-6"
       aria-label={`${names[kind]}定義`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">{names[kind]}</h2>
-        {kind !== "skills" && kind !== "shop" && (
-          <Button
-            type="button"
-            disabled={
-              !catalog || saving || (kind === "items" && !catalog.skills.length)
-            }
-            onClick={() => add()}
-          >
-            追加
-          </Button>
-        )}
-      </div>
+      {kind !== "skills" && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">{names[kind]}</h2>
+          {kind !== "shop" && (
+            <Button
+              type="button"
+              disabled={
+                !catalog ||
+                saving ||
+                (kind === "items" && !catalog.skills.length)
+              }
+              onClick={() => add()}
+            >
+              追加
+            </Button>
+          )}
+        </div>
+      )}
       {error && (
         <p role="alert" className="whitespace-pre-line text-destructive">
           {error}
