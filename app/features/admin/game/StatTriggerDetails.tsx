@@ -5,6 +5,7 @@ import {
   triggerComparisonLabels,
 } from "~/features/game/triggerVariants";
 import { Input } from "~/shared/components/ui/input";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 
 export default function StatTriggerDetails({
   trigger,
@@ -34,9 +35,8 @@ export default function StatTriggerDetails({
   return (
     <>
       {resource && (
-        <select
+        <NativeSelect
           aria-label="値の基準"
-          className="h-9 rounded-md border bg-background px-2"
           value={details.stat_basis}
           onChange={(e) =>
             update({ stat_basis: e.target.value as typeof details.stat_basis })
@@ -47,7 +47,7 @@ export default function StatTriggerDetails({
               {name}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       )}
       {!rank && (
         <Input
@@ -62,9 +62,8 @@ export default function StatTriggerDetails({
         />
       )}
       {!rank && details.stat_basis === "percent" && <span>%</span>}
-      <select
+      <NativeSelect
         aria-label="比較"
-        className="h-9 rounded-md border bg-background px-2"
         value={details.comparison}
         onChange={(e) =>
           update({ comparison: e.target.value as typeof details.comparison })
@@ -75,7 +74,7 @@ export default function StatTriggerDetails({
             {name}
           </option>
         ))}
-      </select>
+      </NativeSelect>
     </>
   );
 }

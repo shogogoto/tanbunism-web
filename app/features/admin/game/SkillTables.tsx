@@ -1,5 +1,7 @@
-import { Plus } from "lucide-react";
-import { AdminTableSection } from "~/features/admin/AdminTable";
+import {
+  AdminTableAddRow,
+  AdminTableSection,
+} from "~/features/admin/AdminTable";
 import type {
   SkillDefinition,
   SkillPatch,
@@ -11,8 +13,8 @@ import {
 } from "~/features/game/catalog";
 import { rebindEffectChances } from "~/features/game/effectChances";
 import type { VariantSelection, VariantSet } from "~/features/game/variantSets";
-import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import DefinitionDeleteButton, {
   pendingDeletionClass,
 } from "./DefinitionDeleteButton";
@@ -160,9 +162,8 @@ export default function SkillTables({
                       />
                     </td>
                     <td>
-                      <select
+                      <NativeSelect
                         aria-label="属性"
-                        className="h-9 rounded-md border bg-background px-2"
                         disabled={removed}
                         value={skill.element ?? "none"}
                         onChange={(event) =>
@@ -190,7 +191,7 @@ export default function SkillTables({
                               {skill.element}（旧属性）
                             </option>
                           )}
-                      </select>
+                      </NativeSelect>
                     </td>
                     <td>
                       <Input
@@ -239,19 +240,12 @@ export default function SkillTables({
                   </SortableRow>
                 );
               })}
-              <tr className="border-t">
-                <td colSpan={8} className="p-1 text-center">
-                  <Button
-                    aria-label="スキルを追加"
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => add("attack", "physical")}
-                  >
-                    <Plus aria-hidden="true" />
-                  </Button>
-                </td>
-              </tr>
+              <AdminTableAddRow
+                colSpan={8}
+                compact
+                label="スキルを追加"
+                onClick={() => add("attack", "physical")}
+              />
             </tbody>
           </>
         )}

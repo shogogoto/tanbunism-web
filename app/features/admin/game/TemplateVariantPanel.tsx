@@ -22,6 +22,7 @@ import {
 } from "~/shared/components/ui/dialog";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import DurationInput from "./DurationInput";
 import VariantSetEditor, { variantSetFields } from "./VariantSetEditor";
 import VariantSetPicker from "./VariantSetPicker";
@@ -174,9 +175,9 @@ export default function TemplateVariantPanel({
         <div className="border-t pt-3 text-sm font-medium">個別の変型</div>
         <div className="space-y-2">
           <Label htmlFor={`variant-axis-${template.id}`}>変更する項目</Label>
-          <select
+          <NativeSelect
             id={`variant-axis-${template.id}`}
-            className="h-9 w-full rounded-md border bg-background px-2"
+            className="w-full"
             value={axis?.id ?? ""}
             onChange={(event) => {
               const next = axes.find((item) => item.id === event.target.value);
@@ -193,7 +194,7 @@ export default function TemplateVariantPanel({
                 {item.label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         {pendingAxis && (
           <div role="alert" className="space-y-2 rounded-md border p-3 text-sm">
@@ -281,9 +282,9 @@ export default function TemplateVariantPanel({
                     }
                   />
                 ) : axis.options ? (
-                  <select
+                  <NativeSelect
                     aria-label="変型の値"
-                    className="h-9 min-w-0 rounded-md border bg-background px-2"
+                    className="min-w-0"
                     value={axis.read(templateSkill(row))}
                     onChange={(event) =>
                       change(
@@ -305,7 +306,7 @@ export default function TemplateVariantPanel({
                         {label}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 ) : (
                   <Input
                     aria-label="変型の値"

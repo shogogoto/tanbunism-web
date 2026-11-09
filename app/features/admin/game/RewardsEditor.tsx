@@ -5,6 +5,7 @@ import {
 } from "~/features/admin/AdminFeedback";
 import {
   AdminNativeTable,
+  AdminTableAddRow,
   AdminTableFrame,
   AdminTableSection,
 } from "~/features/admin/AdminTable";
@@ -18,6 +19,7 @@ import {
 } from "~/features/game/rewards";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import GoldPreview from "./GoldPreview";
 import {
   type GameSettingsDocument,
@@ -30,7 +32,6 @@ type FixedRewards = {
   chest_healing_potions: number;
   chest_step_potions: number;
 };
-const selectClass = "h-9 rounded-md border bg-background px-2 text-sm";
 const tierName = (tier: number) =>
   ["初級", "中級", "上級"][tier - 1] ?? `第${tier}段階`;
 
@@ -73,6 +74,7 @@ function GoldEditor({
   value,
   onChange,
 }: { value: GoldSettings; onChange: (value: GoldSettings) => void }) {
+  const formulaId = useId();
   const number = (
     key: Exclude<keyof GoldSettings, "power_formula">,
     label: string,
@@ -101,11 +103,12 @@ function GoldEditor({
         <span className="pb-2">+</span>
         {number("power_coefficient", "Power補正", 100000, 0, 0.1)}
         <span className="pb-2">×</span>
-        <label className="flex flex-col gap-1">
+        <label htmlFor={formulaId} className="flex flex-col gap-1">
           Powerの計算
-          <select
+          <NativeSelect
+            id={formulaId}
             aria-label="GoldのPower計算"
-            className={selectClass}
+            className="text-sm"
             value={value.power_formula}
             onChange={(event) =>
               onChange({
@@ -117,7 +120,7 @@ function GoldEditor({
           >
             <option value="sqrt">√(Power / 基準Power)</option>
             <option value="log">log(1 + Power / 基準Power)</option>
-          </select>
+          </NativeSelect>
         </label>
         {number("power_reference", "基準Power", 1000000000, 0.01, 0.01)}
         <span className="pb-2">) × [1 + (達成度 − 1) ×</span>
@@ -230,9 +233,9 @@ function RewardTableEditor({
               // biome-ignore lint/suspicious/noArrayIndexKey: controlled rows have no persistent IDs and cannot be reordered.
               <tr key={index}>
                 <td>
-                  <select
+                  <NativeSelect
                     aria-label="アイテム"
-                    className={`${selectClass} max-w-64`}
+                    className="text-sm max-w-64"
                     value={entry.item_id}
                     onChange={(event) =>
                       entryChange(index, { item_id: event.target.value })
@@ -250,7 +253,7 @@ function RewardTableEditor({
                           : ""}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </td>
                 <td>
                   <div className="flex items-center gap-2">
@@ -319,39 +322,29 @@ function RewardTableEditor({
             ))}
           </tbody>
           <tfoot>
-            <tr>
-              <td colSpan={5}>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  aria-label="候補を追加"
-                  disabled={
-                    !catalog.items.length || table.entries.length >= 200
-                  }
-                  onClick={() => {
-                    const item = catalog.items[0];
-                    if (!item) return;
-                    const tier =
-                      1 +
-                      Math.max(
-                        0,
-                        ...table.entries
-                          .filter((entry) => entry.item_id === item.id)
-                          .map((entry) => entry.tier),
-                      );
-                    patch({
-                      entries: [
-                        ...table.entries,
-                        { item_id: item.id, tier, weight: 1, quantity: 1 },
-                      ],
-                    });
-                  }}
-                >
-                  ＋
-                </Button>
-              </td>
-            </tr>
+            <AdminTableAddRow
+              colSpan={5}
+              label="候補を追加"
+              disabled={!catalog.items.length || table.entries.length >= 200}
+              onClick={() => {
+                const item = catalog.items[0];
+                if (!item) return;
+                const tier =
+                  1 +
+                  Math.max(
+                    0,
+                    ...table.entries
+                      .filter((entry) => entry.item_id === item.id)
+                      .map((entry) => entry.tier),
+                  );
+                patch({
+                  entries: [
+                    ...table.entries,
+                    { item_id: item.id, tier, weight: 1, quantity: 1 },
+                  ],
+                });
+              }}
+            />
           </tfoot>
         </AdminNativeTable>
       </AdminTableFrame>
@@ -360,6 +353,7 @@ function RewardTableEditor({
 }
 
 export default function RewardsEditor() {
+  const chestTableId = useId();
   const [catalog, setCatalog] = useState<GameCatalog>();
   const [rewards, setRewards] = useState<RewardSettings>({
     tables: [],
@@ -451,11 +445,15 @@ export default function RewardsEditor() {
             onChange={(gold) => setRewards({ ...rewards, gold })}
           />
           <AdminTableSection title="宝箱" className="mx-0 w-full space-y-4">
-            <label className="flex flex-col gap-1 text-sm">
+            <label
+              htmlFor={chestTableId}
+              className="flex flex-col gap-1 text-sm"
+            >
               アイテムのドロップ候補
-              <select
+              <NativeSelect
+                id={chestTableId}
                 aria-label="宝箱のドロップ候補"
-                className={selectClass}
+                className="text-sm"
                 value={rewards.chest_table_id ?? ""}
                 onChange={(event) =>
                   setRewards({
@@ -470,7 +468,7 @@ export default function RewardsEditor() {
                     {table.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
             <div className="flex flex-wrap gap-3">
               <NumberField

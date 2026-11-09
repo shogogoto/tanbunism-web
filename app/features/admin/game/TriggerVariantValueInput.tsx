@@ -12,6 +12,7 @@ import {
   triggerThresholdBounds,
 } from "~/features/game/triggerVariants";
 import { Input } from "~/shared/components/ui/input";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 
 export function triggerFieldOptions(
   field: TriggerVariantField,
@@ -75,9 +76,9 @@ export default function TriggerVariantValueInput({
       onChange={(e) => onChange(e.target.valueAsNumber)}
     />
   ) : (
-    <select
+    <NativeSelect
       aria-label={label}
-      className="h-9 min-w-0 rounded-md border bg-background px-2"
+      className="min-w-0"
       value={String(value)}
       onChange={(e) =>
         onChange(
@@ -95,6 +96,6 @@ export default function TriggerVariantValueInput({
           {name}
         </option>
       ))}
-    </select>
+    </NativeSelect>
   );
 }

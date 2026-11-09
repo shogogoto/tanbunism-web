@@ -1,5 +1,8 @@
-import { Plus, X } from "lucide-react";
-import { AdminTableSection } from "~/features/admin/AdminTable";
+import { X } from "lucide-react";
+import {
+  AdminTableAddRow,
+  AdminTableSection,
+} from "~/features/admin/AdminTable";
 import {
   type GameCatalog,
   type SkillDefinition,
@@ -17,6 +20,7 @@ import {
 } from "~/features/game/templateVariants";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import DurationInput from "./DurationInput";
 import RowOrder from "./RowOrder";
 import SortableAdminTable from "./SortableAdminTable";
@@ -37,7 +41,6 @@ import {
 } from "./templateEffects";
 import { variantRowHighlight } from "./variantRowStyles";
 
-const selectClass = "h-9 rounded-md border bg-background px-2";
 const columns = [
   ["name", "名前"],
   ["target_count", "対象数"],
@@ -297,9 +300,8 @@ export default function SkillTemplateEditor({
                       {status ? (
                         <span className="text-xs">持続数</span>
                       ) : (
-                        <select
+                        <NativeSelect
                           aria-label={`${prefix}効果の指定`}
-                          className={selectClass}
                           value={mode}
                           disabled={utility}
                           onChange={(e) =>
@@ -318,7 +320,7 @@ export default function SkillTemplateEditor({
                         >
                           <option value="fixed">定数</option>
                           <option value="multiplier">倍率</option>
-                        </select>
+                        </NativeSelect>
                       )}
                       {status ? (
                         <DurationInput
@@ -401,9 +403,8 @@ export default function SkillTemplateEditor({
                     <td
                       className={scopeOverride ? "bg-amber-500/10" : undefined}
                     >
-                      <select
+                      <NativeSelect
                         aria-label="対象数"
-                        className={selectClass}
                         disabled={normal}
                         value={
                           skill.target_count ??
@@ -424,7 +425,7 @@ export default function SkillTemplateEditor({
                           </option>
                         ))}
                         <option value="all">全体</option>
-                      </select>
+                      </NativeSelect>
                       {scopeOverride && (
                         <Button
                           type="button"
@@ -441,9 +442,8 @@ export default function SkillTemplateEditor({
                     </td>
                     <td className={overridden(["effect", "damage_type"])}>
                       <fieldset>
-                        <select
+                        <NativeSelect
                           aria-label="種別"
-                          className={selectClass}
                           disabled={normal}
                           value={kind}
                           onChange={(e) =>
@@ -454,7 +454,7 @@ export default function SkillTemplateEditor({
                           <option value="special">特殊</option>
                           <option value="status">状態</option>
                           <option value="other">その他</option>
-                        </select>
+                        </NativeSelect>
                       </fieldset>
                       {resetCell("種別", ["effect", "damage_type"])}
                     </td>
@@ -472,9 +472,8 @@ export default function SkillTemplateEditor({
                       <fieldset className="max-w-xs">
                         {status ? (
                           <div className="flex flex-wrap items-center gap-1">
-                            <select
+                            <NativeSelect
                               aria-label="詳細"
-                              className={selectClass}
                               value={stateDetail(skill)}
                               onChange={(e) =>
                                 update(
@@ -487,11 +486,10 @@ export default function SkillTemplateEditor({
                               <option value="damage">ダメージ</option>
                               <option value="buff">バフ</option>
                               <option value="debuff">デバフ</option>
-                            </select>
+                            </NativeSelect>
                             {
-                              <select
+                              <NativeSelect
                                 aria-label="対象ステータス"
-                                className={selectClass}
                                 value={stateResource(skill)}
                                 onChange={(e) => {
                                   const patch = changeStateDetail(
@@ -524,14 +522,13 @@ export default function SkillTemplateEditor({
                                     {label}
                                   </option>
                                 ))}
-                              </select>
+                              </NativeSelect>
                             }
                             {["damageDealt", "damageTaken"].includes(
                               skill.stat ?? "",
                             ) && (
-                              <select
+                              <NativeSelect
                                 aria-label="補正対象属性"
-                                className={selectClass}
                                 required
                                 value={skill.affected_element ?? ""}
                                 onChange={(event) =>
@@ -554,11 +551,10 @@ export default function SkillTemplateEditor({
                                       {element.name}
                                     </option>
                                   ))}
-                              </select>
+                              </NativeSelect>
                             )}
-                            <select
+                            <NativeSelect
                               aria-label="状態の値の指定"
-                              className={selectClass}
                               value={skill.amount_mode ?? "fixed"}
                               disabled={[
                                 "maxHp",
@@ -576,25 +572,23 @@ export default function SkillTemplateEditor({
                             >
                               <option value="fixed">定数</option>
                               <option value="percent">比率（%）</option>
-                            </select>
+                            </NativeSelect>
                             {number("状態の値", "amount", 0)}
                             <span className="text-xs">重複上限</span>
                             {number("重複上限", "stack_limit", 1)}
                           </div>
                         ) : utility ? (
-                          <select
+                          <NativeSelect
                             aria-label="詳細"
-                            className={selectClass}
                             value="moves"
                             disabled
                           >
                             <option value="moves">歩数</option>
-                          </select>
+                          </NativeSelect>
                         ) : (
                           <div className="flex flex-wrap items-center gap-1">
-                            <select
+                            <NativeSelect
                               aria-label="対象ステータス"
-                              className={selectClass}
                               value={instantResource(skill)}
                               disabled={normal}
                               onChange={(e) =>
@@ -606,10 +600,9 @@ export default function SkillTemplateEditor({
                             >
                               <option value="hp">HP</option>
                               <option value="mp">MP</option>
-                            </select>
-                            <select
+                            </NativeSelect>
+                            <NativeSelect
                               aria-label="詳細"
-                              className={selectClass}
                               disabled={normal}
                               value={
                                 skill.effect === "heal_hp" ||
@@ -629,7 +622,7 @@ export default function SkillTemplateEditor({
                             >
                               <option value="damage">ダメージ</option>
                               <option value="recovery">回復</option>
-                            </select>
+                            </NativeSelect>
                           </div>
                         )}
                       </fieldset>
@@ -648,9 +641,8 @@ export default function SkillTemplateEditor({
                         {utility ? (
                           "—"
                         ) : (
-                          <select
+                          <NativeSelect
                             aria-label="タイプ"
-                            className={selectClass}
                             value={skill.on_wrong?.type ?? "fizzle"}
                             disabled={normal}
                             onChange={(e) =>
@@ -682,7 +674,7 @@ export default function SkillTemplateEditor({
                             <option value="counter">反撃</option>
                             <option value="fizzle">不発＋反撃</option>
                             <option value="reduced">軽減＋反撃</option>
-                          </select>
+                          </NativeSelect>
                         )}
                       </fieldset>
                       {resetCell("タイプ", ["on_wrong"])}
@@ -748,39 +740,32 @@ export default function SkillTemplateEditor({
                 );
               })}
               {!variantId && (
-                <tr className="border-t">
-                  <td colSpan={columns.length + 1} className="p-1 text-center">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label="効果テンプレートを追加"
-                      onClick={() =>
-                        onChange({
-                          ...catalog,
-                          skill_templates: [
-                            ...templates,
-                            skillTemplate(
-                              normalizeSkill({
-                                id: `effect_${crypto.randomUUID().replaceAll("-", "")}`,
-                                name: "新しい効果",
-                                icon: "sparkles",
-                                enabled: true,
-                                effect: "attack",
-                                target: "enemy",
-                                amount: 0,
-                                multiplier: 1,
-                                mp_cost: 0,
-                              }),
-                            ),
-                          ],
-                        })
-                      }
-                    >
-                      <Plus aria-hidden="true" />
-                    </Button>
-                  </td>
-                </tr>
+                <AdminTableAddRow
+                  colSpan={columns.length + 1}
+                  compact
+                  label="効果テンプレートを追加"
+                  onClick={() =>
+                    onChange({
+                      ...catalog,
+                      skill_templates: [
+                        ...templates,
+                        skillTemplate(
+                          normalizeSkill({
+                            id: `effect_${crypto.randomUUID().replaceAll("-", "")}`,
+                            name: "新しい効果",
+                            icon: "sparkles",
+                            enabled: true,
+                            effect: "attack",
+                            target: "enemy",
+                            amount: 0,
+                            multiplier: 1,
+                            mp_cost: 0,
+                          }),
+                        ),
+                      ],
+                    })
+                  }
+                />
               )}
             </tbody>
           </>

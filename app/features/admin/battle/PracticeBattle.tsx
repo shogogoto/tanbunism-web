@@ -14,6 +14,7 @@ import UserAvatar from "~/features/user/UserAvatar";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import {
   TableBody,
   TableCell,
@@ -457,9 +458,9 @@ export default function PracticeBattle({
       >
         <div className="space-y-1">
           <Label htmlFor="practice-player">プレイヤー</Label>
-          <select
+          <NativeSelect
             id="practice-player"
-            className="h-9 w-full min-w-0 rounded-md border bg-background px-2 text-sm"
+            className="w-full min-w-0 text-sm"
             value={selectedPlayerId}
             disabled={busy || !!active}
             onChange={(event) => {
@@ -474,7 +475,7 @@ export default function PracticeBattle({
                 {user.display_name || user.username ? ` · ${user.email}` : ""}
               </option>
             ))}
-          </select>
+          </NativeSelect>
           {usersError && (
             <p role="alert" className="text-sm text-destructive">
               {usersError}
@@ -578,9 +579,9 @@ export default function PracticeBattle({
         )}
         <div className="space-y-1">
           <Label htmlFor="practice-source">敵の出典</Label>
-          <select
+          <NativeSelect
             id="practice-source"
-            className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+            className="w-full text-sm"
             value={source}
             disabled={busy || !!active}
             onChange={(event) =>
@@ -592,14 +593,14 @@ export default function PracticeBattle({
             )}
             <option value="dungeon">実際のダンジョン</option>
             <option value="trial">比較表の試算から選ぶ（敵を固定）</option>
-          </select>
+          </NativeSelect>
         </div>
         {source === "trial" ? (
           <div className="space-y-1">
             <Label htmlFor="practice-trial">敵の試算</Label>
-            <select
+            <NativeSelect
               id="practice-trial"
-              className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              className="w-full text-sm"
               disabled={busy || !!active || !trials.length}
               value={trial?.id ?? ""}
               onChange={(event) => setTrialId(event.target.value)}
@@ -615,15 +616,15 @@ export default function PracticeBattle({
                   {item.simulation.achievement}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
         ) : source === "dungeon" ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="practice-dungeon">ダンジョン</Label>
-              <select
+              <NativeSelect
                 id="practice-dungeon"
-                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                className="w-full text-sm"
                 value={target}
                 disabled={busy || !!active || dungeonsLoading}
                 onChange={(event) => {
@@ -650,13 +651,13 @@ export default function PracticeBattle({
                     {item.resource_name} · {item.user_email}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <div className="space-y-1">
               <Label htmlFor="practice-level">領域</Label>
-              <select
+              <NativeSelect
                 id="practice-level"
-                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                className="w-full text-sm"
                 value={level}
                 disabled={busy || !!active || !dungeon}
                 onChange={(event) => setLevel(Number(event.target.value))}
@@ -666,7 +667,7 @@ export default function PracticeBattle({
                     領域 {region.level}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
           </div>
         ) : null}

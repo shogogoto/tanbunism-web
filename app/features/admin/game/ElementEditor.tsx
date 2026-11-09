@@ -5,6 +5,7 @@ import {
 } from "~/features/admin/AdminFeedback";
 import {
   AdminNativeTable,
+  AdminTableAddRow,
   AdminTableFrame,
   AdminTableSection,
 } from "~/features/admin/AdminTable";
@@ -148,33 +149,26 @@ export default function ElementEditor() {
                       </td>
                     </tr>
                   ))}
-                  <tr className="border-t">
-                    <td colSpan={4} className="text-center">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        aria-label="属性を追加"
-                        onClick={() => {
-                          setSaved(false);
-                          setCatalog({
-                            ...catalog,
-                            elements: [
-                              ...(catalog.elements ?? []),
-                              {
-                                id: `element_${crypto.randomUUID().replaceAll("-", "")}`,
-                                name: "新しい属性",
-                                icon: "sparkles",
-                                color: "#94a3b8",
-                                enabled: true,
-                              },
-                            ],
-                          });
-                        }}
-                      >
-                        ＋
-                      </Button>
-                    </td>
-                  </tr>
+                  <AdminTableAddRow
+                    colSpan={4}
+                    label="属性を追加"
+                    onClick={() => {
+                      setSaved(false);
+                      setCatalog({
+                        ...catalog,
+                        elements: [
+                          ...(catalog.elements ?? []),
+                          {
+                            id: `element_${crypto.randomUUID().replaceAll("-", "")}`,
+                            name: "新しい属性",
+                            icon: "sparkles",
+                            color: "#94a3b8",
+                            enabled: true,
+                          },
+                        ],
+                      });
+                    }}
+                  />
                 </tbody>
               </AdminNativeTable>
             </AdminTableFrame>

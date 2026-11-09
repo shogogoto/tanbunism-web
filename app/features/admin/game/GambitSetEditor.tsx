@@ -1,8 +1,11 @@
-import { AdminTableSection } from "~/features/admin/AdminTable";
+import {
+  AdminTableAddRow,
+  AdminTableSection,
+} from "~/features/admin/AdminTable";
 import type { GameCatalog } from "~/features/game/catalog";
 import { Badge } from "~/shared/components/ui/badge";
-import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import DefinitionDeleteButton from "./DefinitionDeleteButton";
 import GambitRulesEditor from "./GambitRulesEditor";
 import SortableAdminTable from "./SortableAdminTable";
@@ -104,9 +107,9 @@ export default function GambitSetEditor({
                             </button>
                           </Badge>
                         ))}
-                        <select
+                        <NativeSelect
                           aria-label={`${group.name}に敵を追加`}
-                          className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                          className="w-full text-sm"
                           value=""
                           onChange={(e) => {
                             const id = e.target.value;
@@ -132,7 +135,7 @@ export default function GambitSetEditor({
                                   : ""}
                               </option>
                             ))}
-                        </select>
+                        </NativeSelect>
                       </div>
                     </td>
                     <td>
@@ -154,31 +157,23 @@ export default function GambitSetEditor({
               })}
             </tbody>
             <tfoot>
-              <tr>
-                <td colSpan={5}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="w-full"
-                    aria-label="ガンビットセットを追加"
-                    onClick={() =>
-                      onChange({
-                        ...catalog,
-                        gambit_sets: [
-                          ...sets,
-                          {
-                            id: `gambit_${crypto.randomUUID().replaceAll("-", "")}`,
-                            name: "新しいセット",
-                            rules: [],
-                          },
-                        ],
-                      })
-                    }
-                  >
-                    ＋
-                  </Button>
-                </td>
-              </tr>
+              <AdminTableAddRow
+                colSpan={5}
+                label="ガンビットセットを追加"
+                onClick={() =>
+                  onChange({
+                    ...catalog,
+                    gambit_sets: [
+                      ...sets,
+                      {
+                        id: `gambit_${crypto.randomUUID().replaceAll("-", "")}`,
+                        name: "新しいセット",
+                        rules: [],
+                      },
+                    ],
+                  })
+                }
+              />
             </tfoot>
           </>
         )}

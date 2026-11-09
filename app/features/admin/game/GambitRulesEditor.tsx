@@ -5,6 +5,7 @@ import {
   triggerVariant,
 } from "~/features/game/triggerVariants";
 import { Button } from "~/shared/components/ui/button";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import { RowDragHandle, SortableRow, SortableRows } from "./SortableRows";
 
 export default function GambitRulesEditor({
@@ -28,8 +29,6 @@ export default function GambitRulesEditor({
   );
   const patch = (index: number, value: Partial<EnemyGambitRule>) =>
     onChange(rules.map((r, i) => (i === index ? { ...r, ...value } : r)));
-  const select =
-    "h-9 min-w-0 max-w-44 rounded-md border bg-background px-2 text-sm";
   const rows = rules.map((rule, index) => ({ id: String(index), rule }));
   return (
     <div className="space-y-2">
@@ -76,8 +75,8 @@ export default function GambitRulesEditor({
                     </div>
                   </td>
                   <td>
-                    <select
-                      className={select}
+                    <NativeSelect
+                      className="min-w-0 max-w-44 text-sm"
                       aria-label="トリガー"
                       value={rule.trigger_id}
                       onChange={(e) =>
@@ -96,11 +95,11 @@ export default function GambitRulesEditor({
                           {!t.enabled && "（無効）"}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </td>
                   <td>
-                    <select
-                      className={select}
+                    <NativeSelect
+                      className="min-w-0 max-w-44 text-sm"
                       aria-label="変型"
                       value={rule.trigger_variant_id ?? ""}
                       onChange={(e) =>
@@ -120,7 +119,7 @@ export default function GambitRulesEditor({
                           {v.resolved_name ?? v.name}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </td>
                   <td>
                     {resolved
@@ -128,8 +127,8 @@ export default function GambitRulesEditor({
                       : "—"}
                   </td>
                   <td>
-                    <select
-                      className={select}
+                    <NativeSelect
+                      className="min-w-0 max-w-44 text-sm"
                       aria-label="使用スキル"
                       value={rule.skill_id}
                       onChange={(e) =>
@@ -144,7 +143,7 @@ export default function GambitRulesEditor({
                           {s.name} · MP {s.mp_cost}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </td>
                   <td>
                     <input

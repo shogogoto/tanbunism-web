@@ -17,7 +17,12 @@ mkcert -i # development certificate for https
 npm run dev # Your application will be available at `http://localhost:5173`.
 ```
 
+## UI implementation
+
+UI components and Tailwind conventions: [UI component guide](docs/ui-components.md).
+
 ## Building for Production
+
 ```bash
 npm run build # Create a production build
 ```

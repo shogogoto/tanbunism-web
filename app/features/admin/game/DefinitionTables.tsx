@@ -16,6 +16,7 @@ import { equipmentParts } from "~/features/game/equipmentSlots";
 import { itemCategories, itemCategory } from "~/features/game/itemCategories";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import DefinitionDeleteButton, {
   pendingDeletionClass,
 } from "./DefinitionDeleteButton";
@@ -24,7 +25,6 @@ import RowOrder from "./RowOrder";
 import SortableAdminTable from "./SortableAdminTable";
 import { SortableRow } from "./SortableRows";
 
-const selectClass = "h-9 rounded-md border bg-background px-2 text-sm";
 export default function DefinitionTables({
   kind,
   catalog,
@@ -180,9 +180,9 @@ export default function DefinitionTables({
                 {"skill_id" in item ? (
                   <>
                     <td>
-                      <select
+                      <NativeSelect
                         aria-label="カテゴリ"
-                        className={selectClass}
+                        className="text-sm"
                         value={itemCategory(item)}
                         onChange={(e) =>
                           update(item.id, {
@@ -196,12 +196,12 @@ export default function DefinitionTables({
                             {label}
                           </option>
                         ))}
-                      </select>
+                      </NativeSelect>
                     </td>
                     <td>
-                      <select
+                      <NativeSelect
                         aria-label="装備部位"
-                        className={selectClass}
+                        className="text-sm"
                         disabled={item.kind !== "weapon"}
                         value={item.equipment_part ?? ""}
                         onChange={(e) =>
@@ -219,13 +219,13 @@ export default function DefinitionTables({
                             {part.label}
                           </option>
                         ))}
-                      </select>
+                      </NativeSelect>
                     </td>
                     <td>
-                      <select
+                      <NativeSelect
                         aria-label="発動スキル"
                         required
-                        className={selectClass}
+                        className="text-sm"
                         value={item.skill_id}
                         onChange={(e) => {
                           const skill = catalog.skills.find(
@@ -249,7 +249,7 @@ export default function DefinitionTables({
                             {!s.enabled && "（無効）"}
                           </option>
                         ))}
-                      </select>
+                      </NativeSelect>
                     </td>
                     <td>
                       <div className="flex items-center gap-2">
@@ -321,9 +321,9 @@ export default function DefinitionTables({
                       ),
                     )}
                     <td>
-                      <select
+                      <NativeSelect
                         aria-label="ガンビットセット"
-                        className={`${selectClass} w-32`}
+                        className="text-sm w-32"
                         value={item.gambit_set_id ?? ""}
                         onChange={(event) =>
                           update(item.id, {
@@ -338,7 +338,7 @@ export default function DefinitionTables({
                             {group.name}
                           </option>
                         ))}
-                      </select>
+                      </NativeSelect>
                     </td>
                     <td>
                       <EnemyAffinitiesEditor

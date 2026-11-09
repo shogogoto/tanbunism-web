@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type {
   GameCatalog,
   TriggerDefinition,
@@ -26,6 +26,7 @@ import {
   DialogTrigger,
 } from "~/shared/components/ui/dialog";
 import { Input } from "~/shared/components/ui/input";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import TriggerVariantSetEditor from "./TriggerVariantSetEditor";
 import TriggerVariantValueInput, {
   currentTriggerValue,
@@ -55,6 +56,7 @@ export default function TriggerVariantPanel({
   parentId,
   depth = 0,
 }: Props) {
+  const fieldId = useId();
   const [error, setError] = useState<string>();
   const [pendingField, setPendingField] = useState<TriggerVariantField>();
   const rows = trigger.variants ?? [];
@@ -244,10 +246,10 @@ export default function TriggerVariantPanel({
           }}
         />
         <div className="border-t pt-3 text-sm font-medium">個別の変型</div>
-        <label className="grid gap-1 text-sm">
+        <label htmlFor={fieldId} className="grid gap-1 text-sm">
           変更する項目
-          <select
-            className="h-9 rounded-md border bg-background px-2"
+          <NativeSelect
+            id={fieldId}
             value={field}
             onChange={(e) =>
               plain.length
@@ -265,7 +267,7 @@ export default function TriggerVariantPanel({
                 {label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
         {pendingField && (
           <div role="alert" className="space-y-2 rounded border p-2 text-sm">

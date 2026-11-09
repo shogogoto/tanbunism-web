@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import type { SharedVariantSet } from "~/features/game/variantCore";
 import { Button } from "~/shared/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from "~/shared/components/ui/dialog";
 import { Input } from "~/shared/components/ui/input";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 
 export const variantIdentity = (prefix: string) =>
   `${prefix}_${crypto.randomUUID().replaceAll("-", "")}`;
@@ -34,6 +35,7 @@ export default function VariantSetManager<F extends string, V>({
   title?: string;
   canRemove?: (id: string) => boolean;
 }) {
+  const id = useId();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<SharedVariantSet<F, V>[]>([]);
   const [error, setError] = useState<string>();
@@ -90,11 +92,15 @@ export default function VariantSetManager<F extends string, V>({
                   onChange={(e) => update(set.id, { name: e.target.value })}
                 />
               </label>
-              <label className="min-w-0 flex-1 space-y-1">
+              <label
+                htmlFor={`${id}-${set.id}`}
+                className="min-w-0 flex-1 space-y-1"
+              >
                 <span className="text-xs">変更する項目</span>
-                <select
+                <NativeSelect
+                  id={`${id}-${set.id}`}
                   aria-label="セットの変更項目"
-                  className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                  className="w-full text-sm"
                   value={set.field}
                   onChange={(e) => {
                     const field = e.target.value as F;
@@ -114,7 +120,7 @@ export default function VariantSetManager<F extends string, V>({
                       </option>
                     ),
                   )}
-                </select>
+                </NativeSelect>
               </label>
               <Button
                 type="button"

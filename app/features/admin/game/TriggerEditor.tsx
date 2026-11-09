@@ -19,6 +19,7 @@ import {
 } from "~/features/game/triggerVariants";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import DefinitionDeleteButton, {
   pendingDeletionClass,
 } from "./DefinitionDeleteButton";
@@ -251,9 +252,8 @@ export default function TriggerEditor() {
                         />
                       </td>
                       <td className="p-2">
-                        <select
+                        <NativeSelect
                           aria-label="対象"
-                          className="h-9 rounded-md border bg-background px-2"
                           value={t.target ?? ""}
                           onChange={(e) =>
                             patch(t.id, {
@@ -271,12 +271,11 @@ export default function TriggerEditor() {
                               {name}
                             </option>
                           ))}
-                        </select>
+                        </NativeSelect>
                       </td>
                       <td className="p-2">
-                        <select
+                        <NativeSelect
                           aria-label="判定する条件"
-                          className="h-9 rounded-md border bg-background"
                           value={conditionGroup(t.condition, t.stat)}
                           onChange={(e) => {
                             const group = e.target.value;
@@ -317,7 +316,7 @@ export default function TriggerEditor() {
                               {name}
                             </option>
                           ))}
-                        </select>
+                        </NativeSelect>
                       </td>
                       <td className="p-2">
                         <div className="flex items-center gap-2">
@@ -354,10 +353,9 @@ export default function TriggerEditor() {
                           )}
                           {conditionGroup(t.condition) === "state" && (
                             <>
-                              <select
+                              <NativeSelect
                                 aria-label="判定する状態"
                                 required
-                                className="h-9 rounded-md border bg-background px-2"
                                 value={t.state_skill_id ?? ""}
                                 onChange={(e) =>
                                   patch(t.id, {
@@ -384,10 +382,9 @@ export default function TriggerEditor() {
                                     {!skill.enabled && "（無効）"}
                                   </option>
                                 ))}
-                              </select>
-                              <select
+                              </NativeSelect>
+                              <NativeSelect
                                 aria-label="状態の有無"
-                                className="h-9 rounded-md border bg-background px-2"
                                 value={String(stateCondition(t).state_present)}
                                 onChange={(e) =>
                                   patch(t.id, {
@@ -399,7 +396,7 @@ export default function TriggerEditor() {
                               >
                                 <option value="true">あり</option>
                                 <option value="false">なし</option>
-                              </select>
+                              </NativeSelect>
                             </>
                           )}
                           {t.condition === "always" && (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import {
   AdminActionStatus,
   adminFeedback,
@@ -7,6 +7,7 @@ import type { SkillSound } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import ActivationSoundSettings, {
   type ActivationSoundKey,
 } from "./ActivationSoundSettings";
@@ -238,6 +239,7 @@ const groups = [
 ] as const;
 
 export default function BattleSettingsManager() {
+  const id = useId();
   const [settings, setSettings] = useState<BattleSettings>();
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
@@ -406,12 +408,16 @@ export default function BattleSettingsManager() {
               <section aria-label="行動順" className="rounded-lg border p-4">
                 <h3 className="mb-3 font-medium">行動順</h3>
                 <div className="flex flex-wrap items-end gap-6">
-                  <label className="grid gap-2 text-xs text-muted-foreground">
+                  <label
+                    htmlFor={`${id}-speed-formula`}
+                    className="grid gap-2 text-xs text-muted-foreground"
+                  >
                     速さの計算方式
-                    <select
+                    <NativeSelect
+                      id={`${id}-speed-formula`}
                       form="game-settings"
                       aria-label="速さの計算方式"
-                      className="h-9 rounded-md border bg-background px-3 text-sm text-foreground"
+                      className="px-3 text-sm text-foreground"
                       value={settings.speed_formula}
                       onChange={(event) =>
                         setSettings({
@@ -424,7 +430,7 @@ export default function BattleSettingsManager() {
                     >
                       <option value="sqrt">平方根</option>
                       <option value="linear">比例</option>
-                    </select>
+                    </NativeSelect>
                   </label>
                   <p className="text-sm">
                     行動間隔 = 12 ÷{" "}
@@ -475,12 +481,16 @@ export default function BattleSettingsManager() {
                       input={(kind) => settingInput(kind, true)}
                       powerFormula={settings.power_formula}
                       powerControls={
-                        <label className="grid gap-2 text-xs text-muted-foreground">
+                        <label
+                          htmlFor={`${id}-power-formula`}
+                          className="grid gap-2 text-xs text-muted-foreground"
+                        >
                           Powerの計算方式
-                          <select
+                          <NativeSelect
+                            id={`${id}-power-formula`}
                             form="game-settings"
                             aria-label="Powerの計算方式"
-                            className="h-9 rounded-md border bg-background px-3 text-sm text-foreground"
+                            className="px-3 text-sm text-foreground"
                             disabled={saving}
                             value={settings.power_formula}
                             onChange={(event) => {
@@ -495,7 +505,7 @@ export default function BattleSettingsManager() {
                           >
                             <option value="sqrt">平方根</option>
                             <option value="log">対数（従来）</option>
-                          </select>
+                          </NativeSelect>
                         </label>
                       }
                     />

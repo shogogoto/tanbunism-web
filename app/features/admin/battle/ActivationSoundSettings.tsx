@@ -3,6 +3,7 @@ import { playBattleSound } from "~/features/game/battleSound";
 import type { SkillSound } from "~/features/game/catalog";
 import { soundLabels } from "~/features/game/soundAssets";
 import { Button } from "~/shared/components/ui/button";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 
 export type ActivationSoundKey =
   | "physical_activation_sound"
@@ -45,17 +46,17 @@ export default memo(function ActivationSoundSettings({
                 {label}
               </label>
               <div className="flex gap-2">
-                <select
+                <NativeSelect
                   form="game-settings"
                   id={key}
                   value={value}
-                  className="h-9 max-w-52 rounded-md border bg-background px-2 text-sm"
+                  className="max-w-52 text-sm"
                   onChange={(event) =>
                     onChange(key, event.target.value as SkillSound)
                   }
                 >
                   {options}
-                </select>
+                </NativeSelect>
                 <Button
                   type="button"
                   variant="outline"

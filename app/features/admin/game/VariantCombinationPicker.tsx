@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { SkillTemplate } from "~/features/game/catalog";
 import type { SharedVariantSet } from "~/features/game/variantCore";
 import {
@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/shared/components/ui/dialog";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 
 export default function VariantCombinationPicker({
   template,
@@ -61,6 +62,7 @@ export function VariantCombinationDialog({
   buttonText?: string;
   onChoose: (selections: VariantSelection[]) => void;
 }) {
+  const id = useId();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<VariantSelection[]>([]);
   const [error, setError] = useState<string>();
@@ -102,11 +104,12 @@ export function VariantCombinationDialog({
           </p>
         )}
         {attached.map((set) => (
-          <label key={set.id} className="space-y-1">
+          <label key={set.id} htmlFor={`${id}-${set.id}`} className="space-y-1">
             <span className="text-sm">{set.name}</span>
-            <select
+            <NativeSelect
+              id={`${id}-${set.id}`}
               aria-label={set.name}
-              className="h-9 w-full rounded-md border bg-background px-2"
+              className="w-full"
               value={selected.find((s) => s.set_id === set.id)?.value_id ?? ""}
               onChange={(e) =>
                 setSelected([
@@ -123,7 +126,7 @@ export function VariantCombinationDialog({
                   {v.name}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
         ))}
         <Button

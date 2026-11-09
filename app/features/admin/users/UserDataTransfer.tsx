@@ -10,6 +10,7 @@ import {
 } from "~/shared/components/ui/dialog";
 import { Input } from "~/shared/components/ui/input";
 import { Label } from "~/shared/components/ui/label";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import {
   type AdminUserItem,
   type UserTransferPreview,
@@ -102,11 +103,11 @@ export default function UserDataTransfer({
         <p className="break-all text-sm">移行元: {source.email}</p>
         <div className="space-y-2">
           <Label htmlFor="transfer-target">移行先ユーザー</Label>
-          <select
+          <NativeSelect
             id="transfer-target"
             value={targetId}
             disabled={busy}
-            className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+            className="w-full text-sm"
             onChange={(event) => {
               setTargetId(event.target.value);
               setPreview(undefined);
@@ -123,7 +124,7 @@ export default function UserDataTransfer({
                   {user.email}
                 </option>
               ))}
-          </select>
+          </NativeSelect>
         </div>
         <Button
           variant="outline"

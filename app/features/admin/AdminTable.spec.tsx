@@ -1,12 +1,56 @@
 import { render, screen } from "@testing-library/react";
-import { expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { expect, it, vi } from "vitest";
 import { Table } from "~/shared/components/ui/table";
 import {
   AdminNativeTable,
   AdminTable,
+  AdminTableAddRow,
   AdminTableFrame,
   AdminTableSection,
 } from "./AdminTable";
+
+it.each([false, true])(
+  "adds table rows without submitting a form (compact=%s)",
+  async (compact) => {
+    const add = vi.fn();
+    const submit = vi.fn((event) => event.preventDefault());
+    render(
+      <form onSubmit={submit}>
+        <AdminNativeTable>
+          <tbody>
+            <AdminTableAddRow
+              colSpan={5}
+              label="追加"
+              onClick={add}
+              compact={compact}
+            />
+          </tbody>
+        </AdminNativeTable>
+      </form>,
+    );
+    const button = screen.getByRole("button", { name: "追加" });
+    expect(button.closest("td")).toHaveAttribute("colspan", "5");
+    await userEvent.setup().click(button);
+    expect(add).toHaveBeenCalledOnce();
+    expect(submit).not.toHaveBeenCalled();
+  },
+);
+
+it("keeps unavailable add actions disabled", async () => {
+  const add = vi.fn();
+  render(
+    <AdminNativeTable>
+      <tfoot>
+        <AdminTableAddRow colSpan={3} label="追加" onClick={add} disabled />
+      </tfoot>
+    </AdminNativeTable>,
+  );
+  const button = screen.getByRole("button", { name: "追加" });
+  expect(button).toBeDisabled();
+  await userEvent.setup().click(button);
+  expect(add).not.toHaveBeenCalled();
+});
 
 it("keeps a table heading in the same content-width section as its frame", () => {
   render(

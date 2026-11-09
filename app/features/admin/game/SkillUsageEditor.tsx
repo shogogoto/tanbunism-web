@@ -15,6 +15,7 @@ import {
 } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 
 /** Usage permissions and quiz policy belong to the consumer, not the effect. */
 export default function SkillUsageEditor() {
@@ -165,8 +166,7 @@ export default function SkillUsageEditor() {
                             }
                           >
                             <td>
-                              <select
-                                className="h-9 rounded-md border bg-background px-2"
+                              <NativeSelect
                                 aria-label="使用スキル"
                                 value={u.skill_id}
                                 onChange={(e) =>
@@ -184,7 +184,7 @@ export default function SkillUsageEditor() {
                                       {s.name}
                                     </option>
                                   ))}
-                              </select>
+                              </NativeSelect>
                             </td>
                             {specialty && (
                               <>

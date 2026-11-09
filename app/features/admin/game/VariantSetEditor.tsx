@@ -6,6 +6,7 @@ import {
 import type { TemplateOverride } from "~/features/game/templateVariants";
 import type { VariantSetValue } from "~/features/game/variantSets";
 import { Input } from "~/shared/components/ui/input";
+import { NativeSelect } from "~/shared/components/ui/native-select";
 import DurationInput from "./DurationInput";
 import VariantSetManager from "./VariantSetManager";
 
@@ -65,7 +66,6 @@ export const variantSetFields: Record<TemplateOverride, FieldConfig> = {
   on_wrong: { name: "誤答時の効果" },
 };
 
-const selectClass = "h-9 min-w-0 rounded-md border bg-background px-2 text-sm";
 export default function VariantSetEditor({
   catalog,
   onChange,
@@ -93,9 +93,9 @@ export default function VariantSetEditor({
         if (field === "on_wrong")
           return (
             <div className="space-y-1">
-              <select
+              <NativeSelect
                 aria-label="誤答タイプ"
-                className={selectClass}
+                className="min-w-0 text-sm"
                 value={
                   typeof value === "object" ? String(value.type) : "fizzle"
                 }
@@ -110,7 +110,7 @@ export default function VariantSetEditor({
                 <option value="fizzle">不発</option>
                 <option value="counter">反撃</option>
                 <option value="reduced">軽減</option>
-              </select>
+              </NativeSelect>
               {typeof value === "object" && value.type === "reduced" && (
                 <Input
                   aria-label="軽減効果の値"
@@ -134,9 +134,9 @@ export default function VariantSetEditor({
             />
           );
         return options ? (
-          <select
+          <NativeSelect
             aria-label="セットの値"
-            className={selectClass}
+            className="min-w-0 text-sm"
             value={String(value)}
             onChange={(e) => onValue(e.target.value)}
           >
@@ -145,7 +145,7 @@ export default function VariantSetEditor({
                 {name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         ) : (
           <Input
             aria-label="セットの値"
