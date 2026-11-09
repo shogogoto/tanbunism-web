@@ -36,6 +36,7 @@ import {
 } from "~/shared/components/ui/tabs";
 import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
 import { useGetLearningProgressUserUserIdLearningProgressGet } from "~/shared/generated/gamification/gamification";
+import { useClock } from "~/shared/hooks/useClock";
 import { tanbunDetailCache } from "~/shared/lib/indexed";
 import AchievementsPanel from "./AchievementsPanel";
 import BattleDialog from "./BattleDialog";
@@ -77,7 +78,6 @@ import {
   continueExploring,
   enterDungeon,
   move,
-  newSave,
   recoverAtEntrance,
   resumeEvent,
   visitEntranceFacility,
@@ -97,8 +97,8 @@ import {
 import { gameMenuTabs, isGamePanel } from "./menu";
 import { exploredPlaceCount } from "./progress";
 import { recoverGameState, requestGameState } from "./state";
-import { readGameSave } from "./storage";
 import { chestRegion, openChest, regionChests } from "./treasure";
+import { useAdventureState } from "./useAdventureState";
 
 export default function Game() {
   const { user } = useAuth();
@@ -123,11 +123,24 @@ export function GamePlay({
   playerName,
   player,
 }: { userId: string; playerName?: string; player?: UserReadPublic }) {
-  const [save, setSave] = useState<GameSave>(newSave);
+  const {
+    save,
+    setSave,
+    ready,
+    stateLoaded,
+    legacy,
+    setLegacy,
+    error,
+    setError,
+    feedback,
+    revision,
+    pendingMove,
+    answerRequestPending,
+    localBattle,
+    applyState,
+    persist,
+  } = useAdventureState(userId);
   const [allocationPoints, setAllocationPoints] = useState(0);
-  const [ready, setReady] = useState(false);
-  const [stateLoaded, setStateLoaded] = useState(false);
-  const revision = useRef(0);
   useEffect(() => {
     setAllocationPoints(
       Object.values(save.allocation ?? {}).reduce(
@@ -222,18 +235,12 @@ export function GamePlay({
     setFacility(returnFacility);
   }
   const [showDestinations, setShowDestinations] = useState(false);
-  const [legacy, setLegacy] = useState<GameSave>();
-  const [now, setNow] = useState(Date.now);
+  const { now } = useClock(true, 1000);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [busy, setBusy] = useState(false);
-  const pendingMove = useRef(false);
   const recoveryAttempt = useRef<string | undefined>(undefined);
-  const [error, setError] = useState<string>();
-  const [feedback, setFeedback] = useState<string>();
   const [answerSubmitting, setAnswerSubmitting] = useState(false);
-  const answerRequestPending = useRef(false);
-  const localBattle = useRef<string | null>(null);
   const { data: balance } = useSWR(
     ["game-balance", userId],
     () => gameRequest<GameBalance>("balance"),
@@ -246,11 +253,6 @@ export function GamePlay({
     () => gameRequest<CombatContext>("battle/context"),
     { refreshInterval: 30_000, revalidateOnFocus: true },
   );
-  const applyState = useCallback((state: import("./state").GameState) => {
-    revision.current = state.revision;
-    setSave(state.save);
-    setFeedback(state.save.battleFeedback ?? undefined);
-  }, []);
   const access = useAdventureAccess(userId);
   const {
     data: growth,
@@ -371,7 +373,13 @@ export function GamePlay({
           }
         : current,
     );
-  }, [refreshedContent, refreshResource, refreshRegions, save.content]);
+  }, [
+    refreshedContent,
+    refreshResource,
+    refreshRegions,
+    save.content,
+    setSave,
+  ]);
   const savedMap = run ? dungeonMap(save, run) : undefined;
   const map =
     savedMap && run?.phase === "defeated"
@@ -415,88 +423,10 @@ export function GamePlay({
     () => loadConnectedKnowledge(run?.resourceId ?? "", frontier),
     { revalidateOnFocus: false, shouldRetryOnError: false },
   );
-  useEffect(() => {
-    let active = true;
-    const reload = () => {
-      if (
-        pendingMove.current ||
-        answerRequestPending.current ||
-        localBattle.current
-      )
-        return;
-      void requestGameState()
-        .then(async (state) => {
-          if (state.save.battle?.schedule) {
-            localBattle.current = state.save.battle.id;
-            return state;
-          }
-          if (state.save.battle || state.save.run?.phase === "battle")
-            return gameRequest<import("./state").GameState>(
-              "battle/abandon",
-              {},
-              "POST",
-            );
-          const continued = continueExploring(state.save);
-          if (continued !== state.save)
-            return requestGameState({
-              revision: state.revision,
-              save: continued,
-            });
-          return state;
-        })
-        .then((state) => {
-          if (!active) return;
-          revision.current = state.revision;
-          setSave(state.save);
-          setFeedback(state.save.battleFeedback ?? undefined);
-          setStateLoaded(true);
-          if (!state.revision) {
-            const old = readGameSave(userId);
-            if (old.run || Object.keys(old.clears).length) setLegacy(old);
-          } else setLegacy(undefined);
-          setReady(true);
-        })
-        .catch((cause) => {
-          if (active) {
-            setError(cause.message);
-            setReady(true);
-          }
-        });
-    };
-    reload();
-    window.addEventListener("focus", reload);
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => {
-      active = false;
-      clearInterval(timer);
-      window.removeEventListener("focus", reload);
-    };
-  }, [userId]);
-
   const update = useCallback(
-    async (next: GameSave, consumeAccess = false) => {
-      try {
-        const continued = continueExploring(next);
-        const state = await requestGameState({
-          revision: revision.current,
-          save: continued.run
-            ? { ...continued, content: continued.content ?? content }
-            : continued,
-          consume_access: consumeAccess,
-        });
-        revision.current = state.revision;
-        setSave(state.save);
-        setFeedback(state.save.battleFeedback ?? undefined);
-        return state;
-      } catch (cause) {
-        const latest = await requestGameState();
-        revision.current = latest.revision;
-        setSave(latest.save);
-        setFeedback(latest.save.battleFeedback ?? undefined);
-        throw cause;
-      }
-    },
-    [content],
+    (next: GameSave, consumeAccess = false) =>
+      persist(next, consumeAccess, content),
+    [persist, content],
   );
   useEffect(() => {
     if (!access.data?.available) {
@@ -521,9 +451,7 @@ export function GamePlay({
     const previousRevision = revision.current;
     void recoverGameState()
       .then((state) => {
-        revision.current = state.revision;
-        setSave(state.save);
-        setFeedback(state.save.battleFeedback ?? undefined);
+        applyState(state);
         if (state.revision !== previousRevision)
           void access.mutate().catch(() => undefined);
       })
@@ -539,6 +467,11 @@ export function GamePlay({
     access.data?.next_available_at,
     access.data?.receivedAt,
     access.mutate,
+    applyState,
+    setError,
+    revision,
+    pendingMove,
+    answerRequestPending,
     stateLoaded,
     run,
     busy,
@@ -714,16 +647,14 @@ export function GamePlay({
     setError(undefined);
     try {
       const state = await openChest(revision.current, region);
-      revision.current = state.revision;
-      setSave(state.save);
+      applyState(state);
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "宝箱を開けられませんでした。",
       );
       const state = await requestGameState().catch(() => undefined);
       if (state) {
-        revision.current = state.revision;
-        setSave(state.save);
+        applyState(state);
       }
     } finally {
       pendingMove.current = false;

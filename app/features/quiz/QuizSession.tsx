@@ -1,7 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
-import { useSWRConfig } from "swr";
-import { invalidateGamification } from "~/features/gamification/invalidate";
 import { usePublishReviewProgress } from "~/features/review/ReviewProgress";
 import {
   Alert,
@@ -24,272 +22,54 @@ import {
   findTargetSentenceId,
 } from "./QuizKnowledge";
 import QuizPrompt from "./QuizPrompt";
-import {
-  type QuizChain,
-  type QuizRecommendation,
-  type QuizType,
-  type StudyPlan,
-  answerQuiz,
-  createStudyPlan,
-  listStudyPlans,
-  listStudyResources,
-  prepareAdditionalStudyPlanQuizzes,
-  recommendQuizzes,
-} from "./api";
-import { shuffleOptionIds } from "./optionOrder";
+import type { QuizRecommendation, QuizType, StudyPlan } from "./api";
+import type { QuizResult, SessionRecommendation } from "./quizSessionState";
 import { quizOptionLabel } from "./relationPresentation";
-
-type SessionRecommendation = QuizRecommendation & { optionOrder: string[] };
-
-type LoadState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready" };
-
-type QuizResult = {
-  isCorrect: boolean;
-  chain: QuizChain;
-};
+import { useQuizSession } from "./useQuizSession";
 
 export default function QuizSession({
   planId: selectedPlanId,
 }: { planId?: string } = {}) {
-  const { mutate } = useSWRConfig();
   const [searchParams] = useSearchParams();
-  const requestedPlanId = selectedPlanId ?? searchParams.get("plan");
-  const [plans, setPlans] = useState<StudyPlan[]>([]);
-  const [planId, setPlanId] = useState("");
-  const [recommendations, setRecommendations] = useState<
-    SessionRecommendation[]
-  >([]);
-  const [answers, setAnswers] = useState<Record<string, string[]>>({});
-  const [results, setResults] = useState<Record<string, QuizResult>>({});
-  const [activeQuizIndex, setActiveQuizIndex] = useState(0);
-  const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPreparingRecommendations, setIsPreparingRecommendations] =
-    useState(false);
-  const [preparingQuizType, setPreparingQuizType] = useState<QuizType>();
-  const [preparationError, setPreparationError] = useState<string>();
-  const [submitError, setSubmitError] = useState<string>();
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [isQuickStarting, setIsQuickStarting] = useState(false);
-  const [quickStartError, setQuickStartError] = useState<string>();
+  const {
+    plans,
+    planId,
+    setPlanId,
+    recommendations,
+    answers,
+    results,
+    activeQuizIndex,
+    setActiveQuizIndex,
+    loadState,
+    isSubmitting,
+    isPreparingRecommendations,
+    preparingQuizType,
+    preparationError,
+    submitError,
+    isQuickStarting,
+    quickStartError,
+    quickStart,
+    toggleOption,
+    submitAnswers,
+    retryIncorrectQuizzes,
+    requestNew,
+    unansweredCount,
+    allAnswered,
+    isComplete,
+    answeredCount,
+  } = useQuizSession(selectedPlanId ?? searchParams.get("plan"));
   const sessionRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadPlans() {
-      try {
-        const loadedPlans = await listStudyPlans();
-        if (!active) return;
-        setPlans(loadedPlans);
-        if (
-          requestedPlanId &&
-          !loadedPlans.some(({ uid }) => uid === requestedPlanId)
-        ) {
-          setLoadState({
-            status: "error",
-            message: "選択した学習計画が見つかりません。",
-          });
-          return;
-        }
-        setPlanId(
-          loadedPlans.some(({ uid }) => uid === requestedPlanId)
-            ? (requestedPlanId ?? "")
-            : (loadedPlans[0]?.uid ?? ""),
-        );
-        // Mark the pending recommendation load before exposing the ready UI.
-        // Otherwise the first render briefly looks like a completed empty result.
-        setIsPreparingRecommendations(loadedPlans.length > 0);
-        setLoadState({ status: "ready" });
-      } catch (error) {
-        if (!active) return;
-        setLoadState({
-          status: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : "学習計画を取得できませんでした。",
-        });
-      }
-    }
-
-    loadPlans();
-    return () => {
-      active = false;
-    };
-  }, [requestedPlanId]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey explicitly reloads recommendations.
-  useEffect(() => {
-    if (!planId) {
-      setRecommendations([]);
-      setIsPreparingRecommendations(false);
-      return;
-    }
-
-    const plan = plans.find(({ uid }) => uid === planId);
-    if (!plan) return;
-    const planQuizTypes = [
-      ...plan.quiz_types.filter((quizType) => quizType !== "pair2rel"),
-      ...plan.quiz_types.filter((quizType) => quizType === "pair2rel"),
-    ];
-
-    let active = true;
-    const controller = new AbortController();
-    setLoadState({ status: "ready" });
-    setIsPreparingRecommendations(true);
-    setPreparationError(undefined);
-    setRecommendations([]);
-    setAnswers({});
-    setResults({});
-    setActiveQuizIndex(0);
-    setSubmitError(undefined);
-
-    async function loadRecommendations() {
-      let accumulated: SessionRecommendation[] = [];
-      const errors: string[] = [];
-      for (const quizType of planQuizTypes) {
-        if (!active) return;
-        setPreparingQuizType(quizType);
-        try {
-          const loaded = await recommendQuizzes(planId, quizType, {
-            generateMissing: false,
-            signal: controller.signal,
-          });
-          if (!active) return;
-          const byId = new Map(
-            [
-              ...accumulated,
-              ...loaded.map((item) => ({
-                ...item,
-                optionOrder:
-                  accumulated.find(
-                    (previous) => previous.quiz.quiz_id === item.quiz.quiz_id,
-                  )?.optionOrder ??
-                  shuffleOptionIds(Object.keys(item.quiz.options)),
-              })),
-            ].map((item) => [item.quiz.quiz_id, item]),
-          );
-          accumulated = [...byId.values()];
-          setRecommendations(accumulated);
-        } catch (error) {
-          if (!active || controller.signal.aborted) return;
-          errors.push(
-            error instanceof Error
-              ? error.message
-              : `${quizType}のクイズを取得できませんでした。`,
-          );
-        }
-      }
-      if (!active) return;
-      setPreparingQuizType(undefined);
-      setIsPreparingRecommendations(false);
-      if (errors.length > 0 && accumulated.length === 0) {
-        setLoadState({
-          status: "error",
-          message: errors[0],
-        });
-      } else if (errors.length > 0) {
-        setPreparationError(
-          `${errors.length}形式のクイズを取得できませんでした。取得済みの問題は回答できます。`,
-        );
-      }
-    }
-
-    loadRecommendations();
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [planId, plans, refreshKey]);
 
   useEffect(() => {
     if (recommendations.length > 0) sessionRef.current?.focus();
   }, [recommendations]);
 
-  function toggleOption(quizId: string, optionId: string) {
-    if (results[quizId]) return;
-    setAnswers((current) => {
-      const selected = current[quizId] ?? [];
-      return {
-        ...current,
-        [quizId]: selected.includes(optionId)
-          ? selected.filter((id) => id !== optionId)
-          : [...selected, optionId],
-      };
-    });
-  }
-
-  async function submitAnswers() {
-    const pending = recommendations.filter(
-      ({ quiz }) => results[quiz.quiz_id] === undefined,
-    );
-    if (pending.length === 0) return;
-    setIsSubmitting(true);
-    setSubmitError(undefined);
-
-    const settled = await Promise.allSettled(
-      pending.map(async ({ quiz }) => ({
-        quizId: quiz.quiz_id,
-        chain: await answerQuiz(quiz.quiz_id, answers[quiz.quiz_id] ?? []),
-      })),
-    );
-    const succeeded: Record<string, QuizResult> = {};
-    let failed = 0;
-    for (const result of settled) {
-      if (result.status === "rejected") {
-        failed += 1;
-        continue;
-      }
-      succeeded[result.value.quizId] = {
-        chain: result.value.chain,
-        isCorrect: result.value.chain.answers?.[0]?.is_correct ?? false,
-      };
-    }
-    setResults((current) => ({ ...current, ...succeeded }));
-    if (Object.keys(succeeded).length > 0) {
-      void invalidateGamification(mutate, { preserveData: true }).catch(
-        () => undefined,
-      );
-    }
-    if (failed > 0) {
-      setSubmitError(
-        `${failed}問の回答を送信できませんでした。未送信の問題だけ再実行できます。`,
-      );
-    }
-    setIsSubmitting(false);
-  }
-
-  function retryIncorrectQuizzes() {
-    setRecommendations((current) =>
-      current.filter(({ quiz }) => results[quiz.quiz_id]?.isCorrect === false),
-    );
-    setAnswers({});
-    setResults({});
-    setActiveQuizIndex(0);
-    setSubmitError(undefined);
-  }
-
-  const unansweredCount = recommendations.filter(({ quiz }) => {
-    if (results[quiz.quiz_id]) return false;
-    return (
-      !quiz.no_correct_option && (answers[quiz.quiz_id]?.length ?? 0) === 0
-    );
-  }).length;
-  const allAnswered = recommendations.length > 0 && unansweredCount === 0;
-  const isComplete =
-    recommendations.length > 0 &&
-    recommendations.every(({ quiz }) => results[quiz.quiz_id] !== undefined);
   const reviewDay = useRecommendationDay();
   usePublishReviewProgress(
     "quiz",
     `plan:${planId}`,
     reviewDay,
-    recommendations.filter(({ quiz }) => results[quiz.quiz_id] !== undefined)
-      .length,
+    answeredCount,
     recommendations.length,
     !!planId && loadState.status === "ready",
   );
@@ -334,35 +114,6 @@ export default function QuizSession({
     if (event.key !== "Enter") return;
     event.preventDefault();
     if (allAnswered && !isSubmitting && !isComplete) void submitAnswers();
-  }
-
-  async function quickStart() {
-    setIsQuickStarting(true);
-    setQuickStartError(undefined);
-    try {
-      const resources = await listStudyResources();
-      if (resources.length === 0) {
-        throw new Error("学習対象にできるResourceがありません。");
-      }
-      const plan = await createStudyPlan({
-        name: "おまかせ",
-        resource_ids: resources.slice(0, 20).map(({ uid }) => uid),
-        quiz_types: ["term2sent", "sent2term", "rel2pair", "pair2rel"],
-        n_quiz: 5,
-        n_option: 4,
-      });
-      await prepareAdditionalStudyPlanQuizzes(plan.uid, plan.n_quiz);
-      setPlans([plan]);
-      setPlanId(plan.uid);
-    } catch (caught) {
-      setQuickStartError(
-        caught instanceof Error
-          ? caught.message
-          : "おまかせ学習を開始できませんでした。",
-      );
-    } finally {
-      setIsQuickStarting(false);
-    }
   }
 
   if (loadState.status === "loading") {
@@ -532,7 +283,7 @@ export default function QuizSession({
             ({ quiz }) => results[quiz.quiz_id].isCorrect,
           )}
           onRetryIncorrect={retryIncorrectQuizzes}
-          onRequestNew={() => setRefreshKey((current) => current + 1)}
+          onRequestNew={requestNew}
         />
       )}
     </div>
