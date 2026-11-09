@@ -97,8 +97,9 @@ import {
 import { gameMenuTabs, isGamePanel } from "./menu";
 import { exploredPlaceCount } from "./progress";
 import { recoverGameState, requestGameState } from "./state";
-import { chestRegion, openChest, regionChests } from "./treasure";
+import { chestRegion, regionChests } from "./treasure";
 import { useAdventureState } from "./useAdventureState";
+import { useExplorationActions } from "./useExplorationActions";
 
 export default function Game() {
   const { user } = useAuth();
@@ -123,6 +124,7 @@ export function GamePlay({
   playerName,
   player,
 }: { userId: string; playerName?: string; player?: UserReadPublic }) {
+  const adventure = useAdventureState(userId);
   const {
     save,
     setSave,
@@ -139,7 +141,7 @@ export function GamePlay({
     localBattle,
     applyState,
     persist,
-  } = useAdventureState(userId);
+  } = adventure;
   const [allocationPoints, setAllocationPoints] = useState(0);
   useEffect(() => {
     setAllocationPoints(
@@ -640,27 +642,6 @@ export function GamePlay({
       setBusy(false);
     }
   }
-  async function visitChest(region: number) {
-    if (pendingMove.current || busy || !run) return;
-    pendingMove.current = true;
-    setBusy(true);
-    setError(undefined);
-    try {
-      const state = await openChest(revision.current, region);
-      applyState(state);
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "宝箱を開けられませんでした。",
-      );
-      const state = await requestGameState().catch(() => undefined);
-      if (state) {
-        applyState(state);
-      }
-    } finally {
-      pendingMove.current = false;
-      setBusy(false);
-    }
-  }
   async function switchDungeon(resourceId: string) {
     if (pendingMove.current || answerRequestPending.current) return;
     if (run?.phase === "battle" || feedback) return;
@@ -786,50 +767,18 @@ export function GamePlay({
       setBusy(false);
     }
   }
-  async function recoverAtSanctuary() {
-    if (!run || busy || pendingMove.current) return;
-    const recovered = recoverAtEntrance(save);
-    if (recovered === save) return;
-    pendingMove.current = true;
-    setBusy(true);
-    setError(undefined);
-    try {
-      await update(recovered);
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "回復場所へ移動できませんでした。",
-      );
-    } finally {
-      pendingMove.current = false;
-      setBusy(false);
-    }
-  }
+  const {
+    recoverAtSanctuary,
+    visitChest,
+    visitFacility: enterFacility,
+  } = useExplorationActions({
+    adventure,
+    busy,
+    setBusy,
+    update,
+  });
   async function visitFacility(next: "shop" | "library") {
-    if (!stateLoaded || busy || pendingMove.current || feedback || save.battle)
-      return;
-    // Before the first adventure there is no move budget to consume.
-    if (!run) {
-      setFacility(next);
-      return;
-    }
-    const visited = visitEntranceFacility(save);
-    if (visited === save) return;
-    pendingMove.current = true;
-    setBusy(true);
-    setError(undefined);
-    try {
-      await update(visited);
-      setFacility(next);
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "施設へ移動できませんでした。",
-      );
-    } finally {
-      pendingMove.current = false;
-      setBusy(false);
-    }
+    if (await enterFacility()) setFacility(next);
   }
   async function challengeBoss(level: number) {
     if (busy || pendingMove.current || !run) return;
