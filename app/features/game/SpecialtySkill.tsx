@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/shared/components/ui/dialog";
+import { useClock } from "~/shared/hooks/useClock";
 import { gameRequest } from "./battle";
 import type { GameSave } from "./domain";
 import { type Direction, movePanelFocus } from "./spatialFocus";
@@ -49,7 +50,7 @@ export default function SpecialtySkill({
   const [session, setSession] = useState<Session>();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [now, setNow] = useState(Date.now);
+  const { now } = useClock(Boolean(session));
   const [error, setError] = useState<string>();
   const pending = useRef(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -133,10 +134,6 @@ export default function SpecialtySkill({
       onBusy(false);
     }
   }
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 100);
-    return () => clearInterval(timer);
-  }, []);
   useEffect(() => {
     if (session && remaining === 0 && !error && !answered.current)
       void answer(null);

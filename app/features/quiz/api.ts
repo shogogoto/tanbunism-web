@@ -1,4 +1,5 @@
 import { recommendationDay } from "~/shared/lib/recommendationDay";
+import { API_BASE_URL, requestJson } from "~/shared/lib/requestJson";
 import { invalidateQuizCache, quizCachePolicy, withQuizCache } from "./cache";
 import {
   answerQuizApiQuizAnswerQuizIdPost,
@@ -141,9 +142,6 @@ export type QuizCacheOptions = {
   waitForRefresh?: boolean;
   forceRefresh?: boolean;
 };
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
 
 export async function reportQuizIssue(
   quizId: string,
@@ -424,37 +422,11 @@ async function requestStudyPlanPreparation<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    credentials: "include",
+  return requestJson<T>(`${API_BASE_URL}${path}`, init, {
+    errorMessage: "クイズを準備できませんでした。",
+    invalidJsonMessage: "クイズAPIからJSONではない応答が返されました。",
+    createError: (message, status) => new QuizApiError(message, status),
   });
-  const body = await response.text();
-  let data: unknown;
-  try {
-    data = body ? JSON.parse(body) : undefined;
-  } catch {
-    throw new QuizApiError(
-      "クイズAPIからJSONではない応答が返されました。",
-      response.status,
-    );
-  }
-  if (!response.ok) {
-    const detail =
-      typeof data === "object" && data !== null && "detail" in data
-        ? data.detail
-        : undefined;
-    const message =
-      typeof detail === "string"
-        ? detail
-        : typeof detail === "object" &&
-            detail !== null &&
-            "message" in detail &&
-            typeof detail.message === "string"
-          ? detail.message
-          : "クイズを準備できませんでした。";
-    throw new QuizApiError(message, response.status);
-  }
-  return data as T;
 }
 
 export async function recommendQuizzes(

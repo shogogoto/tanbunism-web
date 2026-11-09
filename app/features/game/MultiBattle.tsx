@@ -10,6 +10,7 @@ import QuizAttempt from "~/features/quiz/QuizAttempt";
 import QuizPreviewPrompt from "~/features/quiz/QuizPreviewPrompt";
 import { Button } from "~/shared/components/ui/button";
 import type { UserReadPublic } from "~/shared/generated/fastAPI.schemas";
+import { useClock } from "~/shared/hooks/useClock";
 import BattleDialog from "./BattleDialog";
 import EndTurnAction from "./EndTurnAction";
 import EnemyAvatar from "./EnemyAvatar";
@@ -110,7 +111,6 @@ function LegacyMultiBattle({
   const pendingAnswerFocus = useRef(false);
   const [frozenRemainingMs, setFrozenRemainingMs] = useState<number>();
   const [active, setActive] = useState(0);
-  const [now, setNow] = useState(Date.now);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<TurnResult>();
@@ -235,16 +235,13 @@ function LegacyMultiBattle({
       pendingAnswerFocus.current = false;
     }
   }, [active, busy, result, focusAnswerChoice]);
+  const { now } = useClock(!result && frozenRemainingMs === undefined);
   const remainingMs =
     frozenRemainingMs ??
     (run?.answerDeadline
       ? Math.max(0, run.answerDeadline - now - clockOffset)
       : undefined);
   const remaining = Math.ceil((remainingMs ?? 0) / 1000);
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 100);
-    return () => clearInterval(timer);
-  }, []);
   async function submitTurn(retreat = false, input?: TurnInput) {
     if (!battle || !run || sending.current || result) return;
     const damageKey = `${battle.id}:${battle.turn}`;

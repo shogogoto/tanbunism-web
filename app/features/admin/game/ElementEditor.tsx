@@ -1,8 +1,4 @@
-import { useEffect, useState } from "react";
-import {
-  AdminActionStatus,
-  adminFeedback,
-} from "~/features/admin/AdminFeedback";
+import { AdminActionStatus } from "~/features/admin/AdminFeedback";
 import {
   AdminNativeTable,
   AdminTableAddRow,
@@ -14,32 +10,28 @@ import {
   type ElementDefinition,
   type GameCatalog,
   defaultElements,
-  requestGameCatalog,
 } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
+import { useGameCatalogDraft } from "./useGameCatalogDraft";
+
+const withElements = (catalog: GameCatalog) => ({
+  ...catalog,
+  elements: catalog.elements ?? defaultElements,
+});
 
 export default function ElementEditor() {
-  const [catalog, setCatalog] = useState<GameCatalog>();
-  const [error, setError] = useState<string>();
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
-  useEffect(() => {
-    let active = true;
-    requestGameCatalog(true)
-      .then((value) => {
-        if (active)
-          setCatalog({ ...value, elements: value.elements ?? defaultElements });
-      })
-      .catch((cause) => {
-        if (active) setError(cause.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const {
+    catalog,
+    setCatalog,
+    error,
+    saving: busy,
+    saved,
+    markChanged,
+    save,
+  } = useGameCatalogDraft(withElements);
   function update(id: string, patch: Partial<ElementDefinition>) {
-    setSaved(false);
+    markChanged();
     setCatalog((current) =>
       current
         ? {
@@ -68,19 +60,7 @@ export default function ElementEditor() {
           className="space-y-4"
           onSubmit={async (event) => {
             event.preventDefault();
-            if (busy) return;
-            setBusy(true);
-            setError(undefined);
-            setSaved(false);
-            try {
-              setCatalog(await requestGameCatalog(true, catalog));
-              setSaved(true);
-              adminFeedback.success();
-            } catch (cause) {
-              setError(adminFeedback.error(cause, "保存できませんでした。"));
-            } finally {
-              setBusy(false);
-            }
+            await save();
           }}
         >
           <fieldset disabled={busy} className="min-w-0">
@@ -153,7 +133,7 @@ export default function ElementEditor() {
                     colSpan={4}
                     label="属性を追加"
                     onClick={() => {
-                      setSaved(false);
+                      markChanged();
                       setCatalog({
                         ...catalog,
                         elements: [

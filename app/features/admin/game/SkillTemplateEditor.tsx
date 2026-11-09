@@ -15,7 +15,6 @@ import {
 } from "~/features/game/catalog";
 import {
   templateDescendants,
-  templateOverrideFields,
   templatePowerFields,
 } from "~/features/game/templateVariants";
 import { Button } from "~/shared/components/ui/button";
@@ -26,6 +25,7 @@ import RowOrder from "./RowOrder";
 import SortableAdminTable from "./SortableAdminTable";
 import { SortableRow } from "./SortableRows";
 import TemplateVariantControls from "./TemplateVariantControls";
+import { applyTemplatePatch, templateDraftRows } from "./templateDraft";
 import {
   changeDetail,
   changeKind,
@@ -86,24 +86,7 @@ export default function SkillTemplateEditor({
       ),
     );
   }
-  const rows = templates.map((template) =>
-    normalizeSkill({
-      ...template,
-      target:
-        template.target ??
-        (template.effect === "ailment" &&
-        ["regen", "refresh"].includes(template.ailment ?? "poison")
-          ? "self"
-          : ["attack", "damage_mp", "debuff", "ailment"].includes(
-                template.effect,
-              )
-            ? "enemy"
-            : "self"),
-      mp_cost: 0,
-      icon: "sparkles",
-      enabled: true,
-    }),
-  );
+  const rows = templateDraftRows(templates);
   const visibleRows = rows.filter((skill) =>
     variantId
       ? skill.id === variantId
@@ -122,48 +105,7 @@ export default function SkillTemplateEditor({
     return typeof value === "string" || typeof value === "number" ? value : "";
   };
   function update(id: string, patch: SkillPatch) {
-    commit(
-      rows.map((skill) => {
-        const source = toTemplate(skill);
-        const result = skillTemplate(
-          skill.id === id
-            ? normalizeSkill({
-                ...skill,
-                ...patch,
-                ...(patch.amount !== undefined &&
-                isStatus(skill) &&
-                skill.on_wrong?.type === "reduced" &&
-                "amount" in skill.on_wrong
-                  ? { on_wrong: { ...skill.on_wrong, amount: patch.amount } }
-                  : {}),
-              })
-            : skill,
-          source,
-        );
-        return {
-          ...result,
-          ...(source.base_template_id
-            ? {
-                base_template_id: source.base_template_id,
-                override_fields: [
-                  ...new Set([
-                    ...(source.override_fields ?? []),
-                    ...(skill.id === id
-                      ? templateOverrideFields.filter(
-                          (key) =>
-                            JSON.stringify(
-                              skill[key as keyof SkillDefinition],
-                            ) !==
-                            JSON.stringify(result[key as keyof typeof result]),
-                        )
-                      : []),
-                  ]),
-                ].filter((key) => key in result),
-              }
-            : {}),
-        };
-      }),
-    );
+    commit(applyTemplatePatch(templates, id, patch));
   }
   return (
     <AdminTableSection

@@ -20,6 +20,7 @@ npm run dev # Your application will be available at `http://localhost:5173`.
 ## UI implementation
 
 UI components and Tailwind conventions: [UI component guide](docs/ui-components.md).
+State, transport and feature boundaries: [Frontend architecture](docs/frontend-architecture.md).
 
 ## Building for Production
 

@@ -38,21 +38,30 @@ export function pathsToEnd(
   predicate: EdgePredicate,
   accessor: Accessor,
 ) {
-  const ls: string[][] = [];
-
-  function _f(ns: string[]) {
-    const last = ns.at(-1);
-    if (!last) throw new Error();
-    const accs = accessor(g, last, predicate);
-    if (accs.length === 0 && ns.length !== 1) {
-      ls.push(ns); // 自身のみのpathは除外
+  const paths: string[][] = [];
+  const path = [start];
+  const active = new Set(path);
+  const stack = [
+    { node: start, next: accessor(g, start, predicate), index: 0 },
+  ];
+  // Track nodes per path, not globally: converging branches are distinct paths.
+  // Explicit frames also avoid a call-stack overflow on deeply nested notes.
+  while (stack.length) {
+    const frame = stack[stack.length - 1];
+    if (frame.index === frame.next.length) {
+      if (frame.next.length === 0 && path.length > 1) paths.push([...path]);
+      stack.pop();
+      path.pop();
+      active.delete(frame.node);
+      continue;
     }
-    for (const a of accs) {
-      _f([...ns, a]);
-    }
+    const next = frame.next[frame.index++];
+    if (active.has(next)) continue;
+    active.add(next);
+    path.push(next);
+    stack.push({ node: next, next: accessor(g, next, predicate), index: 0 });
   }
-  _f([start]);
-  return ls;
+  return paths;
 }
 
 export function operatorGraph(g: Graph, edgeType: EdgeType) {

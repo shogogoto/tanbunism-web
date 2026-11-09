@@ -4,6 +4,7 @@ import QuizAttempt from "~/features/quiz/QuizAttempt";
 import QuizPreviewPrompt from "~/features/quiz/QuizPreviewPrompt";
 import { useTanbunPreview } from "~/features/tanbun/detail/Preview";
 import { Button } from "~/shared/components/ui/button";
+import { useClock } from "~/shared/hooks/useClock";
 import ActionQueue from "./ActionQueue";
 import BattleDialog from "./BattleDialog";
 import BattleFormation from "./BattleFormation";
@@ -39,7 +40,6 @@ export default function ScheduledBattle({
   if (marker) displayMarker.current = marker;
   const schedule = marker?.schedule ?? displayMarker.current?.schedule;
   const run = save.run;
-  const [now, setNow] = useState(Date.now);
   const [frozenRemaining, setFrozenRemaining] = useState<number>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -75,6 +75,9 @@ export default function ScheduledBattle({
     : undefined;
   const quiz = quizIndex === undefined ? undefined : content.quizzes[quizIndex];
   const feedback = Boolean(save.battleFeedback);
+  const { now, refresh: refreshClock } = useClock(
+    !feedback && frozenRemaining === undefined,
+  );
   const remaining =
     frozenRemaining ??
     (!feedback && run?.answerDeadline
@@ -82,11 +85,6 @@ export default function ScheduledBattle({
       : undefined);
   const latest = useRef(save);
   latest.current = save;
-  useEffect(() => {
-    if (feedback || frozenRemaining !== undefined) return;
-    const timer = setInterval(() => setNow(Date.now()), 100);
-    return () => clearInterval(timer);
-  }, [feedback, frozenRemaining]);
 
   async function submit(selected: string[] | null, retreat = false) {
     if (!marker || !run || pending.current || feedback) return;
@@ -190,7 +188,7 @@ export default function ScheduledBattle({
       setResult(undefined);
       lastResult.current = undefined;
       setSelection("yes");
-      setNow(Date.now());
+      refreshClock();
       setFrozenRemaining(undefined);
       onSaved(state);
     } catch (cause) {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AdminActionStatus,
   adminFeedback,
@@ -12,7 +12,6 @@ import {
   type SkillPatch,
   normalizeSkill,
   prepareSkillCatalog,
-  requestGameCatalog,
   resolveCatalogTemplates,
 } from "~/features/game/catalog";
 import { rebindEffectChances } from "~/features/game/effectChances";
@@ -22,6 +21,7 @@ import DefinitionTables from "./DefinitionTables";
 import ShopTable from "./ShopTable";
 import SkillTables from "./SkillTables";
 import SkillTemplateEditor from "./SkillTemplateEditor";
+import { useGameCatalogDraft } from "./useGameCatalogDraft";
 
 type Kind = "skills" | "items" | "enemies" | "shop";
 const names = {
@@ -31,40 +31,32 @@ const names = {
   shop: "ショップ",
 };
 export default function CatalogEditor({ kind }: { kind: Kind }) {
-  const [catalog, setCatalog] = useState<GameCatalog>();
+  const normalize = useCallback(
+    (value: GameCatalog) =>
+      kind === "skills"
+        ? prepareSkillCatalog(value)
+        : resolveCatalogTemplates(value),
+    [kind],
+  );
+  const {
+    catalog,
+    setCatalog,
+    error,
+    setError,
+    saved,
+    saving,
+    markChanged,
+    save: saveDraft,
+  } = useGameCatalogDraft(normalize);
   const [deletions, setDeletions] = useState(new Set<string>());
   const [enemyDeletions, setEnemyDeletions] = useState(new Set<string>());
-  const [error, setError] = useState<string>();
-  const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
   useEffect(() => {
-    let active = true;
+    if (catalog) return;
     setDeletions(new Set());
     setEnemyDeletions(new Set());
-    void requestGameCatalog(true)
-      .then((value) => {
-        if (active)
-          setCatalog(
-            kind === "skills"
-              ? prepareSkillCatalog(value)
-              : resolveCatalogTemplates(value),
-          );
-      })
-      .catch((cause) => {
-        if (active) setError(cause.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, [kind]);
+  }, [catalog]);
   function change(next: GameCatalog) {
-    setCatalog(
-      kind === "skills"
-        ? prepareSkillCatalog(next)
-        : resolveCatalogTemplates(next),
-    );
-    setSaved(false);
-    setError(undefined);
+    setCatalog(next);
   }
   const update = (
     id: string,
@@ -127,35 +119,25 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
       );
       return;
     }
-    setSaving(true);
-    setError(undefined);
-    setSaved(false);
-    try {
-      const next =
-        deletions.size || enemyDeletions.size
-          ? {
-              ...catalog,
-              skills: catalog.skills.filter((s) => !deletions.has(s.id)),
-              enemies: catalog.enemies.filter(
-                (enemy) => !enemyDeletions.has(enemy.id),
-              ),
-              player_skills: catalog.player_skills?.filter(
-                (u) => !deletions.has(u.skill_id),
-              ),
-              specialty_skills: catalog.specialty_skills?.filter(
-                (u) => !deletions.has(u.skill_id),
-              ),
-            }
-          : catalog;
-      setCatalog(await requestGameCatalog(true, next));
+    const next =
+      deletions.size || enemyDeletions.size
+        ? {
+            ...catalog,
+            skills: catalog.skills.filter((s) => !deletions.has(s.id)),
+            enemies: catalog.enemies.filter(
+              (enemy) => !enemyDeletions.has(enemy.id),
+            ),
+            player_skills: catalog.player_skills?.filter(
+              (u) => !deletions.has(u.skill_id),
+            ),
+            specialty_skills: catalog.specialty_skills?.filter(
+              (u) => !deletions.has(u.skill_id),
+            ),
+          }
+        : catalog;
+    if (await saveDraft(next)) {
       setDeletions(new Set());
       setEnemyDeletions(new Set());
-      setSaved(true);
-      adminFeedback.success();
-    } catch (cause) {
-      setError(adminFeedback.error(cause, "保存できませんでした。"));
-    } finally {
-      setSaving(false);
     }
   }
   function add(
@@ -295,7 +277,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
                     else next.add(id);
                     return next;
                   });
-                  setSaved(false);
+                  markChanged();
                   setError(undefined);
                 }}
               />
@@ -325,7 +307,7 @@ export default function CatalogEditor({ kind }: { kind: Kind }) {
                     else next.add(id);
                     return next;
                   });
-                  setSaved(false);
+                  markChanged();
                   setError(undefined);
                 }}
               />

@@ -1,12 +1,7 @@
-import { ArrowDown, ArrowUp, Plus } from "lucide-react";
-import type { ReactNode } from "react";
+import { Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
-import useSWR from "swr";
-import { requestGameState } from "~/features/game/state";
-import { useNotifications } from "~/features/notifications/NotificationProvider";
-import Loading from "~/shared/components/Loading";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +13,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/shared/components/ui/alert-dialog";
-import { Badge } from "~/shared/components/ui/badge";
 import { Button } from "~/shared/components/ui/button";
 import {
   Dialog,
@@ -27,32 +21,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/shared/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/shared/components/ui/table";
 import type { StudyPlanDraft } from "~/shared/generated/fastAPI.schemas";
 import { useIsMobile } from "~/shared/hooks/use-mobile";
-import PreparationNotice from "./PreparationNotice";
 import StudyPlanForm from "./StudyPlanForm";
+import StudyPlanList from "./StudyPlanList";
 import {
-  type QuizType,
   type StudyPlan,
-  type StudyPlanPreparationStatus,
-  type StudyResource,
   deleteStudyPlan,
-  listStudyPlanPreparations,
-  listStudyPlans,
-  listStudyResources,
   prepareAdditionalStudyPlanQuizzes,
   prepareSelectedStudyPlans,
   updateStudyPlan,
 } from "./api";
-import { useQuizSWR } from "./useQuizSWR";
+import {
+  type PlanSortColumn as SortColumn,
+  type PlanSort as SortState,
+  filterStudyPlans,
+  normalizeResourceId,
+  sortStudyPlans,
+} from "./studyPlanView";
+import { useStudyPlanData } from "./useStudyPlanData";
 
 const allQuizTypes: StudyPlanDraft["quiz_types"] = [
   "term2sent",
@@ -61,100 +48,20 @@ const allQuizTypes: StudyPlanDraft["quiz_types"] = [
   "pair2rel",
 ];
 
-const quizTypeLabels: Record<QuizType, string> = {
-  term2sent: "用語 → 単文",
-  sent2term: "単文 → 用語",
-  rel2pair: "関係 → 単文組",
-  pair2rel: "単文組 → 関係",
-};
-
-const quizTypeColumns: Array<{
-  type: QuizType;
-  from: string;
-  to: string;
-}> = [
-  { type: "sent2term", from: "単文", to: "用語" },
-  { type: "term2sent", from: "用語", to: "単文" },
-  { type: "pair2rel", from: "単文組", to: "関係" },
-  { type: "rel2pair", from: "関係", to: "単文組" },
-];
-
-const emptyPlans: StudyPlan[] = [];
-const emptyResources: StudyResource[] = [];
-const emptyPreparations: StudyPlanPreparationStatus[] = [];
-const PLACES_PER_REGION = 5;
-const normalizeResourceId = (resourceId: string) =>
-  resourceId.replaceAll("-", "").toLowerCase();
-type SortColumn =
-  | "name"
-  | "resource"
-  | "achievement"
-  | "prepared"
-  | "options"
-  | QuizType;
-type SortState = { column: SortColumn; direction: "ascending" | "descending" };
-
-function SortableHeader({
-  children,
-  column,
-  className,
-  sort,
-  onSort,
-}: {
-  children: ReactNode;
-  column: SortColumn;
-  className?: string;
-  sort?: SortState;
-  onSort: (column: SortColumn) => void;
-}) {
-  const direction = sort?.column === column ? sort.direction : "none";
-  const Icon = direction === "ascending" ? ArrowUp : ArrowDown;
-  return (
-    <TableHead className={className} aria-sort={direction}>
-      <button
-        type="button"
-        onClick={() => onSort(column)}
-        className="inline-flex items-center justify-center gap-1 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {children}
-        {direction !== "none" && (
-          <Icon className="size-3 shrink-0" aria-hidden="true" />
-        )}
-      </button>
-    </TableHead>
-  );
-}
-
 export default function StudyPlanManager() {
   const isMobile = useIsMobile(1024);
   const navigate = useNavigate();
-  const { notifications, refreshNotifications } = useNotifications();
   const {
-    data: plans = emptyPlans,
-    error: plansError,
+    plans,
+    resources,
+    preparations,
     isLoading,
-    mutate: mutatePlans,
-  } = useQuizSWR<StudyPlan[]>("study-plan-manager-plans", listStudyPlans, {
-    keepPreviousData: true,
-  });
-  const { data: resources = emptyResources, error: resourcesError } =
-    useQuizSWR<StudyResource[]>(
-      "study-plan-manager-resources",
-      listStudyResources,
-      { keepPreviousData: true },
-    );
-  const {
-    data: preparations = emptyPreparations,
-    error: preparationsError,
-    mutate: mutatePreparations,
-  } = useSWR(
-    "study-plan-manager-preparations",
-    () => listStudyPlanPreparations({ forceRefresh: true }),
-    {
-      keepPreviousData: true,
-      refreshInterval: 5000,
-    },
-  );
+    loadError,
+    mutatePlans,
+    mutatePreparations,
+    adventureAchievements,
+    refreshNotifications,
+  } = useStudyPlanData();
   const [editingPlan, setEditingPlan] = useState<StudyPlan>();
   const [isCreating, setIsCreating] = useState(false);
   const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(
@@ -173,61 +80,7 @@ export default function StudyPlanManager() {
     Record<string, number>
   >({});
   const [error, setError] = useState<string>();
-  const [adventureAchievements, setAdventureAchievements] = useState<
-    Record<string, number>
-  >({});
   const rowRefs = useRef(new Map<string, HTMLElement>());
-  const latestPreparationNotificationId = useRef<string | undefined>(undefined);
-
-  useEffect(() => {
-    let active = true;
-    void requestGameState()
-      .then(({ save }) => {
-        const placeCounts = new Map<string, number>();
-        for (const [resourceId, map] of Object.entries(save.maps ?? {})) {
-          placeCounts.set(normalizeResourceId(resourceId), map.places.length);
-        }
-        if (save.run) {
-          const key = normalizeResourceId(save.run.resourceId);
-          if (!placeCounts.has(key))
-            placeCounts.set(key, save.run.readIds.length);
-        }
-        for (const dungeon of Object.values(save.dungeons ?? {})) {
-          const key = normalizeResourceId(dungeon.run.resourceId);
-          if (!placeCounts.has(key)) {
-            placeCounts.set(key, dungeon.run.readIds.length);
-          }
-        }
-        if (active) {
-          setAdventureAchievements(
-            Object.fromEntries(
-              [...placeCounts].map(([resourceId, count]) => [
-                resourceId,
-                Math.floor(count / PLACES_PER_REGION),
-              ]),
-            ),
-          );
-        }
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    const latest = notifications.find(
-      ({ kind }) =>
-        kind === "quiz_preparation_complete" ||
-        kind === "quiz_preparation_failed",
-    );
-    if (!latest || latestPreparationNotificationId.current === latest.uid)
-      return;
-    latestPreparationNotificationId.current = latest.uid;
-    void listStudyPlanPreparations({ forceRefresh: true })
-      .then((fresh) => mutatePreparations(fresh, { revalidate: false }))
-      .catch(() => undefined);
-  }, [mutatePreparations, notifications]);
 
   useEffect(() => {
     setAdditionalCounts((current) =>
@@ -253,13 +106,12 @@ export default function StudyPlanManager() {
   const preparationStates = Object.fromEntries(
     preparations.map((item) => [item.plan_id, item.preparation]),
   );
-  const loadError = plansError ?? resourcesError ?? preparationsError;
 
   const resourceNames = useMemo(
     () =>
       new Map(
         resources.map((resource) => [
-          resource.uid.replaceAll("-", ""),
+          normalizeResourceId(resource.uid),
           resource.name,
         ]),
       ),
@@ -268,7 +120,7 @@ export default function StudyPlanManager() {
 
   function resourceName(resourceId: string) {
     return (
-      resourceNames.get(resourceId.replaceAll("-", "")) ?? "不明なResource"
+      resourceNames.get(normalizeResourceId(resourceId)) ?? "不明なResource"
     );
   }
 
@@ -278,87 +130,17 @@ export default function StudyPlanManager() {
   );
   const selectedPlan =
     selectedPlans.length === 1 ? selectedPlans[0] : undefined;
-  const normalizedQuery = query.trim().toLocaleLowerCase();
-  const matchingPlans = useMemo(
+  const filteredPlans = useMemo(
     () =>
-      plans.filter((plan) => {
-        if (!normalizedQuery) return true;
-        const resourceText = plan.resource_ids
-          .map(
-            (resourceId) =>
-              resourceNames.get(resourceId.replaceAll("-", "")) ??
-              "不明なResource",
-          )
-          .join(" ");
-        return `${plan.name} ${resourceText}`
-          .toLocaleLowerCase()
-          .includes(normalizedQuery);
-      }),
-    [plans, normalizedQuery, resourceNames],
+      sortStudyPlans(
+        filterStudyPlans(plans, query, resourceNames),
+        sort,
+        resourceNames,
+        preparedCounts,
+        adventureAchievements,
+      ),
+    [plans, query, resourceNames, sort, preparedCounts, adventureAchievements],
   );
-  const filteredPlans = useMemo(() => {
-    if (!sort) return matchingPlans;
-    const direction = sort.direction === "ascending" ? 1 : -1;
-    const valueFor = (plan: StudyPlan): string | number | boolean | null => {
-      switch (sort.column) {
-        case "name":
-          return plan.name;
-        case "resource":
-          return plan.resource_ids
-            .map(
-              (resourceId) =>
-                resourceNames.get(normalizeResourceId(resourceId)) ??
-                "不明なResource",
-            )
-            .join(" ");
-        case "achievement":
-          return plan.resource_ids.length === 1
-            ? (adventureAchievements[
-                normalizeResourceId(plan.resource_ids[0])
-              ] ?? 0)
-            : null;
-        case "prepared":
-          return preparedCounts[plan.uid] ?? 0;
-        case "options":
-          return plan.n_option;
-        default:
-          return plan.quiz_types.includes(sort.column);
-      }
-    };
-    const compare = (
-      left: string | number | boolean | null,
-      right: string | number | boolean | null,
-    ) => {
-      if (left === null) return right === null ? 0 : 1;
-      if (right === null) return -1;
-      if (typeof left === "string" && typeof right === "string") {
-        return left.localeCompare(right, "ja");
-      }
-      return Number(left) - Number(right);
-    };
-    const originalOrder = new Map(
-      matchingPlans.map((plan, index) => [plan.uid, index]),
-    );
-    return [...matchingPlans].sort((left, right) => {
-      const leftValue = valueFor(left);
-      const rightValue = valueFor(right);
-      const comparison = compare(leftValue, rightValue);
-      if (comparison === 0) {
-        return (
-          (originalOrder.get(left.uid) ?? 0) -
-          (originalOrder.get(right.uid) ?? 0)
-        );
-      }
-      if (leftValue === null || rightValue === null) return comparison;
-      return comparison * direction;
-    });
-  }, [
-    adventureAchievements,
-    matchingPlans,
-    preparedCounts,
-    resourceNames,
-    sort,
-  ]);
   function toggleSort(column: SortColumn) {
     setSort((current) => ({
       column,
@@ -943,287 +725,24 @@ export default function StudyPlanManager() {
               検索条件に一致する学習計画がありません。
             </p>
           )}
-          {isMobile ? (
-            <div className="space-y-2">
-              {isLoading ? (
-                <Loading />
-              ) : (
-                filteredPlans.map((plan) => (
-                  <article
-                    key={plan.uid}
-                    ref={(element) => {
-                      if (element) rowRefs.current.set(plan.uid, element);
-                      else rowRefs.current.delete(plan.uid);
-                    }}
-                    aria-current={currentPlan?.uid === plan.uid || undefined}
-                    className={`min-w-0 scroll-mt-20 space-y-3 rounded-md border p-3 ${
-                      currentPlan?.uid === plan.uid
-                        ? "border-primary bg-primary/5 ring-1 ring-primary"
-                        : ""
-                    }`}
-                  >
-                    <div className="flex min-w-0 items-start gap-3">
-                      <input
-                        type="checkbox"
-                        className="mt-1 shrink-0"
-                        aria-label={`${plan.name}を選択`}
-                        checked={selectedPlanIds.has(plan.uid)}
-                        onChange={(event) =>
-                          setSelectedPlanIds((current) => {
-                            const next = new Set(current);
-                            if (event.target.checked) next.add(plan.uid);
-                            else next.delete(plan.uid);
-                            return next;
-                          })
-                        }
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <div
-                            className="truncate font-medium"
-                            title={plan.name}
-                          >
-                            {plan.name}
-                          </div>
-                          {plan.default_resource_plan && (
-                            <Badge variant="secondary" className="shrink-0">
-                              ゲーム連携・削除不可
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          <strong className="text-sm tabular-nums text-foreground">
-                            {preparedCounts[plan.uid] ?? 0}
-                          </strong>
-                          問準備済み・1回{plan.n_quiz}問・{plan.n_option}択
-                          <PreparationNotice
-                            preparation={preparationStates[plan.uid]}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex min-w-0 flex-wrap gap-1">
-                      {plan.resource_ids.map((resourceId) => {
-                        const name = resourceName(resourceId);
-                        return (
-                          <Badge
-                            key={resourceId}
-                            variant="secondary"
-                            className="max-w-56"
-                            title={name}
-                          >
-                            <span className="truncate">{name}</span>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {plan.quiz_types.map((quizType) => (
-                        <Badge key={quizType} variant="outline">
-                          {quizTypeLabels[quizType]}
-                        </Badge>
-                      ))}
-                    </div>
-                  </article>
-                ))
-              )}
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table
-                className="table-fixed"
-                containerClassName="overflow-visible"
-              >
-                <TableHeader className="sticky top-20 z-20 bg-background shadow-sm">
-                  <TableRow>
-                    <TableHead className="w-10">
-                      <input
-                        type="checkbox"
-                        aria-label="すべてのStudyPlanを選択"
-                        checked={
-                          filteredPlans.length > 0 &&
-                          filteredPlans.every(({ uid }) =>
-                            selectedPlanIds.has(uid),
-                          )
-                        }
-                        onChange={(event) =>
-                          setSelectedPlanIds(
-                            event.target.checked
-                              ? new Set(filteredPlans.map(({ uid }) => uid))
-                              : new Set(),
-                          )
-                        }
-                      />
-                    </TableHead>
-                    <SortableHeader
-                      column="name"
-                      className="w-36"
-                      sort={sort}
-                      onSort={toggleSort}
-                    >
-                      Plan
-                    </SortableHeader>
-                    <SortableHeader
-                      column="resource"
-                      className="w-44"
-                      sort={sort}
-                      onSort={toggleSort}
-                    >
-                      Resource
-                    </SortableHeader>
-                    <SortableHeader
-                      column="achievement"
-                      className="w-16 text-center"
-                      sort={sort}
-                      onSort={toggleSort}
-                    >
-                      達成度
-                    </SortableHeader>
-                    <SortableHeader
-                      column="prepared"
-                      className="w-16 text-center"
-                      sort={sort}
-                      onSort={toggleSort}
-                    >
-                      準備済み
-                    </SortableHeader>
-                    <SortableHeader
-                      column="options"
-                      className="w-14 text-center"
-                      sort={sort}
-                      onSort={toggleSort}
-                    >
-                      選択肢
-                    </SortableHeader>
-                    {quizTypeColumns.map(({ type, from, to }) => (
-                      <SortableHeader
-                        key={type}
-                        column={type}
-                        className="w-20 whitespace-normal text-center text-[11px] leading-tight"
-                        sort={sort}
-                        onSort={toggleSort}
-                      >
-                        <span className="block">{from}</span>
-                        <span className="block">→{to}</span>
-                      </SortableHeader>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6 + quizTypeColumns.length}>
-                        <Loading />
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredPlans.map((plan) => (
-                      <TableRow
-                        key={plan.uid}
-                        ref={(element) => {
-                          if (element) rowRefs.current.set(plan.uid, element);
-                          else rowRefs.current.delete(plan.uid);
-                        }}
-                        data-state={
-                          selectedPlanIds.has(plan.uid) ? "selected" : undefined
-                        }
-                        aria-current={
-                          currentPlan?.uid === plan.uid || undefined
-                        }
-                        className={
-                          currentPlan?.uid === plan.uid
-                            ? "scroll-mt-20 bg-primary/5 ring-1 ring-inset ring-primary"
-                            : "scroll-mt-20"
-                        }
-                        onClick={() => setCurrentPlanId(plan.uid)}
-                      >
-                        <TableCell>
-                          <input
-                            type="checkbox"
-                            aria-label={`${plan.name}を選択`}
-                            checked={selectedPlanIds.has(plan.uid)}
-                            onChange={(event) =>
-                              setSelectedPlanIds((current) => {
-                                const next = new Set(current);
-                                if (event.target.checked) next.add(plan.uid);
-                                else next.delete(plan.uid);
-                                return next;
-                              })
-                            }
-                          />
-                        </TableCell>
-                        <TableCell className="min-w-0 whitespace-normal">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="max-w-44 truncate font-medium"
-                              title={plan.name}
-                            >
-                              {plan.name}
-                            </div>
-                            {plan.default_resource_plan && (
-                              <Badge variant="secondary" className="shrink-0">
-                                ゲーム連携・削除不可
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="min-w-0 whitespace-normal">
-                          <div className="flex min-w-0 flex-wrap gap-1">
-                            {plan.resource_ids.map((resourceId) => {
-                              const name = resourceName(resourceId);
-                              return (
-                                <Badge
-                                  key={resourceId}
-                                  variant="secondary"
-                                  className="max-w-48"
-                                  title={name}
-                                >
-                                  <span className="truncate">{name}</span>
-                                </Badge>
-                              );
-                            })}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center tabular-nums">
-                          {plan.resource_ids.length === 1
-                            ? (adventureAchievements[
-                                normalizeResourceId(plan.resource_ids[0])
-                              ] ?? 0)
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="text-center tabular-nums">
-                          {preparedCounts[plan.uid] ?? 0}
-                          <PreparationNotice
-                            preparation={preparationStates[plan.uid]}
-                          />
-                        </TableCell>
-                        <TableCell className="text-center tabular-nums">
-                          {plan.n_option}
-                        </TableCell>
-                        {quizTypeColumns.map(({ type, from, to }) => {
-                          const enabled = plan.quiz_types.includes(type);
-                          return (
-                            <TableCell key={type} className="text-center">
-                              <span
-                                className={`inline-flex min-w-9 justify-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                                  enabled
-                                    ? "bg-primary/15 text-primary"
-                                    : "bg-muted text-muted-foreground"
-                                }`}
-                                aria-label={`${from}から${to}: ${enabled ? "ON" : "OFF"}`}
-                              >
-                                {enabled ? "ON" : "OFF"}
-                              </span>
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <StudyPlanList
+            {...{
+              isMobile,
+              isLoading,
+              filteredPlans,
+              currentPlan,
+              setCurrentPlanId,
+              selectedPlanIds,
+              setSelectedPlanIds,
+              rowRefs,
+              preparedCounts,
+              preparationStates,
+              resourceName,
+              adventureAchievements,
+              sort,
+              toggleSort,
+            }}
+          />
         </div>
       )}
     </div>

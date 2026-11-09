@@ -1,3 +1,5 @@
+import { API_BASE_URL, requestJson } from "~/shared/lib/requestJson";
+
 export type AdminGameDungeon = {
   user_id: string;
   user_email: string;
@@ -22,9 +24,6 @@ export type EnemyPoolRebuildResult = {
   quiz_count: number;
   preparing?: boolean;
 };
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
 
 export function listAdminGameDungeons(): Promise<AdminGameDungeon[]> {
   return request("/admin/game/dungeons");
@@ -56,17 +55,7 @@ export function rebuildAdminDungeonEnemies(
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    credentials: "include",
+  return requestJson<T>(`${API_BASE_URL}${path}`, init, {
+    errorMessage: "ダンジョン情報を取得できませんでした。",
   });
-  if (response.ok) return (await response.json()) as T;
-  const body = (await response.json().catch(() => undefined)) as
-    | { detail?: string }
-    | undefined;
-  throw new Error(
-    typeof body?.detail === "string"
-      ? body.detail
-      : "ダンジョン情報を取得できませんでした。",
-  );
 }

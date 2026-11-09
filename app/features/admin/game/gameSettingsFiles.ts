@@ -1,4 +1,4 @@
-import { networkFetch } from "~/shared/lib/networkFetch";
+import { API_BASE_URL, requestJson } from "~/shared/lib/requestJson";
 
 export const MAX_GAME_SETTINGS_FILE_BYTES = 5 * 1024 * 1024;
 export type GameSettingsDocument = {
@@ -14,16 +14,14 @@ export type GameSettingsPreview = {
   document: GameSettingsDocument;
   changes: { section: string; before: unknown; after: unknown }[];
 };
-const base = import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
 async function request<T>(
   path = "",
   body?: unknown,
   method = "POST",
 ): Promise<T> {
-  const response = await networkFetch(
-    `${base}/admin/game/settings-file${path}`,
+  return requestJson<T>(
+    `${API_BASE_URL}/admin/game/settings-file${path}`,
     {
-      credentials: "include",
       cache: "no-store",
       ...(body !== undefined
         ? {
@@ -33,15 +31,8 @@ async function request<T>(
           }
         : {}),
     },
+    { errorMessage: "ゲーム設定JSONを処理できませんでした。" },
   );
-  const data = await response.json().catch(() => null);
-  if (!response.ok)
-    throw new Error(
-      typeof data?.detail === "string"
-        ? data.detail
-        : "ゲーム設定JSONを処理できませんでした。",
-    );
-  return data;
 }
 export const exportGameSettings = () => request<GameSettingsDocument>();
 export const previewGameSettings = (document: unknown) =>

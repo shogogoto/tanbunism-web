@@ -1,46 +1,31 @@
-import { useEffect, useState } from "react";
-import {
-  AdminActionStatus,
-  adminFeedback,
-} from "~/features/admin/AdminFeedback";
+import { AdminActionStatus } from "~/features/admin/AdminFeedback";
 import {
   AdminNativeTable,
   AdminTableFrame,
   AdminTableSection,
 } from "~/features/admin/AdminTable";
-import {
-  type GameCatalog,
-  type SpecialtySkillUse,
-  requestGameCatalog,
-} from "~/features/game/catalog";
+import type { GameCatalog, SpecialtySkillUse } from "~/features/game/catalog";
 import { Button } from "~/shared/components/ui/button";
 import { Input } from "~/shared/components/ui/input";
 import { NativeSelect } from "~/shared/components/ui/native-select";
+import { useGameCatalogDraft } from "./useGameCatalogDraft";
 
 /** Usage permissions and quiz policy belong to the consumer, not the effect. */
 export default function SkillUsageEditor() {
-  const [catalog, setCatalog] = useState<GameCatalog>();
-  const [error, setError] = useState<string>();
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
-  useEffect(() => {
-    let active = true;
-    void requestGameCatalog(true)
-      .then((c) => {
-        if (active) setCatalog(c);
-      })
-      .catch((e) => {
-        if (active) setError(e.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const {
+    catalog,
+    setCatalog,
+    error,
+    saving: busy,
+    saved,
+    markChanged,
+    save,
+  } = useGameCatalogDraft();
   function change(
     key: "player_skills" | "specialty_skills",
     value: GameCatalog[typeof key],
   ) {
-    setSaved(false);
+    markChanged();
     setCatalog((c) => (c ? { ...c, [key]: value } : c));
   }
   return (
@@ -62,19 +47,7 @@ export default function SkillUsageEditor() {
         className="space-y-6"
         onSubmit={async (e) => {
           e.preventDefault();
-          if (!catalog || busy) return;
-          setBusy(true);
-          setError(undefined);
-          setSaved(false);
-          try {
-            setCatalog(await requestGameCatalog(true, catalog));
-            setSaved(true);
-            adminFeedback.success();
-          } catch (e) {
-            setError(adminFeedback.error(e, "保存できませんでした。"));
-          } finally {
-            setBusy(false);
-          }
+          await save();
         }}
       >
         <fieldset disabled={!catalog || busy} className="min-w-0 space-y-6">

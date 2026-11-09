@@ -14,6 +14,45 @@ function fixture() {
 }
 
 describe("グラフユーティリティ", () => {
+  it("ignores cycles without losing converging paths to actual endpoints", () => {
+    const graph = new DirectedGraph();
+    for (const node of ["a", "b", "c", "end"]) graph.addNode(node);
+    for (const [from, to] of [
+      ["a", "b"],
+      ["b", "a"],
+      ["a", "c"],
+      ["c", "b"],
+      ["b", "end"],
+    ])
+      graph.addEdge(from, to, { etype: "below" });
+    expect(pathsToEnd(graph, "a", eqEdgeType("below"), succ)).toEqual([
+      ["a", "b", "end"],
+      ["a", "c", "b", "end"],
+    ]);
+  });
+
+  it("does not invent endpoints for a closed cycle or a self-loop", () => {
+    const graph = new DirectedGraph();
+    graph.addNode("a");
+    graph.addNode("b");
+    graph.addEdge("a", "a", { etype: "below" });
+    graph.addEdge("a", "b", { etype: "below" });
+    graph.addEdge("b", "a", { etype: "below" });
+    expect(pathsToEnd(graph, "a", eqEdgeType("below"), succ)).toEqual([]);
+  });
+
+  it("handles deep paths without recursive stack growth", () => {
+    const graph = new DirectedGraph();
+    const count = 12000;
+    for (let i = 0; i < count; i++) {
+      graph.addNode(String(i));
+      if (i) graph.addEdge(String(i - 1), String(i), { etype: "below" });
+    }
+    const result = pathsToEnd(graph, "0", eqEdgeType("below"), succ);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toHaveLength(count);
+    expect(result[0].at(-1)).toBe(String(count - 1));
+  });
   it("succ", () => {
     expect(succ(fixture(), "0", eqEdgeType("below"))).to.members(["1", "3"]);
     expect(succ(fixture(), "5", eqEdgeType("below"))).to.members([]);

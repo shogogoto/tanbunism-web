@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import { useAuth } from "~/features/auth/AuthProvider";
+import { API_BASE_URL, requestJson } from "~/shared/lib/requestJson";
 
 export type ReviewSettings = {
   id: string;
@@ -24,26 +25,24 @@ export const defaultSettings: ReviewSettings = {
   quiz_count: 20,
   priority: "balanced",
 };
-const api = import.meta.env.VITE_API_BASE_URL ?? "https://knowde.onrender.com";
 
 export async function settingsRequest<T>(
   path = "",
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(`${api}/review/settings${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const body = await response.json().catch(() => undefined);
-    throw new Error(
-      typeof body?.detail === "string"
-        ? body.detail
-        : "復習設定を保存・取得できませんでした。",
-    );
-  }
-  return response.status === 204 ? (undefined as T) : response.json();
+  const headers = new Headers(init?.headers);
+  if (!headers.has("Content-Type"))
+    headers.set("Content-Type", "application/json");
+  return requestJson<T>(
+    `${API_BASE_URL}/review/settings${path}`,
+    {
+      ...init,
+      headers,
+    },
+    {
+      errorMessage: "復習設定を保存・取得できませんでした。",
+    },
+  );
 }
 
 export function useReviewSettings() {

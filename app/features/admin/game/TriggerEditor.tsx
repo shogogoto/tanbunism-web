@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AdminActionStatus,
   adminFeedback,
 } from "~/features/admin/AdminFeedback";
 import { AdminTableSection } from "~/features/admin/AdminTable";
-import { type GameCatalog, requestGameCatalog } from "~/features/game/catalog";
 import type { TriggerTarget } from "~/features/game/catalog";
 import {
   conditionGroup,
@@ -30,6 +29,7 @@ import { SortableRow } from "./SortableRows";
 import StatTriggerDetails from "./StatTriggerDetails";
 import TriggerVariantPanel from "./TriggerVariantPanel";
 import TriggerVariantSetEditor from "./TriggerVariantSetEditor";
+import { useGameCatalogDraft } from "./useGameCatalogDraft";
 
 const conditions = {
   always: "いつでも",
@@ -38,26 +38,19 @@ const conditions = {
   state: "状態",
 };
 export default function TriggerEditor() {
-  const [catalog, setCatalog] = useState<GameCatalog>();
-  const [error, setError] = useState<string>();
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const {
+    catalog,
+    setCatalog,
+    error,
+    setError,
+    saving: busy,
+    saved,
+    markChanged,
+    save,
+  } = useGameCatalogDraft();
   const [variantTrigger, setVariantTrigger] = useState<string>();
   const [deletions, setDeletions] = useState(new Set<string>());
   const stateSkills = catalog?.skills.filter(isStateSkill) ?? [];
-  useEffect(() => {
-    let active = true;
-    void requestGameCatalog(true)
-      .then((value) => {
-        if (active) setCatalog(value);
-      })
-      .catch((cause) => {
-        if (active) setError(cause.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
   function patch(id: string, value: object) {
     if (!catalog) return;
     const next = resolveTriggerVariantSets({
@@ -67,7 +60,7 @@ export default function TriggerEditor() {
       ),
     });
     setCatalog(next);
-    setSaved(false);
+    markChanged();
   }
   return (
     <AdminTableSection
@@ -83,7 +76,7 @@ export default function TriggerEditor() {
               stateSkills={stateSkills}
               onChange={(next) => {
                 setCatalog(next);
-                setSaved(false);
+                markChanged();
               }}
             />
           )}
@@ -149,28 +142,19 @@ export default function TriggerEditor() {
             );
             return;
           }
-          setBusy(true);
-          setError(undefined);
-          try {
-            const next = {
-              ...catalog,
-              triggers: catalog.triggers?.filter(
-                (trigger) => !deletions.has(trigger.id),
-              ),
-              shop: catalog.shop?.filter(
-                (listing) =>
-                  !("trigger_id" in listing) ||
-                  !deletions.has(listing.trigger_id),
-              ),
-            };
-            setCatalog(await requestGameCatalog(true, next));
+          const next = {
+            ...catalog,
+            triggers: catalog.triggers?.filter(
+              (trigger) => !deletions.has(trigger.id),
+            ),
+            shop: catalog.shop?.filter(
+              (listing) =>
+                !("trigger_id" in listing) ||
+                !deletions.has(listing.trigger_id),
+            ),
+          };
+          if (await save(next)) {
             setDeletions(new Set());
-            setSaved(true);
-            adminFeedback.success();
-          } catch (cause) {
-            setError(adminFeedback.error(cause, "保存できませんでした。"));
-          } finally {
-            setBusy(false);
           }
         }}
       >
@@ -180,7 +164,7 @@ export default function TriggerEditor() {
             onReorder={(triggers) => {
               if (!catalog) return;
               setCatalog({ ...catalog, triggers });
-              setSaved(false);
+              markChanged();
               setError(undefined);
             }}
             aria-label="ガンビットのトリガー"
@@ -411,7 +395,7 @@ export default function TriggerEditor() {
                             catalog={catalog}
                             onCatalogChange={(next) => {
                               setCatalog(next);
-                              setSaved(false);
+                              markChanged();
                             }}
                             stateSkills={stateSkills}
                             onChange={(value) => patch(t.id, value)}
@@ -441,7 +425,7 @@ export default function TriggerEditor() {
                               else next.add(t.id);
                               return next;
                             });
-                            setSaved(false);
+                            markChanged();
                             setError(undefined);
                             if (variantTrigger === t.id)
                               setVariantTrigger(undefined);
@@ -464,7 +448,7 @@ export default function TriggerEditor() {
               catalog={catalog}
               onChange={(next) => {
                 setCatalog(next);
-                setSaved(false);
+                markChanged();
               }}
             />
           )}
